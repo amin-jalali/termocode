@@ -33,6 +33,11 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			}
 		}
 	}
+	if have && r.kind == kubeRowItem && r.section == kubeKindSection { // kube_kind.go
+		if cmd, ok := m.handleKubeKindKey(k.String()); ok {
+			return m, cmd
+		}
+	}
 	switch k.String() {
 	case "up", "k":
 		st.move(-1)
@@ -105,6 +110,15 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			}
 			return m, nil
 		}
+	case "o":
+		if d, ok := st.selectedDeployment(); ok {
+			return m, m.kubeRollout(d.Name) // kube_rollout.go
+		}
+	case "I":
+		if d, ok := st.selectedDeployment(); ok {
+			m.askKubeImage(d, "", "")
+			return m, nil
+		}
 	case "d":
 		if have && r.kind == kubeRowItem && r.section == "nodes" {
 			return m, m.servicesToast(toast.Info, "Nodes are not deleted here", "Use kubectl for that")
@@ -127,6 +141,14 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if have && r.kind == kubeRowItem {
 			return m, m.kubeCopyName(r.name)
 		}
+	case ":":
+		return m, m.kubeAskKind() // kube_kind.go
+	case "A":
+		return m, m.kubeToggleKindAll()
+	case "H":
+		return m, m.kubeHelmList() // kube_helm.go
+	case "t":
+		return m, m.kubeTop() // kube_top.go
 	case "R":
 		return m, m.kubeReload()
 	case "[":
@@ -177,10 +199,17 @@ func kubeKeyRows() []confirm.KeyRow {
 		[]string{"r", "deployment: restart (asks first)"},
 		[]string{"s", "deployment, statefulset: scale (asks first)"},
 		[]string{"L", "deployment: logs of all its pods"},
+		[]string{"o", "deployment: rollout status, history, roll back"},
+		[]string{"I", "deployment: set image (asks first)"},
 		[]string{"d", "delete (asks first)"},
+		[]string{"Any kind"},
+		[]string{":", "show a kind (CRDs, aliases; \" -A\" every namespace)"},
+		[]string{"A", "the kind in every namespace, or this one"},
 		[]string{"Cluster"},
 		[]string{"c n", "pick the context, the namespace"},
 		[]string{"[ ]", "back, forward (context / namespace)"},
+		[]string{"t", "metrics: CPU and memory of nodes and pods"},
+		[]string{"H", "helm releases: status, values, history, roll back"},
 		[]string{"R", "load now"},
 		[]string{"w", "save the screen as text"},
 	)

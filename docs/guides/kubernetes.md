@@ -82,9 +82,15 @@ kubeconfig, so other terminals keep their context.
 | `!` | Your custom commands for the row (pods, deployments, services, jobs; see the Containers guide, "Custom commands"). Each asks first. |
 | `r` | Deployment: restart it (asks first). |
 | `s` | Deployment or statefulset: scale it (asks the number, then asks first). |
+| `o` | Deployment: rollout status and history; roll back to an older revision (asks first). |
+| `I` | Deployment: set the image of one container (asks the image, then asks first). |
 | `d` | Delete the row's object (asks first). Not on a node or an event. |
+| `:` | Show any kind as one more section: a CRD, a short name, an alias. `" -A"` at the end: every namespace. |
+| `A` | The `:` kind in every namespace, or in the view's one again. |
 | `c` / `n` | Pick the context / the namespace. |
 | `[` / `]` | Back / forward to the context and namespace you had before. |
+| `t` | Metrics: CPU and memory of the nodes and the pods (a read-only page). |
+| `H` | Helm releases of the namespace: status, values, history, roll back, uninstall. |
 | `R` | Load the lists now. |
 | `w` | Save the screen as a text file (asks for the name; never overwrites a file). |
 | `?` | Show these keys. |
@@ -125,6 +131,21 @@ active forward, also the ones of another context or namespace. `f` on a
 row there stops it; `y` copies its local address (`127.0.0.1:43123`).
 Every forward stops when you quit termocode.
 
+## Metrics
+
+When the cluster runs the metrics-server, each load also reads
+`kubectl top pods`. A wide pod row shows its CPU and memory (`12m
+64Mi`). The footer of a pod shows them too, with a sparkline of the
+last samples (5 seconds apart).
+
+`t` (or **Kubernetes: Show Metrics** in the palette) opens a read-only
+page: CPU and memory of every node (with the share of the node, `25%`)
+and of every pod in the namespace. A node with no metrics yet says
+`unknown`.
+
+A cluster without the metrics-server is asked once; the rows then show
+no metrics. `R` asks again.
+
 ## Restart a deployment
 
 `r` on a deployment asks first. The card shows the deployment, the
@@ -141,6 +162,28 @@ scale`). 0 stops every pod, and the card says so. **Cancel** is the
 first button and has the focus, so `Enter` or `Esc` alone never scales
 anything. The same number as now changes nothing.
 
+## Rollout: status, history, roll back
+
+`o` on a deployment reads `kubectl rollout status` and `kubectl rollout
+history` and opens a list. Nothing changes yet.
+
+- **Status and history** opens a read-only page with the status and
+  every revision, newest first, with its change cause.
+- The newest revision says **current**.
+- An older revision rolls the deployment back to it. A card shows the
+  deployment, the revision, the context, the namespace and the command
+  (`kubectl rollout undo --to-revision`). **Cancel** is the first button
+  and has the focus, so `Enter` or `Esc` alone never rolls anything back.
+
+## Set image
+
+`I` on a deployment asks for the new image as `container=image`. It
+starts with the first container and its image now; the note lists every
+container. With one container you can type only the image. A card then
+shows the change (`shop/api:v3 → shop/api:v4`), the context, the
+namespace and the command (`kubectl set image`). **Cancel** is the first
+button and has the focus. The same image as now changes nothing.
+
 ## Delete an object
 
 `d` on a pod, deployment, service or job asks first. The card shows the
@@ -149,6 +192,54 @@ object, the context, the namespace and the command (`kubectl delete`).
 alone never deletes anything. **Delete** does not wait: the list shows
 the object as it goes. A pod that belongs to a deployment or a job is
 made again; deleting a deployment or a job deletes its pods too.
+
+## Any kind
+
+`:` (or **Kubernetes: Show Kind…** in the palette) reads `kubectl
+api-resources`, so it knows every kind of the cluster, the custom ones
+(CRDs) too. Type a kind:
+
+- its plural, singular or short name (`certificates`, `certificate`,
+  `cert`), its Kind (`Certificate`), or `name.group`
+  (`certificates.cert-manager.io`) when two groups use the same name;
+- or an alias of your own (see below).
+
+`Tab` completes the name. Add ` -A` to list every namespace. The kind
+shows as one more section after **JOBS** and loads with the others.
+`i`, `v`, `E` and `y` work on its rows, in the object's own namespace;
+the rows change nothing. `A` switches between every namespace and the
+view's one. `:` with an empty answer hides the section.
+
+### Aliases
+
+Put your own short names in `kube_aliases.json`, next to `config.json`
+(`~/.config/termocode/`):
+
+```json
+{"tls": "certificates.cert-manager.io", "wg": "widgets"}
+```
+
+The `:` prompt lists them.
+
+## Helm releases
+
+`H` (or **Kubernetes: Helm Releases…** in the palette) lists the helm
+releases of the view's context and namespace: the name, the chart, the
+status and the revision. You need `helm` on your `PATH`; without it the
+view says so and does nothing else.
+
+A release opens a short list:
+
+- **Status**, **Values** and **History** open read-only pages. Values
+  that look secret (passwords, tokens, keys) are masked.
+- **Roll Back…** lists the older revisions. A card shows the release,
+  the revision, the context, the namespace and the command (`helm
+  rollback --wait`).
+- **Uninstall…** asks first. The card shows the release and the command
+  (`helm uninstall`); it deletes every object of the chart.
+
+On both cards **Cancel** is the first button and has the focus, so
+`Enter` or `Esc` alone never changes anything.
 
 ## New manifest from a snippet
 
@@ -160,12 +251,12 @@ is sent to the cluster.
 
 ## The AI
 
-The AI can open the view and load it again. It can also read the
+The AI can open the view, load it again and open the metrics page. It can also read the
 cluster, in the context the view shows: `kube_list` (the four lists),
 `kube_describe` (one object) and `kube_logs` (the last lines of a pod).
-Secrets in their answers are hidden. The AI can never restart or
-scale a deployment, delete an object, start a port-forward or switch
-the context.
+Secrets in their answers are hidden. The AI can never restart,
+scale, roll back or change the image of a deployment, delete an
+object, start a port-forward, use helm or switch the context.
 
 ## When something is wrong
 

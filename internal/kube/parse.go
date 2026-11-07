@@ -48,7 +48,13 @@ type Deployment struct {
 	ReadyN    int
 	Updated   int
 	Available int
-	Ports     []int // the pod template's container ports, spec order
+	Ports     []int            // the pod template's container ports, spec order
+	Images    []ContainerImage // the pod template's containers, spec order
+}
+
+// ContainerImage is one container of a pod template and its image.
+type ContainerImage struct {
+	Name, Image string
 }
 
 // Ready is "ready/wanted".
@@ -218,6 +224,8 @@ type rawDeployment struct {
 		Template struct {
 			Spec struct {
 				Containers []struct {
+					Name  string `json:"name"`
+					Image string `json:"image"`
 					Ports []struct {
 						ContainerPort int `json:"containerPort"`
 					} `json:"ports"`
@@ -247,6 +255,7 @@ func ParseDeployments(b []byte) ([]Deployment, error) {
 		d := Deployment{Name: r.Metadata.Name, Namespace: r.Metadata.Namespace, Created: r.Metadata.CreationTimestamp,
 			Replicas: want, ReadyN: r.Status.ReadyReplicas, Updated: r.Status.UpdatedReplicas, Available: r.Status.AvailableReplicas}
 		for _, c := range r.Spec.Template.Spec.Containers {
+			d.Images = append(d.Images, ContainerImage{Name: c.Name, Image: c.Image})
 			for _, port := range c.Ports {
 				if port.ContainerPort > 0 {
 					d.Ports = append(d.Ports, port.ContainerPort)

@@ -100,6 +100,12 @@ func (m *Model) handleKubePickerSelect(id string) tea.Cmd {
 	if cmd, ok := m.handleKubeLogPick(kind, value); ok { // kube_logs.go
 		return cmd
 	}
+	if cmd, ok := m.handleKubeHelmPick(kind, value); ok { // kube_helm.go
+		return cmd
+	}
+	if cmd, ok := m.handleKubeRolloutPick(kind, value); ok { // kube_rollout.go
+		return cmd
+	}
 	if kind == "snippet" {
 		return m.kubeOpenSnippet(value)
 	}

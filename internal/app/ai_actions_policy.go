@@ -431,6 +431,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"worktree-filter":                   aiAuto(),
 	"worktree-add-folder":               aiNever("acts on the worktree the user selected in the WORKTREES view"),
 	"kubernetes-refresh":                aiAuto(),
+	"kubernetes-top":                    aiAuto(),            // read only (kube_top.go)
+	"kubernetes-helm":                   aiNever(aiNoPicker), // kube_helm.go
+	"kubernetes-kind":                   aiNever(aiNoPicker), // kube_kind.go
 	"kubernetes-context":                aiNever(aiNoPicker + "; the context is the user's choice"),
 	"kubernetes-namespace":              aiNever(aiNoPicker),
 	"kubernetes-snippet":                aiNever(aiNoPicker), // kube_snippet.go
@@ -543,19 +546,19 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-savepoint":                      aiNever("the user's sessions and transactions"),
 	"db-rollback-savepoint":             aiNever("the user's sessions and transactions"),
 	"db-open-csv":                       aiNever("the user picks the file; the AI reads files with its own tools"),
-	"db-er-path":                   aiNever(aiNoPicker),
-	"db-query-log":                 aiNever("the log holds the literal values of every statement; only the user opens it"),
-	"db-console-history":           aiNever(aiNoPicker),
-	"db-run-container":             aiNever("starts a container after a card only the user answers"),
-	"db-cloud-discover":            aiNever("runs the user's cloud CLI with their account; only the user starts it"),
-	"db-iam-auth":                  aiNever("makes a connection run a command at each connect; only the user chooses it"),
-	"db-manage-connection":         aiNever(aiNoPicker),
-	"db-paste-connection":          aiNever("adds a connection from the clipboard; only the user does that"),
-	"db-new-from-template":         aiNever(aiNoPicker),
-	"db-pgtap-run":                 aiNever("it runs the user's test functions after a card only the user answers (db_query)"),
-	"redis-rename-key":             aiNever(aiNoPicker + " (redis_command)"),
-	"redis-copy-key":               aiNever(aiNoPicker + " (redis_command)"),
-	"redis-slowlog":                aiNever("it runs in the user's console; use redis_command (SLOWLOG GET)"),
+	"db-er-path":                        aiNever(aiNoPicker),
+	"db-query-log":                      aiNever("the log holds the literal values of every statement; only the user opens it"),
+	"db-console-history":                aiNever(aiNoPicker),
+	"db-run-container":                  aiNever("starts a container after a card only the user answers"),
+	"db-cloud-discover":                 aiNever("runs the user's cloud CLI with their account; only the user starts it"),
+	"db-iam-auth":                       aiNever("makes a connection run a command at each connect; only the user chooses it"),
+	"db-manage-connection":              aiNever(aiNoPicker),
+	"db-paste-connection":               aiNever("adds a connection from the clipboard; only the user does that"),
+	"db-new-from-template":              aiNever(aiNoPicker),
+	"db-pgtap-run":                      aiNever("it runs the user's test functions after a card only the user answers (db_query)"),
+	"redis-rename-key":                  aiNever(aiNoPicker + " (redis_command)"),
+	"redis-copy-key":                    aiNever(aiNoPicker + " (redis_command)"),
+	"redis-slowlog":                     aiNever("it runs in the user's console; use redis_command (SLOWLOG GET)"),
 
 	// ── Tasks ──
 	"tasks-run":            aiNever(aiNoPicker),

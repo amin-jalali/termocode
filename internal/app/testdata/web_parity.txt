@@ -673,7 +673,10 @@ missing	http-mock-stop	HTTP|S
 missing	http-proxy-set	HTTP|S
 missing	http-ws-close	HTTP|S
 missing	http-ws-send	HTTP|S
+missing	kubernetes-helm	Kubernetes|M
+missing	kubernetes-kind	Kubernetes|S
 missing	kubernetes-snippet	Kubernetes|S
+missing	kubernetes-top	Kubernetes|S
 missing	local-history	Git|S
 missing	local-history-deleted	Git|S
 missing	local-history-label	Git|S

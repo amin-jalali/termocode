@@ -59,6 +59,15 @@ func (m *Model) handleKubeConfirm(id string) (tea.Cmd, bool) {
 	if m.confirmKind == confirmKindKubeScale && m.kube != nil { // kube_scale.go
 		return m.answerKubeScale(id), true
 	}
+	if m.confirmKind == confirmKindKubeHelm && m.kube != nil { // kube_helm.go
+		return m.answerKubeHelm(id), true
+	}
+	if m.confirmKind == confirmKindKubeUndo && m.kube != nil { // kube_rollout.go
+		return m.answerKubeUndo(id), true
+	}
+	if m.confirmKind == confirmKindKubeImage && m.kube != nil {
+		return m.answerKubeImage(id), true
+	}
 	if m.confirmKind == confirmKindKubeDelete && m.kube != nil {
 		return m.handleKubeDeleteConfirm(id), true // kube_delete.go
 	}

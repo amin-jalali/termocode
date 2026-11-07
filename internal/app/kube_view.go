@@ -135,7 +135,7 @@ func (st *kubeState) renderRaw(w, h int, focused bool, now time.Time, hy int) st
 		var line string
 		switch r.kind {
 		case kubeRowSection:
-			line = renderServiceSection(kubeSectionTitle(r.section), st.count(r.section), st.collapsed[r.section], active, focused, w)
+			line = renderServiceSection(st.sectionTitle(r.section), st.count(r.section), st.collapsed[r.section], active, focused, w)
 		case kubeRowItem:
 			line = st.renderItem(r, active, focused, w, now)
 		case kubeRowNote:
@@ -227,6 +227,9 @@ func (st *kubeState) itemParts(r kubeRow, w int, now time.Time) (theme.Icon, the
 		if wide {
 			right = p.Status + " " + right
 		}
+		if t, ok := st.podTop(p.Name); ok && w >= 56 {
+			right = kubeCPUText(t.CPUMilli) + " " + kubeMemText(t.MemBytes) + " " + right
+		}
 		return g, c, right + " " + kube.Age(p.Created, now)
 	case "deployments":
 		d := st.deploys[r.idx]
@@ -262,6 +265,28 @@ func (st *kubeState) itemParts(r kubeRow, w int, now time.Time) (theme.Icon, the
 		default:
 		}
 		return g, c, fmt.Sprintf(":%d %s %d", fw.Local, kubeArrow(), fw.Remote)
+	case kubeKindSection:
+		if r.idx >= len(st.kindObjs) {
+			break
+		}
+		o := st.kindObjs[r.idx]
+		g, c := theme.GlyphSvcStopped, theme.TextDim
+		switch o.Status {
+		case "Ready", "Running", "Active", "Bound", "Succeeded":
+			g, c = theme.GlyphSvcUp, theme.GitAdded
+		case "Not ready", "Failed":
+			g, c = theme.GlyphSvcExited, theme.DiagError
+		case "Pending":
+			g, c = theme.GlyphSvcStarting, theme.GitModified
+		}
+		right := kube.Age(o.Created, now)
+		if wide && o.Status != "" {
+			right = o.Status + " " + right
+		}
+		if st.kindAll && o.Namespace != "" {
+			right = o.Namespace + " " + right
+		}
+		return g, c, right
 	case "jobs":
 		j := st.jobs[r.idx]
 		g, c := kubeJobGlyph(j)
@@ -332,18 +357,18 @@ func (st *kubeState) footer(now time.Time) []string {
 	switch r.section {
 	case "pods":
 		p := st.pods[r.idx]
-		line := fmt.Sprintf("%s · ready %s · %d restarts", p.Status, p.Ready(), p.Restarts)
+		line := fmt.Sprintf("%s · ready %s · %d restarts", p.Status, p.Ready(), p.Restarts) + st.podTopFooter(p.Name)
 		if fw := st.forward(p.Name); fw != nil {
 			line = fmt.Sprintf("127.0.0.1:%d %s %d · %s", fw.Local, kubeArrow(), fw.Remote, line)
 		}
-		return []string{line, "l logs · L options · e shell · f forward · ? keys"}
+		return []string{line, "l logs · L options · e shell · f forward · t metrics · ? keys"}
 	case "deployments":
 		d := st.deploys[r.idx]
 		line := fmt.Sprintf("ready %s · updated %d · available %d", d.Ready(), d.Updated, d.Available)
 		if fw := st.forwardOf("deployment", d.Name); fw != nil {
 			return []string{fmt.Sprintf("127.0.0.1:%d %s %d · %s", fw.Local, kubeArrow(), fw.Remote, line), "i describe · r restart · f stop forward · ? keys"}
 		}
-		return []string{line, "i describe · r restart · ? keys"}
+		return []string{line, "o rollout · I image · r restart · ? keys"}
 	case "services":
 		s := st.services[r.idx]
 		line := s.Type + " · " + s.ClusterIP + " · " + s.PortsText()
@@ -354,6 +379,17 @@ func (st *kubeState) footer(now time.Time) []string {
 	case kubeForwardsSection:
 		if _, fw, ok := st.selectedForward(); ok && fw != nil {
 			return []string{fmt.Sprintf("127.0.0.1:%d %s %s:%d", fw.Local, kubeArrow(), fw.Target(), fw.Remote), "f stop · y copy address · ? keys"}
+		}
+	case kubeKindSection:
+		if o, ok := st.selectedKindObject(); ok {
+			line := st.kind.Kind
+			if o.Namespace != "" {
+				line += " · ns " + o.Namespace
+			}
+			if o.Status != "" {
+				line += " · " + o.Status
+			}
+			return []string{line, "i describe · v yaml · A all namespaces · : kind · ? keys"}
 		}
 	case "jobs":
 		j := st.jobs[r.idx]
