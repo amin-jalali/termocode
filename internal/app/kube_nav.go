@@ -18,7 +18,7 @@ import (
 // before, ] forward again; a new change drops the forward list. w saves
 // the rows on screen as plain text (0600, never over an existing file).
 
-const promptKindKubeSaveScreen promptKindEnum = 3790
+const promptKindKubeSaveScreen promptKindEnum = 3797
 
 // kubeNavMax caps the back list.
 const kubeNavMax = 50

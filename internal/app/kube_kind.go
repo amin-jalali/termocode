@@ -106,7 +106,7 @@ func (m *Model) openKubeKindPrompt(value, errText string) {
 	}
 	note := itoa(len(st.apiRes)) + " kinds (" + itoa(custom) + " custom). Tab completes · \" -A\" every namespace · empty hides."
 	if len(aliases) > 0 {
-		note += " Aliases: " + strings.Join(sortedKeys(aliases), ", ") + "."
+		note += " Aliases: " + strings.Join(kubeSortedKeys(aliases), ", ") + "."
 	}
 	m.prompt.SetNote(note)
 	m.prompt.SetAllowEmpty(true)
@@ -119,7 +119,7 @@ func (m *Model) openKubeKindPrompt(value, errText string) {
 	m.promptKind = promptKindKubeKind
 }
 
-func sortedKeys(m map[string]string) []string {
+func kubeSortedKeys(m map[string]string) []string {
 	out := make([]string, 0, len(m))
 	for k := range m {
 		out = append(out, k)
