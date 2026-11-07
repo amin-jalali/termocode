@@ -2,9 +2,12 @@
 // focus; Enter presses the focused button only; Esc means Later, never an
 // answer (inside the check window after a risky press it cancels that
 // answer before it is sent); the risky button is inert for 600 ms (useArming) with a visible
-// fill. There is no "Always allow" from the web, ever.
+// fill. There is no "Always allow" from the web, ever. A destructive card
+// (MOBUX-12, the phone) has no risky button at all: only "Approve on
+// laptop". Every answer gives a short haptic buzz on the phone.
 import { h, type ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
+import { haptic } from "../lib/haptic";
 import { t, type StringKey } from "../strings";
 import { useArming } from "./arming";
 
@@ -55,11 +58,14 @@ export interface CardProps {
   by?: string;
   /** riskyLabel replaces the kind's risky answer ("Send" on a form card, MOB-12). */
   riskyLabel?: StringKey;
+  /** destructive: the call cannot be undone, so the risky answer is
+   * "Approve on laptop" (onLaptop) and the web never sends it. */
+  destructive?: boolean;
 }
 
 const CHECK_MS = 300;
 
-export function Card({ id, kind, state = "open", subject, where, children, mode = "dialog", onAnswer, onLater, onCancel, onClose, onLaptop, by, riskyLabel }: CardProps) {
+export function Card({ id, kind, state = "open", subject, where, children, mode = "dialog", onAnswer, onLater, onCancel, onClose, onLaptop, by, riskyLabel, destructive }: CardProps) {
   const root = useRef<HTMLElement | null>(null);
   const safeBtn = useRef<HTMLButtonElement | null>(null);
   const arm = useArming(root);
@@ -98,6 +104,7 @@ export function Card({ id, kind, state = "open", subject, where, children, mode 
     setDone(true);
     check.current = setTimeout(() => {
       check.current = undefined;
+      haptic("risky");
       onAnswer?.("risky");
     }, CHECK_MS);
   };
@@ -131,10 +138,22 @@ export function Card({ id, kind, state = "open", subject, where, children, mode 
     const c = choices[kind];
     foot = (
       <div class="choices">
-        <button type="button" class="btn btn-neutral" ref={safeBtn} onClick={() => onAnswer?.("safe")}>
+        <button
+          type="button"
+          class="btn btn-neutral"
+          ref={safeBtn}
+          onClick={() => {
+            haptic("safe");
+            onAnswer?.("safe");
+          }}
+        >
           {t(c.safe)}
         </button>
-        {state === "long" || state === "peek" ? (
+        {destructive ? (
+          <button type="button" class="btn btn-neutral" onClick={onLaptop}>
+            {t("card.approve_laptop")}
+          </button>
+        ) : state === "long" || state === "peek" ? (
           <button type="button" class="btn btn-neutral" onClick={onLaptop}>
             {t(state === "peek" ? "card.open_diff" : "laptop.open")}
           </button>
@@ -157,9 +176,11 @@ export function Card({ id, kind, state = "open", subject, where, children, mode 
             )}
           </button>
         )}
-        <span id={armID} class="sr-only">
-          {t("card.arming")}
-        </span>
+        {!destructive && (
+          <span id={armID} class="sr-only">
+            {t("card.arming")}
+          </span>
+        )}
       </div>
     );
   }
@@ -191,6 +212,7 @@ export function Card({ id, kind, state = "open", subject, where, children, mode 
           {where}
         </div>
       )}
+      {destructive && state === "open" && <p class="card-line card-destructive">{t("card.destructive")}</p>}
       <footer class="card-foot">{foot}</footer>
       {(state === "open" && kind !== "trust") || state === "long" || state === "peek" ? (
         <div class="card-hint" aria-hidden="true">

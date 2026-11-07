@@ -55,6 +55,8 @@
 .choices > .btn { flex: 1 1 8rem; }
 .card-line { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); min-height: var(--tap); color: var(--text-2); }
 .card-wait { color: var(--amber); font-family: var(--font-mono); font-size: var(--fs-row); }
+.card-destructive { justify-content: flex-start; margin: 0; color: var(--amber); } /* MOBUX-12: color + shape */
+.card-destructive::before { content: "▲" / ""; }
 .card-hint { font-family: var(--font-mono); font-size: var(--fs-hint); color: var(--muted); white-space: pre; } /* AA on the card's surface */
 .hint-touch { display: none; }
 @media (hover: none) and (pointer: coarse) {

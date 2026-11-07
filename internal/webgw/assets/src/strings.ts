@@ -164,6 +164,8 @@ export const S = {
   "card.later": "Later",
   "card.cancelled": "Cancelled. Nothing was sent.",
   "card.answer_laptop": "Answer on laptop",
+  "card.approve_laptop": "Approve on laptop",
+  "card.destructive": "This cannot be undone. Approve it on the laptop.",
   "card.hint": "Enter  Deny · Esc  Later",
   "card.hint_touch": "Swipe down  Later",
   "card.arming": "Ready in a moment…",

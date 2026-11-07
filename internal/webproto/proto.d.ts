@@ -1346,6 +1346,7 @@ export interface Card {
   file?: string;
   diff?: CardDiff;
   form?: BlockFormField[];
+  destructive?: boolean;
 }
 
 export interface CardChoice {
