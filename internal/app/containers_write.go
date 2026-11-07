@@ -229,7 +229,7 @@ func (m *Model) onContainerWritePrompt(kind promptKindEnum, value string) tea.Cm
 			m.pendingContainerWrite = containerWrite{}
 			return m.servicesToast(toast.Info, "Limits not changed", err.Error())
 		}
-		w.res = r
+		w.verb, w.res = "resources", r // the prompt kind is the verb
 		m.askContainerWrite(w)
 	}
 	return nil
