@@ -144,6 +144,13 @@ func (c Conn) EngineLabel() string {
 		return "SQLite"
 	case "redis":
 		return "Redis"
+	case "sqlserver":
+		if IsAzureSQLHost(c.Host) {
+			return "Azure SQL"
+		}
+		return "SQL Server"
+	case "oracle":
+		return "Oracle"
 	}
 	return c.Driver
 }

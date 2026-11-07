@@ -51,6 +51,9 @@ func NewSQLSession(ctx context.Context, conn Conn, password string) (*SQLSession
 	case "mysql":
 		dialect = MySQLDialect{}
 	default:
+		if err := DriverMissing(driver); err != nil {
+			return nil, err
+		}
 		return nil, fmt.Errorf("unsupported SQL driver %q", conn.Driver)
 	}
 	db, release, err := openSQLDB(conn, password)

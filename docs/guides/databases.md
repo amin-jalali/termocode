@@ -89,6 +89,8 @@ The PostgreSQL family has presets on the PostgreSQL driver: CockroachDB (port 26
 - Amazon Redshift: no materialized views or sequences in the tree, and no EXPLAIN ANALYZE (`x`/analyze shows the plan only).
 - CockroachDB and Redshift: the plan is the server's text plan (plain `EXPLAIN`).
 
+SQL Server / Azure SQL (`"driver": "sqlserver"`, also `mssql` or `azuresql`; port 1433) and Oracle (`"driver": "oracle"`) can be saved in the config, but their drivers are not built in yet: connecting says so. A `*.database.windows.net` host turns on TLS (`encrypt=true`); `"params": {"fedauth": "ActiveDirectoryDefault"}` asks for Microsoft Entra (AD) sign-in once the driver is in.
+
 - **A server type** asks for the host, port, user and database. Then it asks for a masked password.
 - **From a URL** asks you to paste one, for example `postgres://app@localhost:5432/app`. Schemes `postgres`, `postgresql`, `mysql`, `mariadb`, `redis`, `rediss`, `sqlite` and `file` work. A password in the URL is taken out and stored as a secret. If the URL has none, you are asked for it.
 

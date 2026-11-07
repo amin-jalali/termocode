@@ -165,6 +165,8 @@ func defaultPort(d string) int {
 		return 8123
 	case "cassandra":
 		return 9042
+	case "sqlserver":
+		return 1433
 	}
 	return 0
 }
@@ -174,6 +176,8 @@ func normDriver(d string) string {
 		return "mysql"
 	case "scylla", "scylladb":
 		return "cassandra"
+	case "mssql", "azuresql":
+		return "sqlserver"
 	}
 	return d
 }
