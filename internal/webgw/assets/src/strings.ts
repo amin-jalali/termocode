@@ -324,7 +324,8 @@ export const S = {
   "git.ask_laptop": "Ask the laptop",
   "git.commit.one": "Commit 1 file",
   "git.commit.other": "Commit {n} files",
-  "git.commit_confirm": "Commit {n} staged files to {branch}?",
+  "git.commit_confirm.one": "Commit 1 staged file to {branch}?",
+  "git.commit_confirm.other": "Commit {n} staged files to {branch}?",
   "git.commit_do": "Commit",
   "git.committed": "Committed {hash} · {n} files",
   "git.subject": "Commit message",
@@ -846,7 +847,7 @@ export function t(key: StringKey, vars?: Record<string, string | number>): strin
   });
 }
 
-type Plural = "pill.cards" | "edit.sent" | "git.commit" | "e.idle" | "e.max" | "gg.files" | "im.models_n" | "im.tools_n";
+type Plural = "pill.cards" | "edit.sent" | "git.commit" | "git.commit_confirm" | "e.idle" | "e.max" | "gg.files" | "im.models_n" | "im.tools_n";
 
 /** tn picks the .one or .other form of a plural key by n. */
 export function tn(key: Plural, n: number, vars?: Record<string, string | number>): string {

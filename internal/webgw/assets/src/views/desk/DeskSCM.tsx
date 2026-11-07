@@ -266,7 +266,7 @@ export function DeskSCM() {
               />
             </div>
             {asking ? (
-              <Ask text={t("git.commit_confirm", { n: staged.length, branch })} verb={t("git.commit_do")} onYes={commit} onNo={() => setAsking(false)} />
+              <Ask text={tn("git.commit_confirm", staged.length, { branch })} verb={t("git.commit_do")} onYes={commit} onNo={() => setAsking(false)} />
             ) : (
               <div class="pv-split scm-commit">
                 <button type="button" class="pv-btn" data-act="commit" aria-disabled={ready ? undefined : "true"} title={tn("git.commit", staged.length)} onClick={askCommit}>
