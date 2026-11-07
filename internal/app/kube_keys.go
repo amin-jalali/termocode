@@ -91,6 +91,12 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			m.askKubeDelete(kubeKindOf(r.section), r.name)
 			return m, nil
 		}
+	case "o":
+		if have && r.kind == kubeRowItem && r.section != kubeForwardsSection {
+			return m, m.kubeEditYAML(kubeKindOf(r.section), r.name)
+		}
+	case "a":
+		return m, m.kubeApplyCurrentFile()
 	case "f":
 		return m, m.kubeToggleSelectedForward()
 	case "y":
@@ -148,6 +154,8 @@ func kubeKeyRows() []confirm.KeyRow {
 		[]string{"r", "deployment: restart (asks first)"},
 		[]string{"s", "deployment: scale (asks first)"},
 		[]string{"d", "delete (asks first)"},
+		[]string{"o", "edit the YAML in a file"},
+		[]string{"a", "apply the editor's file (diff, then asks)"},
 		[]string{"Cluster"},
 		[]string{"c n", "pick the context, the namespace"},
 		[]string{"[ ]", "back, forward (context / namespace)"},

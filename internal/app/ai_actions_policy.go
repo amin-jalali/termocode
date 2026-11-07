@@ -416,6 +416,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"kubernetes-context":           aiNever(aiNoPicker + "; the context is the user's choice"),
 	"kubernetes-namespace":         aiNever(aiNoPicker),
 	"kubernetes-snippet":           aiNever(aiNoPicker), // kube_snippet.go
+	"kubernetes-apply-file":        aiNever("writes to the cluster; only the user applies a file, after the diff"),
 	"containers-context-use":       aiNever("a context switch is the user's choice; it moves every container action to another host"),
 	"containers-context-default":   aiNever("changes the machine-wide Docker default"),
 	"containers-registry-connect":  aiNever("signing in to a registry takes the user's token; it is the user's"),

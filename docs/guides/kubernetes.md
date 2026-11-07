@@ -67,6 +67,8 @@ kubeconfig, so other terminals keep their context.
 | `r` | Deployment: restart it (asks first). |
 | `s` | Deployment: scale it (asks the number, then asks first). |
 | `d` | Delete the row's object (asks first). |
+| `o` | Edit the row's YAML in a file (not Secrets). Save it, then press `a`. |
+| `a` | Apply the editor's saved file: shows the diff, then asks first. |
 | `c` / `n` | Pick the context / the namespace. |
 | `[` / `]` | Back / forward to the context and namespace you had before. |
 | `R` | Load the lists now. |
@@ -121,6 +123,21 @@ alone never deletes anything. **Delete** does not wait: the list shows
 the object as it goes. A pod that belongs to a deployment or a job is
 made again; deleting a deployment or a job deletes its pods too.
 
+## Edit and apply YAML
+
+**Kubernetes: Apply Current File…** (or `a` in the view) applies the file
+of the editor tab to the cluster. Save it first. termocode runs
+`kubectl diff -f` (a server-side dry-run: nothing changes) and opens the
+diff as a read-only page. Then a card shows the file, the context, the
+namespace, the number of changed lines and the command (`kubectl
+apply -f`). **Cancel** is the first button and has the focus, so `Enter`
+or `Esc` alone never applies anything. When the cluster already matches
+the file, nothing is asked.
+
+`o` on a row writes the object's YAML to a private temp file and opens it
+in the editor. Change it, save it, and apply it as above. Secrets are not
+opened this way: their values are masked, so the copy would break them.
+
 ## New manifest from a snippet
 
 **Kubernetes: New Manifest from Snippet…** opens a new YAML buffer with a
@@ -135,8 +152,8 @@ The AI can open the view and load it again. It can also read the
 cluster, in the context the view shows: `kube_list` (the four lists),
 `kube_describe` (one object) and `kube_logs` (the last lines of a pod).
 Secrets in their answers are hidden. The AI can never restart or
-scale a deployment, delete an object, start a port-forward or switch
-the context.
+scale a deployment, delete an object, apply a file, start a
+port-forward or switch the context.
 
 ## When something is wrong
 

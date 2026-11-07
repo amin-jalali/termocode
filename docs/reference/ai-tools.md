@@ -2332,6 +2332,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `itermoc-profiles` | Itermoc: Profiles | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
 | `itermoc-services` | Itermoc: Services | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
 | `join-lines` | Edit: Join Lines | confirm (fileWrite) |   |
+| `kubernetes-apply-file` | Kubernetes: Apply Current File… | never | writes to the cluster; only the user applies a file, after the diff |
 | `kubernetes-context` | Kubernetes: Switch Context… | never | opens a picker or prompt that only the user can answer; use a typed tool; the context is the user's choice |
 | `kubernetes-namespace` | Kubernetes: Switch Namespace… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `kubernetes-refresh` | Kubernetes: Refresh | auto |   |
