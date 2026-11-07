@@ -85,6 +85,72 @@ local function aliases(text)
  end
  return map
 end
+-- CTE and FROM-subquery columns (DBX-3): read from the select list of
+-- the group; WITH name [(a,b)] AS (...) and (SELECT ...) [AS] alias.
+local KWSET={}
+for _,k in ipairs(KW) do if not k:find(' ') then KWSET[k]=1 end end
+local ID='[%w_\34\96]+'
+local function top_split(s)
+ local parts,depth,cur={},0,1
+ for i=1,#s do
+  local ch=s:sub(i,i)
+  if ch=='(' then depth=depth+1 elseif ch==')' then depth=depth-1
+  elseif ch==',' and depth==0 then parts[#parts+1]=s:sub(cur,i-1);cur=i+1 end
+ end
+ parts[#parts+1]=s:sub(cur)
+ return parts
+end
+local function trim(s) return (s:gsub('^%s+',''):gsub('%s+$','')) end
+local function select_cols(inner)
+ local body=inner:match('^%s*[Ss][Ee][Ll][Ee][Cc][Tt]%s+(.*)$')
+ if not body then return nil end
+ body=body:gsub('^[Dd][Ii][Ss][Tt][Ii][Nn][Cc][Tt]%s+','')
+ local depth,stop=0,#body+1
+ for i=1,#body do
+  local ch=body:sub(i,i)
+  if ch=='(' then depth=depth+1 elseif ch==')' then depth=depth-1
+  elseif depth==0 and i>1 and body:sub(i-1,i-1):match('%s') and body:sub(i,i+3):lower()=='from' and body:sub(i+4,i+4):match('[%s(]') then stop=i;break end
+ end
+ local cols={}
+ for _,item in ipairs(top_split(body:sub(1,stop-1))) do
+  item=trim(item)
+  local name=item:match('%s[Aa][Ss]%s+('..ID..')$') or item:match('%)%s*('..ID..')$')
+   or item:match('^[%w_.\34\96]+%s+('..ID..')$') or item:match('^'..ID..'%.('..ID..')$') or item:match('^('..ID..')$')
+  if name and not name:match('^%d+$') and not KWSET[name:lower()] then cols[#cols+1]=unq(name) end
+ end
+ return cols
+end
+local function derived(text)
+ local map,ctes={},{}
+ local i=1
+ while true do
+  local s,e=text:find('%b()',i)
+  if not s then break end
+  local cols=select_cols(text:sub(s+1,e-1))
+  if cols then
+   local pre=text:sub(1,s-1)
+   local name,list=pre:match('('..ID..')%s*(%b())%s+[Aa][Ss]%s*$')
+   if not name then name=pre:match('('..ID..')%s+[Aa][Ss]%s*$') end
+   if name and not KWSET[name:lower()] then
+    if list then
+     cols={}
+     for _,c in ipairs(top_split(list:sub(2,-2))) do c=trim(c);if c~='' then cols[#cols+1]=unq(c) end end
+    end
+    name=unq(name):lower()
+    map[name]=cols;ctes[#ctes+1]=name
+   else
+    local post=text:sub(e+1)
+    local alias=post:match('^%s+[Aa][Ss]%s+([%w_]+)') or post:match('^%s+([%w_]+)')
+    if alias then
+     alias=alias:lower()
+     if not NOALIAS[alias] and not KWSET[alias] then map[alias]=cols end
+    end
+   end
+  end
+  i=s+1
+ end
+ return map,ctes
+end
 function _G._termocode_sql_omni(findstart,base)
  local line=api.nvim_get_current_line()
  local col=api.nvim_win_get_cursor(0)[2]
@@ -101,7 +167,16 @@ function _G._termocode_sql_omni(findstart,base)
  local qual=before:sub(1,col-#word):match('([%w_$\34\96]+)%.$')
  if qual then
   local q=unq(qual):lower()
-  local tbl=aliases(statement_text())[q] or q
+  local text=statement_text()
+  local tbl=aliases(text)[q] or q
+  local der=derived(text)
+  local dcols=der[q] or der[tbl]
+  if dcols then
+   for _,c in ipairs(dcols) do
+    if c:lower():sub(1,#lb)==lb then add(quoted(S1,c),'column') end
+   end
+   return out
+  end
   local cols=S1.cols and S1.cols[tbl]
   if cols then
    for _,c in ipairs(cols) do
@@ -142,6 +217,10 @@ function _G._termocode_sql_omni(findstart,base)
  end
  for _,sc in ipairs(S1.schemas or {}) do
   if n<300 and sc:lower():sub(1,#lb)==lb then add(quoted(S1,sc),'schema');n=n+1 end
+ end
+ local _,ctes=derived(statement_text())
+ for _,c in ipairs(ctes) do
+  if c:sub(1,#lb)==lb then add(quoted(S1,c),'cte') end
  end
  return out
 end
