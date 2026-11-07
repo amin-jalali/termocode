@@ -246,7 +246,7 @@ func TestPersianStringsHaveTheSameKeys(t *testing.T) {
 		}
 	}
 	for k := range enKeys {
-		if !faKeys[k] {
+		if !faKeys[k] && !strings.HasPrefix(k, "ph.proj.") { // phone app keys are English only (PhoneOnly)
 			t.Errorf("strings.fa.ts has no %s", k)
 		}
 	}
