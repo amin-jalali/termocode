@@ -80,10 +80,10 @@ func TestResearchE2EFakeSearch(t *testing.T) {
 		t.Fatal(err)
 	}
 	b := ws.View(args, out)
-	if b == nil || b.Kind != blocks.KindList || b.Source != "web_search" || len(b.Items) != 1 {
+	if b == nil || b.Kind != blocks.KindList || b.Source != "" || len(b.Items) != 1 {
 		t.Fatalf("sources block %+v", b)
 	}
-	if err := b.Validate(); err != nil {
+	if err := viewFilled(b).Validate(); err != nil {
 		t.Fatal(err)
 	}
 	it := b.Items[0]
@@ -107,10 +107,10 @@ func TestResearchE2EFakeSearch(t *testing.T) {
 		t.Fatal(err)
 	}
 	b = wf.View(args, out)
-	if b == nil || b.Kind != blocks.KindText || b.Source != "web_fetch" || b.Title != "API" {
+	if b == nil || b.Kind != blocks.KindText || b.Source != "" || b.Title != "API" {
 		t.Fatalf("page block %+v", b)
 	}
-	if err := b.Validate(); err != nil {
+	if err := viewFilled(b).Validate(); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(mdText(b.MD), "Use Foo()") {
@@ -146,7 +146,7 @@ func TestResearchViewsCut(t *testing.T) {
 	if n := len(mdText(b.MD)); n > researchMaxText+64 {
 		t.Errorf("text %d bytes, max %d", n, researchMaxText)
 	}
-	if err := b.Validate(); err != nil {
+	if err := viewFilled(b).Validate(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -164,4 +164,12 @@ func TestResearchViewsCut(t *testing.T) {
 	if researchSearchView(map[string]any{"query": "q"}, "1. Bad\n   javascript:alert(1)\n").Items[0].Ref != nil {
 		t.Error("a non-http url got a ref")
 	}
+}
+
+// viewFilled is b as the agent sends it: a view leaves its id and source
+// to the agent (toolBlock), so the test fills them before Validate.
+func viewFilled(b *blocks.Block) *blocks.Block {
+	c := *b
+	c.ID, c.Source = "view", "tool"
+	return &c
 }

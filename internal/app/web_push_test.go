@@ -32,7 +32,7 @@ type webPushRig struct {
 
 func newWebPushRig(t *testing.T) *webPushRig {
 	t.Helper()
-	r := &webPushRig{store: secrets.NewStore(secretstest.NewMemory(), secrets.Options{}), hits: map[string]int{}, code: http.StatusCreated}
+	r := &webPushRig{store: secrets.NewStore(secretstest.NewMemory(), secrets.Options{Dir: t.TempDir()}), hits: map[string]int{}, code: http.StatusCreated}
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		r.mu.Lock()
 		r.hits[req.URL.Path]++
@@ -129,7 +129,7 @@ func TestWebPushKeyLivesInTheSecretStore(t *testing.T) {
 	if k2.Public() != k.Public() {
 		t.Error("a second key was made")
 	}
-	locked := secrets.NewStore(secretstest.NewLockedMemory("pw"), secrets.Options{})
+	locked := secrets.NewStore(secretstest.NewLockedMemory("pw"), secrets.Options{Dir: t.TempDir()})
 	webPushStore = func() (secrets.Store, error) { return locked, nil }
 	if k, st := webPushKey(true); k != nil || st != webPushLocked {
 		t.Errorf("locked store: %v %q", k, st)

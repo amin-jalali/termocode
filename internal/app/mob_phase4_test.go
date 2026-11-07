@@ -56,6 +56,9 @@ func TestMobPhase4OpsWired(t *testing.T) {
 			t.Errorf("%s: size cap %d", op, p.MaxBytes)
 		}
 		_, ask := webAskOps[op]
+		if _, later := webAskLaterOps[op]; later { // the card after a read off the UI thread
+			ask = true
+		}
 		_, now := webOps[op]
 		switch {
 		case card && !p.LaptopCard:

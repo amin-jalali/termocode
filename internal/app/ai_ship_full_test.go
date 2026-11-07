@@ -2,6 +2,7 @@ package app
 
 import (
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 // (one per call, the last one repeats), the diff, the commit and the
 // folder removal of the archive step.
 type wtShipFakes struct {
+	mu      sync.Mutex // the fakes run on the commands' goroutines
 	dirty   []int
 	commits []string
 	removed []string
@@ -28,6 +30,8 @@ func wtShipSwap(t *testing.T, dirty ...int) *wtShipFakes {
 	f := &wtShipFakes{dirty: dirty}
 	oldDirty, oldDiff, oldCommit, oldRemove := wtDirtyRun, wtShipDiffRun, wtShipCommitRun, wtRemoveRun
 	wtDirtyRun = func(string) (int, error) {
+		f.mu.Lock()
+		defer f.mu.Unlock()
 		n := f.dirty[0]
 		if len(f.dirty) > 1 {
 			f.dirty = f.dirty[1:]
@@ -37,12 +41,41 @@ func wtShipSwap(t *testing.T, dirty ...int) *wtShipFakes {
 	wtShipDiffRun = func(string, bool, int) (string, bool, error) {
 		return "diff --git a/x.go b/x.go\n+package x\n", false, nil
 	}
-	wtShipCommitRun = func(_, msg string) error { f.commits = append(f.commits, msg); return nil }
-	wtRemoveRun = func(_, path string, _ bool) error { f.removed = append(f.removed, path); return nil }
+	wtShipCommitRun = func(_, msg string) error {
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		f.commits = append(f.commits, msg)
+		return nil
+	}
+	wtRemoveRun = func(_, path string, _ bool) error {
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		f.removed = append(f.removed, path)
+		return nil
+	}
 	t.Cleanup(func() {
 		wtDirtyRun, wtShipDiffRun, wtShipCommitRun, wtRemoveRun = oldDirty, oldDiff, oldCommit, oldRemove
 	})
 	return f
+}
+
+// commitList and removedList copy what the fakes saw so far.
+func (f *wtShipFakes) commitList() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]string(nil), f.commits...)
+}
+
+func (f *wtShipFakes) removedList() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]string(nil), f.removed...)
+}
+
+func (f *wtShipFakes) setDirty(d ...int) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.dirty = d
 }
 
 // wtShipModel is the ship model with one user worktree on feat/x.
@@ -143,8 +176,8 @@ func TestWorktreeShipFullFlow(t *testing.T) {
 		}
 	}
 	wtShipDrive(t, m, m.answerAIRulesForTest("commit"), card(confirmKindAIShipPush))
-	if len(g.commits) != 1 || g.commits[0] != "feat: ship it" {
-		t.Fatalf("commits %q", g.commits)
+	if len(g.commitList()) != 1 || g.commitList()[0] != "feat: ship it" {
+		t.Fatalf("commits %q", g.commitList())
 	}
 	if sh := m.aiS().ship; sh == nil || !sh.full || sh.wtPath != wt {
 		t.Fatalf("not a full ship of the worktree: %+v", sh)
@@ -180,9 +213,9 @@ func TestWorktreeShipFullFlow(t *testing.T) {
 	if m.confirm.SafeID() != "cancel" {
 		t.Fatalf("the archive card is not Cancel first: %q", m.confirm.SafeID())
 	}
-	wtShipDrive(t, m, m.answerAIRulesForTest("archive"), func() bool { return len(g.removed) == 1 })
-	if g.removed[0] != wt {
-		t.Fatalf("removed %v", g.removed)
+	wtShipDrive(t, m, m.answerAIRulesForTest("archive"), func() bool { return len(g.removedList()) == 1 })
+	if g.removedList()[0] != wt {
+		t.Fatalf("removed %v", g.removedList())
 	}
 	want := "probe push probe pr probe merge"
 	if got := strings.Join(f.calls, " "); got != want {
@@ -209,8 +242,8 @@ func TestWorktreeShipCommitCard(t *testing.T) {
 	if c := m.onAIConfirmClosed(); c != nil {
 		t.Error("Esc started work")
 	}
-	if len(g.commits) != 0 || m.aiS().ship != nil {
-		t.Fatalf("committed %q, ship %v", g.commits, m.aiS().ship != nil)
+	if len(g.commitList()) != 0 || m.aiS().ship != nil {
+		t.Fatalf("committed %q, ship %v", g.commitList(), m.aiS().ship != nil)
 	}
 
 	wtShipDrive(t, m, m.wtShipItem(it), card)
@@ -219,16 +252,16 @@ func TestWorktreeShipCommitCard(t *testing.T) {
 		t.Fatal("Edit message… opened no prompt")
 	}
 	cmd := m.handlePromptSubmit("fix: my own words")
-	wtShipDrive(t, m, cmd, func() bool { return len(g.commits) == 1 && m.aiS().ship != nil })
-	if g.commits[0] != "fix: my own words" {
-		t.Fatalf("commits %q", g.commits)
+	wtShipDrive(t, m, cmd, func() bool { return len(g.commitList()) == 1 && m.aiS().ship != nil })
+	if g.commitList()[0] != "fix: my own words" {
+		t.Fatalf("commits %q", g.commitList())
 	}
 	m.aiShipStop("stop")
 
-	g.dirty = []int{0}
+	g.setDirty(0)
 	cmd = m.wtShipItem(it)
 	wtShipDrive(t, m, cmd, func() bool { return m.aiS().ship != nil })
-	if len(g.commits) != 1 {
+	if len(g.commitList()) != 1 {
 		t.Fatal("a clean worktree was committed")
 	}
 }

@@ -78,7 +78,7 @@ func TestAICannotAnswerWebCards(t *testing.T) {
 		"answerWebPairAsk":         {"web_access.go"},
 		"answerWebPairQR":          {"web_access.go"},
 		"answerWebDeviceRemove":    {"web_access.go"},
-		"openWebPair":              {"web_access.go"},
+		"openWebPair":              {"web_access.go", "ai_chat_comments.go"}, // CMP-88 Share this chat: the owner's Make link button (ai-share-chat is aiNever)
 		"webRevokeDevice":          {"web_access.go"},
 		"answerWebGrant":           {"web_access.go"},
 		"webMakeViewer":            {"web_access.go"},

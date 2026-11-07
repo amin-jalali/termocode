@@ -25,6 +25,7 @@ func imageGenModel(t *testing.T, kind, base string) (*Model, string) {
 	dir, _ := filepath.EvalSymlinks(t.TempDir())
 	t.Chdir(dir)
 	m.ai.slotFake = map[string]aiSlot{ai.SlotMain: {cfg: ai.Config{Kind: kind, APIKey: "sk-test", BaseURL: base}}}
+	m.ai.provider = fakeAIProvider{} // a set-up provider: AI palette entries need one
 	return &m, dir
 }
 

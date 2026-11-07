@@ -11,6 +11,9 @@ import (
 // cursorOnHost puts the cursor on the first row of one host kind.
 func cursorOnHost(t *testing.T, m *Model, kind hostKind) {
 	t.Helper()
+	for sec := range m.services.collapsed { // sections may start folded
+		m.services.collapsed[sec] = false
+	}
 	for i, r := range m.services.rows() {
 		if r.kind == svcRowHostItem && r.host == kind {
 			m.services.cursor = i

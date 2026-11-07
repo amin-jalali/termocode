@@ -83,6 +83,7 @@ func xferCtrModel(t *testing.T) (*Model, *xferCtrHost) {
 	t.Helper()
 	t.Setenv(transfer.EnvOverride, "local")
 	mm := newTestModel(t)
+	mm.w, mm.h = 120, 40 // cards draw at a window size
 	h := &xferCtrHost{files: map[string]string{"/app/main.go": "package main\n"}, dirs: map[string]bool{"/app": true}}
 	mm.ws = workspace.Workspace{ID: "container:default/api-1:/app", Kind: workspace.KindContainer, Root: "/app", Host: h}
 	return &mm, h

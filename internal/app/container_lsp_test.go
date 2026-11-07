@@ -230,6 +230,7 @@ func lspContainerModel(t *testing.T, h *fakeLSPHost) *Model {
 	containerMirrorBase = func() (string, error) { return base, nil }
 	t.Cleanup(func() { containerMirrorBase = old })
 	mm := newTestModel(t)
+	mm.w, mm.h = 120, 40 // cards draw at a window size
 	mm.ws = workspace.Workspace{ID: "container:default/api-1:/app", Kind: workspace.KindContainer, Root: "/app", Host: h}
 	mm.containerLSP = &containerLSPState{}
 	t.Cleanup(func() { activeLSPMirror.Store(nil) })
