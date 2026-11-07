@@ -122,7 +122,7 @@ func TestDesktopOnlyStringsLiveInTheWorkbench(t *testing.T) {
 		t.Error("the phone's page imports strings.desk.ts; only the workbench may")
 	}
 	if desk["src/strings.phone.ts"] || reachable(files, "src/main.tsx")["src/strings.phone.ts"] {
-		t.Error("strings.phone.ts is imported outside the phone views (phone.tsx)")
+		t.Error("strings.phone.ts is imported outside the phone views (home.tsx)")
 	}
 	page, onlyDesk := map[string]bool{}, map[string]bool{}
 	for _, e := range parseStrings(t, "src/strings.ts", "S") {

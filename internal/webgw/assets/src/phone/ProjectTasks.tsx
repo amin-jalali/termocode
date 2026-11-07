@@ -106,9 +106,10 @@ function Section({ s, onPick }: { s: ProjectTaskSection; onPick?: (it: ProjectTa
   );
 }
 
-/** ProjectTasksView lists the open project's tasks; onPick receives the
- * tapped task (its id is what an attach of kind ptask / issue / pr names). */
-export function ProjectTasksView({ onPick }: { onPick?: (it: ProjectTask) => void }) {
+/** ProjectTasksView lists a project's tasks (ws: its workspace key for
+ * the door, "" the open one); onPick receives the tapped task (its id is
+ * what an attach of kind ptask / issue / pr names). */
+export function ProjectTasksView({ onPick, ws = "" }: { onPick?: (it: ProjectTask) => void; ws?: string }) {
   const [only, setOnly] = useState<Only>("");
   const [done, setDone] = useState(false);
   const [again, setAgain] = useState(0);
@@ -124,7 +125,8 @@ export function ProjectTasksView({ onPick }: { onPick?: (it: ProjectTask) => voi
     if (done) args.done = true;
     setBusy(true);
     link
-      .request("project.tasks", args)
+      .requestWithID("project.tasks", args, ws || undefined)
+      .result
       .then(
         (r) => {
           if (stop) return;
@@ -137,7 +139,7 @@ export function ProjectTasksView({ onPick }: { onPick?: (it: ProjectTask) => voi
     return () => {
       stop = true;
     };
-  }, [only, done, again, on]);
+  }, [only, done, again, on, ws]);
 
   return (
     <div class="ph-tasks" aria-busy={busy ? "true" : undefined}>

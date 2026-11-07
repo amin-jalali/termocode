@@ -443,10 +443,10 @@ export const S = {
   "nt.no_agents_body": "No agent is installed on the laptop. Install one there, then come back.",
   "nt.viewer_body": "You can only watch. Ask the laptop for control to start a task.",
   "more.runs": "Runs",
+  "wfv.needs": "Needs you",
   "more.workflows": "Workflows",
   // The phone's live board (MOB-18); English only, no Persian text.
   "more.board": "Live board",
-  "wfv.needs": "Needs you",
   "board.col.working": "Working",
   "board.col.done": "Done today",
   "board.columns": "Board columns",

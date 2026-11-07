@@ -11,6 +11,8 @@ import { NotifyField } from "../ui/NotifyField";
 import { BookmarkField } from "../ui/BookmarkField";
 import { Segmented } from "../ui/Segmented";
 import { TopicBody } from "./Placeholder";
+import { SkeletonRows } from "../ui/Skeleton";
+import { Button } from "../ui/Button";
 import { RunsView } from "./more/RunsView";
 import { WorkflowsView } from "./more/WorkflowsView";
 import { BoardRoute } from "./more/BoardRoute";
@@ -68,6 +70,28 @@ function ToolsView() {
   );
 }
 
+/** PhoneProject is the phone's projects list or one project's page
+ * (MOBUX-6, MOBUX-7), from home.js (the one phone chunk): a skeleton while it loads, Try
+ * again when the load failed. */
+function PhoneProject({ id }: { id: string }) {
+  const m = phone.value;
+  useEffect(() => {
+    if (!phone.peek()) loadHome().catch(() => undefined);
+  }, []);
+  if (m) return id ? <m.ProjectPage id={id} /> : <m.ProjectsPage />;
+  return (
+    <View tab="more" title={t("loading")} name="project-loading">
+      {phoneFailed.value ? (
+        <Button small onClick={() => loadHome().catch(() => undefined)}>
+          {t("retry")}
+        </Button>
+      ) : (
+        <SkeletonRows rows={6} mono={false} />
+      )}
+    </View>
+  );
+}
+
 /** ReviewLazy is #/more/review (MOB-14): the phone views' review, loaded
  * from home.js on first use. */
 function ReviewLazy() {
@@ -95,6 +119,7 @@ type OnOff = "on" | "off";
 export function MoreView() {
   const sub = route.value.tab === "more" ? route.value.rest : "";
   if (sub === "tools") return <ToolsView />;
+  if (sub === "projects" || sub.startsWith("projects/")) return <PhoneProject id={sub.slice("projects/".length)} />;
   if (sub === "search") return <SearchView />;
   if (sub === "tasks") return <TasksView />;
   if (sub === "new-task") return <NewTaskView />;
@@ -207,6 +232,9 @@ export function MoreView() {
               {t("pill.review")}
             </button>
           )}
+          <button type="button" class="more-link" data-sub="projects" onClick={() => go({ tab: "more", rest: "projects", query: {} })}>
+            {t("ph.proj.title")}
+          </button>
         </nav>
         <section class="group" aria-labelledby="g-phone">
           <h2 class="group-title" id="g-phone">
