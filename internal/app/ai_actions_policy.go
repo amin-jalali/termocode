@@ -377,6 +377,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-transaction-mode":          aiNever(aiNoAIConfig),
 	"db-commit":                    aiNever("the user's transaction"),
 	"db-rollback":                  aiNever("the user's transaction"),
+	"db-sessions":                  aiNever("the user's sessions and transactions"),
 	"db-submit-changes":            aiNever("the user's pending edits; use the database query tool"),
 	"db-revert-changes":            aiNever("the user's pending edits"),
 	"db-result-pin":                aiAuto(),

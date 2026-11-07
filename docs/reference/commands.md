@@ -221,6 +221,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Run Statement or Selection | `db-run` |   |   |
 | Databases: SSL Settings… | `db-ssl` |   |   |
 | Databases: Select 100 Rows in Console | `db-select` |   |   |
+| Databases: Sessions… | `db-sessions` |   |   |
 | Databases: Set Redis Key TTL… | `redis-set-ttl` |   |   |
 | Databases: Show DDL | `db-ddl` |   |   |
 | Databases: Submit Pending Changes… | `db-submit-changes` |   |   |

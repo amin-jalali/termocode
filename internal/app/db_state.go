@@ -84,6 +84,7 @@ type dbState struct {
 	addFromURL          bool
 	menuRow             dbTreeRow
 	pendingDisconnectID string
+	closeSessionKey     string // the session Databases: Sessions… asks to close
 	sessions            map[string]dbclient.Session
 	passwords           map[string]string
 	connectionEpochs    map[string]uint64

@@ -2074,6 +2074,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-run` | Databases: Run Statement or Selection | never | SQL runs require the database query tool and its guard |
 | `db-run-file` | Databases: Run File | never | SQL runs require the database query tool and its guard |
 | `db-select` | Databases: Select 100 Rows in Console | never | SQL runs require the database query tool and its guard |
+| `db-sessions` | Databases: Sessions… | never | the user's sessions and transactions |
 | `db-ssl` | Databases: SSL Settings… | never | AI provider, credentials and approvals stay with the user |
 | `db-submit-changes` | Databases: Submit Pending Changes… | never | the user's pending edits; use the database query tool |
 | `db-test-connection` | Databases: Test Connection | auto |   |
