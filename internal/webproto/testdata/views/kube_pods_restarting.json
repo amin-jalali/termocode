@@ -1,0 +1,10 @@
+{
+  "note": "pods that restart: a typed number filter on restarts, most restarts first (MOB-73)",
+  "spec": {"view": "kube.pods", "layout": "table", "fields": ["name", "status"], "filter": [{"field": "restarts", "op": "gt", "value": "2"}], "sort": [{"field": "restarts", "desc": true}]},
+  "src": {"context": "staging", "namespace": "shop", "pods": [
+    {"name": "api-1", "ready": "1/1", "status": "Running", "restarts": 0, "containers": ["api"]},
+    {"name": "worker-1", "ready": "0/1", "status": "CrashLoopBackOff", "restarts": 12, "containers": ["worker"]},
+    {"name": "web-1", "ready": "1/1", "status": "Running", "restarts": 3, "containers": ["web"]}
+  ], "deployments": [], "services": [], "jobs": []},
+  "want": {"kind": "table", "total": 2, "rows": [["worker-1", "CrashLoopBackOff"], ["web-1", "Running"]]}
+}

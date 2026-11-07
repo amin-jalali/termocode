@@ -1,0 +1,10 @@
+{
+  "note": "tests: only failed cases, as a table (MOB-73)",
+  "spec": {"view": "tests", "layout": "table", "fields": ["label", "state"], "filter": [{"field": "kind", "op": "eq", "value": "case"}, {"field": "state", "op": "eq", "value": "failed"}]},
+  "src": {"state": "idle", "counts": {"total": 3, "passed": 1, "failed": 1, "skipped": 0, "running": 0}, "items": [
+    {"id": "p:internal/a", "kind": "package", "label": "internal/a", "state": "failed"},
+    {"id": "c:internal/a/a_test.go:TestOK", "kind": "case", "label": "TestOK", "state": "passed"},
+    {"id": "c:internal/a/a_test.go:TestBad", "kind": "case", "label": "TestBad", "state": "failed", "fail_path": "internal/a/a_test.go", "fail_line": 12}
+  ]},
+  "want": {"kind": "table", "total": 1, "rows": [["TestBad", "failed"]]}
+}

@@ -1,0 +1,9 @@
+{
+  "note": "containers: a state filter, the table keeps only the running ones (MOB-73)",
+  "spec": {"view": "containers", "layout": "table", "fields": ["name", "state"], "filter": [{"field": "state", "op": "eq", "value": "running"}]},
+  "src": {"engine": "docker", "containers": [
+    {"id": "aaa", "name": "db", "image": "postgres:16", "state": "running", "status": "Up 2 hours"},
+    {"id": "bbb", "name": "old", "image": "redis:7", "state": "exited", "status": "Exited (0)"}
+  ]},
+  "want": {"kind": "table", "total": 1, "rows": [["db", "running"]]}
+}

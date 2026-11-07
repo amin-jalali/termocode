@@ -1961,6 +1961,20 @@
       "phase": "v2"
     },
     {
+      "op": "ai.usage",
+      "args": "EmptyArgs",
+      "result": "AIUsage",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "usercmds.list",
       "args": "EmptyArgs",
       "result": "UserCmdList",
@@ -5211,6 +5225,69 @@
         "inline",
         "nextEdit",
         "worktrees"
+      ],
+      "additionalProperties": true
+    },
+    "AIUsage": {
+      "type": "object",
+      "properties": {
+        "by_agent": {
+          "items": {
+            "$ref": "#/defs/AIUsageLine"
+          },
+          "type": "array"
+        },
+        "by_model": {
+          "items": {
+            "$ref": "#/defs/AIUsageLine"
+          },
+          "type": "array"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "total": {
+          "$ref": "#/defs/AIUsageLine"
+        }
+      },
+      "required": [
+        "scope",
+        "by_model",
+        "by_agent",
+        "total"
+      ],
+      "additionalProperties": true
+    },
+    "AIUsageLine": {
+      "type": "object",
+      "properties": {
+        "billing": {
+          "type": "string"
+        },
+        "calls": {
+          "type": "integer"
+        },
+        "cost_usd": {
+          "type": "number"
+        },
+        "input": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "output": {
+          "type": "integer"
+        },
+        "priced": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "calls",
+        "input",
+        "output"
       ],
       "additionalProperties": true
     },

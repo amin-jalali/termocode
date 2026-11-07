@@ -1,0 +1,6 @@
+{
+  "note": "a log view: the container's last lines as one code block, redaction kept (MOB-73)",
+  "spec": {"view": "logs.container", "args": {"id": "aaa"}},
+  "src": {"id": "aaa", "lines": ["listening on :5432", "password=•••••• accepted"], "redacted": 1},
+  "want": {"kind": "text", "total": 2, "md": {"k": "doc", "c": [{"k": "codeblock", "text": "listening on :5432\npassword=•••••• accepted"}]}}
+}
