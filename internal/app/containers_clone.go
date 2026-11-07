@@ -20,8 +20,8 @@ import (
 // names them (-e NAME) and the tab's environment carries the values.
 
 const (
-	promptKindContainerRunOptions promptKindEnum  = 5342
-	confirmKindContainerClone     confirmKindEnum = 5342
+	promptKindContainerRunOptions promptKindEnum  = 5352
+	confirmKindContainerClone     confirmKindEnum = 5352
 )
 
 // clonePending is the Duplicate / Recreate card's plan.

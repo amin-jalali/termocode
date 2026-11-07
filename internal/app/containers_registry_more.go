@@ -29,12 +29,12 @@ import (
 // termocode never runs a cloud CLI.
 
 const (
-	confirmKindRegistryAuth      confirmKindEnum = 5343
-	confirmKindRegistryDeleteTag confirmKindEnum = 5344
+	confirmKindRegistryAuth      confirmKindEnum = 5353
+	confirmKindRegistryDeleteTag confirmKindEnum = 5354
 	confirmKindRegistryCloudHint confirmKindEnum = 5345
 
-	promptKindRegistryCatalogHost promptKindEnum = 5343
-	promptKindRegistryAuthUser    promptKindEnum = 5344
+	promptKindRegistryCatalogHost promptKindEnum = 5353
+	promptKindRegistryAuthUser    promptKindEnum = 5354
 
 	pickerKindRegistryCatalog pickerKindEnum = 5343
 )

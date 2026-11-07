@@ -76,6 +76,7 @@ when something changed. When you hide the view (another activity item,
 | `W` | open a folder of the running container as the workspace |
 | `t` | attach to a container; on an image, tag it |
 | `S` | follow live stats |
+| `T` | debug a running container with a separate toolbox container (see [Debug toolbox](#debug-toolbox)) |
 | `i` | inspect: a read-only JSON page in the editor |
 | `L` | logs with options: tail, since, timestamps; save to a file; search |
 | `I` | details: status, exit code, restarts, health log, processes, mounts, labels, env names (no values) |
@@ -94,6 +95,7 @@ when something changed. When you hide the view (another activity item,
 | `n` / `i` / `x` | on CONTEXTS: create a context (name, host, TLS files; asks first) / inspect it / remove it (asks first) |
 | `R` | refresh all |
 | `m` | choose the sections (the **⋯** menu) |
+| `!` | your custom commands for the row (see [Custom commands](#custom-commands)) |
 | `Esc` | clear the filter; without a filter, focus the editor |
 
 Mouse: click moves the cursor; a click on a header or `▸` / `▾` folds it;
@@ -325,6 +327,81 @@ in use is kept, and built-in networks cannot be removed. `z` on either heading
 asks before pruning. Volume pruning lists only unnamed volumes (their data
 is deleted); volumes with a name are kept. On VOLUMES, `d` reads disk usage once and fills in the
 reported sizes. Disk usage is not queried in the background.
+
+## Dockerfiles and compose files
+
+In a Dockerfile every `FROM` line shows a **▸ build** lens at the right
+edge (**▸ build to <stage>** on a named stage that is not the last one).
+In a compose file every service shows **▸ up <service>**. Click the lens,
+or run **Containers: Run Dockerfile Stage or Compose Service at Cursor**
+with the cursor anywhere in that block. A card shows the full command
+first (**Cancel** is the default); **Build** or **Start** runs it in a
+terminal tab.
+
+**Containers: Add Docker Files…** writes a starter `Dockerfile`,
+`compose.yaml` and `.dockerignore`. The template that fits the folder
+(Go, Node.js, Python, static site, or a plain Alpine shell) is listed
+first. The card lists the files it creates and the files that already
+exist; existing files are never overwritten.
+
+Your own templates: **Containers: Open Docker Templates Folder** opens
+`docker-templates/` in the config folder. Each sub-folder there is one
+template; its files are copied as they are.
+
+**Containers: Add Compose Service…** adds a service (PostgreSQL, MySQL,
+Redis, MongoDB, RabbitMQ, nginx) to the end of the `services:` block of
+the workspace compose file, or creates `compose.yaml`. The card shows the
+service first; a name that is already there is refused.
+
+`tasks.json` also takes `"type": "docker-build"`, `"docker-run"` and
+`"docker-compose"` tasks, and **Run Task…** offers docker build and
+compose up / down when the folder has a Dockerfile or compose file.
+
+## Custom commands
+
+Add your own row commands in `container-commands.json` in the config
+folder (**Containers: Edit Custom Commands** opens it, with an example the
+first time). Each entry has a `name`, a `view` (`containers`, `images`,
+`volumes`, `networks`, `compose`, `pods`, `deployments`, `services`,
+`jobs`), an `argv` list and an optional `key`:
+
+```json
+{ "commands": [
+  { "name": "Top processes", "view": "containers", "key": "w",
+    "argv": ["docker", "top", "{{id}}"] }
+] }
+```
+
+Placeholders: `{{id}}`, `{{name}}`, `{{image}}`, `{{context}}`,
+`{{namespace}}`. `!` on a row (or **Custom Commands…** in the row menu, or
+**Containers: Run Custom Command on Row…**) lists the commands of that
+view; the `key` runs one straight from the view. A key the view already
+uses is refused. Every command shows a card with the command as it will
+run (**Cancel** first). There is no shell: each `argv` entry is one
+argument, and a row value that would start with `-` is refused.
+
+## Several contexts at once
+
+**Containers: Show All Contexts Together** adds an **ALL CONTEXTS**
+section above HELP. It asks every docker context (or podman connection)
+at the same time and lists their containers, grouped by context. A
+context that does not answer shows one line with its error; the others
+still show. The rows only show: `Enter` uses that context in this
+session (your default stays as it is), then the usual keys work on its
+rows in CONTAINERS. `y` copies the id, `r` loads the section again. It
+never loads on a timer. Run the command again to hide the section.
+
+## Debug toolbox
+
+Some images have no shell or tools (distroless). `T` on a running
+container (or **Debug with Toolbox…** in its menu, or **Containers: Debug
+Selected with Toolbox…**) asks for a toolbox image (`busybox:stable` by
+default), then shows the command on a card (**Cancel** first). The
+toolbox is a separate, throw-away container that shares the target's
+processes and network (`--pid container:…`, `--network container:…`), so
+`ps`, `netstat` and `wget` see the target. The target is never changed:
+nothing is copied into it and nothing runs inside it. The toolbox is
+removed when its shell ends.
 
 ## Pruning
 

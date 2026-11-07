@@ -438,6 +438,9 @@ func (m *Model) containersList(section string) tea.Cmd {
 	if st == nil || !st.visible || section == "help" {
 		return nil
 	}
+	if section == allContextsSection { // CTX-41 (containers_multi.go)
+		return m.loadAllContexts()
+	}
 	if section == "contexts" && !st.hasContexts() {
 		return nil
 	}
@@ -490,7 +493,7 @@ func (m *Model) containersLoadVisible() tea.Cmd {
 	for _, s := range hostSectionOrder {
 		cmds = append(cmds, m.containersRefresh(s))
 	}
-	cmds = append(cmds, m.containersRefreshContexts())
+	cmds = append(cmds, m.containersRefreshContexts(), m.loadAllContexts()) // CTX-41
 	return tea.Batch(cmds...)
 }
 
@@ -628,6 +631,7 @@ func (m *Model) onContainerHost(msg containerHostMsg) tea.Cmd {
 				cmds = append(cmds, m.containersRefresh(s))
 			}
 		}
+		cmds = append(cmds, m.loadAllContexts()) // CTX-41 (containers_multi.go)
 		if st.registryWantImages {
 			// A registry host was opened before the engine was found.
 			st.registryWantImages = false

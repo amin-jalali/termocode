@@ -323,6 +323,8 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 		return m.onRunOptionsPrompt(value)
 	case promptKindServicesDeployGit: // services_deploy_git.go
 		return m.onDeployGitPrompt(value)
+	case promptKindContainerDebugImage: // CTX-43 (containers_debug.go)
+		return m.onDebugImagePrompt(value)
 	case promptKindComposeRun: // services_compose_extras.go
 		return m.onComposeRunPrompt(value)
 	case promptKindRegistryHost, promptKindRegistryUser, promptKindRegistryToken: // containers_registries.go

@@ -64,6 +64,7 @@ kubeconfig, so other terminals keep their context.
 | `e` | Pod: open a shell in it. |
 | `f` | Pod, service or deployment: start or stop a port-forward. On a **FORWARDS** row: stop it. |
 | `y` | Copy the name. On a **FORWARDS** row: copy the local address. |
+| `!` | Your custom commands for the row (pods, deployments, services, jobs; see the Containers guide, "Custom commands"). Each asks first. |
 | `r` | Deployment: restart it (asks first). |
 | `s` | Deployment: scale it (asks the number, then asks first). |
 | `d` | Delete the row's object (asks first). |

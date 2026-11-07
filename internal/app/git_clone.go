@@ -111,6 +111,9 @@ func (m *Model) handleClonePromptClose() tea.Cmd {
 		return cmd
 	case promptKindRegistryHost, promptKindRegistryUser, promptKindRegistryToken: // containers_registries.go
 		return m.registryPromptClosed()
+	case promptKindContainerDebugImage: // CTX-43
+		m.services.debugTarget = containers.Container{}
+		return nil
 	case promptKindContainerBuildTag, promptKindContainerBuildArgs, promptKindContainerBuildTarget, promptKindContainerBuildPlatform:
 		m.pendingBuild = containers.BuildOptions{}
 		var cmd tea.Cmd

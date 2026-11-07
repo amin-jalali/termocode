@@ -363,6 +363,8 @@ func (m *Model) openContainerMenu(r svcRow, x, y int) {
 		{Sep: true},
 		{ID: "duplicate", Title: "Duplicate…", Icon: "⧉"},
 		{ID: "recreate", Title: "Recreate (pull, same settings)…", Icon: "↻"},
+		{ID: "custom", Title: "Custom Commands…", Hint: "!", Icon: "⚙"}, // CTX-38
+		debugMenuItem(), // CTX-43
 	}
 	if _, ok := m.dbTargetFromRow(r); ok {
 		items = append(items, menu.Item{ID: "databases", Title: dbOpenInDatabasesTitle, Icon: theme.IconDatabases.String()})
@@ -397,6 +399,11 @@ func (m *Model) handleContainerRowMenuSelect(id string, r svcRow) tea.Cmd {
 		return m.databaseOpenFromRow(r)
 	case "duplicate", "recreate": // containers_clone.go
 		return m.containerCloneStart(id, c)
+	case "debug-toolbox": // CTX-43
+		return m.askDebugToolbox(c)
+	case "custom": // CTX-38: the menu row is the cursor row
+		row, ok := m.containersCustomRow()
+		return m.openCustomCommands(row, ok)
 	}
 	return nil
 }
