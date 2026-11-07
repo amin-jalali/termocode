@@ -1,0 +1,10 @@
+{
+  "id": "",
+  "kind": "table",
+  "title": "2 rows on main (dev) · 4 ms",
+  "columns": [
+    {"id": "c0", "label": "id", "kind": "text"},
+    {"id": "c1", "label": "name", "kind": "text"}
+  ],
+  "rows": [["1", "a|b"], ["2", "NULL"]]
+}

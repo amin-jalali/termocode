@@ -1,0 +1,9 @@
+{
+  "id": "",
+  "kind": "list",
+  "title": "Web: \"go\" · 2",
+  "items": [
+    {"id": "i0", "title": "Go docs", "sub": "https://go.dev/doc/ · The Go docs.", "badge": "go.dev"},
+    {"id": "i1", "title": "Blog", "sub": "http://www.example.com/blog?x=1", "badge": "example.com"}
+  ]
+}
