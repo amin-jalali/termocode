@@ -39,7 +39,7 @@ func TestContainerStatsGraph(t *testing.T) {
 	tm.settle()
 	tm.Palette("Containers: Focus")
 	tm.WaitText("CONTAINERS", uiTimeout)
-	tm.WaitText("termocode-api-1", uiTimeout)
+	tm.WaitText("api-1", uiTimeout) // the row under its compose project: termocode › api-1
 	for i := 0; i < 30 && !cursorFooterHas(tm, "ghcr.io/acme/api:1.4"); i++ {
 		tm.Send(KeyDown)
 		tm.settle()
@@ -95,6 +95,8 @@ func TestContainerWorkspaceOnFakeEngine(t *testing.T) {
 
 	tm.Palette("View: Focus Explorer")
 	tm.settle()
+	tm.Send(KeyDown) // from the folder's own row to its file
+	tm.settle()
 	tm.Send(KeyEnter)
 	tm.WaitText("hello from the container", uiTimeout)
 	tm.settle()
@@ -128,7 +130,7 @@ func TestKubernetesViewFakeKubectl(t *testing.T) {
 	tm.Palette("Kubernetes: Show")
 	tm.WaitText("KUBERNETES", uiTimeout)
 	tm.WaitText("PODS", uiTimeout)
-	tm.WaitText("api-7d9f8c6b5", uiTimeout)
+	tm.WaitText("x2x4q", uiTimeout) // api-7d9f8c6b5-x2x4q, cut in the middle in the side bar
 	tm.settle()
 	tm.CheckScreen("kubernetes", mainFrame)
 	if f.Count("get pods -o json --context dev --namespace shop") == 0 {
@@ -206,6 +208,8 @@ func TestTerminalsBackAfterRestart(t *testing.T) {
 	if tm.Has("first-21") {
 		t.Errorf("the old output came back; only the folder should:\n%s", tm.Screen())
 	}
+	tm.ClickText("sub-rst$") // the editor has the focus at start: into the terminal
+	tm.settle()
 	tm.Type("echo in-$(basename \"$PWD\")\r")
 	tm.WaitText("in-sub-rst", uiTimeout)
 	tm.CheckScreen("terminal restored", mainFrame)

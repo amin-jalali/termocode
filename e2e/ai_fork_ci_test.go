@@ -126,8 +126,9 @@ func TestCIChipAndFixWithAI(t *testing.T) {
 	tm.Send("\x1bc") // Alt+C on a legacy terminal
 	tm.WaitText("AI CHAT", uiTimeout)
 	tm.WaitText("Check the message in the chat and press Enter", uiTimeout)
+	tm.WaitText("TestCIMarker7d31", uiTimeout) // the box shows the end, where the caret is
+	tm.Send("\x1b[H")                          // Home: the caret and the box go to the start
 	tm.WaitText("CI failed on branch", uiTimeout)
-	tm.WaitText("TestCIMarker7d31", uiTimeout)
 
 	b, _ := os.ReadFile(ghLog)
 	for _, line := range strings.Split(strings.TrimSpace(string(b)), "\n") {
