@@ -11,6 +11,7 @@ package app
 // (progress every 256 KB, then the answer): no timers, idle costs 0.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -175,6 +176,7 @@ type httpRun struct {
 	at       time.Time
 	progress int64
 	body     *httpBody // the Body view's lines (made once per resp)
+	live     []byte    // the newest text of a stream while it runs (API-16)
 }
 
 // httpState is the HTTP client's per-app state (Model.http).
@@ -400,6 +402,7 @@ func httpResolver(file string, fileVars []httpclient.Var, env string) *httpclien
 // httpEvent is one step of a send: progress or the answer.
 type httpEvent struct {
 	progress int64
+	live     []byte // a streamed answer's newest text (httpLiveTail)
 	resp     *httpclient.Response
 	body     *httpBody // resp laid out for the page (nil: binary or empty)
 }
@@ -489,9 +492,12 @@ func (m *Model) startHTTPRun(run *httpRun, hooks httpclient.Hooks) tea.Cmd {
 		default:
 		}
 	}
+	feed := &httpLiveFeed{ch: ch}
+	hooks.Live = feed.push
 	snap := *run // the goroutine never touches run itself
 	crash.Go("the HTTP client", func() {
 		resp := client.Send(ctx, snap.rr, hooks)
+		feed.stop() // nothing is sent on ch after this
 		snap.resp = resp
 		// History and the page layout (pretty print, lines) side by
 		// side, both off the UI loop.
@@ -523,10 +529,15 @@ func (m *Model) handleHTTPMsg(msg tea.Msg) (tea.Cmd, bool) {
 		}
 		if msg.ev.resp == nil {
 			msg.run.progress = msg.ev.progress
+			next := waitHTTPEvent(msg.gen, msg.run, msg.ch)
+			if msg.ev.live != nil {
+				msg.run.live = msg.ev.live
+				return tea.Batch(m.httpShowLive(), next), true
+			}
 			m.httpUpdateHead()
-			return waitHTTPEvent(msg.gen, msg.run, msg.ch), true
+			return next, true
 		}
-		msg.run.resp, msg.run.body = msg.ev.resp, msg.ev.body
+		msg.run.resp, msg.run.body, msg.run.live = msg.ev.resp, msg.ev.body, nil
 		return m.httpFinish(msg.run), true
 	case httpAppendMsg:
 		return m.httpPageAppend(msg), true
@@ -549,7 +560,7 @@ func (m *Model) httpFinish(run *httpRun) tea.Cmd {
 		s.cancel = nil
 	}
 	s.running = nil
-	if run.resp.ErrKind == httpclient.ErrKindCancelled && s.shown != nil && s.shown != run && s.shown.resp != nil {
+	if run.resp.ErrKind == httpclient.ErrKindCancelled && len(run.resp.Body) == 0 && s.shown != nil && s.shown != run && s.shown.resp != nil {
 		// Keep the previous body; only row 2 says cancelled.
 		prev := *s.shown
 		r := *s.shown.resp
@@ -645,3 +656,80 @@ var (
 	httpGlyphError  = theme.GlyphFail
 	httpGlyphHop    = theme.GlyphRedirect
 )
+
+// API-16: a streamed answer is shown while it comes, at most
+// httpLiveEvery apart, with its newest httpLiveMax bytes.
+const (
+	httpLiveEvery = 100 * time.Millisecond
+	httpLiveMax   = 64 << 10
+)
+
+// httpLiveTail copies the newest httpLiveMax bytes of body, from the
+// start of a line (the client reuses body after the call).
+func httpLiveTail(body []byte) []byte {
+	if len(body) > httpLiveMax {
+		body = body[len(body)-httpLiveMax:]
+		if i := bytes.IndexByte(body, '\n'); i >= 0 {
+			body = body[i+1:]
+		}
+	}
+	return append([]byte(nil), body...)
+}
+
+// httpLiveFeed sends a stream's newest text to the UI loop: right away
+// when the last send is httpLiveEvery old, else once that time is up
+// (so the last chunk before a pause is never left out).
+type httpLiveFeed struct {
+	ch      chan<- httpEvent
+	mu      sync.Mutex
+	last    time.Time
+	pending []byte
+	pendN   int64 // body bytes when pending was taken
+	timer   *time.Timer
+	done    bool
+}
+
+func (f *httpLiveFeed) push(body []byte) {
+	tail, n := httpLiveTail(body), int64(len(body))
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.done {
+		return
+	}
+	if wait := httpLiveEvery - time.Since(f.last); wait > 0 {
+		f.pending, f.pendN = tail, n
+		if f.timer == nil {
+			f.timer = time.AfterFunc(wait, f.flush)
+		}
+		return
+	}
+	f.sendLocked(tail, n)
+}
+
+func (f *httpLiveFeed) flush() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.timer = nil
+	if f.done || f.pending == nil {
+		return
+	}
+	f.sendLocked(f.pending, f.pendN)
+}
+
+func (f *httpLiveFeed) sendLocked(tail []byte, n int64) {
+	f.pending, f.last = nil, time.Now()
+	select {
+	case f.ch <- httpEvent{progress: n, live: tail}:
+	default: // the UI is busy; a newer text follows
+	}
+}
+
+// stop ends the feed before the channel closes.
+func (f *httpLiveFeed) stop() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.done = true
+	if f.timer != nil {
+		f.timer.Stop()
+	}
+}
