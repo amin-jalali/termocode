@@ -130,6 +130,20 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			m.askKubeDelete(kubeKindOf(r.section), r.name)
 			return m, nil
 		}
+	case "O":
+		if have && r.kind == kubeRowItem && r.section != kubeForwardsSection {
+			return m, m.kubeEditYAML(kubeKindOf(r.section), r.name)
+		}
+	case "N":
+		return m, m.kubeNodes()
+	case "S":
+		return m, m.kubeHPA()
+	case "P":
+		return m, m.kubeRBAC()
+	case "x":
+		return m, m.kubeReport()
+	case "a":
+		return m, m.kubeApplyCurrentFile()
 	case "f":
 		return m, m.kubeToggleSelectedForward()
 	case "y":
@@ -205,7 +219,13 @@ func kubeKeyRows() []confirm.KeyRow {
 		[]string{"Any kind"},
 		[]string{":", "show a kind (CRDs, aliases; \" -A\" every namespace)"},
 		[]string{"A", "the kind in every namespace, or this one"},
+		[]string{"O", "edit the YAML in a file"},
+		[]string{"a", "apply the editor's file (diff, then asks)"},
 		[]string{"Cluster"},
+		[]string{"x", "cluster report: pulse, owner tree, problems"},
+		[]string{"P", "permissions: can-i, role bindings, service accounts"},
+		[]string{"N", "nodes: cordon, uncordon, drain (asks first)"},
+		[]string{"S", "autoscalers (HPA, read only)"},
 		[]string{"c n", "pick the context, the namespace"},
 		[]string{"[ ]", "back, forward (context / namespace)"},
 		[]string{"t", "metrics: CPU and memory of nodes and pods"},

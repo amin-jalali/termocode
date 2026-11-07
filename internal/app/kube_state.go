@@ -82,6 +82,10 @@ type kubeState struct {
 	lastRollout    kubeRolloutMsg    // the rollout picker's status and history
 	pendingHelm    kubeHelmTarget    // the helm rollback / uninstall card (kube_helm.go)
 	helmCurrent    int               // the release's revision now (rollback card)
+	pendingApply   kubeApplyTarget   // the apply card's file (kube_apply.go)
+	pendingNode    kubeNodeTarget    // the node card's node and action (kube_nodes.go)
+	nodes          []kube.Node       // the node picker's rows (kube_nodes.go)
+	nodesContext   string            // the context they came from
 
 	forwards map[string]*kube.Forward // by context/namespace/pod (kube_forward.go)
 
@@ -469,6 +473,18 @@ func (m *Model) handleKubeMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onKubeUndo(msg), true
 	case kubeImageMsg:
 		return m.onKubeImage(msg), true
+	case kubeDiffMsg:
+		return m.onKubeDiff(msg), true
+	case kubeApplyMsg:
+		return m.onKubeApply(msg), true
+	case kubeNodesMsg:
+		return m.onKubeNodes(msg), true
+	case kubeNodeActionMsg:
+		return m.onKubeNodeAction(msg), true
+	case kubePageMsg:
+		return m.onKubePage(msg), true
+	case kubeEditMsg:
+		return m.onKubeEdit(msg), true
 	}
 	return nil, false
 }

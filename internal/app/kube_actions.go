@@ -19,12 +19,27 @@ func kubePaletteItems() []picker.Item {
 		{ID: "kubernetes-helm", Title: "Kubernetes: Helm Releases…"},
 		{ID: "kubernetes-kind", Title: "Kubernetes: Show Kind…"},
 		{ID: "kubernetes-snippet", Title: "Kubernetes: New Manifest from Snippet…"},
+		{ID: "kubernetes-apply-file", Title: "Kubernetes: Apply Current File…"},
+		{ID: "kubernetes-report", Title: "Kubernetes: Cluster Report"},
+		{ID: "kubernetes-rbac", Title: "Kubernetes: Permissions (RBAC)"},
+		{ID: "kubernetes-nodes", Title: "Kubernetes: Nodes…"},
+		{ID: "kubernetes-hpa", Title: "Kubernetes: Autoscalers (HPA)"},
 	}
 }
 
 // dispatchKubePalette runs the "Kubernetes: …" palette commands.
 func (m *Model) dispatchKubePalette(id string) (tea.Cmd, bool) {
 	switch id {
+	case "kubernetes-nodes":
+		return m.kubeNodes(), true
+	case "kubernetes-hpa":
+		return m.kubeHPA(), true
+	case "kubernetes-rbac":
+		return m.kubeRBAC(), true
+	case "kubernetes-report":
+		return m.kubeReport(), true
+	case "kubernetes-apply-file":
+		return m.kubeApplyCurrentFile(), true
 	case "kubernetes-snippet":
 		m.openTasksPickerItems(" New Manifest ", kubeSnippetItems())
 		return nil, true

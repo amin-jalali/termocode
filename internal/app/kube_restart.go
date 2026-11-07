@@ -68,6 +68,12 @@ func (m *Model) handleKubeConfirm(id string) (tea.Cmd, bool) {
 	if m.confirmKind == confirmKindKubeImage && m.kube != nil {
 		return m.answerKubeImage(id), true
 	}
+	if m.confirmKind == confirmKindKubeNode && m.kube != nil {
+		return m.answerKubeNode(id), true // kube_nodes.go
+	}
+	if m.confirmKind == confirmKindKubeApply && m.kube != nil {
+		return m.answerKubeApply(id), true // kube_apply.go
+	}
 	if m.confirmKind == confirmKindKubeDelete && m.kube != nil {
 		return m.handleKubeDeleteConfirm(id), true // kube_delete.go
 	}

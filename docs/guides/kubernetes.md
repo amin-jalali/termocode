@@ -87,6 +87,12 @@ kubeconfig, so other terminals keep their context.
 | `d` | Delete the row's object (asks first). Not on a node or an event. |
 | `:` | Show any kind as one more section: a CRD, a short name, an alias. `" -A"` at the end: every namespace. |
 | `A` | The `:` kind in every namespace, or in the view's one again. |
+| `O` | Edit the row's YAML in a file (not Secrets). Save it, then press `a`. |
+| `a` | Apply the editor's saved file: shows the diff, then asks first. |
+| `x` | Cluster report of the namespace (a read-only page). |
+| `P` | Permissions of the namespace (a read-only page). |
+| `N` | Nodes of the cluster: cordon, uncordon or drain one (asks first). |
+| `S` | Autoscalers (HPA) of the namespace (a read-only page). |
 | `c` / `n` | Pick the context / the namespace. |
 | `[` / `]` | Back / forward to the context and namespace you had before. |
 | `t` | Metrics: CPU and memory of the nodes and the pods (a read-only page). |
@@ -241,6 +247,70 @@ A release opens a short list:
 On both cards **Cancel** is the first button and has the focus, so
 `Enter` or `Esc` alone never changes anything.
 
+## Cluster report
+
+**Kubernetes: Cluster Report** (or `x` in the view) opens a read-only page
+about the namespace:
+
+- **Pulse**: for pods, deployments, services and jobs, how many are ok,
+  how many warn and how many fail.
+- **Xray**: the owner tree. Each deployment, service and job with the pods
+  it owns or selects, and their status.
+- **Report**: the problems found, for example crashing or restarting
+  pods, pods with no limits or no readiness probe, images with no fixed
+  tag, services that select no pod, failed jobs.
+
+It only reads the cluster. The AI may open it.
+
+## Permissions (RBAC)
+
+**Kubernetes: Permissions (RBAC)** (or `P` in the view) opens a read-only
+page about the namespace:
+
+- **What you may do**: each resource and its verbs, from
+  `kubectl auth can-i --list`. It asks the cluster about you; nothing
+  changes.
+- **Role bindings**: each binding, its role and its subjects (users,
+  groups, service accounts).
+- **Service accounts** of the namespace.
+
+When you may not read one part, that part says why and the others still
+show. The AI may open the page.
+
+## Nodes and autoscalers
+
+**Kubernetes: Nodes…** (or `N` in the view) lists the nodes of the
+cluster with their status, roles, version and age. Pick a node to see
+what you can do:
+
+- **Cordon**: no new pods go to the node. Its running pods stay.
+- **Uncordon** (on a cordoned node): it takes new pods again.
+- **Drain**: cordon the node and evict its pods, so they start on other
+  nodes. DaemonSet pods stay; `emptyDir` data of evicted pods is lost.
+
+Each one asks first. The card shows the node, the context and the
+command. **Cancel** is the first button and has the focus, so `Enter` or
+`Esc` alone never changes a node.
+
+**Kubernetes: Autoscalers (HPA)** (or `S` in the view) opens a read-only
+page of the namespace's horizontal pod autoscalers: the target, min and
+max replicas, how many run now and how many it wants, and the metrics.
+
+## Edit and apply YAML
+
+**Kubernetes: Apply Current File…** (or `a` in the view) applies the file
+of the editor tab to the cluster. Save it first. termocode runs
+`kubectl diff -f` (a server-side dry-run: nothing changes) and opens the
+diff as a read-only page. Then a card shows the file, the context, the
+namespace, the number of changed lines and the command (`kubectl
+apply -f`). **Cancel** is the first button and has the focus, so `Enter`
+or `Esc` alone never applies anything. When the cluster already matches
+the file, nothing is asked.
+
+`O` on a row writes the object's YAML to a private temp file and opens it
+in the editor. Change it, save it, and apply it as above. Secrets are not
+opened this way: their values are masked, so the copy would break them.
+
 ## New manifest from a snippet
 
 **Kubernetes: New Manifest from Snippet…** opens a new YAML buffer with a
@@ -256,7 +326,8 @@ cluster, in the context the view shows: `kube_list` (the four lists),
 `kube_describe` (one object) and `kube_logs` (the last lines of a pod).
 Secrets in their answers are hidden. The AI can never restart,
 scale, roll back or change the image of a deployment, delete an
-object, start a port-forward, use helm or switch the context.
+object, apply a file, cordon or drain a node, start a port-forward,
+use helm or switch the context.
 
 ## When something is wrong
 
