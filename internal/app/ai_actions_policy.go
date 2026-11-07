@@ -741,6 +741,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// Proof of work (CMP-52): the AI shoots with proof_screenshot; the
 	// list and deleting the shots are the user's.
 	"ai-proofs": aiNever(aiNoPicker),
+	"ai-image-gen": aiNever("image generation is paid; only the user turns it on"),
 	// Ship pushes and opens pull requests: only the user starts it.
 	"ai-ship":          aiNever("it pushes and opens a pull request: the user starts it"),
 	"acp-thread":       aiNever("it starts an outside agent program: the user starts and ends it"),
@@ -868,6 +869,8 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_memory_recall":      aiNever(aiNoAIConfig),
 	"ai_web_fetch":          aiNever(aiNoAIConfig + "; the AI never turns on its own web access"),
 	"ai_web_search":         aiNever(aiNoAIConfig + "; the AI never turns on its own web access"),
+	"ai_image_gen":          aiNever(aiNoAIConfig + "; image generation is paid"),
+	"ai_image_model":        aiNever(aiNoAIConfig),
 	// Work until done: the AI never raises its own rounds or budget.
 	"ai_until_done_rounds":     aiNever(aiNoAIConfig),
 	"ai_until_done_budget_usd": aiNever(aiNoAIConfig),

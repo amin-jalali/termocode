@@ -469,6 +469,7 @@ missing	ai-chat-comments	AI|S
 missing	ai-chat-doc-revisions	AI|S
 missing	ai-chat-docs	AI|M
 missing	ai-history-search	AI|S
+missing	ai-image-gen	AI|S
 missing	ai-mcp-accounts	AI|S
 missing	ai-powers	AI|S
 missing	ai-proofs	AI|S

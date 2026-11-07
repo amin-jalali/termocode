@@ -609,6 +609,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-hooks", "AI: Hooks…", ""},
 		{"ai-web-tools", "AI: Web Tools… (fetch, search, docs, browser)", ""},
 		{"ai-proofs", "AI: Proof of Work… (screenshots the AI took)", ""},
+		{"ai-image-gen", "AI: Toggle Image Generation", ""},
 		{"ai-ship", "AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop", ""},
 		{"ai-plan-worktree", "AI: Run Next Plan in a Worktree, Then Ship… / Off", ""},
 		{"ai-agent-hooks", "Agent: State Hooks… (exact working / waiting / done)", ""},
@@ -815,6 +816,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIPowers(), true
 	case "ai-hooks":
 		return m.openAIHooks(), true
+	case "ai-image-gen": // ai_image_tool.go
+		return m.aiToggleImageGen(), true
 	case "ai-web-tools":
 		return m.openAIWebTools(), true
 	case "ai-proofs":
