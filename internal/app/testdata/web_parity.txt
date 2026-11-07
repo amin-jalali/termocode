@@ -515,8 +515,13 @@ missing	db-chart	Databases|S
 missing	db-copy-as	Databases|S
 missing	db-export-tables	Databases|M
 missing	db-er-path	Databases|S
+missing	db-inline-clear	Databases|S
 missing	db-query-log	Databases|S
 missing	db-console-history	Databases|S
+missing	db-result-cell-menu	Databases|S
+missing	db-result-column-types	Databases|S
+missing	db-result-create-table	Databases|S
+missing	db-result-row-numbers	Databases|S
 missing	db-run-container	Databases|S
 missing	db-cloud-discover	Databases|S
 missing	db-iam-auth	Databases|S

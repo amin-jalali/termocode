@@ -35,6 +35,11 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-result-page-size", Title: "Databases: Set Result Page Size…"},
 		{ID: "db-result-goto-row", Title: "Databases: Go to Result Row…"},
 		{ID: "db-result-load-all", Title: "Databases: Load All Result Rows"},
+		{ID: "db-result-row-numbers", Title: "Databases: Toggle Result Row Numbers"},
+		{ID: "db-result-column-types", Title: "Databases: Toggle Result Column Types"},
+		{ID: "db-result-cell-menu", Title: "Databases: Result Cell Menu…"},
+		{ID: "db-result-create-table", Title: "Databases: Copy Result Columns as CREATE TABLE"},
+		{ID: "db-inline-clear", Title: "Databases: Clear Inline Results"},
 		{ID: "db-run-file", Title: "Databases: Run File"},
 		{ID: "db-explain", Title: "Databases: Explain Statement"},
 		{ID: "db-sql-outline", Title: "Databases: Go to Statement…"},
@@ -165,6 +170,16 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseGotoRowPrompt(), true
 	case "db-result-load-all":
 		return m.databaseLoadAll(), true
+	case "db-result-row-numbers":
+		return m.databaseToggleRowNums(), true
+	case "db-result-column-types":
+		return m.databaseToggleColTypes(), true
+	case "db-result-cell-menu":
+		return m.databaseCellMenuAtCursor(), true
+	case "db-result-create-table":
+		return m.databaseCopyColumnDDL(true, -1, -1), true
+	case "db-inline-clear":
+		return m.databaseClearInline(), true
 	case "db-exec-mode":
 		return m.databaseExecModePicker(), true
 	case "db-explain":
@@ -1268,6 +1283,9 @@ func dbPageKeyRows() []confirm.KeyRow {
 		[]string{"] / [", "next / previous page"},
 		[]string{"N", "go to row N"},
 		[]string{"L", "load all rows (past db_max_rows)"},
+		[]string{"I", "row numbers (on / off)"},
+		[]string{"T", "column types in the header (on / off)"},
+		[]string{"m", "cell menu: open, copy, column definition (DDL), filter, …"},
 		[]string{"o", "sort by a column"},
 		[]string{"f", "show only some rows"},
 		[]string{"*", "show only rows with this cell's value (table data)"},

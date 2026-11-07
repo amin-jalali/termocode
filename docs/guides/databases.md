@@ -197,6 +197,8 @@ Press `Ctrl+Alt+R` (or `Ctrl+Enter` in terminals that send it) to run the statem
 
 **Result page.** `N` goes to row N (it opens that page and puts the cursor on the row). `L` loads all rows when the result was cut at `db_max_rows` (it runs the statement again, up to 100000 rows). **Databases: Set Result Page Size…** changes the rows per page of the shown result at once. `db_result_new_tab` keeps every result in its own tab; `db_auto_transpose` opens a one-row result flipped (one line per column).
 
+`I` shows row numbers and `T` shows each column's type after its name (`db_row_numbers` and `db_column_types` turn them on for every result). `m` opens the cell menu: open or copy the cell, copy the column, copy the column definition (`"name" type`) or all columns as a `CREATE TABLE`, the column stats, edit, hide or sort. With `db_inline_result` set to `true`, the first five rows of a console result also show under the statement in the `.sql` file; **Databases: Clear Inline Results** removes them.
+
 A read runs at once. Any other statement asks first, and the card shows the exact SQL (use Up/Down to read a long one). The title says what is special: `DELETE` or `UPDATE` without `WHERE`, `DROP`, `TRUNCATE`, `ALTER`, a production connection, or a read-only connection. There is no "always allow". In a file run, each write gets its own card.
 
 ## Results

@@ -521,13 +521,39 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 			grid = append(grid, g)
 		}
 	}
+	// DBX-26: the column type after the name (T) and the row numbers
+	// in front of each row (I).
+	types := s.showColTypes()
+	head := func(i, j int) (name, typ string) {
+		name = dbOneLine(page.Columns[i].Name)
+		if types && page.Columns[i].Type != "" {
+			typ = " " + dbOneLine(page.Columns[i].Type)
+		}
+		full := ansi.Truncate(name+typ, limit(j), more)
+		if ansi.StringWidth(full) <= ansi.StringWidth(name) {
+			return full, ""
+		}
+		return name, strings.TrimPrefix(full, name)
+	}
+	numW, base := 0, s.page*s.pageSize()
+	if s.shown.tv != nil {
+		base = s.shown.tv.offset
+	}
+	if s.showRowNums() {
+		numW = len(strconv.Itoa(base + max(len(page.Rows), 1)))
+	}
+	gutter := ""
+	if numW > 0 {
+		gutter = strings.Repeat(" ", numW+1)
+	}
 	widths := make([]int, len(cols))
 	for j, i := range cols {
 		if fixed[j] > 0 {
 			widths[j] = fixed[j]
 			continue
 		}
-		widths[j] = ansi.StringWidth(ansi.Truncate(dbOneLine(page.Columns[i].Name), dbMaxCellWidth, more))
+		hn, ht := head(i, j)
+		widths[j] = ansi.StringWidth(hn + ht)
 		for _, row := range grid {
 			if i < len(row.cells) {
 				widths[j] = max(widths[j], ansi.StringWidth(cell(row.cells[i], j)))
@@ -537,7 +563,7 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 	}
 	p.widths = widths
 	bar := " " + dbGlyphVBar.String() + " "
-	pos := 1
+	pos := 1 + len(gutter)
 	for _, w := range widths {
 		p.bounds = append(p.bounds, pos)
 		pos += w + ansi.StringWidth(bar)
@@ -550,17 +576,27 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 		return text + gap
 	}
 	var b strings.Builder
-	b.WriteString(" ")
+	b.WriteString(" " + gutter)
+	var typeSpans [][2]int
 	for j, i := range cols {
 		if j > 0 {
 			b.WriteString(bar)
 		}
-		b.WriteString(pad(ansi.Truncate(dbOneLine(page.Columns[i].Name), limit(j), more), widths[j], false))
+		hn, ht := head(i, j)
+		b.WriteString(hn)
+		if ht != "" {
+			typeSpans = append(typeSpans, [2]int{b.Len(), b.Len() + len(ht)})
+			b.WriteString(ht)
+		}
+		b.WriteString(strings.Repeat(" ", max(0, widths[j]-ansi.StringWidth(hn+ht))))
 	}
 	n := p.add(strings.TrimRight(b.String(), " "))
 	p.hl(n, 0, len(p.lines[n-1]), "TermocodeHttpSection")
+	for _, sp := range typeSpans {
+		p.hl(n, sp[0], min(sp[1], len(p.lines[n-1])), "TermocodeHttpSep")
+	}
 	b.Reset()
-	b.WriteString(dbGlyphHBar.String())
+	b.WriteString(dbGlyphHBar.String() + strings.Repeat(dbGlyphHBar.String(), len(gutter)))
 	for i, w := range widths {
 		if i > 0 {
 			b.WriteString(dbGlyphHBar.String() + dbGlyphCross.String() + dbGlyphHBar.String())
@@ -583,6 +619,17 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 		b.Reset()
 		b.WriteString(g.mark)
 		markEnd := b.Len()
+		var numSpan [2]int
+		if numW > 0 {
+			num := ""
+			if g.unset == nil && gi < len(page.Rows) {
+				num = strconv.Itoa(base + gi + 1)
+			}
+			numSpan[0] = b.Len()
+			b.WriteString(pad(num, numW, true))
+			numSpan[1] = b.Len()
+			b.WriteString(" ")
+		}
 		var dim, changed [][2]int
 		var hot [][3]int // start, end, level
 		for j, i := range cols {
@@ -608,6 +655,9 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 		end := len(p.lines[n-1])
 		if alt && gi%2 == 1 {
 			p.hl(n, 0, max(end, 1), "TermocodeDbAltRow")
+		}
+		if numSpan[1] > numSpan[0] {
+			p.hl(n, numSpan[0], min(numSpan[1], end), "TermocodeHttpSep")
 		}
 		switch {
 		case g.deleted:
@@ -940,6 +990,17 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 	}
 	if cmd, ok := m.databaseColumnsKey(key, col); ok {
 		return cmd
+	}
+	switch key { // DBX-26 (db_result_extra.go); m keeps the display column
+	case "m":
+		if s.shown.redis != nil || s.shown.plan != nil {
+			return nil
+		}
+		return m.databaseCellMenu(row, col)
+	case "I":
+		return m.databaseToggleRowNums()
+	case "T":
+		return m.databaseToggleColTypes()
 	}
 	if s.shown.redis == nil && s.shown.plan == nil && s.view == dbViewGrid && !s.trans {
 		col = s.gridColumn(col) // the grid shows the columns in the layout's order

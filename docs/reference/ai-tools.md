@@ -2088,6 +2088,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-guide` | Databases: Open Guide | auto |   |
 | `db-history` | Databases: History… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-import-csv` | Databases: Import CSV into Table… | never | importing rows is a write the user confirms (db_query) |
+| `db-inline-clear` | Databases: Clear Inline Results | auto |   |
 | `db-insert-hints` | Databases: Show INSERT Column Hints | auto |   |
 | `db-new-console` | Databases: New Console | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-object-actions` | Databases: Object Actions… | never | drops, empties or creates database objects; only the user can confirm the card |
@@ -2096,10 +2097,14 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-quick-doc` | Databases: Quick Documentation | auto |   |
 | `db-refresh` | Databases: Refresh | auto |   |
 | `db-refresh-object` | Databases: Refresh Selected Object | auto |   |
+| `db-result-cell-menu` | Databases: Result Cell Menu… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `db-result-column-types` | Databases: Toggle Result Column Types | auto |   |
+| `db-result-create-table` | Databases: Copy Result Columns as CREATE TABLE | never | writes the user's clipboard |
 | `db-result-goto-row` | Databases: Go to Result Row… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-result-load-all` | Databases: Load All Result Rows | never | SQL runs require the database query tool and its guard |
 | `db-result-page-size` | Databases: Set Result Page Size… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-result-pin` | Databases: Pin Result Tab | auto |   |
+| `db-result-row-numbers` | Databases: Toggle Result Row Numbers | auto |   |
 | `db-revert-changes` | Databases: Revert Pending Changes… | never | the user's pending edits |
 | `db-rollback` | Databases: Roll Back | never | the user's transaction |
 | `db-run` | Databases: Run Statement or Selection | never | SQL runs require the database query tool and its guard |
@@ -2598,12 +2603,14 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db_ai_max_kb` | never | AI provider, credentials and approvals stay with the user |
 | `db_alternate_rows` | confirm (settings) |   |
 | `db_auto_transpose` | confirm (settings) |   |
+| `db_column_types` | confirm (settings) |   |
 | `db_complete_catalogs` | confirm (settings) |   |
 | `db_bool_style` | confirm (settings) |   |
 | `db_date_format` | confirm (settings) |   |
 | `db_exec_mode` | confirm (settings) |   |
 | `db_geometry_format` | confirm (settings) |   |
 | `db_history_max` | never | AI provider, credentials and approvals stay with the user |
+| `db_inline_result` | confirm (settings) |   |
 | `db_introspect_level` | confirm (settings) |   |
 | `db_lob_bytes` | confirm (settings) |   |
 | `db_max_rows` | never | AI provider, credentials and approvals stay with the user |
@@ -2612,6 +2619,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db_redis_max_keys` | never | AI provider, credentials and approvals stay with the user |
 | `db_redis_separator` | confirm (settings) |   |
 | `db_result_new_tab` | confirm (settings) |   |
+| `db_row_numbers` | confirm (settings) |   |
 | `db_selection_split` | confirm (settings) |   |
 | `db_time_format` | confirm (settings) |   |
 | `db_time_zone` | confirm (settings) |   |

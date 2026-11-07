@@ -368,6 +368,11 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-result-page-size":               aiNever(aiNoPicker),
 	"db-result-goto-row":                aiNever(aiNoPicker),
 	"db-result-load-all":                aiNever("SQL runs require the database query tool and its guard"),
+	"db-result-row-numbers":             aiAuto(), // DBX-26: display only
+	"db-result-column-types":            aiAuto(),
+	"db-result-cell-menu":               aiNever(aiNoPicker),
+	"db-result-create-table":            aiNever("writes the user's clipboard"),
+	"db-inline-clear":                   aiAuto(),
 	"db-explain":                        aiNever(aiNoPicker + " (db_explain)"),
 	"db-explain-analyze":                aiNever("executes the statement; use db_explain"),
 	"db-format":                         aiConfirm(ai.ClassFileWrite),
@@ -895,6 +900,9 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"db_selection_split":   aiConfirm(ai.ClassSettings),
 	"db_result_new_tab":    aiConfirm(ai.ClassSettings), // DBX-26: display only
 	"db_auto_transpose":    aiConfirm(ai.ClassSettings),
+	"db_row_numbers":       aiConfirm(ai.ClassSettings), // DBX-26: display only
+	"db_column_types":      aiConfirm(ai.ClassSettings),
+	"db_inline_result":     aiConfirm(ai.ClassSettings),
 	"db_introspect_level":  aiConfirm(ai.ClassSettings), // DBX-29
 	"db_complete_catalogs": aiConfirm(ai.ClassSettings),
 	"db_csv_separator":     aiConfirm(ai.ClassSettings), // DBX-36: export shape only
