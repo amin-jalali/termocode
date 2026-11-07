@@ -669,6 +669,9 @@ func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 	if m.promptKind == promptKindDBEditCell {
 		return m.databaseSetCell(value, false), true
 	}
+	if m.promptKind == promptKindDBWhereValue { // db_where_builder.go
+		return m.databaseWhereApply(value), true
+	}
 	if m.promptKind == promptKindDBResultFilter {
 		s := m.dbConsole()
 		if s.shown != nil && s.shown.tv != nil {

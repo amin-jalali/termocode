@@ -1018,8 +1018,10 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 		return m.databaseUnlessDirty(m.databaseRerun)
 	case "h":
 		return m.databaseHistory()
-	case "=":
+	case "*":
 		return m.databaseQuickFilter(tv, row, col)
+	case "b":
+		return m.databaseWhereBuilder()
 	case "f":
 		if tv != nil {
 			cmd := m.openHTTPPrompt(promptKindDBResultFilter, "Filter rows", "WHERE condition (empty: all rows):", tv.where)

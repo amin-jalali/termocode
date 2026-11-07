@@ -154,7 +154,7 @@ function _G._termocode_db_open(split,lines,hls,first,bounds,cursor,wrap,fold,nam
   api.nvim_buf_set_name(b,'SQL Result')
   vim.b[b].termocode_no_guides=true -- right-aligned numbers are not indentation
   vim.bo[b].bufhidden='hide';vim.bo[b].swapfile=false
-  for _,k in ipairs({']','[','r','h','f','o','c','C','S','v','y','q','#','t','e','E','+','-','u','w','p','P','K','Z','x','X','D','1','2','3','4','5','6','7','8','9','?','=','H','O','<','>','F','(',')','{','}','Y'}) do vim.keymap.set('n',k,function() notify(k) end,{buffer=b,silent=true,nowait=true}) end
+  for _,k in ipairs({']','[','r','h','f','o','c','C','S','v','y','q','#','t','e','E','+','-','u','w','p','P','K','Z','x','X','D','1','2','3','4','5','6','7','8','9','?','=','H','O','<','>','F','(',')','{','}','Y','*','b'}) do vim.keymap.set('n',k,function() notify(k) end,{buffer=b,silent=true,nowait=true}) end
   for _,k in ipairs({'e','+','-'}) do vim.keymap.set('x',k,function() notify_range_edit(k) end,{buffer=b,silent=true,nowait=true}) end
   vim.keymap.set('n','gd',function() notify('gd') end,{buffer=b,silent=true})
   vim.keymap.set('n','g=',function() notify('g=') end,{buffer=b,silent=true,nowait=true})
