@@ -326,7 +326,11 @@ func TestRenderGroups(t *testing.T) {
 		t.Errorf("amin group = %+v", b.Groups[2])
 	}
 	// The limit counts rows over all groups; counts stay the full counts.
-	b = render(t, spec(func(s *blocks.ViewSpec) { s.Group = "author"; s.Limit = 2; s.Sort = []blocks.ViewSort{{Field: "number"}} }))
+	b = render(t, spec(func(s *blocks.ViewSpec) {
+		s.Group = "author"
+		s.Limit = 2
+		s.Sort = []blocks.ViewSort{{Field: "number"}}
+	}))
 	if !b.Truncated || len(b.Groups) != 2 || len(b.Groups[1].Rows) != 1 || b.Groups[1].Count != 1 {
 		t.Errorf("limited groups = %+v truncated %v", b.Groups, b.Truncated)
 	}

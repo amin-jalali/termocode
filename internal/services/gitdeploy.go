@@ -30,7 +30,12 @@ var (
 // A flag, a space, a control character, a local file URL or an odd ref is
 // refused, so nothing the user typed can become an option.
 func PlanGitDeploy(spec, base string) (GitDeploy, error) {
-	spec = strings.TrimSpace(spec)
+	// A control character anywhere (a pasted newline too) is refused, not
+	// trimmed away: only plain spaces around the URL are forgiven.
+	if strings.IndexFunc(spec, func(r rune) bool { return r < ' ' || r == 0x7f }) >= 0 {
+		return GitDeploy{}, errors.New("not a repository URL")
+	}
+	spec = strings.Trim(spec, " ")
 	url, ref, _ := strings.Cut(spec, "#")
 	if url == "" {
 		return GitDeploy{}, errors.New("type a git repository URL")

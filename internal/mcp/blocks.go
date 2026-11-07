@@ -69,7 +69,7 @@ func (m blockMaker) text(s string, max int) string {
 	if m.o.Clean != nil {
 		s = m.o.Clean(s)
 	}
-	s = ai.RedactSecrets(s)
+	s = ai.Redact(s) // known secrets and token shapes (ghp_…, bearer …): a phone block leaves the laptop
 	s = strings.Map(func(r rune) rune {
 		if unicode.IsControl(r) {
 			return ' '
@@ -85,7 +85,7 @@ func (m blockMaker) long(s string) string {
 	if m.o.Clean != nil {
 		s = m.o.Clean(s)
 	}
-	s = ai.RedactSecrets(strings.ToValidUTF8(s, "�"))
+	s = ai.Redact(strings.ToValidUTF8(s, "�"))
 	if len(s) > maxBlockText {
 		s = s[:maxBlockText]
 		for !utf8.ValidString(s) {

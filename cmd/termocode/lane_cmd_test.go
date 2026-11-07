@@ -21,7 +21,13 @@ func TestLaneUsageAndRefusals(t *testing.T) {
 		t.Errorf("help: %d", code)
 	}
 	errw.Reset()
-	if code := runLaneIn([]string{"pull", "-oProxyCommand=x:/a"}, nil, &out, &errw, env); code != 1 || !strings.Contains(errw.String(), "host:folder") {
+	// Without "--" the flag parser stops it (usage); after "--" the remote
+	// check refuses a host that would be an ssh option.
+	if code := runLaneIn([]string{"pull", "-oProxyCommand=x:/a"}, nil, &out, &errw, env); code != 2 {
+		t.Errorf("flag-like remote: %d %q", code, errw.String())
+	}
+	errw.Reset()
+	if code := runLaneIn([]string{"pull", "--", "-oProxyCommand=x:/a"}, nil, &out, &errw, env); code != 1 || !strings.Contains(errw.String(), "host:folder") {
 		t.Errorf("bad remote: %d %q", code, errw.String())
 	}
 	junk := filepath.Join(t.TempDir(), "x.tlane")

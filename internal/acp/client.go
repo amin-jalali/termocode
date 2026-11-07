@@ -7,6 +7,8 @@ import (
 	"io"
 	"sync"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // cancelGrace is how long a cancelled prompt waits for the agent's
@@ -224,7 +226,7 @@ func (cl *Client) Prompt(ctx context.Context, session, text string, sink func(Up
 	}
 	callCtx, stop := context.WithCancel(cl.ctx)
 	defer stop()
-	go func() {
+	crash.Go("acp.Prompt", func() {
 		select {
 		case <-ctx.Done():
 			_ = cl.Cancel(session)
@@ -235,7 +237,7 @@ func (cl *Client) Prompt(ctx context.Context, session, text string, sink func(Up
 			}
 		case <-callCtx.Done():
 		}
-	}()
+	})
 	if err := cl.c.call(callCtx, "session/prompt", params, &res); err != nil {
 		if ctx.Err() != nil {
 			return "cancelled", ctx.Err()

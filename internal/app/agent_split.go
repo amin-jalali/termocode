@@ -60,8 +60,8 @@ func aiSplitArgs(a map[string]any) (goal, verify string, parts []agentrace.LaneS
 		return "", "", nil, fmt.Errorf("verify must be one command line of at most %d characters", aiRaceVerifyMax)
 	}
 	list, _ := a["parts"].([]any)
-	if len(list) < agentrace.MinLanes || len(list) > agentrace.MaxLanes {
-		return "", "", nil, fmt.Errorf("parts must list %d to %d parts", agentrace.MinLanes, agentrace.MaxLanes)
+	if len(list) < agentrace.MinLanes || len(list) > agentrace.MaxParts {
+		return "", "", nil, fmt.Errorf("parts must list %d to %d parts", agentrace.MinLanes, agentrace.MaxParts)
 	}
 	for i, v := range list {
 		p, _ := v.(map[string]any)

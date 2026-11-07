@@ -140,6 +140,9 @@ func Wrap(p Plan, h Host, bin string, args []string) (string, []string, error) {
 	case ToolBwrap:
 		return path, bwrapArgs(p, h, dir, w, bin, args), nil
 	default:
+		if p.Mode == WorkspaceWrite {
+			w = append(w, writable{path: dir}) // bwrap binds dir itself; the profile must list it
+		}
 		out := []string{"-p", seatbeltProfile(h, w), bin}
 		return path, append(out, args...), nil
 	}

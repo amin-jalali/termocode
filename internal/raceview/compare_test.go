@@ -132,8 +132,12 @@ func TestCompareJudge(t *testing.T) {
 	c := NewCompare(r)
 	c.SetSize(150, 42)
 	out := ansi.Strip(c.Box())
+	star := "★"
+	if ascii() {
+		star = "*"
+	}
 	for _, want := range []string{"JUDGE", "gpt-5 · $0.02", "1. Claude Code — tests pass, small change", "2. Codex — verify fails",
-		"pick: Claude Code", "Claude Code ★", "p"} {
+		"pick: Claude Code", "Claude Code " + star, "p"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("no %q in:\n%s", want, out)
 		}
