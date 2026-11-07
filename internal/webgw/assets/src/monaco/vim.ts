@@ -16,6 +16,7 @@
 // as one edit, so the page's undo and the laptop's buffer see it like
 // typing.
 import type { Text } from "@codemirror/state";
+import { own } from "../state/dict";
 
 export type VimMode = "normal" | "insert" | "visual" | "vline" | "vblock";
 
@@ -223,8 +224,9 @@ export function parseKeys(s: string, leader = "\\"): string[] | null {
         i = j;
         continue;
       }
-      if (low in NAMED_KEYS) {
-        if (NAMED_KEYS[low]) out.push(NAMED_KEYS[low]);
+      const named = own(NAMED_KEYS, low);
+      if (named !== undefined) {
+        if (named) out.push(named);
         i = j;
         continue;
       }

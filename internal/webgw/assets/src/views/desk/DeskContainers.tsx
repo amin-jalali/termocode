@@ -259,7 +259,7 @@ function CtrRows({ cs, level, x }: { cs: CtrView[]; level: number; x: Ctx }) {
       { icon: "output", label: t("ctr.logs"), run: () => showLogs(c) },
       { icon: "json", act: "inspect", label: t("ctr.inspect"), run: () => openTab("inspect-container", c.id, c.name) },
       RUNNING.has(c.state) ? { icon: "pulse", act: "stats", label: t("ctr.stats"), run: () => openTab("stats", c.id, c.name) } : null,
-      url ? { icon: "link-external", label: t("ctr.open_port"), run: () => void window.open(url, "_blank", "noopener,noreferrer"), menuOnly: true } : null,
+      url ? { icon: "link-external", label: t("ctr.open_port"), run: () => openPort(c), menuOnly: true } : null,
       null,
       { icon: "copy", label: t("ctr.copy_id"), run: () => copyText(c.id), menuOnly: true },
       { icon: "copy", label: t("ctr.copy_name"), run: () => copyText(c.name), menuOnly: true },
