@@ -295,7 +295,8 @@ Add files to your next message in three ways:
 
 Text files are sent as text (up to 60 KB). Images (PNG, JPEG, GIF, WebP)
 are sent as images to Anthropic, OpenAI and OpenRouter. Other providers
-get a short note instead. Other binary files are refused.
+get a short note instead. PDFs are sent as their text (best effort; a
+scan with no text is refused). Other binary files are refused.
 Click `×` on a chip to remove it, or press `Backspace` in the empty input.
 
 To get files out:
