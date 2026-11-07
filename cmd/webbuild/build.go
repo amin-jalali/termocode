@@ -45,7 +45,9 @@ var workbenchChunk = page{Name: "workbench", Entry: "workbench.tsx"}
 // import (lib/lazy.ts) on a phone only, when one of them opens, so the
 // desktop never requests it and app.js does not grow. It shares the
 // page's modules through app-chunk.js, like the workbench. MOB-4's Home
-// (src/home/) is in it too; it still gets its views through init(host).
+// (src/home/) and the All tools menu (MOBUX-5, once its own phone.js)
+// are in it too: one phone chunk. The Home still gets its views through
+// init(host).
 var homeChunk = page{Name: "home", Entry: "home.tsx"}
 
 var appPage = page{Name: "app", Entry: "main.tsx", Template: "index.html", HTML: "index.html", With: []page{workbenchChunk, homeChunk}}
@@ -195,7 +197,7 @@ func buildPage(abs, vendorDir string, pkgs []manifest.Package, p page, out map[s
 			return fmt.Errorf("webbuild: %s built no %s.js", w.Entry, w.Name)
 		}
 		if _, ok := out[w.Name+".css"]; ok {
-			return fmt.Errorf("webbuild: %s imports a style sheet; desk.ts gathers the desktop's", w.Entry)
+			return fmt.Errorf("webbuild: %s imports a style sheet; desk.ts gathers the desktop's, app.css the phone's", w.Entry)
 		}
 	}
 	if p.Template == "" {

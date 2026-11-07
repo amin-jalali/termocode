@@ -343,6 +343,33 @@ func TestBuildWritesTheHomeChunk(t *testing.T) {
 	}
 }
 
+// The All tools menu (MOBUX-5) is in the one phone chunk (home.js; it was
+// its own phone.js before the merge): the page loads it when the user
+// opens it; it shares the page's modules through app-chunk.js, holds the
+// menu, and the page's own files do not.
+func TestBuildPutsAllToolsInTheHomeChunk(t *testing.T) {
+	out, err := Build(realAssets)
+	if err != nil {
+		t.Fatal(err)
+	}
+	page, ph := string(out["app.js"])+string(out["app-chunk.js"]), string(out["home.js"])
+	if ph == "" {
+		t.Fatal("build wrote no home.js")
+	}
+	if _, ok := out["home.css"]; ok {
+		t.Error("home.js brought its own style sheet; the phone's styles are in app.css")
+	}
+	if !strings.Contains(ph, `from"./app-chunk.js"`) || strings.Contains(ph, "__H") {
+		t.Error("home.js does not share the page's modules (no app-chunk.js import, or its own Preact)")
+	}
+	if !strings.Contains(ph, "tools-server") || strings.Contains(page, "tools-server") {
+		t.Error("the All tools menu is not in home.js alone")
+	}
+	if !strings.Contains(page, `import("/assets/home.js")`) {
+		t.Error("the page does not load /assets/home.js")
+	}
+}
+
 // The Persian strings are their own file (strings-fa.js), loaded only
 // when the UI language is Persian: the phone's first files carry one
 // language, English. strings-fa.js is the strings alone (no Preact).
@@ -374,12 +401,13 @@ func TestBuildRefusesAnyOtherDynamicImport(t *testing.T) {
 	}
 }
 
-// The phone's Home (MOB-4) is its own file (home.js), built alone: the
-// page loads it with a dynamic import on a phone only and hands it its
-// Preact, signals and views (src/home/api.ts), so home.js holds no Preact
-// of its own and the phone's first files (app.js, app-chunk.js) do not
-// grow with it. The desktop never names it.
-func TestBuildWritesTheHomeChunk(t *testing.T) {
+// The phone's Home (MOB-4) is in the one phone chunk (home.js): the page
+// loads it with a dynamic import on a phone only and hands it its signals
+// and views (src/home/api.ts), so home.js holds no Preact of its own and
+// the phone's first files (app.js, app-chunk.js) do not grow with it. The
+// desktop never names it. (Merge: home.js now shares app-chunk.js, like
+// This phone and All tools; MOB-4 had it built alone.)
+func TestBuildHomeChunkHoldsTheHome(t *testing.T) {
 	out, err := Build(realAssets)
 	if err != nil {
 		t.Fatal(err)
@@ -396,9 +424,6 @@ func TestBuildWritesTheHomeChunk(t *testing.T) {
 	}
 	if !strings.Contains(home, "home-chips") || strings.Contains(home, "__H") || strings.Contains(home, "preact") {
 		t.Error("home.js is not the Home alone (it has no chips, or its own Preact)")
-	}
-	if strings.Contains(home, `from"./app-chunk.js"`) {
-		t.Error("home.js imports the shared chunk: it gets what it needs from the page")
 	}
 	for _, name := range []string{"index.html", "workbench.js"} {
 		if strings.Contains(string(out[name]), "home.js") {

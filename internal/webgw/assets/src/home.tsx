@@ -2,6 +2,7 @@
 // loaded by it (lib/lazy.ts) only on a phone, when one opens; the desktop
 // never requests it. It shares Preact and the session with the page
 // through app-chunk.js. This phone (MOBUX-20) and the Home (MOB-4, which
-// gets its host through init).
+// gets its host through init) and All tools (MOBUX-5).
 export { ThisPhone } from "./views/phone/ThisPhone";
 export { Home, init } from "./home/main";
+export { AllToolsView } from "./home/AllToolsView";
