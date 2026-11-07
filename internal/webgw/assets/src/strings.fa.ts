@@ -872,6 +872,7 @@ export const FA: Record<StringKey, string> = {
   "dbv.f_ca": "فایل CA",
   "dbv.f_cert": "فایل گواهی کلاینت",
   "dbv.f_db": "پایگاه داده",
+  "dbv.f_keyspace": "Keyspace (اختیاری)",
   "dbv.f_driver": "نوع",
   "dbv.f_env": "محیط",
   "dbv.f_host": "میزبان",

@@ -294,6 +294,7 @@ local function changed(buf)
   if api.nvim_buf_is_valid(buf) and _G.termocode_notify then _G.termocode_notify('termocode_db_buf',buf) end
  end,150)
 end
+vim.filetype.add({extension={cql='sql'}})
 local g=api.nvim_create_augroup('termocode_sql',{clear=true})
 api.nvim_create_autocmd('FileType',{group=g,pattern='sql',callback=function(args)
  local buf=args.buf
@@ -411,7 +412,7 @@ func (m *Model) databaseBufferLens(buf int) {
 		return
 	}
 	file, lines, ok := m.httpBufText(buf)
-	if !ok || !strings.EqualFold(lastExt(file), ".sql") {
+	if !ok || !isDBLensExt(file) {
 		return
 	}
 	m.ensureDatabasesLoaded()
@@ -446,8 +447,24 @@ func (m *Model) databaseBufferLens(buf int) {
 	if s.inlineSeen { // DBX-26: the first rows of a result under its query
 		_ = m.nvim.ExecLuaArgs(`local b,items=...;local api=vim.api;local ns=api.nvim_create_namespace('termocode_sql_inline');api.nvim_buf_clear_namespace(b,ns,0,-1);local n=api.nvim_buf_line_count(b);for _,it in ipairs(items) do local vl={};for _,l in ipairs(it.lines) do vl[#vl+1]={{l,'TermocodeHttpLens'}} end;pcall(api.nvim_buf_set_extmark,b,ns,math.max(math.min(it.line,n),1)-1,0,{virt_lines=vl}) end`, buf, inline)
 	}
+	if !dbInspectsFile(file) {
+		inspectConn = nil // clears old marks; SQL rules do not fit CQL
+	}
 	m.databaseInspectBuffer(buf, lines, inspectConn)
 }
+
+// isDBLensExt reports a file whose statements get the run lens: .sql and
+// Cassandra's .cql.
+func isDBLensExt(p string) bool {
+	switch strings.ToLower(lastExt(p)) {
+	case ".sql", ".cql":
+		return true
+	}
+	return false
+}
+
+// dbInspectsFile reports a file the SQL inspections check (.sql only).
+func dbInspectsFile(p string) bool { return strings.EqualFold(lastExt(p), ".sql") }
 
 func lastExt(p string) string {
 	if i := strings.LastIndexByte(p, '.'); i >= 0 && !strings.ContainsAny(p[i:], `/\`) {
