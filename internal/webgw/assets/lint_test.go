@@ -30,9 +30,11 @@ var sourceRules = []rule{
 	{name: "string timer", re: regexp.MustCompile(`set(Timeout|Interval)\s*\(\s*["'\x60]`)},
 	{name: "javascript: URL", re: regexp.MustCompile(`(?i)javascript:`)},
 	{name: "external URL", re: regexp.MustCompile(`(?i)\b(https?|wss?)://`)},
-	// The two dynamic imports load the editor file (WEB-39) and the
-	// desktop workbench, each a fixed path.
-	{name: "dynamic import", re: regexp.MustCompile(`\bimport\s*\(`), allow: map[string]bool{"lib/lazy.ts": true}},
+	// The page's dynamic imports (lib/lazy.ts) load the editor file
+	// (WEB-39), the desktop workbench and the Persian strings; the desktop
+	// editor's frame loads its Vim mode (monaco-vim.js, WEBP-1). Each is a
+	// fixed path.
+	{name: "dynamic import", re: regexp.MustCompile(`\bimport\s*\(`), allow: map[string]bool{"lib/lazy.ts": true, "monaco/frame.ts": true}},
 	{name: "remote script/style", re: regexp.MustCompile(`(?i)@import|url\(\s*["']?(https?:)?//`)},
 	// Only the prefs module touches localStorage, and it never holds a
 	// secret; and the bookmark key of a remembered browser (WEBP-12), the
