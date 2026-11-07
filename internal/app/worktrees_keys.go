@@ -36,6 +36,7 @@ func worktreeKeyRows() []confirm.KeyRow {
 		[]string{"d", "diff vs base: what it changed since it left its base · keep or revert each change"},
 		[]string{"n", "new worktree: name, start point, agent and first task"},
 		[]string{"c", "new child worktree: from this one's branch, listed under it"},
+		[]string{"H", "hand off: a new agent goes on with a note of this work, here or in a child"},
 		[]string{"L", "show the setup of a new worktree (its terminal tab)"},
 		[]string{"r", "run the dev server on the worktree's own port ($PORT) · again: show its tab"},
 		[]string{"o", "open the running dev server's address in the browser"},
@@ -80,6 +81,7 @@ func worktreePaletteItems() []picker.Item {
 		{ID: wtResetOrderPaletteID, Title: "Worktree: Reset Order"},
 		{ID: wtNewPaletteID, Title: "Worktree: New…"},
 		{ID: wtChildPaletteID, Title: "Worktree: New Child of Selected…"},
+		{ID: wtHandoffPaletteID, Title: "Worktree: Hand Off Selected…"},
 		{ID: wtSetupLogPaletteID, Title: "Worktree: Show Setup Log"},
 		{ID: wtRunPaletteID, Title: "Worktree: Run Dev Server of Selected"},
 		{ID: wtRunOpenPaletteID, Title: "Worktree: Open Dev Server of Selected"},
@@ -131,6 +133,8 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.openWorktreeNew(), true
 	case wtChildPaletteID:
 		return m.openWorktreeNewChild(), true
+	case wtHandoffPaletteID:
+		return m.worktreeHandoff(), true
 	case wtSetupLogPaletteID:
 		return m.worktreeSetupLog(), true
 	case wtRunPaletteID:
@@ -236,6 +240,8 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.openWorktreeNew()
 	case "c":
 		return m, m.openWorktreeNewChild()
+	case "H":
+		return m, m.worktreeHandoff()
 	case "L":
 		return m, m.worktreeSetupLog()
 	case "r":
