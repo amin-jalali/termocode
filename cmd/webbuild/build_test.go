@@ -315,6 +315,33 @@ func TestBuildSplitsTheWorkbench(t *testing.T) {
 	}
 }
 
+// The phone views the first files do not carry are their own file
+// (phone.js, MOBUX-5): the page loads it when the user opens one (All
+// tools); it shares the page's modules through app-chunk.js, holds the
+// menu, and the page's own files do not.
+func TestBuildSplitsThePhoneViews(t *testing.T) {
+	out, err := Build(realAssets)
+	if err != nil {
+		t.Fatal(err)
+	}
+	page, ph := string(out["app.js"])+string(out["app-chunk.js"]), string(out["phone.js"])
+	if ph == "" {
+		t.Fatal("build wrote no phone.js")
+	}
+	if _, ok := out["phone.css"]; ok {
+		t.Error("phone.js brought its own style sheet; the phone's styles are in app.css")
+	}
+	if !strings.Contains(ph, `from"./app-chunk.js"`) || strings.Contains(ph, "__H") {
+		t.Error("phone.js does not share the page's modules (no app-chunk.js import, or its own Preact)")
+	}
+	if !strings.Contains(ph, "tools-server") || strings.Contains(page, "tools-server") {
+		t.Error("the All tools menu is not in phone.js alone")
+	}
+	if !strings.Contains(page, `import("/assets/phone.js")`) {
+		t.Error("the page does not load /assets/phone.js")
+	}
+}
+
 // The Persian strings are their own file (strings-fa.js), loaded only
 // when the UI language is Persian: the phone's first files carry one
 // language, English. strings-fa.js is the strings alone (no Preact).
