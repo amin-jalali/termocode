@@ -17,7 +17,7 @@ func TestControlOps(t *testing.T) {
 		}
 	}
 	for _, p := range Ops() {
-		if p.Gateway && p.Op != OpControlChallenge && p.Op != OpControlAsk {
+		if p.Gateway && p.Op != OpControlChallenge && p.Op != OpControlAsk && p.Op != OpPushSubscribe && p.Op != OpPushUnsubscribe {
 			t.Errorf("%s is answered by the gateway", p.Op)
 		}
 	}
