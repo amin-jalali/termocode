@@ -16,6 +16,7 @@ import "../styles/phone.css";
 import "../styles/home.css";
 import "../styles/chat.css";
 import "../styles/blocks.css";
+import "../styles/customize.css";
 import "./kit.css";
 import { toast } from "../lib/toasts";
 import type { StatusView } from "../state/status";
@@ -38,6 +39,7 @@ import { WaitingLaptop } from "../ui/Waiting";
 import { Block as PhoneBlock, BoardTile, Composer, PhoneCard, PhoneChip, PhoneChips, PhoneShell, PhoneSheet, Row, Rows, StatusMark, STATUS, StreamMsg, type Status } from "../phone/index";
 import { ChipRow } from "../home/ChipRow";
 import type { ChipState } from "../home/chips";
+import { KitCustomize } from "./customize";
 import "./replay";
 import type { Block as ProtoBlock } from "../../../../webproto/proto";
 
@@ -777,6 +779,8 @@ function Kit() {
           <Pair tall>
             {() => <Blocks list={blockSamples} now={KIT_NOW} onAction={(a) => toast("info", a.label)} onLaptop={(b) => toast("info", b.title)} onForm={() => toast("ok", t("blk.form_send"))} />}
           </Pair>
+        <Section id="customize" title="Customize a view" note="⚙ on a view block opens the sheet: fields, filter, sort, group, rows, layout, density; the preview runs the draft. Cancel is first.">
+          <KitCustomize />
         </Section>
 
         <Section id="misc" title="Choices">
