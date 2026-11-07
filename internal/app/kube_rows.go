@@ -48,6 +48,10 @@ func (st *kubeState) names(sec string) []string {
 		for _, j := range st.jobs {
 			out = append(out, j.Name)
 		}
+	case kubeForwardsSection:
+		for _, k := range st.forwardKeys() {
+			out = append(out, st.forwardLabel(k))
+		}
 	}
 	return out
 }
@@ -57,7 +61,8 @@ func kubeMatch(name, filter string) bool {
 	return filter == "" || strings.Contains(strings.ToLower(name), strings.ToLower(filter))
 }
 
-// rows flattens the view: a problem, or the four sections and their items.
+// rows flattens the view: a problem, or the four sections and their items
+// (and FORWARDS while a port-forward runs).
 func (st *kubeState) rows() []kubeRow {
 	if st == nil || !st.loaded {
 		return nil
@@ -66,7 +71,11 @@ func (st *kubeState) rows() []kubeRow {
 		return []kubeRow{{kind: kubeRowNote, text: st.err}}
 	}
 	var out []kubeRow
-	for _, sec := range kubeSections {
+	secs := kubeSections
+	if len(st.forwards) > 0 { // last, so starting one never moves the cursor
+		secs = append(secs[:len(secs):len(secs)], kubeForwardsSection)
+	}
+	for _, sec := range secs {
 		out = append(out, kubeRow{kind: kubeRowSection, section: sec})
 		if st.collapsed[sec] {
 			continue

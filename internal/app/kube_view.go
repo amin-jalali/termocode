@@ -235,6 +235,9 @@ func (st *kubeState) itemParts(r kubeRow, w int, now time.Time) (theme.Icon, the
 		if wide {
 			right += fmt.Sprintf(" upd %d av %d", d.Updated, d.Available)
 		}
+		if fw := st.forwardOf("deployment", d.Name); fw != nil {
+			right = kubeArrow() + ":" + strconv.Itoa(fw.Local) + " " + right
+		}
 		return g, c, right + " " + kube.Age(d.Created, now)
 	case "services":
 		s := st.services[r.idx]
@@ -242,7 +245,23 @@ func (st *kubeState) itemParts(r kubeRow, w int, now time.Time) (theme.Icon, the
 		if wide {
 			right += " " + s.PortsText()
 		}
+		if fw := st.forwardOf("svc", s.Name); fw != nil {
+			right = kubeArrow() + ":" + strconv.Itoa(fw.Local) + " " + right
+		}
 		return theme.GlyphSvcStopped, theme.TextDim, right
+	case kubeForwardsSection:
+		keys := st.forwardKeys()
+		if r.idx >= len(keys) {
+			break
+		}
+		fw := st.forwards[keys[r.idx]]
+		g, c := theme.GlyphSvcUp, theme.GitAdded
+		select {
+		case <-fw.Done(): // kubectl ended; the next load drops it
+			g, c = theme.GlyphSvcExited, theme.DiagError
+		default:
+		}
+		return g, c, fmt.Sprintf(":%d %s %d", fw.Local, kubeArrow(), fw.Remote)
 	case "jobs":
 		j := st.jobs[r.idx]
 		g, c := kubeJobGlyph(j)
@@ -309,10 +328,22 @@ func (st *kubeState) footer(now time.Time) []string {
 		return []string{line, "l logs · e shell · f forward · ? keys"}
 	case "deployments":
 		d := st.deploys[r.idx]
-		return []string{fmt.Sprintf("ready %s · updated %d · available %d", d.Ready(), d.Updated, d.Available), "i describe · r restart · ? keys"}
+		line := fmt.Sprintf("ready %s · updated %d · available %d", d.Ready(), d.Updated, d.Available)
+		if fw := st.forwardOf("deployment", d.Name); fw != nil {
+			return []string{fmt.Sprintf("127.0.0.1:%d %s %d · %s", fw.Local, kubeArrow(), fw.Remote, line), "i describe · r restart · f stop forward · ? keys"}
+		}
+		return []string{line, "i describe · r restart · ? keys"}
 	case "services":
 		s := st.services[r.idx]
-		return []string{s.Type + " · " + s.ClusterIP + " · " + s.PortsText(), "i describe · y copy name · ? keys"}
+		line := s.Type + " · " + s.ClusterIP + " · " + s.PortsText()
+		if fw := st.forwardOf("svc", s.Name); fw != nil {
+			return []string{fmt.Sprintf("127.0.0.1:%d %s %d · %s", fw.Local, kubeArrow(), fw.Remote, line), "i describe · f stop forward · ? keys"}
+		}
+		return []string{line, "i describe · y copy name · ? keys"}
+	case kubeForwardsSection:
+		if _, fw, ok := st.selectedForward(); ok && fw != nil {
+			return []string{fmt.Sprintf("127.0.0.1:%d %s %s:%d", fw.Local, kubeArrow(), fw.Target(), fw.Remote), "f stop · y copy address · ? keys"}
+		}
 	case "jobs":
 		j := st.jobs[r.idx]
 		return []string{fmt.Sprintf("%s · %s done · %d failed", j.Status(), j.Completions(), j.Failed), "i describe · y copy name · ? keys"}

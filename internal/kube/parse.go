@@ -47,6 +47,7 @@ type Deployment struct {
 	ReadyN    int
 	Updated   int
 	Available int
+	Ports     []int // the pod template's container ports, spec order
 }
 
 // Ready is "ready/wanted".
@@ -213,6 +214,15 @@ type rawDeployment struct {
 	Metadata meta `json:"metadata"`
 	Spec     struct {
 		Replicas *int `json:"replicas"`
+		Template struct {
+			Spec struct {
+				Containers []struct {
+					Ports []struct {
+						ContainerPort int `json:"containerPort"`
+					} `json:"ports"`
+				} `json:"containers"`
+			} `json:"spec"`
+		} `json:"template"`
 	} `json:"spec"`
 	Status struct {
 		ReadyReplicas     int `json:"readyReplicas"`
@@ -233,8 +243,16 @@ func ParseDeployments(b []byte) ([]Deployment, error) {
 		if r.Spec.Replicas != nil {
 			want = *r.Spec.Replicas
 		}
-		out = append(out, Deployment{Name: r.Metadata.Name, Namespace: r.Metadata.Namespace, Created: r.Metadata.CreationTimestamp,
-			Replicas: want, ReadyN: r.Status.ReadyReplicas, Updated: r.Status.UpdatedReplicas, Available: r.Status.AvailableReplicas})
+		d := Deployment{Name: r.Metadata.Name, Namespace: r.Metadata.Namespace, Created: r.Metadata.CreationTimestamp,
+			Replicas: want, ReadyN: r.Status.ReadyReplicas, Updated: r.Status.UpdatedReplicas, Available: r.Status.AvailableReplicas}
+		for _, c := range r.Spec.Template.Spec.Containers {
+			for _, port := range c.Ports {
+				if port.ContainerPort > 0 {
+					d.Ports = append(d.Ports, port.ContainerPort)
+				}
+			}
+		}
+		out = append(out, d)
 	}
 	return out, nil
 }

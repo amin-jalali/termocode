@@ -94,6 +94,8 @@ func (m *Model) handleKubePickerSelect(id string) tea.Cmd {
 			return nil
 		}
 		return m.kubeRescope(st.context, value)
+	case "pf-svc", "pf-deployment":
+		return m.handleKubeForwardPick(kind, value)
 	}
 	return m.handleKubePodPick(kind, value)
 }

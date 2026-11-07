@@ -1,10 +1,13 @@
 package app
 
 import (
+	"strconv"
+
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/help"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // ── Kubernetes view: keys ────────────────────────────────────────────────
@@ -50,11 +53,14 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if p, ok := st.selectedPod(); ok {
 			return m, m.kubePodTerminal("logs", p, "")
 		}
+		if r.section == kubeForwardsSection {
+			return m, nil // nothing to describe; f stops it
+		}
 		if have && r.kind == kubeRowItem && k.String() == "enter" {
 			return m, m.kubeDescribe(kubeKindOf(r.section), r.name)
 		}
 	case "i":
-		if have && r.kind == kubeRowItem {
+		if have && r.kind == kubeRowItem && r.section != kubeForwardsSection {
 			return m, m.kubeDescribe(kubeKindOf(r.section), r.name)
 		}
 	case "e":
@@ -67,10 +73,13 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, nil
 		}
 	case "f":
-		if p, ok := st.selectedPod(); ok {
-			return m, m.kubeToggleForward(p, 0)
-		}
+		return m, m.kubeToggleSelectedForward()
 	case "y":
+		if _, fw, ok := st.selectedForward(); ok && fw != nil {
+			addr := "127.0.0.1:" + strconv.Itoa(fw.Local)
+			m.copyToClipboard(addr)
+			return m, m.servicesToast(toast.Info, "Copied address", addr)
+		}
 		if have && r.kind == kubeRowItem {
 			return m, m.kubeCopyName(r.name)
 		}
