@@ -409,3 +409,138 @@ button.ph-tile:active { background: var(--bg-hover); }
   font: 600 var(--p-fs-body) / var(--p-lh-body) var(--p-font);
 }
 .ph-composer-send[aria-disabled="true"] { background: var(--p-surface-2); color: var(--p-muted); }
+
+/* App shell (MOBUX-2): top bar, stream, dock. The column is the small
+   viewport's height, so with the keyboard up the dock rides on it and the
+   stream gives up the room. The dock is the thumb zone. */
+.ph-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-height: 0;
+  background: var(--p-bg);
+  color: var(--p-text);
+}
+.ph-top {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--p-s2);
+  min-height: var(--p-bar-h);
+  padding: env(safe-area-inset-top, 0px) var(--p-s2) 0 var(--p-s2);
+  border-bottom: 1px solid var(--p-line);
+  background: var(--p-bg);
+}
+.ph-switch {
+  flex: 0 1 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-s1);
+  min-width: 0;
+  min-height: var(--p-tap);
+  padding: 0 var(--p-s2);
+  border: 0;
+  border-radius: var(--p-r-row);
+  background: transparent;
+  color: var(--p-text);
+  font: 600 var(--p-fs-title) / var(--p-lh-title) var(--p-font);
+}
+.ph-switch:active { background: var(--bg-hover); }
+.ph-switch.is-plain { display: inline-flex; }
+.ph-switch-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ph-switch-caret { color: var(--p-muted); font-size: var(--p-fs-meta); }
+.ph-live {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-s1);
+  color: var(--p-text-2);
+  font: var(--p-fs-meta) / var(--p-lh-meta) var(--p-font);
+  white-space: nowrap;
+}
+.ph-top-btn {
+  flex: none;
+  min-width: var(--p-tap);
+  min-height: var(--p-tap);
+  border: 0;
+  border-radius: var(--p-r-row);
+  background: transparent;
+  color: var(--p-text);
+  font-size: var(--p-fs-title);
+}
+.ph-top-btn:active { background: var(--bg-hover); }
+.ph-switch:focus-visible,
+.ph-top-btn:focus-visible,
+.ph-switch-row:focus-visible,
+.ph-composer-mic:focus-visible,
+.ph-composer-attach:focus-visible,
+.ph-stream:focus-visible {
+  outline: 2px solid var(--p-focus);
+  outline-offset: -2px;
+}
+.ph-stream {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-gap);
+  padding: var(--p-s3) var(--p-gutter);
+  -webkit-overflow-scrolling: touch;
+}
+.ph-msg { max-width: 100%; font: var(--p-fs-body) / var(--p-lh-body) var(--p-font); }
+.ph-msg.is-you {
+  align-self: flex-end;
+  max-width: 85%;
+  padding: var(--p-s2) var(--p-s3);
+  border-radius: var(--p-r-block);
+  background: var(--p-surface-2);
+}
+.ph-msg.is-ai { align-self: stretch; }
+.ph-dock {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--p-line);
+  background: var(--p-bg);
+}
+.ph-dock > .ph-composer { border-top: 0; }
+.ph-shell.is-offline .ph-chip,
+.ph-shell.is-offline .ph-composer-attach { opacity: 0.55; }
+.ph-composer-attach,
+.ph-composer-mic {
+  flex: none;
+  min-width: var(--p-tap);
+  min-height: var(--p-tap);
+  border: 1px solid var(--p-line);
+  border-radius: var(--p-r-block);
+  background: var(--p-surface);
+  color: var(--p-text);
+  font-size: var(--p-fs-title);
+}
+.ph-composer-attach:active,
+.ph-composer-mic:active { background: var(--bg-hover); }
+.ph-composer-hint { margin: 0; color: var(--p-text-2); font: var(--p-fs-meta) / var(--p-lh-meta) var(--p-font); }
+
+/* Project switcher sheet */
+.ph-switch-list { margin: 0; padding: 0; list-style: none; }
+.ph-switch-row {
+  display: flex;
+  align-items: center;
+  gap: var(--p-s2);
+  width: 100%;
+  min-height: var(--p-tap);
+  padding: var(--p-s2) var(--p-s3);
+  border: 0;
+  border-radius: var(--p-r-row);
+  background: transparent;
+  color: var(--p-text);
+  text-align: start;
+}
+.ph-switch-row:active { background: var(--bg-hover); }
+.ph-switch-row.is-on { background: var(--p-surface-2); }
+.ph-switch-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ph-switch-name { font: 600 var(--p-fs-body) / var(--p-lh-body) var(--p-font); }
+.ph-switch-where { color: var(--p-text-2); font: var(--p-fs-meta) / var(--p-lh-meta) var(--p-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ph-switch-check { color: var(--p-st-done); }

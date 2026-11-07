@@ -1,8 +1,12 @@
 // Composer: the box at the bottom, in the thumb zone. Attached items show
 // as chips (a reference only: id or path, never secret contents) with an
 // × each; Enter adds a line on a phone, Send sends. Offline, Send is
-// greyed and does nothing (inputs change state, not shape).
+// greyed and does nothing (inputs change state, not shape). With onAttach
+// a "+" opens what can be attached; with mic a 🎤 puts the cursor in the
+// box and points at the keyboard's own dictation (the page records no
+// audio, MOB-26).
 import { h } from "preact";
+import { useRef, useState } from "preact/hooks";
 import { t } from "../strings";
 
 export interface Attached {
@@ -19,6 +23,8 @@ export function Composer({
   onRemove,
   offline,
   placeholder,
+  onAttach,
+  mic,
 }: {
   value: string;
   onInput: (v: string) => void;
@@ -27,7 +33,13 @@ export function Composer({
   onRemove?: (id: string) => void;
   offline?: boolean;
   placeholder?: string;
+  /** onAttach shows the + button (the host opens its attach sheet). */
+  onAttach?: () => void;
+  /** mic shows the 🎤 button. */
+  mic?: boolean;
 }) {
+  const box = useRef<HTMLTextAreaElement | null>(null);
+  const [hint, setHint] = useState(false);
   const empty = value.trim() === "" && (!attached || attached.length === 0);
   const off = offline || empty;
   return (
@@ -52,8 +64,19 @@ export function Composer({
           ))}
         </div>
       )}
+      {hint && (
+        <p class="ph-composer-hint" role="status">
+          {t("ph.mic_hint")}
+        </p>
+      )}
       <div class="ph-composer-row">
+        {onAttach && (
+          <button type="button" class="ph-composer-attach" aria-label={t("ph.attach")} onClick={onAttach}>
+            +
+          </button>
+        )}
         <textarea
+          ref={box}
           class="ph-composer-box"
           rows={1}
           value={value}
@@ -61,7 +84,22 @@ export function Composer({
           aria-label={placeholder ?? t("ph.ask")}
           enterkeyhint="send"
           onInput={(e) => onInput((e.currentTarget as HTMLTextAreaElement).value)}
+          onBlur={() => setHint(false)}
         />
+        {mic && (
+          <button
+            type="button"
+            class="ph-composer-mic"
+            aria-label={t("ph.mic")}
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={() => {
+              box.current?.focus();
+              setHint(true);
+            }}
+          >
+            🎤
+          </button>
+        )}
         <button type="submit" class="ph-composer-send" aria-disabled={off ? "true" : undefined}>
           {t("send")}
         </button>
