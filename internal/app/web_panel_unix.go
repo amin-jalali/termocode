@@ -98,6 +98,7 @@ func startWebGatewayProcess(h *webHub, args []string) (*webGatewayProc, error) {
 		var hand struct {
 			Port int    `json:"port"`
 			URL  string `json:"url"`
+			FP   string `json:"fp"`
 		}
 		if err := json.NewDecoder(pr).Decode(&hand); err != nil || hand.Port == 0 {
 			select { // the reason is on stderr once the process ended
@@ -107,7 +108,7 @@ func startWebGatewayProcess(h *webHub, args []string) (*webGatewayProc, error) {
 			_ = h.send(h.ctx, webPanelFailMsg{hub: h, proc: proc, err: errors.New(webGatewayReason(stderr.String()))})
 			return
 		}
-		_ = h.send(h.ctx, webPanelUpMsg{hub: h, proc: proc, port: hand.Port, url: hand.URL})
+		_ = h.send(h.ctx, webPanelUpMsg{hub: h, proc: proc, port: hand.Port, url: hand.URL, fp: hand.FP})
 	})
 	crash.Go("web: the gateway process", func() {
 		_ = cmd.Wait()

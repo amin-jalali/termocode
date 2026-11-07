@@ -97,7 +97,10 @@ func (m *Model) openWebPair(guest bool) tea.Cmd {
 		return m.webToast(toast.Warn, "Start the web panel first: Web: Open in Browser.")
 	}
 	if st.url == "" {
-		return m.webToast(toast.Warn, `Pairing a device needs tailnet mode. Set "web_listen": "tailnet" in config.json, then start the panel again.`)
+		return m.webToast(toast.Warn, `Pairing a device needs "web_listen": "lan" (same Wi-Fi) or "tailnet" in config.json. Set it, then start the panel again.`)
+	}
+	if guest && st.fp != "" {
+		return m.webToast(toast.Warn, "Share as Viewer needs tailnet mode. On the same Wi-Fi, pair the device instead.")
 	}
 	if m.confirmOpen {
 		return m.webToast(toast.Warn, "Answer the open card first.")
@@ -115,7 +118,7 @@ func (m *Model) openWebPair(guest bool) tea.Cmd {
 		c.send(&webproto.Event{T: webproto.KindEv, Kind: "pair", Data: data})
 	}
 	acc := m.webAccess()
-	acc.link, acc.guest = st.url+"#p="+plain, guest
+	acc.link, acc.guest = webPairLink(st, plain), guest
 	title := "Pair a phone or tablet"
 	body := "Scan this code with the phone's camera. It works once, for 2 minutes.\n" +
 		"The phone then shows a 6-digit code; you check it here."
@@ -134,6 +137,16 @@ func (m *Model) openWebPair(guest bool) tea.Cmd {
 	m.confirmOpen = true
 	m.confirmKind = confirmKindWebPairQR
 	return nil
+}
+
+// webPairLink is the pairing link: <url>#p=<secret>, and in LAN mode
+// &fp=<certificate fingerprint>, which the app pins for that origin.
+func webPairLink(st *webPanelState, plain string) string {
+	link := st.url + "#p=" + plain
+	if st.fp != "" {
+		link += "&fp=" + st.fp
+	}
+	return link
 }
 
 // webQRLines draws text as a QR code with half blocks for a card's

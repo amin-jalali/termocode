@@ -69,6 +69,9 @@ func webStartBody(cfg webConfig, fromCLI bool) string {
 	b.WriteString("The browser shows your files, chats and terminals and can type into them.\n")
 	if cfg.Tailnet {
 		b.WriteString("Your devices on your tailnet can reach it (tailscale serve), not on the internet.\n")
+	} else if cfg.LAN {
+		b.WriteString("Devices on the same Wi-Fi can reach it (https, a certificate made on this computer).\n")
+		b.WriteString("Only a device you pair with a QR code and a 6-digit code gets in.\n")
 	} else {
 		b.WriteString("The panel listens only on this computer (127.0.0.1")
 		if cfg.Port != 0 {

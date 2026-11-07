@@ -121,10 +121,16 @@ func (l *Login) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch r.URL.Path {
-	case "/login/start":
-		l.start(w, r)
-	case "/login/finish":
-		l.finish(w, r)
+	case "/login/start", "/login/finish":
+		if l.cfg.Passkeys == nil {
+			writeJSON(w, http.StatusNotFound, errorReply("no_passkeys"))
+			return
+		}
+		if r.URL.Path == "/login/start" {
+			l.start(w, r)
+		} else {
+			l.finish(w, r)
+		}
 	case "/login/totp":
 		l.totp(w, r)
 	case "/login/device":

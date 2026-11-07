@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -65,11 +66,13 @@ func webGatewayConfig(args []string, errw io.Writer) (webgw.RunConfig, bool) {
 	sshPort := fs.Int("ssh-port", 0, "SSH mode: serve on the folder's unix socket for this forwarded port")
 	tailnet := fs.Bool("tailnet", false, "tailnet mode: tailscale serve in front of 127.0.0.1")
 	devices := fs.String("devices", "", "the paired-device folder (pairing and passkeys on)")
+	lan := fs.Bool("lan", false, "LAN mode: https on a private LAN address, pinned self-signed certificate")
 	totp := fs.Bool("totp", false, "a paired device also needs a one-time code")
 	appKey := fs.Bool("app-key", false, "the Android app may sign in with its keystore key")
 	phone := fs.Bool("phone-watch", false, "a paired phone that watches keeps the gateway up (web_phone)")
 	if err := fs.Parse(args); err != nil || *dir == "" || *audit == "" || fs.NArg() != 0 ||
-		(*sshPort != 0 && (*port != 0 || *sshPort < 1024 || *sshPort > 65535 || *tailnet)) {
+		(*sshPort != 0 && (*port != 0 || *sshPort < 1024 || *sshPort > 65535 || *tailnet)) ||
+		(*lan && (*devices == "" || *tailnet || *sshPort != 0)) {
 		fmt.Fprintln(errw, "termocode: the web gateway is started by termocode itself")
 		return webgw.RunConfig{}, false
 	}
@@ -92,6 +95,9 @@ func webGatewayConfig(args []string, errw io.Writer) (webgw.RunConfig, bool) {
 	}
 	if *tailnet {
 		cfg.Tailnet = &webgw.TailnetConfig{}
+	}
+	if *lan {
+		cfg.LAN = &webgw.LANConfig{CertDir: filepath.Join(*devices, "lan")}
 	}
 	cfg.DevicesDir = *devices
 	if *devices != "" {

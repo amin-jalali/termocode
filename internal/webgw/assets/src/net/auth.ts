@@ -8,7 +8,9 @@
 
 const TOKEN_KEY = "termocode.session";
 const SECRET_HASH = /^#s=([A-Za-z0-9_-]{43})$/;
-const PAIR_HASH = /^#p=([A-Za-z0-9_-]{43})$/;
+// A LAN pairing link also carries the certificate's fingerprint for the
+// app (&fp=); the page only drops it.
+const PAIR_HASH = /^#p=([A-Za-z0-9_-]{43})(?:&fp=[A-Za-z0-9_-]{43})?$/;
 
 export type AuthFailure = "expired" | "busy" | "failed";
 

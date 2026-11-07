@@ -86,6 +86,10 @@ type RunConfig struct {
 	// reached from the user's tailnet through tailscale serve on
 	// https://<machine>.<tailnet>.ts.net/; Funnel is refused.
 	Tailnet *TailnetConfig
+	// LAN, when set, is LAN mode: https on one private LAN address with a
+	// stored self-signed certificate; the pairing link pins its
+	// fingerprint. No passkeys (an IP address has no name for them).
+	LAN *LANConfig
 }
 
 // Status is what the gateway writes to its status file. It holds no
@@ -107,6 +111,8 @@ type Status struct {
 type handoff struct {
 	Port int    `json:"port"`
 	URL  string `json:"url"`
+	// FP is LAN mode's certificate fingerprint (base64url SHA-256).
+	FP string `json:"fp,omitempty"`
 }
 
 // ErrGatewayBusy: another gateway already runs for this workspace.
@@ -151,10 +157,14 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	var ln net.Listener
 	var site Site
 	port := cfg.Port
-	if cfg.UnixPath != "" {
+	var lanFP string
+	switch {
+	case cfg.UnixPath != "":
 		ln, site, err = ListenUnix(cfg.UnixPath, cfg.PortHint)
 		port = cfg.PortHint
-	} else {
+	case cfg.LAN != nil:
+		ln, site, lanFP, err = listenLAN(*cfg.LAN, cfg.Port, now())
+	default:
 		ln, site, err = Listen(ListenConfig{Port: cfg.Port, Tailnet: tn != nil})
 	}
 	if err != nil {
@@ -195,9 +205,11 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 			f := false
 			_ = audit.Log(Event{Kind: EvOp, Op: webproto.OpAppWatchToken, OK: &f, Why: "damaged_file"})
 		}
-		pk, err := NewPasskeys(site, devices, now)
-		if err != nil {
-			return 0, fmt.Errorf("passkeys: %w", err)
+		var pk *Passkeys
+		if cfg.LAN == nil {
+			if pk, err = NewPasskeys(site, devices, now); err != nil {
+				return 0, fmt.Errorf("passkeys: %w", err)
+			}
 		}
 		pairing = NewPairing(PairingConfig{Tokens: tokens, Store: devices, Audit: audit, Now: now, Passkeys: pk, AppKeys: cfg.AppKeyLogin,
 			Ask: func(ctx context.Context, a webproto.PairAskArgs) (string, error) {
@@ -286,8 +298,11 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	crash.Go("web gateway: the server", func() { _ = srv.Serve(LimitConns(ln, DefaultLimits.MaxConns)) })
 	defer func() { _ = srv.Close() }()
 
-	url := "http://" + site.Hosts[0] + "/"
+	url := site.Scheme + "://" + site.Hosts[0] + "/"
 	where := "127.0.0.1:" + strconv.Itoa(port)
+	if cfg.LAN != nil {
+		where = site.Hosts[0] + " on the LAN (https, pinned certificate)"
+	}
 	tailCh := make(chan tailStop, 1)
 	if tn != nil {
 		if err := tn.serve(ctx, port); err != nil {
@@ -326,7 +341,7 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 		return 0, err
 	}
 	if cfg.Handoff != nil {
-		_ = json.NewEncoder(cfg.Handoff).Encode(handoff{Port: port, URL: url})
+		_ = json.NewEncoder(cfg.Handoff).Encode(handoff{Port: port, URL: url, FP: lanFP})
 		if c, ok := cfg.Handoff.(io.Closer); ok {
 			_ = c.Close()
 		}
@@ -342,6 +357,30 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	ws.Wait()
 	_ = audit.Log(Event{Kind: EvStop, Code: int(code), Why: why})
 	return code, nil
+}
+
+// listenLAN opens LAN mode's listener: the stored certificate (made on
+// the first start) on the configured or picked private address.
+func listenLAN(cfg LANConfig, port int, now time.Time) (net.Listener, Site, string, error) {
+	if cfg.CertDir == "" {
+		return nil, Site{}, "", errors.New("LAN mode needs the paired-device folder")
+	}
+	ip := cfg.IP
+	if ip == nil {
+		var ok bool
+		if ip, ok = PickLANAddr(LANAddrs()); !ok {
+			return nil, Site{}, "", ErrNoLAN
+		}
+	}
+	cert, fp, err := LoadOrCreateLANCert(cfg.CertDir, now)
+	if err != nil {
+		return nil, Site{}, "", fmt.Errorf("LAN certificate: %w", err)
+	}
+	ln, site, err := ListenLAN(ip, port, cert)
+	if err != nil {
+		return nil, Site{}, "", err
+	}
+	return ln, site, fp, nil
 }
 
 // askPair asks the laptop to pair a device and returns the owner's role.
