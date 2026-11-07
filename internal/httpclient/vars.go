@@ -41,6 +41,9 @@ type Resolver struct {
 	OnSecret func(string)
 	// Now is the clock for $timestamp / $datetime; nil = time.Now.
 	Now func() time.Time
+	// Responses returns the last response of the request called name,
+	// for {{name.response.body.$.token}} (chain.go); nil = no chaining.
+	Responses func(name string) (*Response, bool)
 	// BaseDir is the .http file's folder: `< ./file` bodies are read
 	// there ("" = unsaved request, no file bodies).
 	BaseDir string
@@ -73,6 +76,9 @@ type sendScope struct {
 	rv      *Resolver
 	dynamic map[string]string
 	secrets []string
+	// frozen holds chained response values that contain "{{": they are
+	// put back after expanding, so a server cannot inject {{$secret x}}.
+	frozen []string
 }
 
 // Resolve substitutes URL, header values and body. Unknown names stay
@@ -129,6 +135,28 @@ func (sc *sendScope) expand(s string) string {
 			break
 		}
 	}
+	return sc.thaw(s)
+}
+
+// frozenMark wraps the index of a frozen value; NUL never appears in a
+// placeholder name, so the marker is not expanded again.
+const frozenMark = "\x00chain"
+
+func (sc *sendScope) freeze(v string) string {
+	if !strings.Contains(v, "{{") {
+		return v
+	}
+	sc.frozen = append(sc.frozen, v)
+	return frozenMark + strconv.Itoa(len(sc.frozen)-1) + "\x00"
+}
+
+func (sc *sendScope) thaw(s string) string {
+	if len(sc.frozen) == 0 || !strings.Contains(s, frozenMark) {
+		return s
+	}
+	for i := len(sc.frozen) - 1; i >= 0; i-- {
+		s = strings.ReplaceAll(s, frozenMark+strconv.Itoa(i)+"\x00", sc.frozen[i])
+	}
 	return s
 }
 
@@ -156,7 +184,10 @@ func (rv *Resolver) Known(expr string) bool {
 		}
 		return knownDynamic(fn, arg, rv.now)
 	}
-	_, _, ok := rv.named(expr)
+	if _, _, ok := rv.named(expr); ok {
+		return true
+	}
+	_, _, ok := rv.chainValue(expr)
 	return ok
 }
 
@@ -164,6 +195,14 @@ func (sc *sendScope) lookup(expr string) (string, bool) {
 	rv := sc.rv
 	if !strings.HasPrefix(expr, "$") {
 		v, private, ok := rv.named(expr)
+		if !ok {
+			if v, private, ok = rv.chainValue(expr); ok {
+				if private {
+					sc.secret(v)
+				}
+				return sc.freeze(v), true
+			}
+		}
 		if ok && private {
 			sc.secret(v)
 		}
