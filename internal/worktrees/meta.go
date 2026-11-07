@@ -51,6 +51,10 @@ type Meta struct {
 	Link LinkInfo `json:"link,omitzero"` // what gh last said about Issue / PR (WTX-9)
 
 	Adopted bool `json:"adopted,omitempty"` // an external worktree the user adopted (WTX-10)
+
+	// Group ties the worktrees of one task across the repositories of a
+	// multi-repo workspace (CMP-22): the branch they share.
+	Group string `json:"group,omitempty"`
 }
 
 // Empty: termocode knows nothing about the worktree.

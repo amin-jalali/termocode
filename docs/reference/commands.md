@@ -838,6 +838,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Jump… | `worktree-jump` | `Ctrl+Shift+J` | `Ctrl+Shift+J` |
 | Worktree: Link Issue or PR… | `worktree-link` |   |   |
 | Worktree: New Child of Selected… | `worktree-new-child` |   |   |
+| Worktree: New in Each Repository… | `worktree-new-multi` |   |   |
 | Worktree: New… | `worktree-new` |   |   |
 | Worktree: Next Filter | `worktree-filter` |   |   |
 | Worktree: Open Selected | `worktree-open` |   |   |

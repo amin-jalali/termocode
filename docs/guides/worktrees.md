@@ -34,6 +34,7 @@ repository's git folder, never in your project.
 | `N` | The notes agents left on it, with their times |
 | `n` | New worktree (see below) |
 | `c` | New child worktree: it starts from the selected one's branch |
+| `M` | New worktree in each repository of this window (see below) |
 | `L` | Show the setup of a new worktree (its terminal tab) |
 | `A` | Adopt a worktree made outside termocode |
 | `F` | Forget a worktree whose folder is gone |
@@ -101,6 +102,32 @@ show as `└ …`). A child whose parent is gone moves up to the top level.
 **Worktree: Jump…** (**Ctrl+Shift+J**) lists the worktrees and the
 agents in them, from every termocode window, with the ones that wait for
 you first.
+
+## A worktree in each repository
+
+A task often needs a change in more than one repository: a frontend and
+a backend, or several services in one folder. When the folders of this
+window hold two or more git repositories (a folder of projects, or
+repositories added with **File: Add Folder…**),
+**Worktree: New in Each Repository…** (`M` in the view) makes one
+worktree in each of them, on the same branch, in one step.
+
+- The card lists every repository with a **yes** / **no** row and the
+  folder its worktree goes to (`<repo>.worktrees/<branch>`, or setting
+  `worktree_dir`; when two repositories would share a folder, the
+  repository's name is added). **From** is empty for each repository's
+  current branch, or a branch or tag they all have.
+- **Cancel** comes first; nothing is made until **Create**. Create
+  checks every repository first and says which one is in the way (the
+  branch or the folder is there already).
+- All or nothing: when git fails in one repository, the worktrees made
+  before go again, branch and folder, and the card says why.
+- **Create + Add Folders** also adds the new worktrees as folders of
+  this window.
+- Each repository keeps its own git state. termocode tags the worktrees
+  with their branch (`group` in each repository's `worktrees.json`), so
+  they read as one task.
+- The AI cannot use this card.
 
 ## Link an issue or pull request
 

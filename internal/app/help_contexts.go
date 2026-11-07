@@ -106,6 +106,8 @@ func (m Model) helpTopicForFocus() string {
 		return helpContexts["review"]
 	case m.wtLinkOpen():
 		return worktreesGuidePage + "#worktrees"
+	case m.wtMultiOpen():
+		return worktreesGuidePage + "#a-worktree-in-each-repository" // worktrees_multi.go
 	case m.wtFormOpen():
 		return worktreesGuidePage + "#new-worktree" // Worktree: New… (worktrees_new.go)
 	case m.connectOpen && m.itermoc != nil && m.itermoc.form != nil:

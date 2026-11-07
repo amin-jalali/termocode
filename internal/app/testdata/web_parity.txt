@@ -713,6 +713,7 @@ missing	worktree-jump	Worktrees|M
 missing	worktree-link	Worktrees|M
 missing	worktree-new	Worktrees|M
 missing	worktree-new-child	Worktrees|M
+missing	worktree-new-multi	Worktrees|M
 missing	worktree-notes	Worktrees|M
 missing	worktree-open	Worktrees|M
 missing	worktree-pin	Worktrees|M
