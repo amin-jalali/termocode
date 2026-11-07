@@ -74,6 +74,8 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAIMemoryPicked(id), true
 	case pickerKindAISkills: // ai_skills.go
 		return m.onAISkillsPicked(id), true
+	case pickerKindAIPowers: // ai_powers.go
+		return m.onAIPowersPicked(id), true
 	case pickerKindAIWebTools: // ai_web_tools.go
 		return m.onAIWebToolsPicked(id), true
 	case pickerKindAgentHooks: // agent_hooks_ui.go
@@ -243,6 +245,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAgentPackInstall(id), true
 	case confirmKindAgentPacksUndo:
 		return m.answerAgentPackUndo(id), true
+	case confirmKindAIPowerInstall, confirmKindAIPowerRemove: // ai_powers.go
+		return m.answerAIPowerCard(m.confirmKind, id), true
 	case confirmKindRaceConflict, confirmKindRaceOthers, confirmKindRaceDiscard: // agent_race_compare.go
 		return m.answerRaceCard(m.confirmKind, id), true
 	case confirmKindWorkflowGate: // workflow_gate.go

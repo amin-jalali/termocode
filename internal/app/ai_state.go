@@ -129,6 +129,8 @@ type aiState struct {
 	// skillsFake replaces the skill files in AI: Skills… for the
 	// screenshot demo (ai_skills_demo.go).
 	skillsFake *ai.Skills
+	// powerSel is the power an AI: Powers Catalog… card is about (ai_powers.go).
+	powerSel string
 	// memSlotWarned: the "no quick model" toast was shown this session.
 	memSlotWarned bool
 	// memAsk is the turn the open ask-once memory card is for.
@@ -574,6 +576,7 @@ func aiPaletteItems() []paletteEntry {
 		{"help-bug-report", "Help: Build Bug Report…", ""},
 		{"ai-doctor", "AI: Doctor", ""},
 		{"ai-skills", "AI: Skills…", ""},
+		{"ai-powers", "AI: Powers Catalog…", ""},
 		{"ai-hooks", "AI: Hooks…", ""},
 		{"ai-web-tools", "AI: Web Tools… (fetch, search, docs, browser)", ""},
 		{"ai-ship", "AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop", ""},
@@ -757,6 +760,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIDoctor(), true
 	case "ai-skills":
 		return m.openAISkills(), true
+	case aiPowersPaletteID: // ai_powers.go
+		return m.openAIPowers(), true
 	case "ai-hooks":
 		return m.openAIHooks(), true
 	case "ai-web-tools":
