@@ -375,6 +375,8 @@ export const FA: Record<StringKey, string> = {
   "git.stash_q": "همهٔ تغییرها کنار گذاشته شود؟ با برگرداندن، دوباره می‌آیند.",
   "git.pop_q": "تازه‌ترین تغییرهای کنار گذاشته برگردد؟",
   "git.checkout_q": "به {branch} بروید؟ فایل‌های تغییرکرده با شما می‌آیند.",
+  "git.remote_branches": "شاخه‌های ریموت",
+  "git.track_q": "به {branch} بروید؟ یک شاخهٔ محلی تازه {remote} را دنبال می‌کند.",
   "git.cancelled_here": "لغو شد. چیزی تغییر نکرد.",
 
   // Search, tasks, runs
@@ -810,6 +812,7 @@ export const FA: Record<StringKey, string> = {
   "scm.placeholder": "پیام ({keys} برای ثبت روی '{branch}')",
   "scm.more_actions": "کارهای بیشتر…",
   "scm.checkout": "رفتن به شاخهٔ {branch}",
+  "scm.checkout_remote": "رفتن به شاخهٔ ریموت {branch}",
   "scm.graph": "کامیت‌ها",
   "scm.nothing_staged": "اول تغییرها را برای ثبت آماده کنید.",
   "sb.branch": "{branch} (رفتن به شاخه، دریافت، ارسال…)",

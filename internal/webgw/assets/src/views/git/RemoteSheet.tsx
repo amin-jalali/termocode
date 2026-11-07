@@ -2,8 +2,10 @@
 // stash and switch branch. Every one waits for a laptop card: the page
 // asks first (Cancel first and focused), then the laptop runs its own git
 // command with its own sign-in; no password or token goes through the
-// page. The branch list comes from git.branches when the sheet opens.
-import { h } from "preact";
+// page. The branch list comes from git.branches when the sheet opens; a
+// remote branch with no local branch is switched to as a new local branch
+// that tracks it.
+import { Fragment, h } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { link } from "../../session";
 import { t } from "../../strings";
@@ -15,15 +17,19 @@ import { gitFailed } from "./errors";
 interface Branches {
   current: string;
   branches: string[];
+  remotes: string[];
   stashes: number;
   upstream: boolean;
 }
+
+const names = (v: unknown): string[] => (Array.isArray(v) ? v.filter((b): b is string => typeof b === "string") : []);
 
 function readBranches(r: unknown): Branches {
   const o = typeof r === "object" && r !== null ? (r as Record<string, unknown>) : {};
   return {
     current: typeof o.current === "string" ? o.current : "",
-    branches: Array.isArray(o.branches) ? o.branches.filter((b): b is string => typeof b === "string") : [],
+    branches: names(o.branches),
+    remotes: names(o.remotes),
     stashes: typeof o.stashes === "number" ? o.stashes : 0,
     upstream: o.upstream === true,
   };
@@ -43,6 +49,7 @@ export function RemoteSheet({ branch, ahead, behind, changed, onDone }: { branch
 
   if (ask) return <AskLaptop label={t("git.remote")} text={ask.text} send={() => link.request(ask.op, ask.args)} onDone={onDone} />;
   const others = (b?.branches ?? []).filter((x) => x !== branch);
+  const remotes = b?.remotes ?? [];
   return (
     <Sheet onLater={onDone} label={t("git.remote")}>
       <div class="remote">
@@ -76,23 +83,46 @@ export function RemoteSheet({ branch, ahead, behind, changed, onDone }: { branch
         <h2 class="group-title">{t("git.switch")}</h2>
         {!b ? (
           <p class="empty">{t("git.branches_loading")}</p>
-        ) : others.length === 0 ? (
+        ) : others.length === 0 && remotes.length === 0 ? (
           <p class="empty">{t("git.one_branch")}</p>
         ) : (
-          <div class="branch-list">
-            {others.map((x) => (
-              <button
-                type="button"
-                class="branch-row"
-                key={x}
-                data-branch={x}
-                dir="ltr"
-                onClick={() => setAsk({ op: "git.checkout", args: { branch: x }, text: t("git.checkout_q", { branch: x }) })}
-              >
-                {x}
-              </button>
-            ))}
-          </div>
+          others.length > 0 && (
+            <div class="branch-list">
+              {others.map((x) => (
+                <button
+                  type="button"
+                  class="branch-row"
+                  key={x}
+                  data-branch={x}
+                  dir="ltr"
+                  onClick={() => setAsk({ op: "git.checkout", args: { branch: x }, text: t("git.checkout_q", { branch: x }) })}
+                >
+                  {x}
+                </button>
+              ))}
+            </div>
+          )
+        )}
+        {remotes.length > 0 && (
+          <>
+            <h2 class="group-title">{t("git.remote_branches")}</h2>
+            <div class="branch-list">
+              {remotes.map((x) => (
+                <button
+                  type="button"
+                  class="branch-row"
+                  key={x}
+                  data-remote={x}
+                  dir="ltr"
+                  onClick={() =>
+                    setAsk({ op: "git.checkout", args: { remote: x }, text: t("git.track_q", { branch: x.slice(x.indexOf("/") + 1), remote: x }) })
+                  }
+                >
+                  {x}
+                </button>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </Sheet>
