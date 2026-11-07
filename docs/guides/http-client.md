@@ -61,7 +61,7 @@ An encrypted private key is not supported.
 ## The response page
 
 Row 1 is the request, row 2 the status (`200 OK · 118 ms · 1.4 KB · json`),
-then the body. **Tab** (or `1` `2` `3`, or a click on the chips) switches
+then the body. **Tab** (or `1` … `9`, or a click on the chips) switches
 **Body** (pretty JSON, folds with `zc` / `zo`), **Headers** (request and
 response headers, redirect hops, timing) and **Raw**. All Vim motions,
 `/` and yank work.
@@ -135,12 +135,47 @@ would commit it).
 | HTTP: Import from curl… | `-X`, `-H`, `-d`, `--json`, `-u`, `-G` … become a new `###` block |
 | HTTP: Import OpenAPI… | an OpenAPI 3.x or Swagger 2.0 file (YAML or JSON) becomes `<title>.http` next to it: one `###` block per operation with example bodies; `{{baseUrl}}` goes into a new `http-client.env.json`; put `token` / `apiKey` / `basicAuth` in the private env file |
 | HTTP: New .http File… | a file with two example requests |
+| HTTP: Clear Script Variables | forget the values `# @pre set` / `# @post set` wrote |
 
 Settings: `http_timeout`, `http_max_redirects`, `http_max_body_mb`,
 `http_cookie_jar`, `http_history_max`, `http_tls_insecure`,
 `http_ai_max_kb` (see the settings reference). `HTTP_PROXY`, `HTTPS_PROXY`
 and `NO_PROXY` work like in curl. History keeps the request as written
 (never the resolved token) and lives in `http/history.jsonl` (mode 0600).
+
+## Tests and scripts
+
+Lines above the request line check the answer and pass values on.
+
+```http
+### Log in
+# @pre set requestId = {{$uuid}}
+# @assert status == 200
+# @assert header Content-Type contains json
+# @assert body $.token exists
+# @assert time < 500
+# @assert body schema {"type":"object","required":["token"],"properties":{"token":{"type":"string","minLength":10}}}
+# @post set token = body $.token
+POST {{base}}/login
+X-Request-Id: {{requestId}}
+```
+
+| Line | Meaning |
+|---|---|
+| `# @assert SUBJECT OP [VALUE]` | a check. Subjects: `status`, `time` (ms or `300ms`), `header NAME`, `body`, `body $.a.b[0]`. Ops: `==` `!=` `<` `<=` `>` `>=` `contains` `matches` (a regexp) `exists` `!exists` `schema` |
+| `# @assert body [$.path] schema {…}` | a JSON Schema check: `type`, `enum`, `const`, `required`, `properties`, `additionalProperties`, `items`, `minItems`, `maxItems`, `minLength`, `maxLength`, `pattern`, `minimum`, `maximum` |
+| `# @pre set NAME = VALUE` | before the send: VALUE may use `{{vars}}`; `{{NAME}}` works in this request and later ones |
+| `# @post set NAME = SUBJECT` | after the answer: stores `status`, `time`, `header X`, `body` or `body $.path` |
+| `# @pre unset NAME`, `# @post unset NAME` | forget a value |
+
+The script lines can only read variables and the answer and write
+script variables: no files, no network, no programs. Script variables
+win over file and environment variables and live until termocode quits
+(or **HTTP: Clear Script Variables**).
+
+The **Tests** view on the response page (key `9`) lists every check:
+passed in green, failed in red with the reason. Row 2 and the lens say
+`✓ 3/3 checks` or `✗ 1/3 checks`.
 
 ## Run files for CI
 
@@ -162,7 +197,10 @@ termocode http run --env dev --data users.csv --junit report.xml api/
 | `--json FILE`, `--junit FILE` | also write the report as JSON or JUnit XML |
 | `--timeout 10s` | the timeout per request |
 
-A request passes when it was sent and answered with a status below 400.
+A request passes when it was sent and answered with a status below 400;
+a request with `# @assert` lines passes when every check passed (a check
+may expect a 404). Script variables carry from one request to the next
+during a run; reports list each check.
 A placeholder that stays unknown fails the request without sending it.
 Reports show the URL as written (`{{base}}/users`), never the resolved
 tokens.

@@ -177,6 +177,8 @@ type httpRun struct {
 	progress int64
 	body     *httpBody // the Body view's lines (made once per resp)
 	live     []byte    // the newest text of a stream while it runs (API-16)
+	// tests are the @assert / @pre / @post results of this send (API-8).
+	tests []httpclient.AssertResult
 	// prev is the answer the same request got the time before (the
 	// Diff view compares with it); nil when there is none or it was big.
 	prev *httpclient.Response
@@ -401,8 +403,13 @@ func httpResolver(file string, fileVars []httpclient.Var, env string) *httpclien
 		Secret:   httpSecretLookup(),
 		OnSecret: ai.RegisterSecret,
 		BaseDir:  base,
+		Session:  httpSession,
 	}
 }
+
+// httpSession holds the variables `# @pre/@post set` wrote; it lives
+// until the app quits or HTTP: Clear Script Variables (API-8).
+var httpSession = httpclient.NewSession()
 
 // ── sending ─────────────────────────────────────────────────────────────
 
@@ -412,6 +419,7 @@ type httpEvent struct {
 	live     []byte // a streamed answer's newest text (httpLiveTail)
 	resp     *httpclient.Response
 	body     *httpBody // resp laid out for the page (nil: binary or empty)
+	tests    []httpclient.AssertResult
 }
 
 // httpEventMsg carries one httpEvent into Update.
@@ -517,8 +525,9 @@ func (m *Model) startHTTPRun(run *httpRun, hooks httpclient.Hooks) tea.Cmd {
 		if !resp.IsBinary && len(resp.Body) > 0 {
 			body = layoutHTTPBody(resp)
 		}
+		tests := httpRunTests(snap.rr, resp)
 		<-recorded
-		ch <- httpEvent{resp: resp, body: body}
+		ch <- httpEvent{resp: resp, body: body, tests: tests}
 		close(ch)
 	})
 	m.httpRefreshLens(run.file)
@@ -545,6 +554,7 @@ func (m *Model) handleHTTPMsg(msg tea.Msg) (tea.Cmd, bool) {
 			return next, true
 		}
 		msg.run.resp, msg.run.body, msg.run.live = msg.ev.resp, msg.ev.body, nil
+		msg.run.tests = msg.ev.tests
 		return m.httpFinish(msg.run), true
 	case httpAppendMsg:
 		return m.httpPageAppend(msg), true
@@ -601,6 +611,9 @@ func (m *Model) httpRecordLens(run *httpRun) {
 		code := itoa(run.resp.Status)
 		hl := strings.Replace(httpStatusHL(run.resp.Status), "Status", "Lens", 1) // no bold in the editor
 		l = httpLens{text: code + " · " + httpclient.FormatDuration(run.resp.Elapsed), hl: hl, n: len(code)}
+	}
+	if t := httpTestsShort(run.tests); t != "" {
+		l.text += " · " + t
 	}
 	s.lens[run.file+"\x00"+run.label] = l
 }
@@ -662,6 +675,9 @@ var (
 	httpGlyphFlight = theme.GlyphSending
 	httpGlyphError  = theme.GlyphFail
 	httpGlyphHop    = theme.GlyphRedirect
+	// API-8 checks.
+	httpGlyphCheckOK   = theme.GlyphOK
+	httpGlyphCheckFail = theme.GlyphFail
 )
 
 // API-16: a streamed answer is shown while it comes, at most

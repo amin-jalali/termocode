@@ -571,6 +571,7 @@ missing	git-unshallow	Git|S
 missing	git-upstream-set	Git|S
 missing	git-upstream-unset	Git|S
 missing	http-api-docs	HTTP|S
+missing	http-clear-script-vars	HTTP|S
 missing	http-cookies	HTTP|S
 missing	http-copy-snippet	HTTP|S
 missing	http-fields	HTTP|S

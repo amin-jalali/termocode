@@ -18,7 +18,8 @@ import (
 // The HTTP Response page (plan 2.6): a scratch nvim buffer like Find
 // Results. Row 1 is the request line, row 2 the status summary, row 3 the
 // hairline; from row 4 one of eight views (Body, Headers, Raw, Cookies,
-// Timing, Wire, Diff, Text; http_views.go has the last five). Real text
+// Timing, Wire, Diff, Text, Tests; http_views.go has Cookies to Text,
+// http_tests_view.go has Tests). Real text
 // is what the buffer holds, so /, n, yank and zc work; the chrome is
 // virtual text drawn by httpPageLua from the head and the row table.
 
@@ -32,9 +33,10 @@ const (
 	httpViewWire
 	httpViewDiff
 	httpViewText
+	httpViewTests
 )
 
-var httpViewNames = []string{"Body", "Headers", "Raw", "Cookies", "Timing", "Wire", "Diff", "Text"}
+var httpViewNames = []string{"Body", "Headers", "Raw", "Cookies", "Timing", "Wire", "Diff", "Text", "Tests"}
 
 func init() {
 	registerNotifyHandler("termocode_http_key", func(m *Model, args []any) tea.Cmd {
@@ -112,6 +114,9 @@ func buildHTTPPage(run *httpRun, view int, reveal, sending bool) httpPage {
 		head["st_hl"] = "TermocodeHttpStatusErr"
 	default:
 		summary = resp.Summary()
+		if t := httpTestsShort(run.tests); t != "" {
+			summary += " · " + t
+		}
 		head["st_n"] = len(itoa(resp.Status))
 		head["st_hl"] = httpStatusHL(resp.Status)
 	}
@@ -182,7 +187,7 @@ func buildHTTPPage(run *httpRun, view int, reveal, sending bool) httpPage {
 			break
 		}
 		lines = appendTextLines(lines, resp.TextBytes())
-	case httpViewCookies, httpViewTiming, httpViewWire, httpViewDiff, httpViewText:
+	case httpViewCookies, httpViewTiming, httpViewWire, httpViewDiff, httpViewText, httpViewTests:
 		for _, r := range httpInspectRows(run, view, reveal) {
 			switch {
 			case r.k == "":

@@ -44,6 +44,10 @@ type Request struct {
 	// Asserts holds the `# @assert <check>` lines in order (see
 	// RunAsserts); they are not in Directives.
 	Asserts []string `json:"asserts,omitempty"`
+	// Pre and Post hold the `# @pre …` / `# @post …` script lines in
+	// order (script.go); they are not in Directives.
+	Pre  []string `json:"pre,omitempty"`
+	Post []string `json:"post,omitempty"`
 }
 
 // File is a parsed `.http` file.

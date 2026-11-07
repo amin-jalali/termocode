@@ -47,6 +47,9 @@ type Resolver struct {
 	// BaseDir is the .http file's folder: `< ./file` bodies are read
 	// there ("" = unsaved request, no file bodies).
 	BaseDir string
+	// Session holds the variables `# @pre/@post set` wrote (script.go);
+	// they win over file and environment variables. nil = none kept.
+	Session *Session
 }
 
 // Unresolved is one placeholder that is still raw after resolving.
@@ -71,6 +74,9 @@ type Resolved struct {
 	// Digest is set by `# @auth digest` (or $auth): Send answers the
 	// server's Digest challenge with it. Never written to JSON.
 	Digest *DigestAuth `json:"-"`
+	// PreErrors are the @pre lines that did not parse (RunTests shows
+	// them as failed checks).
+	PreErrors []AssertResult `json:"-"`
 }
 
 // sendScope keeps the values of the dynamic functions for one send, so
@@ -82,6 +88,8 @@ type sendScope struct {
 	// frozen holds chained response values that contain "{{": they are
 	// put back after expanding, so a server cannot inject {{$secret x}}.
 	frozen []string
+	// pre holds what this request's @pre lines set (nil value = unset).
+	pre map[string]*string
 }
 
 // Resolve substitutes URL, header values and body. Unknown names stay
@@ -90,6 +98,9 @@ func (rv *Resolver) Resolve(req Request) (Resolved, []Unresolved) {
 	sc := &sendScope{rv: rv, dynamic: map[string]string{}}
 	out := Resolved{Template: req, Env: rv.Env, Dir: rv.BaseDir}
 	out.Request = req
+	if len(req.Pre) > 0 {
+		out.PreErrors = sc.runPre(req.Pre)
+	}
 	var un []Unresolved
 	out.URL = sc.expand(req.URL)
 	un = appendUnresolved(un, out.URL, "url")
@@ -227,6 +238,15 @@ func (rv *Resolver) Known(expr string) bool {
 func (sc *sendScope) lookup(expr string) (string, bool) {
 	rv := sc.rv
 	if !strings.HasPrefix(expr, "$") {
+		if p, ok := sc.pre[expr]; ok {
+			if p == nil {
+				return "", false
+			}
+			return sc.freeze(*p), true
+		}
+		if v, ok := rv.Session.Get(expr); ok && isPlainName(expr) {
+			return sc.freeze(v), true
+		}
 		v, private, ok := rv.named(expr)
 		if !ok {
 			if v, private, ok = rv.chainValue(expr); ok {

@@ -623,26 +623,27 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-runs": aiNever("the user's monitoring page; it holds Stop, Pause and Resume"),
 
 	// ── HTTP client ──
-	"http-send":             aiNever("sends a network request; use http_send (gated by host and method)"),
-	"http-send-pick":        aiNever(aiNoPicker + " (http_list_requests, http_send)"),
-	"http-quick":            aiNever(aiNoPicker + " (http_send with method and url)"),
-	"http-cancel":           aiConfirm(ai.ClassIDE), // stops the user's request
-	"http-last-response":    aiAuto(),
-	"http-history":          aiNever(aiNoPicker + " (http_history)"),
-	"http-cookies":          aiNever(aiNoPicker + " (cookies stay with the user)"),
-	"http-env-select":       aiNever(aiNoPicker + " (http_set_environment)"),
-	"http-env-open":         aiAuto(),
-	"http-env-open-private": aiNever("opens the file that holds the user's secrets"),
-	"http-saved":            aiNever(aiNoPicker + " (http_list_requests on http/saved.http)"),
-	"http-save":             aiNever(aiNoPicker + " (http_save_request)"),
-	"http-copy-curl":        aiConfirm(ai.ClassIDE), // overwrites the system clipboard
-	"http-copy-snippet":     aiNever(aiNoPicker + " (http_list_requests, then write the snippet)"),
-	"http-import-curl":      aiNever(aiNoPicker + " (http_save_request)"),
-	"http-import-openapi":   aiNever(aiNoPicker + " (http_save_request)"),
-	"http-new-file":         aiNever(aiNoPicker + " (create_file)"),
-	"http-save-body":        aiNever(aiNoPicker + " (http_get_last_response, write_file)"),
-	"http-fields":           aiNever(aiNoPicker + " (read_file, write_file)"),
-	"http-api-docs":         aiAuto(), // read-only page
+	"http-send":              aiNever("sends a network request; use http_send (gated by host and method)"),
+	"http-send-pick":         aiNever(aiNoPicker + " (http_list_requests, http_send)"),
+	"http-quick":             aiNever(aiNoPicker + " (http_send with method and url)"),
+	"http-cancel":            aiConfirm(ai.ClassIDE), // stops the user's request
+	"http-last-response":     aiAuto(),
+	"http-clear-script-vars": aiConfirm(ai.ClassIDE), // drops values the user's scripts set
+	"http-history":           aiNever(aiNoPicker + " (http_history)"),
+	"http-cookies":           aiNever(aiNoPicker + " (cookies stay with the user)"),
+	"http-env-select":        aiNever(aiNoPicker + " (http_set_environment)"),
+	"http-env-open":          aiAuto(),
+	"http-env-open-private":  aiNever("opens the file that holds the user's secrets"),
+	"http-saved":             aiNever(aiNoPicker + " (http_list_requests on http/saved.http)"),
+	"http-save":              aiNever(aiNoPicker + " (http_save_request)"),
+	"http-copy-curl":         aiConfirm(ai.ClassIDE), // overwrites the system clipboard
+	"http-copy-snippet":      aiNever(aiNoPicker + " (http_list_requests, then write the snippet)"),
+	"http-import-curl":       aiNever(aiNoPicker + " (http_save_request)"),
+	"http-import-openapi":    aiNever(aiNoPicker + " (http_save_request)"),
+	"http-new-file":          aiNever(aiNoPicker + " (create_file)"),
+	"http-save-body":         aiNever(aiNoPicker + " (http_get_last_response, write_file)"),
+	"http-fields":            aiNever(aiNoPicker + " (read_file, write_file)"),
+	"http-api-docs":          aiAuto(), // read-only page
 }
 
 // aiActionPolicyFor returns the policy of a palette id, including the

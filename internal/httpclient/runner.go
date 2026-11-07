@@ -20,7 +20,8 @@ import (
 // in order, optionally several times with rows from a CSV / JSON data
 // file, and builds a report for the screen, JSON and JUnit. A request
 // passes when it was sent, had no unresolved placeholder and answered
-// with a status below 400. Reports keep the template URL (placeholders
+// with a status below 400, or, when it has `# @assert` lines, when
+// every check passed (API-8). Reports keep the template URL (placeholders
 // as written) and hide every private value.
 
 // RunFile is one parsed file to run.
@@ -61,6 +62,8 @@ type RunResult struct {
 	Elapsed   time.Duration `json:"elapsed_ns"`
 	Passed    bool          `json:"passed"`
 	Failure   string        `json:"failure,omitempty"`
+	// Checks are the request's @assert / @pre / @post results (API-8).
+	Checks []AssertResult `json:"checks,omitempty"`
 }
 
 // RunReport is the result of a run.
@@ -85,6 +88,7 @@ func Run(ctx context.Context, c *Client, files []RunFile, opts RunOptions) RunRe
 		}
 	}
 	sent := 0
+	sess := NewSession() // what @pre/@post set lives for this run
 	for it := 0; it < iters; it++ {
 		var row map[string]string
 		if len(opts.Data) > 0 {
@@ -96,6 +100,9 @@ func Run(ctx context.Context, c *Client, files []RunFile, opts RunOptions) RunRe
 				rv = opts.NewResolver(rf)
 			}
 			rv.FileVars = withRow(rv.FileVars, row)
+			if rv.Session == nil {
+				rv.Session = sess
+			}
 			for _, req := range rf.File.Requests {
 				if sent > 0 && opts.Delay > 0 && !sleepCtx(ctx, opts.Delay) {
 					rep.Stopped = true
@@ -175,10 +182,24 @@ func runOne(ctx context.Context, c *Client, rv *Resolver, path string, req Reque
 	resp := c.Send(ctx, rr, h)
 	res.Status = resp.Status
 	res.Elapsed = resp.Elapsed
+	res.Checks = RunTests(rr, resp, rv.Session)
+	for i := range res.Checks {
+		res.Checks[i].Message = hideSecrets(res.Checks[i].Message, rr.Secrets)
+	}
+	failed := ""
+	for _, ch := range res.Checks {
+		if !ch.Pass {
+			failed = ch.Expr + ": " + ch.Message
+			break
+		}
+	}
 	switch {
 	case resp.Err != "":
 		res.Failure = hideSecrets(resp.Err, rr.Secrets)
-	case resp.Status >= 400:
+	case failed != "":
+		res.Failure = "check failed: " + failed
+	case len(rr.Asserts) == 0 && resp.Status >= 400:
+		// With asserts, they decide (a test may expect a 404).
 		res.Failure = "status " + resp.StatusLine()
 	default:
 		res.Passed = true

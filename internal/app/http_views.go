@@ -38,6 +38,8 @@ func httpInspectRows(run *httpRun, view int, reveal bool) []httpRow {
 		return httpWireRows(run, reveal)
 	case httpViewDiff:
 		return httpDiffRows(run)
+	case httpViewTests:
+		return httpTestRows(run)
 	case httpViewText:
 		if resp.Kind() != "html" {
 			return []httpRow{{k: "note", text: "Text shows an HTML answer as plain text; this answer is " + httpKindWord(resp) + "."}}

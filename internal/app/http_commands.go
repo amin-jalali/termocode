@@ -89,6 +89,7 @@ func httpPaletteItems() []picker.Item {
 		{ID: "http-save-body", Title: "HTTP: Save Response Body…"},
 		{ID: "http-fields", Title: "HTTP: Edit Params and Headers…"},
 		{ID: "http-api-docs", Title: "HTTP: Open API Docs"},
+		{ID: "http-clear-script-vars", Title: "HTTP: Clear Script Variables"},
 	}
 }
 
@@ -137,6 +138,8 @@ func (m *Model) dispatchHTTPPalette(id string) (tea.Cmd, bool) {
 		return m.httpSaveBodyPrompt(), true
 	case "http-fields":
 		return m.openHTTPFields(0, 0), true
+	case "http-clear-script-vars":
+		return m.httpClearScriptVars(), true
 	case "http-api-docs":
 		return m.httpOpenAPIDocs(), true
 	}

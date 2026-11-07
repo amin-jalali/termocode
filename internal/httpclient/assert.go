@@ -29,6 +29,7 @@ type Assert struct {
 	Value   string
 	path    []pathStep
 	re      *regexp.Regexp
+	schema  map[string]any
 }
 
 // AssertResult is the outcome of one assert line.
@@ -45,6 +46,7 @@ const maxAssertPattern = 1000
 var assertOps = map[string]bool{
 	"==": true, "!=": true, "<": true, "<=": true, ">": true, ">=": true,
 	"contains": true, "matches": true, "exists": true, "!exists": true,
+	"schema": true,
 }
 
 // ParseAssert reads one assert expression (the text after `@assert`).
@@ -104,6 +106,20 @@ func ParseAssert(s string) (Assert, error) {
 		if _, err := parseAssertDuration(a.Value); err != nil {
 			return a, err
 		}
+	}
+	if a.Op == "schema" {
+		if a.Subject != "body" {
+			return a, fmt.Errorf("schema checks the body (body [$.path] schema {…})")
+		}
+		sc, err := parseSchema(a.Value)
+		if err != nil {
+			return a, err
+		}
+		a.schema = sc
+		if a.path == nil {
+			a.path = []pathStep{}
+		}
+		return a, nil
 	}
 	if a.Op == "matches" {
 		if len(a.Value) > maxAssertPattern {
@@ -226,7 +242,7 @@ func (a Assert) check(resp *Response, doc any, isJSON bool) (bool, string) {
 		return compare(v, found, a)
 	}
 	// body
-	if a.path == nil {
+	if a.path == nil && a.schema == nil {
 		return compare(resp.Text(), true, a)
 	}
 	if !isJSON {
@@ -235,6 +251,12 @@ func (a Assert) check(resp *Response, doc any, isJSON bool) (bool, string) {
 	v, found := walkPath(doc, a.path)
 	if !found {
 		return compare("", false, a)
+	}
+	if a.schema != nil {
+		if errs := ValidateSchema(a.schema, v); len(errs) > 0 {
+			return false, strings.Join(errs, "; ")
+		}
+		return true, ""
 	}
 	if a.Op == "contains" {
 		if arr, ok := v.([]any); ok {

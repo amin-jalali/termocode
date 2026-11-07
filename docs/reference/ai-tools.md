@@ -2307,6 +2307,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `hover` | LSP: Show Hover Documentation | auto |   |
 | `http-api-docs` | HTTP: Open API Docs | auto |   |
 | `http-cancel` | HTTP: Cancel Request | confirm (ide) |   |
+| `http-clear-script-vars` | HTTP: Clear Script Variables | confirm (ide) |   |
 | `http-cookies` | HTTP: Cookies… | never | opens a picker or prompt that only the user can answer; use a typed tool (cookies stay with the user) |
 | `http-copy-curl` | HTTP: Copy as curl | confirm (ide) |   |
 | `http-copy-snippet` | HTTP: Copy as Code… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_list_requests, then write the snippet) |
