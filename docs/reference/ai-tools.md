@@ -1994,6 +1994,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | --- | --- | --- | --- |
 | `acp-agents-edit` | Open Config: ACP Agents | never | the list names programs termocode starts: only the user edits it |
 | `acp-thread` | Agent: Chat with an ACP Agent… / End | never | it starts an outside agent program: the user starts and ends it |
+| `agent-account-switch` | Agent: Switch Account… | never | AI provider, credentials and approvals stay with the user; it starts an outside agent as another of the user's accounts |
 | `agent-account-use` | Agent: Accounts… | never | AI provider, credentials and approvals stay with the user; opens a picker or prompt that only the user can answer; use a typed tool |
 | `agent-auto-continue-toggle` | Agent: Toggle Auto-Continue | never | AI provider, credentials and approvals stay with the user; it lets termocode type into an outside agent's tab |
 | `agent-chat-view` | Agent: Chat View | never | shows an outside agent's own session file; only the user opens it (owner decision D1) |
@@ -2834,4 +2835,6 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `workflows_missed_grace_min` | confirm (settings) |   |
 | `workflows_parallel_max` | confirm (settings) |   |
 | `workflows_wait_hours` | confirm (settings) |   |
+| `worktree_auto_archive_days` | never | archives worktree folders by itself; only the user turns it on |
 | `worktree_dir` | never | where new worktrees go on disk; a file-only switch the user edits in config.json |
+| `worktree_max` | never | archives worktree folders by itself; only the user turns it on |

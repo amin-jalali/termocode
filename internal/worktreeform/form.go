@@ -123,6 +123,7 @@ type Config struct {
 	Include []string `json:"include,omitempty"` // files copied into each new worktree
 	Shared  []string `json:"shared,omitempty"`  // files or folders linked to the main checkout's
 	Setup   []string `json:"setup,omitempty"`   // shell lines run in the new worktree (after trust)
+	Archive []string `json:"archive,omitempty"` // shell lines run in a worktree before its folder goes (after trust)
 
 	// The dev server of a worktree (CMP-5): Run is a shell line that
 	// reads its port from $PORT (after trust, like Setup); Ports the

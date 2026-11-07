@@ -326,6 +326,8 @@ func run(argv []string) int {
 			return runWeb(args[1:])
 		case "service":
 			return runService(args[1:])
+		case "runner":
+			return runRunner(args[1:])
 		case "lsp-proxy":
 			return runLSPProxy(args[1:])
 		case "attach", "kill":
@@ -424,7 +426,7 @@ func tuiCommand(args []string) bool {
 		return true
 	}
 	switch args[0] {
-	case serverArg, "sessions", "ssh", "mcp", "acp", "http", "db", "service", "attach", "kill", "setup", "-h", "--help", "help":
+	case serverArg, "sessions", "ssh", "mcp", "acp", "http", "db", "service", "runner", "attach", "kill", "setup", "-h", "--help", "help":
 		return false
 	}
 	return !isVersionArg(args[0])
@@ -464,6 +466,8 @@ func printUsage() {
 	fmt.Println("                             open or stop the web panel of the running termocode")
 	fmt.Println("  termocode service install|uninstall|status")
 	fmt.Println("                             start the session of this folder at login")
+	fmt.Println("  termocode runner serve|add|list|show|cancel")
+	fmt.Println("                             this machine serves agent tasks (runner --help)")
 	fmt.Println("  termocode setup            install JetBrainsMono Nerd Font and check prerequisites")
 	fmt.Println("  termocode --version        print the version")
 	fmt.Println("  termocode -h               show this help")

@@ -73,6 +73,10 @@ type Turn struct {
 	Tool, Args string
 	// Failed: the result is an error or a non-zero exit code.
 	Failed bool
+	// Detail is the full text of a call that asks the user (redacted):
+	// a question with its numbered options, or a plan to approve. Other
+	// calls have none.
+	Detail string
 }
 
 // Usage is the session's token use as the CLI recorded it.
@@ -113,6 +117,32 @@ func (s Session) Prompts() int {
 		}
 	}
 	return n
+}
+
+// Pending is the newest tool call that has no result yet (results are
+// matched to calls of the same tool, oldest first).
+func (s Session) Pending() (Turn, bool) {
+	open := map[string][]int{}
+	for i, t := range s.Turns {
+		switch t.Kind {
+		case ToolCall:
+			open[t.Tool] = append(open[t.Tool], i)
+		case ToolResult:
+			if q := open[t.Tool]; len(q) > 0 {
+				open[t.Tool] = q[1:]
+			}
+		}
+	}
+	best := -1
+	for _, q := range open {
+		for _, i := range q {
+			best = max(best, i)
+		}
+	}
+	if best < 0 {
+		return Turn{}, false
+	}
+	return s.Turns[best], true
 }
 
 // FirstPrompt is the first prompt's text ("" for none).

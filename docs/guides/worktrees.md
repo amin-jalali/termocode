@@ -131,7 +131,8 @@ A repository can list files for each new worktree in
   "include": [".env", ".env.local"], // copied
   "shared": ["node_modules"],        // linked to the main checkout's folder
   "setup": ["pnpm install"],         // run in the new worktree
-  "branch_prefix": "amin/"           // starts a branch made from the task
+  "archive": ["docker compose down"], // run before a worktree's folder goes
+  "branch_prefix": "amin/"            // starts a branch made from the task
 }
 ```
 
@@ -149,6 +150,14 @@ A repository can list files for each new worktree in
   run in a terminal tab of their own inside the new worktree, so you can
   watch them, with your environment minus termocode's secrets. The card
   shows `setup ● running`, `✓` or `✗`; `L` shows the tab.
+- **archive** commands run in a worktree's folder just before Archive,
+  Delete or Clean up removes it, for example to stop its services and
+  free its ports. They share the trust of this file with **setup**. The
+  archive card shows them; while the file is not trusted, **Archive**
+  skips them and **Trust script and archive** runs them first. The delete
+  and clean up cards say whether they run. Each command may take two
+  minutes at most. A failing command never keeps the folder: the removal
+  goes on and a warning names the command and its log file.
 
 ## A dev server per worktree
 
@@ -578,6 +587,29 @@ termocode lane push [--chats] [DIR] host:~/src/app   # pack here, unpack there
 ```
 
 The AI never moves, unpacks or pulls a lane.
+### Auto clean-up
+
+Two settings (Settings, **Git** group) archive worktrees by themselves.
+Both are off (`0`) until you set them:
+
+- `worktree_auto_archive_days`: a worktree with no activity for this
+  many days is archived.
+- `worktree_max`: when more worktrees than this are live (the main
+  checkout does not count), the oldest ones are archived until it fits.
+
+termocode checks when the worktree list is read (the WORKTREES view,
+Jump, the web page), at most once an hour. It archives like `x`: the
+folder goes and its disk is freed (git-ignored files such as build
+output go too), the branch stays. One toast names each worktree, why it
+went and how much disk was freed. `x` on its row under **ARCHIVED**
+brings it back in one step.
+
+It only takes clean worktrees termocode made or you adopted. It never
+takes the main checkout, the worktree this window is in, an agent lane,
+a locked or pinned worktree, one an agent works in, one with changed
+files, or one used in the last day. A file that changes just before the
+archive stops it: termocode never forces it. The AI can not change these
+settings.
 
 ## From the web page
 
