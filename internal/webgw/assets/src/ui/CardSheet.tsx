@@ -17,6 +17,7 @@ import { answeredBy, cards, link, live, store, waiting } from "../session";
 import { answerable, riskyChoice, safeChoice } from "../state/cards";
 import { t, type StringKey } from "../strings";
 import { Card, type CardKind, type CardState } from "./Card";
+import { CardForm, formMissing, formStart, type FormValues } from "./CardForm";
 import { DiffRow } from "./rows";
 import { Sheet } from "./Sheet";
 
@@ -95,6 +96,7 @@ export function CardSheet({ id }: { id: string }) {
   const [gone, setGone] = useState(false);
   const [sending, setSending] = useState(false);
   const [drop, setDrop] = useState<Set<number>>(new Set());
+  const [form, setForm] = useState<FormValues | undefined>(undefined);
   const loaded = store.topic("cards").value !== undefined;
   const by = answeredBy.value.get(id);
 
@@ -127,12 +129,21 @@ export function CardSheet({ id }: { id: string }) {
       toast("info", t("card.keep_none"));
       return;
     }
+    // A form card (an MCP server's question, MOB-12) sends its answers with Send.
+    const fields = shown.form ?? [];
+    const answers = which === "risky" && fields.length > 0 ? (form ?? formStart(fields)) : undefined;
+    const miss = answers && formMissing(fields, answers);
+    if (miss) {
+      toast("info", t("card.form_missing", { name: miss }));
+      return;
+    }
     setSending(true);
-    link.request("cards.answer", hunks.length > 0 ? { id, choice: choice.id, hunks } : { id, choice: choice.id }).then(
+    const args = answers ? { id, choice: choice.id, form: answers } : hunks.length > 0 ? { id, choice: choice.id, hunks } : { id, choice: choice.id };
+    link.request("cards.answer", args).then(
       () => {
         setSending(false);
         if (which === "safe") toast("info", t(review ? "toast.rejected" : "toast.denied"));
-        else toast("ok", t(review ? "toast.accepted" : "toast.allowed"));
+        else toast("ok", t(answers ? "toast.sent" : review ? "toast.accepted" : "toast.allowed"));
         closeCard();
       },
       (e: unknown) => {
@@ -161,8 +172,12 @@ export function CardSheet({ id }: { id: string }) {
         }}
         onClose={closeCard}
         onLaptop={closeCard}
+        riskyLabel={shown.form && shown.form.length > 0 ? "card.send" : undefined}
       >
         {shown.body && <p class="card-text">{shown.body}</p>}
+        {shown.form && shown.form.length > 0 && state === "open" && (
+          <CardForm id={shown.id} fields={shown.form} values={form ?? formStart(shown.form)} onChange={setForm} />
+        )}
         {shown.diff && state !== "long" && <CardDiff c={shown} drop={drop} setDrop={setDrop} />}
         {shown.kind === "review" && shown.diff && !shown.diff.truncated && shown.file && layout.value === "desktop" && !shown.id.includes(":") && (
           <button

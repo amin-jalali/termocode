@@ -237,6 +237,9 @@ func (m *Model) webCards(p *webCardsPub, diffs bool) []webCardRef {
 		add(c, webproto.Card{Kind: webproto.CardTool, Title: "AI wants to: " + c.tool.Label(),
 			Body: ai.Redact(aiCleanText(c.human)), Choices: []webproto.CardChoice{deny, allow}})
 	}
+	if s != nil && s.mcpx.elicit != nil { // an MCP server's question (MOB-12, web_cards_elicit.go)
+		add(s.mcpx.elicit, webElicitCard(s.mcpx.elicit, deny))
+	}
 	if st := m.mcpServe; st != nil {
 		asks := append([]*mcpServeAsk(nil), st.queue...)
 		if st.active != nil {

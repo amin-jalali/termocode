@@ -191,6 +191,7 @@ export interface CardsAnswerArgs {
   id: string;
   choice: string;
   hunks?: number[];
+  form?: Record<string, string>;
 }
 
 export interface SetTextArgs {
@@ -1238,6 +1239,7 @@ export interface Card {
   read_only?: boolean;
   file?: string;
   diff?: CardDiff;
+  form?: BlockFormField[];
 }
 
 export interface CardChoice {
