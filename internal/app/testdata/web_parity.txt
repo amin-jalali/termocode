@@ -652,6 +652,7 @@ missing	git-patch-apply-file	Git|S
 missing	git-patch-save	Git|S
 missing	git-pr-filter	Git|S
 missing	git-pr-mine	Git|S
+missing	git-pr-review-bot	Git|S
 missing	git-publish	Git|S
 missing	git-pull-options	Git|S
 missing	git-pull-rebase	Git|S
