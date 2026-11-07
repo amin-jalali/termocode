@@ -209,6 +209,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Compare Schemas… | `db-compare-schemas` |   |   |
 | Databases: Configure | `db-configure` |   |   |
 | Databases: Connect Selected | `db-connect` |   |   |
+| Databases: Copy Redis Key… | `redis-copy-key` |   |   |
 | Databases: Count Rows | `db-count-rows` |   |   |
 | Databases: Delete Redis Key… | `redis-delete-key` |   |   |
 | Databases: Describe Table | `db-describe` |   |   |
@@ -232,6 +233,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Open Table Data | `db-data` |   |   |
 | Databases: Pin Result Tab | `db-result-pin` |   |   |
 | Databases: Refresh | `db-refresh` |   |   |
+| Databases: Rename Redis Key… | `redis-rename-key` |   |   |
 | Databases: Revert Pending Changes… | `db-revert-changes` |   |   |
 | Databases: Roll Back | `db-rollback` |   |   |
 | Databases: Run File | `db-run-file` |   |   |
@@ -241,6 +243,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Sessions… | `db-open-sessions` |   |   |
 | Databases: Set Redis Key TTL… | `redis-set-ttl` |   |   |
 | Databases: Show DDL | `db-ddl` |   |   |
+| Databases: Show Redis Slow Log | `redis-slowlog` |   |   |
 | Databases: Show Server Info | `db-server-info` |   |   |
 | Databases: Show Sessions and Locks | `db-sessions` |   |   |
 | Databases: Submit Pending Changes… | `db-submit-changes` |   |   |

@@ -403,6 +403,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-er-diagram":                aiNever(aiNoPicker),
 	"redis-set-ttl":                aiNever(aiNoPicker + " (redis_command)"),
 	"redis-delete-key":             aiNever(aiNoPicker + " (redis_command)"),
+	"redis-rename-key":             aiNever(aiNoPicker + " (redis_command)"),
+	"redis-copy-key":               aiNever(aiNoPicker + " (redis_command)"),
+	"redis-slowlog":                aiNever("it runs in the user's console; use redis_command (SLOWLOG GET)"),
 	"containers-focus":             aiAuto(),
 	"containers-engine-config":     aiAuto(),
 	"kubernetes-show":              aiAuto(), // read only (kube_actions.go)

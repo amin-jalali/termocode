@@ -69,12 +69,18 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-guide", Title: "Databases: Open Guide"},
 		{ID: "redis-set-ttl", Title: "Databases: Set Redis Key TTL…"},
 		{ID: "redis-delete-key", Title: "Databases: Delete Redis Key…"},
+		{ID: "redis-rename-key", Title: "Databases: Rename Redis Key…"},
+		{ID: "redis-copy-key", Title: "Databases: Copy Redis Key…"},
+		{ID: "redis-slowlog", Title: "Databases: Show Redis Slow Log"},
 	}, dbAIPaletteItems()...)
 }
 
 func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 	if id == "redis-set-ttl" || id == "redis-delete-key" {
 		return m.databaseRedisPaletteKey(id), true
+	}
+	if id == "redis-rename-key" || id == "redis-copy-key" || id == "redis-slowlog" {
+		return m.databaseRedisPaletteAdmin(id), true
 	}
 	if !strings.HasPrefix(id, "db-") {
 		return nil, false

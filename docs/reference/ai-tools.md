@@ -2371,8 +2371,11 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `problems-panel` | View: Problems | auto |   |
 | `quick-open` | Go to File... | never | opens a picker or prompt that only the user can answer; use a typed tool (open_file) |
 | `quit` | File: Quit | never | quits termocode |
+| `redis-copy-key` | Databases: Copy Redis Key… | never | opens a picker or prompt that only the user can answer; use a typed tool (redis_command) |
 | `redis-delete-key` | Databases: Delete Redis Key… | never | opens a picker or prompt that only the user can answer; use a typed tool (redis_command) |
+| `redis-rename-key` | Databases: Rename Redis Key… | never | opens a picker or prompt that only the user can answer; use a typed tool (redis_command) |
 | `redis-set-ttl` | Databases: Set Redis Key TTL… | never | opens a picker or prompt that only the user can answer; use a typed tool (redis_command) |
+| `redis-slowlog` | Databases: Show Redis Slow Log | never | it runs in the user's console; use redis_command (SLOWLOG GET) |
 | `reload-buffer` | File: Revert / Reload from Disk | confirm (always asks) |   |
 | `reload-window` | Developer: Reload Window | never | ends or resets the user's session |
 | `reopen-closed` | View: Reopen Closed Editor | auto |   |

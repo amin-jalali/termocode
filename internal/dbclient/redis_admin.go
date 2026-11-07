@@ -3,6 +3,7 @@ package dbclient
 import (
 	"strconv"
 	"strings"
+	"time"
 )
 
 // RedisRename is RENAMENX src dst (never overwrites), or RENAME when the
@@ -105,4 +106,65 @@ func redisText(v any) string {
 		return strconv.FormatInt(x, 10)
 	}
 	return ""
+}
+
+// RedisInfoResult shows INFO text as section | field | value rows.
+func RedisInfoResult(text string) Result {
+	res := Result{Columns: []Column{{Name: "section"}, {Name: "field"}, {Name: "value"}}}
+	for _, sec := range ParseRedisInfo(text) {
+		for _, f := range sec.Fields {
+			res.Rows = append(res.Rows, []Cell{{Text: RedisDisplay(sec.Name)}, {Text: RedisDisplay(f[0])}, {Text: RedisDisplay(f[1])}})
+		}
+	}
+	if len(res.Rows) == 0 {
+		res.Notices = []string{"INFO returned no fields"}
+	}
+	return res
+}
+
+// RedisSlowlogResult shows a SLOWLOG GET reply, newest first as sent.
+func RedisSlowlogResult(reply any) Result {
+	res := Result{Columns: []Column{{Name: "id"}, {Name: "time"}, {Name: "µs"}, {Name: "command"}, {Name: "client"}, {Name: "name"}}}
+	for _, e := range ParseRedisSlowlog(reply) {
+		res.Rows = append(res.Rows, []Cell{
+			{Text: strconv.FormatInt(e.ID, 10), Kind: "number"},
+			{Text: time.Unix(e.Unix, 0).Format("2006-01-02 15:04:05")},
+			{Text: strconv.FormatInt(e.Micros, 10), Kind: "number"},
+			{Text: RedisDisplay(strings.Join(e.Args, " "))},
+			{Text: RedisDisplay(e.Client)},
+			{Text: RedisDisplay(e.Name)},
+		})
+	}
+	if len(res.Rows) == 0 {
+		res.Notices = []string{"The slow log is empty"}
+	}
+	return res
+}
+
+// RedisAdminGrid is the readable grid of INFO and SLOWLOG GET replies;
+// ok=false for every other command (the generic reply grid).
+func RedisAdminGrid(args []string, reply any) (Result, bool) {
+	if len(args) == 0 {
+		return Result{}, false
+	}
+	switch strings.ToUpper(args[0]) {
+	case "INFO":
+		var text string
+		switch x := reply.(type) {
+		case []byte:
+			text = string(x)
+		case string:
+			text = x
+		default:
+			return Result{}, false
+		}
+		return RedisInfoResult(text), true
+	case "SLOWLOG":
+		if len(args) >= 2 && strings.EqualFold(args[1], "GET") {
+			if _, ok := reply.([]any); ok {
+				return RedisSlowlogResult(reply), true
+			}
+		}
+	}
+	return Result{}, false
 }
