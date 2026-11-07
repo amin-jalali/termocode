@@ -52,4 +52,10 @@
 .run-why { color: var(--amber); font-size: 0.875rem; }
 .run .choices { padding-top: var(--s2); }
 .run .btn, .task-line .btn { min-height: var(--tap); }
+.runs-top { display: flex; justify-content: flex-end; padding: 0 var(--s4) var(--s2); }
+.runs-top .btn { min-height: var(--tap); }
+.coord { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s3); }
+.coord .btn { min-height: var(--tap); }
+.run-text { width: 100%; min-height: calc(var(--tap) * 2); padding: var(--s2); border: 1px solid var(--border); border-radius: var(--r-chip); background: var(--bg); color: var(--text); font: inherit; resize: vertical; }
+.run-text:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
 .notify { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s2); }

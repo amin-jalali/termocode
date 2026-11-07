@@ -259,6 +259,18 @@ export interface LspRowsArgs {
   last: number;
 }
 
+export interface AIRunStartArgs {
+  task: string;
+  profile?: string;
+  ref?: string;
+}
+
+export interface RunsSendArgs {
+  key: string;
+  step?: string;
+  text: string;
+}
+
 export interface DebugExpandArgs {
   key: string;
   open: boolean;
@@ -1346,6 +1358,12 @@ export interface RunItem {
   cost_usd?: number;
   needs_you?: boolean;
   can?: string[];
+  running?: RunStepRef[];
+}
+
+export interface RunStepRef {
+  id: string;
+  title?: string;
 }
 
 export interface MCPSnap {
@@ -3005,6 +3023,8 @@ export interface OpArgs {
   "lsp.code_actions": LspRangeArgs;
   "lsp.code_action_apply": LspApplyArgs;
   "lsp.inlay_hints": LspRowsArgs;
+  "ai.run_start": AIRunStartArgs;
+  "runs.send": RunsSendArgs;
   "debug.expand": DebugExpandArgs;
   "debug.sources": EmptyArgs;
   "debug.start": DebugConfigArgs;
@@ -3296,6 +3316,7 @@ export interface OpResult {
   "lsp.code_actions": LspActions;
   "lsp.code_action_apply": EditRes;
   "lsp.inlay_hints": LspHints;
+  "ai.run_start": AskRef;
   "debug.sources": DebugSources;
   "debug.open_launch": DebugLaunch;
   "lsp.type_definition": LspLocations;

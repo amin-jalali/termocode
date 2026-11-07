@@ -81,5 +81,9 @@ type RunItem struct {
 	Live      bool     `json:"live,omitempty"`     // elapsed grows: the page adds the time since
 	CostUSD   float64  `json:"cost_usd,omitempty"` // known step costs
 	NeedsYou  bool     `json:"needs_you,omitempty"`
-	Can       []string `json:"can,omitempty"` // what the web may do now: "stop", "pause", "resume"
+	Can       []string `json:"can,omitempty"` // what the web may do now: "stop", "pause", "resume", "send"
+
+	// Running are the steps that run now and can get a message
+	// (runs.send, MOB-64); at most MaxRunLive.
+	Running []RunStepRef `json:"running,omitempty"`
 }

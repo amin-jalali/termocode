@@ -31,6 +31,8 @@ export interface RunView {
   cost: number;
   needsYou: boolean;
   can: string[];
+  /** running are the steps that work now and can get a message (runs.send). */
+  running: { id: string; title: string }[];
 }
 
 type Obj = Record<string, unknown>;
@@ -82,6 +84,10 @@ export function readRuns(data: unknown): RunView[] {
       cost: num(r.cost_usd),
       needsYou: r.needs_you === true,
       can: list(r.can).map(str),
+      running: list(r.running)
+        .map(obj)
+        .filter((x) => str(x.id) !== "")
+        .map((x) => ({ id: str(x.id), title: str(x.title) })),
     }));
 }
 
