@@ -50,6 +50,8 @@ func NewSQLSession(ctx context.Context, conn Conn, password string) (*SQLSession
 		dialect = PostgresDialect{}
 	case "mysql":
 		dialect = MySQLDialect{}
+	case "sqlserver":
+		dialect = SQLServerDialect{} // DBX-62: go-mssqldb
 	default:
 		if err := DriverMissing(driver); err != nil {
 			return nil, err
@@ -203,6 +205,12 @@ func openSQLDB(conn Conn, password string) (*sql.DB, func(), error) {
 			return sql.OpenDB(startSQLConnector{Connector: connector, stmts: stmts}), release, nil
 		}
 		return sql.OpenDB(connector), release, nil
+	case "sqlserver":
+		connector, err := sqlServerConnector(conn, password) // mssql_conn.go
+		if err != nil {
+			return nil, noop, err
+		}
+		return sql.OpenDB(connector), noop, nil
 	default:
 		return nil, noop, fmt.Errorf("unsupported SQL driver %q", conn.Driver)
 	}
@@ -289,6 +297,17 @@ func (s *SQLSession) ReadOnlySession() (Session, error) {
 }
 
 func (s *SQLSession) Run(ctx context.Context, statement string, opts RunOptions) (result Result) {
+	if s.name == "sqlserver" {
+		if stmt, analyze, ok := sqlServerPlanTarget(statement); ok {
+			return s.runSQLServerPlan(ctx, stmt, analyze) // mssql_conn.go
+		}
+		if q, ok := sqlServerSavepoint(statement); ok {
+			if q == "" {
+				return Result{}
+			}
+			statement = q
+		}
+	}
 	start := time.Now()
 	defer func() { result.Elapsed = time.Since(start) }()
 	_, statements := Classify(statement, s.name)
@@ -400,6 +419,14 @@ func (s *SQLSession) runOne(ctx context.Context, query string, kind Kind, maxRow
 			if _, err = conn.ExecContext(ctx, timeoutSetting); err == nil {
 				_, err = conn.ExecContext(ctx, "START TRANSACTION READ ONLY")
 			}
+		} else if s.name == "sqlserver" {
+			// T-SQL has no read-only transaction or statement timeout: the
+			// classifier refuses writes, the ROLLBACK below undoes the rest
+			// and a lock wait stops after 30 s.
+			_, err = conn.ExecContext(ctx, s.dialect.ReadOnlyBegin())
+			if err == nil {
+				_, err = conn.ExecContext(ctx, "SET LOCK_TIMEOUT 30000")
+			}
 		} else {
 			_, err = conn.ExecContext(ctx, s.dialect.ReadOnlyBegin())
 			if err == nil {
@@ -466,6 +493,11 @@ func (s *SQLSession) runOne(ctx context.Context, query string, kind Kind, maxRow
 					typ = out.Columns[i].Type
 				}
 				row[i] = sqlCell(v, typ)
+				if s.name == "sqlserver" {
+					if c, ok := sqlServerCell(v, typ); ok {
+						row[i] = c
+					}
+				}
 				if row[i].Kind == "binary" && !containsString(out.Notices, "Binary values are shown as hexadecimal.") {
 					out.Notices = append(out.Notices, "Binary values are shown as hexadecimal.")
 				}
@@ -581,6 +613,8 @@ func queryReturnsRows(query, dialect string) bool {
 		return true
 	case "ANALYZE":
 		return len(words) > 1 && (words[1] == "SELECT" || words[1] == "WITH")
+	case "EXEC", "EXECUTE":
+		return normDriver(dialect) == "sqlserver" // a procedure may send rows
 	}
 	return false
 }
@@ -722,8 +756,11 @@ func (s *SQLSession) Introspect(ctx context.Context, req IntrospectionRequest) (
 	result := IntrospectionResult{}
 	if req.Object != "" && req.Schema == "" {
 		currentSchema := "SELECT current_schema()"
-		if normDriver(s.name) == "mysql" {
+		switch normDriver(s.name) {
+		case "mysql":
 			currentSchema = "SELECT DATABASE()"
+		case "sqlserver":
+			currentSchema = "SELECT SCHEMA_NAME()"
 		}
 		if err := s.readCatalog(ctx, currentSchema, &result.Schemas); err != nil {
 			return result, err
@@ -765,7 +802,7 @@ func (s *SQLSession) Introspect(ctx context.Context, req IntrospectionRequest) (
 				dst = &result.Sequences
 			}
 			args := []any(nil)
-			if queries[key] != "" && (strings.Contains(queries[key], "$1") || strings.Contains(queries[key], "?")) {
+			if queries[key] != "" && (strings.Contains(queries[key], "$1") || strings.Contains(queries[key], "?") || strings.Contains(queries[key], "@p1")) {
 				args = []any{req.Schema}
 			}
 			if err := s.readCatalog(ctx, queries[key], dst, args...); err != nil {

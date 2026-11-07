@@ -107,7 +107,7 @@ With no connections yet, the view lists the suggestions and offers **a add** and
 
 ## Add a connection
 
-Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, Cassandra / ScyllaDB, ClickHouse, libSQL / Turso, or **From a URL**.
+Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, SQL Server / Azure SQL, Cassandra / ScyllaDB, ClickHouse, libSQL / Turso, or **From a URL**.
 
 The MySQL family has presets on the MySQL driver: MariaDB, TiDB (port 4000), PlanetScale / Vitess and Amazon Aurora (MySQL) (both with TLS), and SingleStore. A preset fills the port, user and SSL mode, shows a short note on what differs from MySQL, and is saved as `"preset"` in the connection; the tree shows its name next to the host.
 
@@ -117,8 +117,15 @@ The PostgreSQL family has presets on the PostgreSQL driver: CockroachDB (port 26
 - Amazon Redshift: no materialized views or sequences in the tree, and no EXPLAIN ANALYZE (`x`/analyze shows the plan only).
 - CockroachDB and Redshift: the plan is the server's text plan (plain `EXPLAIN`).
 
-SQL Server / Azure SQL (`"driver": "sqlserver"`, also `mssql` or `azuresql`; port 1433) and Oracle (`"driver": "oracle"`) can be saved in the config, but their drivers are not built in yet: connecting says so. A `*.database.windows.net` host turns on TLS (`encrypt=true`); `"params": {"fedauth": "ActiveDirectoryDefault"}` asks for Microsoft Entra (AD) sign-in once the driver is in.
-For Oracle (port 1521; `ora` works too) the database is the service name. `"params": {"tns": "PROD"}` takes host, port, service (or SID) and TCPS from `tnsnames.ora` (in `$TNS_ADMIN`, else `$ORACLE_HOME/network/admin`), and `"wallet": "/path/to/wallet"` uses a wallet folder with TLS.
+SQL Server / Azure SQL (`"driver": "sqlserver"`, also `mssql` or `azuresql`; port 1433) uses the built-in go-mssqldb driver. The tree shows databases, schemas, tables, views, procedures and sequences; table data pages with `OFFSET … FETCH` (the console's first-rows query is `SELECT TOP n`). A `*.database.windows.net` host turns on TLS (`encrypt=true`). Sign-in:
+
+- **SQL login**: user and password, as for the other servers.
+- **Windows (NTLM)**: write the user as `DOMAIN\user`.
+- **Microsoft Entra (AD)**: `"params": {"fedauth": "ActiveDirectoryDefault"}` (or another `ActiveDirectory…` mode); the password, if any, is the secret of the account or service principal.
+
+The plan (`x`) is the server's SHOWPLAN XML: the statement does not run. Analyze uses STATISTICS XML and runs the statement, after the same Cancel-first card as on the other servers. Read-only sessions run in a transaction that is always rolled back.
+
+Oracle (`"driver": "oracle"`) can be saved in the config, but its driver is not built in yet: connecting says so. For Oracle (port 1521; `ora` works too) the database is the service name. `"params": {"tns": "PROD"}` takes host, port, service (or SID) and TCPS from `tnsnames.ora` (in `$TNS_ADMIN`, else `$ORACLE_HOME/network/admin`), and `"wallet": "/path/to/wallet"` uses a wallet folder with TLS.
 
 - **A server type** asks for the host, port, user and database. Then it asks for a masked password.
 - **Cassandra / ScyllaDB** asks for a contact point (port 9042), an optional user and an optional keyspace. Its console is a `.cql` file; the send key runs the CQL statement at the cursor and results come a page at a time.

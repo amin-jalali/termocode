@@ -434,7 +434,7 @@ func StreamRows(ctx context.Context, sess Session, driver, sql string, sink RowS
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		q := "SELECT * FROM (" + inner + tail + " AS termocode_export" + d.Limit(page, offset)
+		q := "SELECT * FROM (" + inner + tail + " AS termocode_export" + OrderedLimit(d, page, offset)
 		res := sess.Run(ctx, q, RunOptions{MaxRows: page})
 		if res.Err != nil {
 			return res.Err

@@ -1080,13 +1080,14 @@ func dbTypePickerItems(remote bool) []picker.Item {
 		{ID: "mysql", Title: "MySQL / MariaDB", Hint: "default port 3306"},
 		{ID: "sqlite", Title: "SQLite", Hint: "a file on this computer"},
 		{ID: "redis", Title: "Redis / Valkey", Hint: "default port 6379"},
+		{ID: "sqlserver", Title: "SQL Server / Azure SQL", Hint: "default port 1433"},
 		{ID: "cassandra", Title: "Cassandra / ScyllaDB", Hint: "CQL, default port 9042"},
 		{ID: "clickhouse", Title: "ClickHouse", Hint: "HTTP interface, default port 8123"},
 		{ID: "libsql", Title: "libSQL / Turso", Hint: "a remote libsql:// server"},
 		{ID: "url", Title: "From a URL", Hint: "paste a connection URL"},
 	}
 	if remote {
-		items = []picker.Item{items[0], items[1], items[3]}
+		items = []picker.Item{items[0], items[1], items[3], items[4]}
 	}
 	for _, p := range dbclient.PGPresets() {
 		items = append(items, picker.Item{ID: "preset:" + p.ID, Title: p.Label, Hint: fmt.Sprintf("PostgreSQL family · port %d", p.Port)})
@@ -1193,6 +1194,12 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 	case "libsql":
 		cmd := m.databaseAddPrompt(promptKindDBAdd, "libSQL / Turso server", "Server URL:", "libsql://my-db.turso.io", false)
 		m.prompt.SetNote("The auth token is asked next and kept in the secret store.")
+		return cmd
+	case "sqlserver":
+		// DBX-62: a *.database.windows.net host turns on TLS (SQLServerDSN).
+		s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.User, s.pendingConn.Database = "sqlserver", 1433, "sa", "master"
+		cmd := m.databaseAddPrompt(promptKindDBHost, "SQL Server: server address", "Host name or address:", "localhost", false)
+		m.prompt.SetNote("Azure SQL: use the *.database.windows.net name (TLS is turned on). Windows sign-in: DOMAIN\\user as the user.")
 		return cmd
 	case "url":
 		return m.databaseAddPrompt(promptKindDBAdd, "Connection URL", "Paste a database URL:", "postgres://user@localhost:5432/database", false)

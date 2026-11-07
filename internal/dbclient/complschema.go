@@ -51,7 +51,7 @@ func LoadCompletionSchema(ctx context.Context, s Introspector, driver, database 
 	type scope struct{ db, schema string }
 	var scopes []scope
 	switch d := normDriver(driver); d {
-	case "postgres", "postgresql":
+	case "postgres", "postgresql", "sqlserver":
 		r, err := s.Introspect(ctx, IntrospectionRequest{Database: "current"})
 		if err != nil {
 			return out, err

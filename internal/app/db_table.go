@@ -127,8 +127,10 @@ func (tv *dbTableView) selectSQL(limit int) (string, error) {
 	}
 	if len(order) > 0 {
 		b.WriteString(" ORDER BY " + strings.Join(order, ", "))
+		b.WriteString(d.Limit(limit, max(tv.offset, 0)))
+	} else {
+		b.WriteString(dbclient.OrderedLimit(d, limit, max(tv.offset, 0))) // T-SQL pages only after an ORDER BY
 	}
-	b.WriteString(d.Limit(limit, max(tv.offset, 0)))
 	sql := b.String()
 	if err := dbReadOnlyCheck(tv.driver, sql); err != nil {
 		return "", err

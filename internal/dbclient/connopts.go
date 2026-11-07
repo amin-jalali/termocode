@@ -150,6 +150,12 @@ func (o ConnOptions) StartSQL(driver string) []string {
 		if level != "" {
 			out = append(out, "SET SESSION TRANSACTION ISOLATION LEVEL "+level)
 		}
+	case "sqlserver":
+		// The default schema belongs to the database user in T-SQL; only
+		// the isolation level is a session setting.
+		if level != "" {
+			out = append(out, "SET TRANSACTION ISOLATION LEVEL "+level)
+		}
 	}
 	if strings.TrimSpace(o.InitSQL) != "" {
 		stmts, err := Split(o.InitSQL, driver)
