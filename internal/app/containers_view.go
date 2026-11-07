@@ -146,7 +146,7 @@ func (st *servicesState) hostSectionBody(sec string) []svcRow {
 				{kind: svcRowCode, section: key, text: svcPermissionFix},
 				hint("y copies it · R to retry")}
 		case services.ProblemDaemonDown:
-			return []svcRow{note(name + " is not running"), retryRow(key)}
+			return []svcRow{note(name + " is not running"), engineStartRow(st.containerEngine.Kind, key), retryRow(key)}
 		}
 		msg := errLine(p.Detail)
 		if msg == "" {

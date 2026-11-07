@@ -388,6 +388,7 @@ excluded	buffer-info	laptop only: TUI status overlay
 excluded	cheat-sheet	laptop only: TUI shortcut sheet (the web has its own keys sheet)
 excluded	clipboard-history	laptop only: the laptop clipboard is never shared with the web
 excluded	containers-copy-id	laptop only: copies to the laptop clipboard
+excluded	containers-engine-config	laptop only: opens the engine config file of the laptop
 excluded	containers-help	laptop only: opens the TUI guide
 excluded	copy-file-ref	laptop only: copies to the laptop clipboard
 excluded	dap-install	laptop only: installs a debug adapter on the laptop disk

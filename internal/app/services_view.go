@@ -145,7 +145,12 @@ func (st *servicesState) problemRows() []svcRow {
 	case services.ProblemNoCompose:
 		return []svcRow{note("Docker Compose v2 is needed"), hint("Update Docker · R retry")}
 	case services.ProblemDaemonDown:
-		return []svcRow{note(p.Message()), hint("Start it, then try again."), retryRow(svcSecCompose)}
+		start := engineStartRow(p.Engine, svcSecCompose)
+		next := hint("Then try again.")
+		if start.kind == svcRowCode {
+			next = hint("y copies it, then Retry")
+		}
+		return []svcRow{note(p.Message()), start, next, retryRow(svcSecCompose)}
 	case services.ProblemNoPermission:
 		return []svcRow{note(p.Message()),
 			{kind: svcRowCode, section: svcSecCompose, text: svcPermissionFix},

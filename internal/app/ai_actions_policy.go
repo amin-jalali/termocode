@@ -398,6 +398,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"redis-set-ttl":                aiNever(aiNoPicker + " (redis_command)"),
 	"redis-delete-key":             aiNever(aiNoPicker + " (redis_command)"),
 	"containers-focus":             aiAuto(),
+	"containers-engine-config":     aiAuto(),
 	"kubernetes-show":              aiAuto(), // read only (kube_actions.go)
 	"worktree-view":                aiAuto(), // read only (worktrees_keys.go)
 	"worktree-open":                aiNever(aiNoSession),
