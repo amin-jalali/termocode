@@ -64,12 +64,14 @@ type Resume struct {
 type Sub struct {
 	T      string   `json:"t"`
 	Topics []string `json:"topics"`
+	WS     string   `json:"ws,omitempty"` // MOB-50: the workspace key ("": the home one)
 }
 
 // Unsub drops topic subscriptions.
 type Unsub struct {
 	T      string   `json:"t"`
 	Topics []string `json:"topics"`
+	WS     string   `json:"ws,omitempty"`
 }
 
 // Req is a request. Args is checked against the op's args type.
@@ -78,6 +80,7 @@ type Req struct {
 	ID   uint64          `json:"id"`
 	Op   string          `json:"op"`
 	Args json.RawMessage `json:"args,omitempty"`
+	WS   string          `json:"ws,omitempty"`
 }
 
 // Ping keeps the connection alive; Here is true while the page is visible.
@@ -106,6 +109,7 @@ type Meta struct {
 	Viewers int      `json:"viewers"`
 	UI      MetaUI   `json:"ui"`
 	Caps    []string `json:"caps"`
+	WS      string   `json:"ws,omitempty"` // the workspace this meta is of (set by the gateway)
 }
 
 // MetaUI is the laptop's look, so the page can match it.
@@ -122,6 +126,7 @@ type Snap struct {
 	Topic string          `json:"topic"`
 	Seq   uint64          `json:"seq"`
 	Data  json.RawMessage `json:"data"`
+	WS    string          `json:"ws,omitempty"`
 }
 
 // Delta is one change of a topic; Seq is the previous seq + 1.
@@ -130,12 +135,14 @@ type Delta struct {
 	Topic string          `json:"topic"`
 	Seq   uint64          `json:"seq"`
 	Data  json.RawMessage `json:"data"`
+	WS    string          `json:"ws,omitempty"`
 }
 
 // Resync says deltas of a topic were dropped; the browser subscribes again.
 type Resync struct {
 	T     string `json:"t"`
 	Topic string `json:"topic"`
+	WS    string `json:"ws,omitempty"`
 }
 
 // Res is the reply to a request.
@@ -143,6 +150,7 @@ type Res struct {
 	T    string          `json:"t"`
 	ID   uint64          `json:"id"`
 	Data json.RawMessage `json:"data,omitempty"`
+	WS   string          `json:"ws,omitempty"`
 }
 
 // ErrMsg is an error, for a request (ID set) or for the connection.
@@ -153,6 +161,7 @@ type ErrMsg struct {
 	Code ErrCode         `json:"code"`
 	Msg  string          `json:"msg"`
 	Data json.RawMessage `json:"data,omitempty"`
+	WS   string          `json:"ws,omitempty"`
 }
 
 // Event is a one-shot event not tied to a topic.
@@ -160,6 +169,7 @@ type Event struct {
 	T    string          `json:"t"`
 	Kind string          `json:"kind"`
 	Data json.RawMessage `json:"data,omitempty"`
+	WS   string          `json:"ws,omitempty"`
 }
 
 // Pong answers a ping with the same N.

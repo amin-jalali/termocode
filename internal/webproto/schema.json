@@ -334,7 +334,8 @@
     "answered": "Answered",
     "attention": "Attention",
     "search.batch": "SearchBatch",
-    "views_saved": "SavedViewList"
+    "views_saved": "SavedViewList",
+    "ws.gone": "WSGone"
   },
   "messages": {
     "client": {
@@ -8251,6 +8252,9 @@
         },
         "topic": {
           "type": "string"
+        },
+        "ws": {
+          "type": "string"
         }
       },
       "required": [
@@ -8473,6 +8477,9 @@
         },
         "t": {
           "const": "err"
+        },
+        "ws": {
+          "type": "string"
         }
       },
       "required": [
@@ -8491,6 +8498,9 @@
         },
         "t": {
           "const": "ev"
+        },
+        "ws": {
+          "type": "string"
         }
       },
       "required": [
@@ -12278,6 +12288,9 @@
         },
         "viewers": {
           "type": "integer"
+        },
+        "ws": {
+          "type": "string"
         }
       },
       "required": [
@@ -12788,6 +12801,9 @@
         },
         "working": {
           "type": "integer"
+        },
+        "ws": {
+          "type": "string"
         }
       },
       "required": [
@@ -13084,6 +13100,9 @@
         },
         "t": {
           "const": "req"
+        },
+        "ws": {
+          "type": "string"
         }
       },
       "required": [
@@ -13103,6 +13122,9 @@
         },
         "t": {
           "const": "res"
+        },
+        "ws": {
+          "type": "string"
         }
       },
       "required": [
@@ -13165,6 +13187,9 @@
           "const": "resync"
         },
         "topic": {
+          "type": "string"
+        },
+        "ws": {
           "type": "string"
         }
       },
@@ -13860,6 +13885,9 @@
         },
         "topic": {
           "type": "string"
+        },
+        "ws": {
+          "type": "string"
         }
       },
       "required": [
@@ -14191,6 +14219,9 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "ws": {
+          "type": "string"
         }
       },
       "required": [
@@ -15209,6 +15240,9 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "ws": {
+          "type": "string"
         }
       },
       "required": [
@@ -15636,6 +15670,25 @@
       },
       "required": [
         "name"
+      ],
+      "additionalProperties": true
+    },
+    "WSGone": {
+      "type": "object",
+      "properties": {
+        "why": {
+          "enum": [
+            "closed",
+            "not_running",
+            "busy",
+            "limit",
+            "off",
+            "bad"
+          ]
+        }
+      },
+      "required": [
+        "why"
       ],
       "additionalProperties": true
     },

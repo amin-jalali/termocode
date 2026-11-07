@@ -94,6 +94,13 @@ func webGatewayConfig(args []string, errw io.Writer) (webgw.RunConfig, bool) {
 		cfg.Tailnet = &webgw.TailnetConfig{}
 	}
 	cfg.DevicesDir = *devices
+	if *devices != "" {
+		// MOB-50: the paired gateway is the door to this user's other
+		// running workspaces on the machine.
+		home := paths.Key
+		cfg.Home = home
+		cfg.DialWS = func(ctx context.Context, ws string) (net.Conn, error) { return webDoorDial(ctx, home, ws) }
+	}
 	cfg.RequireTOTP = *totp
 	cfg.AppKeyLogin = *appKey
 	cfg.PhoneWatch = *phone
