@@ -42,12 +42,6 @@ const (
 	dbNodeTrigger      // a trigger of a schema (DBX-13)
 	dbNodeExtension    // an extension installed in a schema (DBX-13)
 	dbNodeRole         // a user or role of the server (DBX-13)
-	dbNodeRedisNS      // a key namespace ("session:")
-	dbNodeRedisKey     // a key with its type
-	dbNodeRedisMore    // the scan stopped at db_redis_max_keys / no keys
-	dbNodeLoading      // "Loading…": the node's children are on their way (quiet, not a problem)
-	dbNodeTrigger      // a trigger of a schema (DBX-13)
-	dbNodeExtension    // an extension installed in a schema (DBX-13)
 	dbNodeFolderHeader // a connection folder heading (DBX-21); not a node
 )
 
@@ -102,7 +96,6 @@ type dbState struct {
 	savepointKey        string                  // the session Set / Roll Back to Savepoint acts on
 	savepointName       string                  // the savepoint the rollback card is for
 	csvConns            []dbclient.Conn         // session-only CSV/TSV copies (db_csv_open.go)
-	closeSessionKey     string                  // the session Databases: Sessions… asks to close
 	importConns         []dbclient.ImportedConn // Import Connections…: found, waiting for the card (db_importconn.go)
 	keepAlive           map[string]*dbKeepAlive // connection -> its keep-alive / reconnect (db_keepalive.go)
 	sessions            map[string]dbclient.Session
