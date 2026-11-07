@@ -26,10 +26,28 @@ func replaceAll(t *testing.T, d *Driver, find, repl, want string) {
 	d.Key("enter")
 	d.Type(repl)
 	d.Key("enter")
-	if !d.WaitForText(want, 10*time.Second) {
+	if !d.WaitFor(func() bool { return strings.Contains(cardWords(screen(d), "Replace in Workspace"), want) }, 10*time.Second) {
 		t.Fatalf("confirm dialog does not say %q:\n%s", want, screen(d))
 	}
 	clickButton(d, "Replace")
+}
+
+// cardWords is the text inside the card whose row holds anchor, its
+// wrapped lines joined with single spaces (the card wraps at its width).
+func cardWords(frame, anchor string) string {
+	var words []string
+	for _, row := range cardText(frame, anchor) {
+		r := []rune(row)
+		if len(r) < 2 {
+			continue
+		}
+		in := string(r[1:])
+		if i := strings.IndexRune(in, '│'); i >= 0 {
+			in = in[:i]
+		}
+		words = append(words, strings.Fields(in)...)
+	}
+	return strings.Join(words, " ")
 }
 
 // Spec: Given b.txt open and clean and a.txt open with an unsaved edit,
