@@ -73,6 +73,8 @@ If both files use the same `id`, the project entry wins. Press `e` on a connecti
 
 Every pooled connection runs the schema, time zone, isolation and `initSQL` statements first; a failing one fails the connection with its reason.
 
+To change them without editing the file, run **Databases: Manage Connection…** on one of your own connections and pick **Connection Options…**. The list shows every option with its value. Pick one, type the new value (lists are comma lists, empty clears it) and press Enter. A bad value keeps the prompt open with the reason and saves nothing. An open session uses the new options after you connect again.
+
 **Schema loading.** `db_introspect_level` sets how much a table row loads (`auto` loads less in big schemas). `r` in the tree reloads only the object under the cursor; `R` reloads everything. Each load is kept in `db/schema-cache.json` (names and types, never data); when a load differs from the cached one the row says `changed since …`. **Databases: Show Schema Cache Info** tells when a connection was last loaded. `db_complete_catalogs` adds the system catalogs to SQL completion.
 
 A row with a problem shows the reason, for example `literal password in project config`, `duplicate connection id` or `sqlite path is outside the workspace`. Fix the file and press `R`.
