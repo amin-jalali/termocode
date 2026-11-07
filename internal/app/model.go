@@ -146,6 +146,7 @@ type Model struct {
 	confirm                 confirm.Model
 	pendingContainerID      string
 	pendingContainerStop    bool
+	pendingContainerBulk    string // CTX-23: the verb of the open bulk card
 	pendingContainerProject string
 	pendingContainerDir     string
 	pendingContainerFiles   []string

@@ -119,6 +119,7 @@ type servicesState struct {
 	containerCancels    map[string]context.CancelFunc
 	containerGen        uint64
 	containerRows       []containers.Container
+	containerMarks      map[string]bool // CTX-23: container id → marked for a bulk action
 	imageRows           []containers.Image
 	networkRows         []containers.Network
 	volumeRows          []containers.Volume
@@ -578,6 +579,8 @@ func (m *Model) handleServicesMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onContainerHost(msg), true
 	case containerActionDoneMsg:
 		return m.onContainerActionDone(msg), true
+	case containerBulkDoneMsg:
+		return m.onContainerBulkDone(msg), true
 	case containerInspectMsg:
 		return m.onContainerInspect(msg), true
 	case containerGroupDoneMsg:

@@ -861,6 +861,10 @@ func (st *servicesState) renderHostItem(r svcRow, active, focused bool, w int) s
 		if st.busy[containerBusyPrefix+c.ID].Busy() {
 			g, gcol = theme.GlyphSvcStarting, theme.TextSecondary
 		}
+		glyph := g.String()
+		if st.containerMarked(c.ID) { // CTX-23: marked for a bulk action
+			glyph, gcol = "*", theme.GitAdded
+		}
 		var cols []hostCol
 		if sc := st.statsRowCol(c, w); sc != nil { // live CPU / memory takes the image's place
 			cols = append(cols, *sc)
@@ -881,7 +885,7 @@ func (st *servicesState) renderHostItem(r svcRow, active, focused bool, w int) s
 		if gcol == theme.TextDim {
 			ncol = theme.TextSecondary
 		}
-		return renderHostLine(active, focused, w, r.depth, g.String(), gcol, r.name, ncol, cols)
+		return renderHostLine(active, focused, w, r.depth, glyph, gcol, r.name, ncol, cols)
 	case hostImage:
 		if r.idx < 0 || r.idx >= len(st.imageRows) {
 			break
