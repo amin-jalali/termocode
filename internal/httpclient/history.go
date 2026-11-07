@@ -51,6 +51,8 @@ type Entry struct {
 	Binary      bool     `json:"binary,omitempty"`
 	FinalURL    string   `json:"final_url,omitempty"`
 	Hops        []Hop    `json:"hops,omitempty"`
+	// Pinned entries are listed on top and never trimmed by the cap.
+	Pinned bool `json:"pinned,omitempty"`
 }
 
 // NewEntry builds a history entry from the request template and the
@@ -131,6 +133,23 @@ func (e *Entry) Line(now time.Time) string {
 		label = e.Method + " " + e.Name
 	}
 	return fmt.Sprintf("%s · %s · %d ms · %s", label, status, e.ElapsedMS, Ago(now.Sub(e.Time)))
+}
+
+// DayLabel names the day of t for grouping: "Today", "Yesterday",
+// "Mon 2 Nov" (this year) or "Wed 31 Dec 2025".
+func DayLabel(t, now time.Time) string {
+	t, now = t.Local(), now.Local()
+	day := func(x time.Time) time.Time { return time.Date(x.Year(), x.Month(), x.Day(), 0, 0, 0, 0, time.Local) }
+	d, n := day(t), day(now)
+	switch {
+	case d.Equal(n):
+		return "Today"
+	case d.Equal(n.AddDate(0, 0, -1)):
+		return "Yesterday"
+	case d.Year() == n.Year():
+		return t.Format("Mon 2 Jan")
+	}
+	return t.Format("Mon 2 Jan 2006")
 }
 
 // Ago is "just now", "5 s ago", "2 min ago", "3 h ago", "4 d ago".
@@ -294,6 +313,23 @@ func (s *Store) Delete(id string) error {
 	return c.write(s.Path, out)
 }
 
+// SetPinned pins or unpins the entry with id.
+func (s *Store) SetPinned(id string, pinned bool) error {
+	c := histLock(s.Path)
+	defer c.mu.Unlock()
+	if err := c.sync(s.Path, true); err != nil {
+		return err
+	}
+	list := append([]Entry(nil), trimList(c.list, s.max())...)
+	for i := range list {
+		if list[i].ID == id {
+			list[i].Pinned = pinned
+			return c.write(s.Path, list)
+		}
+	}
+	return fmt.Errorf("no history entry %q", id)
+}
+
 // Clear removes every entry.
 func (s *Store) Clear() error {
 	c := histLock(s.Path)
@@ -301,11 +337,32 @@ func (s *Store) Clear() error {
 	return c.write(s.Path, nil)
 }
 
+// trimList keeps at most n entries (oldest first in list): the oldest
+// unpinned ones go first; pinned ones always stay.
 func trimList(list []Entry, n int) []Entry {
-	if len(list) > n {
-		return list[len(list)-n:]
+	drop := len(list) - n
+	if drop <= 0 {
+		return list
 	}
-	return list
+	pinned := false
+	for _, e := range list {
+		if e.Pinned {
+			pinned = true
+			break
+		}
+	}
+	if !pinned {
+		return list[drop:]
+	}
+	out := make([]Entry, 0, n)
+	for _, e := range list {
+		if drop > 0 && !e.Pinned {
+			drop--
+			continue
+		}
+		out = append(out, e)
+	}
+	return out
 }
 
 // historySlack is how far over max the file may grow before a rewrite
