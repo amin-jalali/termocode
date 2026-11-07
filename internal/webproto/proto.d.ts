@@ -559,6 +559,15 @@ export interface AIMCPProfileArgs {
   all?: boolean;
 }
 
+export interface AICatalogArgs {
+  feature?: string;
+  query?: string;
+}
+
+export interface TrackerIDArgs {
+  id: string;
+}
+
 export interface ChatRenameArgs {
   id: string;
   title: string;
@@ -2405,6 +2414,73 @@ export interface MCPProfileItem {
   hint?: string;
 }
 
+export interface AICatalog {
+  features: CatalogFeature[];
+  servers: CatalogServer[];
+  note?: string;
+  truncated?: boolean;
+}
+
+export interface CatalogFeature {
+  id: string;
+  title: string;
+  hint: string;
+  tools: number;
+  asks: number;
+  try: string[];
+  view?: string;
+}
+
+export interface CatalogServer {
+  name: string;
+  state: string;
+  trusted: boolean;
+  cached?: boolean;
+  known: boolean;
+  prompts?: boolean;
+  resources?: boolean;
+  tools: CatalogTool[];
+}
+
+export interface CatalogTool {
+  name: string;
+  title?: string;
+  hint?: string;
+  gate: "runs" | "asks" | "off";
+  text: string;
+}
+
+export interface TrackerPins {
+  pins: TrackerPin[];
+}
+
+export interface TrackerPin {
+  id: string;
+  title: string;
+  server: string;
+  tool: string;
+  args?: string;
+  refresh: number;
+  runs: boolean;
+  why?: string;
+}
+
+export interface TrackerBlock {
+  id: string;
+  title: string;
+  rows: TrackerRow[];
+  text?: string;
+  error?: string;
+  truncated?: boolean;
+  at: number;
+}
+
+export interface TrackerRow {
+  title: string;
+  hint?: string;
+  ref?: string;
+}
+
 export interface ChatExport {
   name: string;
   text: string;
@@ -3137,6 +3213,10 @@ export interface OpArgs {
   "ai.worktree_discard": AIWorktreeArgs;
   "ai.mcp_profiles": EmptyArgs;
   "ai.use_mcp_profile": AIMCPProfileArgs;
+  "ai.catalog": AICatalogArgs;
+  "ai.tracker_pins": EmptyArgs;
+  "ai.tracker_run": TrackerIDArgs;
+  "ai.tracker_unpin": TrackerIDArgs;
   "chat.rename": ChatRenameArgs;
   "chat.fork": ChatForkArgs;
   "chat.delete": ChatOpenArgs;
@@ -3407,6 +3487,10 @@ export interface OpResult {
   "ai.worktree_discard": AskRef;
   "ai.mcp_profiles": MCPProfiles;
   "ai.use_mcp_profile": AskRef;
+  "ai.catalog": AICatalog;
+  "ai.tracker_pins": TrackerPins;
+  "ai.tracker_run": TrackerBlock;
+  "ai.tracker_unpin": TrackerPins;
   "chat.fork": ChatRef;
   "chat.delete": AskRef;
   "chat.clear": AskRef;
