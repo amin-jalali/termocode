@@ -82,3 +82,21 @@ func TestGitxGraphColumnsToggleSaves(t *testing.T) {
 		t.Errorf("read back %b", gitGraphCols.Load())
 	}
 }
+
+// A start with no git_graph_columns in config.json shows the default
+// columns, even when an earlier model in the same process hid one (the
+// bits are a process global; a full testkit run left the date column
+// off for later tests, so GRAPH rows lost their age).
+func TestGitxGraphColumnsInitWithoutSettingResetsDefault(t *testing.T) {
+	path, err := settingsConfigPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = os.Remove(path)
+	t.Cleanup(func() { gitGraphCols.Store(0) })
+	gitGraphCols.Store(uint32(gitColDate | gitColAuthor | gitColSHA))
+	gitGraphColsInit()
+	if !gitGraphColOn(gitColAuthor) || !gitGraphColOn(gitColDate) || gitGraphColOn(gitColSHA) {
+		t.Errorf("no setting: bits %b, want the default", gitGraphCols.Load())
+	}
+}
