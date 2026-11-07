@@ -121,6 +121,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	if c, ok := m.handleKubeMsg(msg); ok { // kube_state.go
 		return m, c
 	}
+	if c, ok := m.handleDevPreviewMsg(msg); ok { // devpreview_ui.go
+		return m, c
+	}
 	if c, ok := m.handleWTMsg(msg); ok { // worktrees_state.go
 		return m, c
 	}
@@ -1741,7 +1744,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+shift+v":
 			m.terminalPasteFromClipboard()
-			return m, nil
+			return m, m.aiTermNoteUserKey() // pasting is typing: it takes the tab over from the AI
 		case "ctrl+shift+c":
 			lines := m.terminalCopyToClipboard()
 			if lines <= 0 {
@@ -1758,9 +1761,10 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	}
 
 	if m.inTerminal && shouldPassToTerminal(msg) && !m.skipsShell(msg) {
+		driveCmd := m.aiTermNoteUserKey() // typing in a tab the AI drives takes it over (CMP-67)
 		var cmd tea.Cmd
 		m.editor, cmd = m.editor.Update(msg)
-		return m, cmd
+		return m, tea.Batch(cmd, driveCmd)
 	}
 
 	// Bottom panel: a focused non-terminal tab (Output, Problems, …) gets
@@ -2504,6 +2508,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.onWTSessionAgentPicked(msg.ID)
 	case pickerKindWTCleanup: // worktrees_cleanup.go: a row ticks, the first row goes on
 		return m.onWTCleanupPicked(msg.ID)
+	case pickerKindSpecOpen: // specs_ui.go
+		return m.openSpecCard(msg.ID)
 	case pickerKindWTRef: // worktrees_new.go: back to the dialog with the start point
 		m.reopenWTForm(msg.ID)
 		return nil

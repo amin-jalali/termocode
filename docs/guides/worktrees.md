@@ -42,8 +42,9 @@ repository's git folder, never in your project.
 | `N` | The notes agents left on it, with their times |
 | `d` | Diff vs base: what it changed since it left its base; keep or revert each change |
 | `n` | New worktree (see below) |
-| `c` | New child worktree: it starts from the selected one's branch |
+| `c` | New child worktree: it starts from the selected one's branch; its PR targets that branch |
 | `I` | Start from an issue: pick an open issue, the New worktree form fills in |
+| `e` | Restack a child: replay its commits onto its parent's branch (asks first) |
 | `H` | Hand off: a new agent goes on with a note of this work (see below) |
 | `L` | Show the setup of a new worktree (its terminal tab) |
 | `r` | Run the dev server on the worktree's own port (`$PORT`); again: show its tab |
@@ -189,12 +190,61 @@ worktree gets a port of its own:
 - When every port of the range is held or in use, nothing starts and a
   message says to stop a server or widen `ports`.
 
+### Warm setup and env vars
+
+Two more keys make a new worktree ready faster:
+
+```jsonc
+{
+  "setup": ["npm ci"],
+  "env": { "PORT": "3001" },                // added to the setup
+  "warm": {
+    "paths": ["node_modules"],              // what the setup makes
+    "key": ["package-lock.json"]            // when it changes, set up again
+  }
+}
+```
+
+- **env** adds plain variables to the setup. Names must be shell names.
+  A `${secret:NAME}` value is dropped: secrets never come from a file in
+  the repository.
+- **warm**: after a setup that worked, termocode keeps a copy of the
+  **paths** in the git folder (`termocode/warm/`). The next new worktree
+  whose **key** files have the same bytes gets that copy and skips the
+  setup; a toast says so. A changed key file, setup line or config file
+  runs the setup again. The newest 3 copies are kept, each at most 4 GB.
+- A path the new worktree has already is kept as it is. Every path must
+  stay inside the worktree.
+- The trust card names the env variables and the warm paths. A warm copy
+  is only used after you trust the file.
+- Use warm paths that still work when moved, like `node_modules`. A
+  Python `.venv` holds its own folder path, so leave it out.
+
 ## Child worktrees
 
 `c` (**Worktree: New Child of Selected…**) opens the New worktree form
 for a child of the selected worktree: it starts from that worktree's
 branch, and the list draws it under its parent (`└`; deeper children
 show as `└ …`). A child whose parent is gone moves up to the top level.
+
+### Stacked pull requests
+
+A child is stacked on its parent. termocode keeps the parent's branch
+as the child's base, so **Git: Create Pull Request…** and the ship loop,
+run inside the child, target the parent's branch instead of the default
+branch. The card shows it: `feat/child → feat/parent (stacked: the
+branch of the parent worktree)`. When the parent is archived, its kept
+branch is still the target; when the parent is gone, the branch kept at
+creation is.
+
+When the parent moves on (new commits, or it was rebased), `e`
+(**Worktree: Restack Selected onto Parent…**) replays the child's
+commits onto the parent's branch with `git rebase`. A card names both
+branches first; **Cancel** is first and focused, `Esc` cancels.
+Uncommitted changes stop it before anything runs. A conflict leaves the
+rebase open in the child: open it to continue or abort. A child that was
+pushed before needs a force-with-lease push afterwards. The AI may ask
+for a restack only through the same card.
 
 **Worktree: Jump…** (**Ctrl+Shift+J**) lists the worktrees and the
 agents in them, from every termocode window, with the ones that wait for
@@ -313,6 +363,11 @@ tools. A note is one line of plain text, at most 500 characters, with
 secrets hidden; the 50 newest are kept. The card shows the last note and
 the status; `N` lists all notes with their times. A link from the command
 line shows a card first (**Deny** comes first).
+
+To hand a task to a new agent in a new worktree from a script, use
+`termocode agent start "<task>"`: termocode shows this **New worktree**
+card filled in, and nothing is made until you press **Create + Start**
+(see [Start a background task](agents.md#start-a-background-task)).
 
 ## Review changes vs base
 

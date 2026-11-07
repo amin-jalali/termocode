@@ -79,7 +79,7 @@ type aiRecaller struct {
 func (m *Model) aiRecallTurn(root, text string) *aiRecaller {
 	s := m.aiS()
 	mode := aiRecallMode()
-	if mode == aiRecallOff || aiMemoryState() != aiMemoryOn {
+	if mode == aiRecallOff || !aiMemoryUses(aiMemoryState()) {
 		return nil
 	}
 	ls, err := s.aiMemoryLoad(root)

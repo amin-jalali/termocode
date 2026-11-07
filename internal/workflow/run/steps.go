@@ -26,6 +26,12 @@ func (r *runner) exec(ctx context.Context, s *workflow.Step, f *frame, st *StepS
 		return r.runStepCall(ctx, s, f, st, attempt)
 	case workflow.TypeWrite:
 		return r.write(ctx, s, f, st, attempt)
+	case workflow.TypeLoop:
+		return r.loop(ctx, s, f, st)
+	case workflow.TypeBranch:
+		return r.branch(ctx, s, f, st)
+	case workflow.TypeWait:
+		return r.wait(ctx, s, f, st)
 	}
 	return "", fmt.Errorf("unknown step type %q", s.Type)
 }
@@ -131,6 +137,19 @@ func (r *runner) plan(ctx context.Context, s *workflow.Step, f *frame, st *StepS
 	for i, it := range items {
 		it.Plan = &PlanMark{Rank: rank[it.Key], Skip: res.Skip[it.Key], Labels: res.Labels[it.Key]}
 		out[i] = it
+	}
+	if s.Plan != nil && s.Plan.Approve && !r.opts.Dry {
+		if r.opts.Approve == nil {
+			return "", Permanent(errors.New("this plan needs your approval and nothing can ask"))
+		}
+		r.emit(Event{Kind: PlanWait, Step: stepKey(s), Item: f.itemPath(), Attempt: attempt})
+		ok, err := r.opts.Approve(ctx, ApproveCall{Step: s, Item: f.itemPath(), Items: out})
+		if err != nil {
+			return "", err
+		}
+		if !ok {
+			return "", fmt.Errorf("plan %s: not approved: %w", stepKey(s), ErrDenied)
+		}
 	}
 	r.setList(f, s, st, out)
 	return StateDone, nil
@@ -386,6 +405,7 @@ func (r *runner) runStepCall(ctx context.Context, s *workflow.Step, f *frame, st
 	if err != nil {
 		return "", Permanent(fmt.Errorf("prompt: %w", err))
 	}
+	prompt = withHandoff(prompt, s.Handoff, sc)
 	render := func(t string) (string, error) { return r.opts.Eval.Render(t, sc) }
 	out, err := r.opts.Run.Run(ctx, RunCall{Step: s, Item: f.nearestItem(), Env: f.nearestEnv(),
 		Prompt: prompt, Render: render, Attempt: attempt})
@@ -432,6 +452,9 @@ func (r *runner) marker(s *workflow.Step, f *frame) string {
 	m := "termocode-run:" + r.rf.ID + "/" + stepKey(s)
 	if p := f.itemPath(); p != "" {
 		m += "/" + p
+	}
+	if t := f.roundTag(); t != "" { // a write in a loop: one per round
+		m += "/" + t
 	}
 	return m
 }
@@ -515,6 +538,10 @@ func (r *runner) restore(f *frame, s *workflow.Step, st *StepState) {
 			}
 		}
 		r.setOutput(f, s, map[string]any{"ok": len(failed) == 0, "items": listScope(all), "done": done, "failed": failed})
+	case st.Loop != nil:
+		r.setOutput(f, s, map[string]any{"ok": true, "rounds": float64(len(st.Loop.Rounds))})
+	case st.Branches != nil:
+		r.setOutput(f, s, branchOutput(s, st.Branches))
 	case st.State == StateSkipped:
 		r.setOutput(f, s, map[string]any{"ok": false, "skipped": true})
 	case st.State == StateWouldRun || st.State == StateRecorded:

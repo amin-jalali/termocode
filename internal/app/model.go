@@ -2,6 +2,7 @@ package app
 
 import (
 	"os"
+	"os/exec"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -128,6 +129,11 @@ type Model struct {
 	aiChatHits          []aiChatHit // AI: Search Chat History… (ai_chat_search.go, CMP-30)
 	aiChatHitsCapped    bool
 	agentUsage          *agentusage.Book // plan windows of the outside agents (agent_usage.go)
+	// CMP-19 (agent_goal.go): the tab the start card is about, the last
+	// check command, and check task buffer → agent tab buffer.
+	agentGoalPending int
+	agentGoalLast    string
+	agentGoalVerify  map[int]int
 	// CMP-88 (ai_chat_comments.go): the chat AI: Chat Comments… lists and
 	// the comment its card is about.
 	aiChatCommentsFor string
@@ -144,6 +150,9 @@ type Model struct {
 	agentNamesGen    int
 
 	crash *crashUI // recovered panics → toasts (crash_ui.go)
+	// lite is why this start runs without the editor (lite.go, CMP-99;
+	// "" = the full editor).
+	lite string
 	// ws is the open workspace (ADR 0018), set by New from the process
 	// workspace. Read it through m.workspace() / m.rootDir().
 	ws                      workspace.Workspace
@@ -588,6 +597,9 @@ type Model struct {
 	// shells keep running until the panel shows again (terminal_hide.go).
 	hiddenTerminalTabs   []terminalTab
 	hiddenTerminalActive int
+	// aiTermDrive are the terminal tabs (by buffer) the AI agent typed in
+	// and whether the user took them over (CMP-67, ai_terminal_drive.go).
+	aiTermDrive map[int]*aiTermDriveState
 	// termRestorePending are saved terminals of a panel that was hidden at
 	// the last quit: they come back on the next Ctrl+T (terminal_restore.go).
 	termRestorePending *savedTerminals
@@ -635,6 +647,8 @@ type Model struct {
 	pendingKubeHelm kubeHelmTarget
 	// wt is the WORKTREES view (worktrees_state.go).
 	wt *wtState
+	// specOpen is the spec whose card is open (specs_ui.go).
+	specOpen string
 	// databases is lazy and holds idle sessions only while the view is open.
 	databases *dbState
 	// itermoc is the Itermoc view (profiles, models, services, outside
@@ -965,7 +979,13 @@ func New() Model {
 	var client *nvim.Client
 	var err error
 	noNvim := os.Getenv("TERMOCODE_NO_NVIM") == "1"
+	// Lite mode (CMP-99): asked for, or no nvim on PATH; no editor and
+	// no "nvim:" error, a start tip instead.
+	lite := ""
 	if !noNvim {
+		lite = liteReason(os.Getenv, exec.LookPath)
+	}
+	if !noNvim && lite == "" {
 		client, err = nvim.New()
 	}
 	// Terminal panel height: prefer the value persisted from the previous
@@ -1055,8 +1075,9 @@ func New() Model {
 		setup:            newSetupState(),  // setup card (setup_card_ui.go)
 		debug:            loadDebugState(), // Group D (shared by Model copies)
 		crash:            newCrashUI(),
+		lite:             lite,
 	}
-	if noNvim {
+	if noNvim || lite != "" {
 		m.editor = editor.New(nil)
 	} else if err != nil {
 		m.editor = editor.New(nil)
@@ -1083,6 +1104,9 @@ func (m Model) Init() tea.Cmd {
 	if cmd := fontTipCmd(); cmd != nil {
 		cmds = append(cmds, cmd)
 	}
+	if cmd := liteTipCmd(m.lite); cmd != nil { // CMP-99: Lite mode (lite.go)
+		cmds = append(cmds, cmd)
+	}
 	if cmd := m.setupInitCmd(); cmd != nil {
 		cmds = append(cmds, cmd)
 	}
@@ -1105,6 +1129,7 @@ func (m Model) Init() tea.Cmd {
 	cmds = append(cmds, m.explorer.ScheduleLoads())   // FIX-2: a container root's first listing
 	cmds = append(cmds, wfxBootCmd())                 // WFX-15: the workflow scheduler (workflows_sched.go)
 	cmds = append(cmds, m.devcontainerOfferCmd())     // RC-7: "reopen in a dev container?" (devcontainer_offer.go)
+	cmds = append(cmds, aiChatSchedBootCmd())         // CMP-43: scheduled chats (ai_chat_sched.go)
 	if cmd := m.containerWatchInitCmd(); cmd != nil { // RC-4: is the container still running? (container_workspace.go)
 		cmds = append(cmds, cmd)
 	}

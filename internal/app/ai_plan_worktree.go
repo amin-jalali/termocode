@@ -25,7 +25,7 @@ const confirmKindAIPlanShip confirmKindEnum = 2950
 // The worktree calls (vars: tests use fakes, no git).
 var (
 	createPlanWorktree = git.CreateAgentWorktreeFromHead
-	commitPlanWorktree = git.CommitAgentWorktree
+	commitPlanWorktree = aiCommitPlanWorktree // git_ai_attribution (ai_commit_attribution.go)
 )
 
 // aiPlanWT is the plan-in-a-worktree state of the chat.

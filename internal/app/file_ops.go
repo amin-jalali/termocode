@@ -170,6 +170,9 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 	if cmd, ok := m.handleGitxPromptSubmit(value); ok { // gitx_hub.go
 		return cmd
 	}
+	if cmd, ok := m.handleCodebaseSearchPrompt(value); ok { // CMP-69 (codebase_search.go)
+		return cmd
+	}
 	if cmd, ok := m.handleSecretsPromptSubmit(value); ok { // secrets_ui.go
 		return cmd
 	}
@@ -213,6 +216,9 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 		return cmd
 	}
 	if cmd, ok := m.handleHTTPPromptSubmit(value); ok { // HTTP client
+		return cmd
+	}
+	if cmd, ok := m.handleSpecPromptSubmit(value); ok { // specs_ui.go
 		return cmd
 	}
 	switch m.promptKind {

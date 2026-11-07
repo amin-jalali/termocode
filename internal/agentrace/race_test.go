@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// Spec (AGX-4): a race has 2–4 lanes and a task; each lane's id names its
+// Spec (AGX-4, CMP-18): a race has 2–8 lanes and a task; each lane's id names its
 // worktree and branch (race-<n>-<k>-<agent>: lower case, digits, dashes),
 // so the same agent may run twice and two races never share a lane.
 func TestNewRace(t *testing.T) {
@@ -32,7 +32,7 @@ func TestNewRace(t *testing.T) {
 	if got := strings.Join(ids, " "); got != "race-3-1-claude race-3-2-codex race-3-3-claude" {
 		t.Errorf("lane ids %s", got)
 	}
-	for _, bad := range [][]LaneSpec{nil, {{Agent: "claude"}}, {{Agent: "a"}, {Agent: "b"}, {Agent: "c"}, {Agent: "d"}, {Agent: "e"}}} {
+	for _, bad := range [][]LaneSpec{nil, {{Agent: "claude"}}, {{Agent: "a"}, {Agent: "b"}, {Agent: "c"}, {Agent: "d"}, {Agent: "e"}, {Agent: "f"}, {Agent: "g"}, {Agent: "h"}, {Agent: "i"}}} {
 		if _, err := New(1, "task", "", bad, 0); err == nil {
 			t.Errorf("%d lanes: no error", len(bad))
 		}

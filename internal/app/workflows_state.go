@@ -25,6 +25,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/workflow/run"
 	"github.com/amin-jalali/termocode/internal/workflow/schedule"
 	"github.com/amin-jalali/termocode/internal/workflow/source"
+	"github.com/amin-jalali/termocode/internal/workflow/trigger"
 	"github.com/amin-jalali/termocode/internal/workflow/wire"
 )
 
@@ -50,6 +51,8 @@ const (
 	confirmKindWorkflowBudget confirmKindEnum = 3506
 	// the schedule went off while a run works: stop it too?
 	confirmKindWorkflowOffStop confirmKindEnum = 3507
+	// workflows_again.go: run a failed run again from its failed part
+	confirmKindWorkflowRetry confirmKindEnum = 3508
 )
 
 // wfxNarrowW: a window narrower than this shows the view as one page.
@@ -75,6 +78,9 @@ type wfxState struct {
 	pageOn     bool
 	detail     string
 	pageScroll int
+	// stepTab is the step tab of a run page (workflows_again.go): 0 =
+	// all steps, i+1 = the file's step i.
+	stepTab    int
 	live       map[string]*wfxLive // by run id
 	pending    string              // the workflow a card is about
 	pendingDry bool
@@ -90,6 +96,12 @@ type wfxState struct {
 	// notOwner: another process has it (no schedules, no resume here).
 	owner    *ledger.Owner
 	notOwner bool
+	// trig polls and serves the event triggers (workflows_triggers.go;
+	// nil while no workflow has one); trigQueue are the events whose
+	// card waits (the first is on the card); trigRecent the last events.
+	trig       *wfxTrigHost
+	trigQueue  []trigger.Event
+	trigRecent []wfxTrigSeen
 }
 
 // wfxLive is a run of this process.
@@ -141,6 +153,7 @@ type (
 		id    string
 		ask   wire.GateAsk
 		tool  bool // a source tool that is not read-only (no allow-list)
+		plan  bool // a plan step that waits for approval (CMP-45)
 		reply chan wire.GateDecision
 	}
 	wfxDoneMsg struct{ id string }
@@ -436,6 +449,9 @@ func (m *Model) answerWorkflowCard(id string) tea.Cmd {
 	if cmd, ok := m.answerWorkflowTrustCard(kind, id); ok {
 		return cmd
 	}
+	if cmd, ok := m.answerWorkflowRetryCard(kind, id); ok {
+		return cmd
+	}
 	name, dry := st.pending, st.pendingDry
 	st.pending = ""
 	e, ok := wire.Find(st.list, name)
@@ -603,7 +619,22 @@ func (m *Model) wfxStartRun(e wire.Entry, dry, show bool) (string, *run.Handle, 
 
 // wfxStartRunFrom is wfxStartRun that may continue a recovered run file.
 func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFile) (string, *run.Handle, tea.Cmd, error) {
+	return m.wfxStartRunWith(e, dry, show, resume, wfxRunOpts{})
+}
+
+// wfxRunOpts are the extras of a triggered run (CMP-38).
+type wfxRunOpts struct {
+	vars map[string]any // the run's vars over the file's (trigger_*)
+	dir  string         // the run works here (a new agent worktree); "" is the workspace
+}
+
+// wfxStartRunWith is wfxStartRunFrom with vars and a working dir.
+func (m *Model) wfxStartRunWith(e wire.Entry, dry, show bool, resume *run.RunFile, opts wfxRunOpts) (string, *run.Handle, tea.Cmd, error) {
 	st := m.wfxS()
+	ws := st.ws
+	if opts.dir != "" {
+		ws = opts.dir
+	}
 	if !dry && e.File != nil {
 		if why := wfxPolicy().Blocked(e.File); why != "" {
 			return "", nil, nil, errors.New("blocked: " + why)
@@ -628,9 +659,9 @@ func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFil
 			return ctx.Err()
 		}
 	}
-	ask := func(ctx context.Context, a wire.GateAsk, tool bool) (wire.GateDecision, error) {
+	askAs := func(ctx context.Context, a wire.GateAsk, tool, plan bool) (wire.GateDecision, error) {
 		reply := make(chan wire.GateDecision, 1)
-		if err := block(ctx, wfxGateMsg{id: id, ask: a, tool: tool, reply: reply}); err != nil {
+		if err := block(ctx, wfxGateMsg{id: id, ask: a, tool: tool, plan: plan, reply: reply}); err != nil {
 			return wire.GateDeny, err
 		}
 		select {
@@ -640,22 +671,29 @@ func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFil
 			return wire.GateDeny, ctx.Err()
 		}
 	}
+	ask := func(ctx context.Context, a wire.GateAsk, tool bool) (wire.GateDecision, error) {
+		return askAs(ctx, a, tool, false)
+	}
 	mc := newWFMCP(m.aiMCP(), m.aiMCPTrustAnnotations())
 	var tools source.ToolCaller
 	var check run.ToolCheck
 	if mc != nil {
 		tools, check = mc, mc
 	}
-	src := &source.Sources{Workspace: st.ws, Tools: tools, GH: ghci.DefaultRunner(source.DefaultGitHubTimeout), Databases: wfDB{root: st.ws}}
+	src := &source.Sources{Workspace: ws, Tools: tools, GH: ghci.DefaultRunner(source.DefaultGitHubTimeout), Databases: wfDB{root: st.ws}}
 	if s, err := m.secretStore(); err == nil && s != nil {
 		src.Secrets = s
 	}
 	ms := wfxMessenger(id, block)
 	ms.Tools = tools
 	cfg := wire.Config{
-		Workspace: st.ws, Root: st.root, Entry: e, RunID: id, Dry: dry, Resume: resume,
+		Workspace: ws, Root: st.root, Entry: e, RunID: id, Dry: dry, Resume: resume, Vars: opts.vars,
 		Src: src, Tools: check, AI: m.wfxAIEnv(), Exec: wfxExec,
 		Gate: func(ctx context.Context, a wire.GateAsk) (wire.GateDecision, error) { return ask(ctx, a, false) },
+		ApprovePlan: func(ctx context.Context, c run.ApproveCall) (bool, error) {
+			d, err := askAs(ctx, wfxPlanAsk(c), false, true)
+			return d != wire.GateDeny, err
+		},
 		AskTool: func(ctx context.Context, c run.AskCall) (bool, error) {
 			d, err := ask(ctx, wire.GateAsk{Step: c.Step.ID, Target: c.Server + " · " + c.Tool,
 				Preview: "This source step calls a tool that is not marked read-only. It may change things there."}, true)
@@ -694,8 +732,8 @@ func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFil
 			}
 		},
 	}
-	gh := newWFXGitHub(st.ws)
-	cfg.PR, cfg.GitHubComment, cfg.Find = gh.PR, gh.Comment, gh.Find
+	gh := newWFXGitHub(ws)
+	cfg.PR, cfg.GitHubComment, cfg.Find, cfg.Wait = gh.PR, gh.Comment, gh.Find, gh.Wait
 	cfg.ParallelMax, cfg.AgentSandbox = wfxRunSettings()
 	cfg.AgentOSSandbox = agentOSSandboxOn()
 	if !dry && wfxHasAgentStep(e.File) {
@@ -791,8 +829,8 @@ func (m *Model) handleWfxMsg(msg tea.Msg) (tea.Cmd, bool) {
 		st := m.wfxS()
 		e, _ := wire.Find(st.list, l.name)
 		a := WorkflowWriteAsk{Workflow: l.name, Step: msg.ask.Step, Item: msg.ask.Item, Target: msg.ask.Target,
-			Preview: msg.ask.Preview, Undo: msg.ask.Undo, StateRoot: st.root}
-		if !msg.tool {
+			Preview: msg.ask.Preview, Undo: msg.ask.Undo, StateRoot: st.root, Plan: msg.plan}
+		if !msg.tool && !msg.plan {
 			a.FileHash = e.Hash
 		}
 		reply := msg.reply

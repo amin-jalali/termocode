@@ -42,6 +42,9 @@ type Rules struct {
 	// CLAUDE.md below the root and .claude/rules files with globs. They
 	// are added to a read_file result, once per chat (RulesInjector).
 	Scoped []ScopedRule
+	// Review is the root files' review-only rules (CMP-37): their "Code
+	// Review Rules" sections, cut out of Text. Only AI reviews use them.
+	Review string
 }
 
 // LoadProjectRules reads the rules files of root. A missing, empty or
@@ -52,7 +55,7 @@ func LoadProjectRules(root string) Rules {
 	if err != nil {
 		return r
 	}
-	var parts, names []string
+	var parts, names, revParts, revNames []string
 	add := func(name, text string, size int) {
 		r.Files = append(r.Files, name)
 		r.Bytes += size
@@ -63,7 +66,33 @@ func LoadProjectRules(root string) Rules {
 		if !ok {
 			continue
 		}
-		add(name, text, size)
+		rest, rev := SplitReviewRules(text)
+		if rev != "" {
+			revParts, revNames = append(revParts, rev), append(revNames, name)
+		}
+		if rest == "" {
+			r.Files = append(r.Files, name) // review rules only
+			r.Bytes += size
+			continue
+		}
+		add(name, rest, size)
+	}
+	switch len(revParts) {
+	case 0:
+	case 1:
+		r.Review = revParts[0]
+	default:
+		var b strings.Builder
+		for i, p := range revParts {
+			if i > 0 {
+				b.WriteString("\n\n")
+			}
+			b.WriteString("# " + revNames[i] + "\n" + p)
+		}
+		r.Review = b.String()
+	}
+	if len(r.Review) > RulesMaxBytes {
+		r.Review = cutRules(r.Review, RulesMaxBytes)
 	}
 	for _, cr := range loadClaudeRules(root, realRoot) {
 		if len(cr.Globs) == 0 && cr.Mode == "" {
@@ -96,7 +125,7 @@ func LoadProjectRules(root string) Rules {
 		r.Text = cutRules(r.Text, RulesMaxBytes)
 		r.Truncated = true
 	}
-	if r.Text == "" && len(r.Scoped) == 0 {
+	if r.Text == "" && len(r.Scoped) == 0 && r.Review == "" {
 		return r
 	}
 	h := sha256.New()
@@ -106,6 +135,13 @@ func LoadProjectRules(root string) Rules {
 		if sr.Mode != "" { // CMP-82; other rules keep their old hash
 			h.Write([]byte("\x00" + sr.Mode + "\x00" + sr.Name + "\x00" + sr.Description))
 		}
+		if sr.Review != "" {
+			h.Write([]byte("\x00review\x00" + sr.Review))
+		}
+	}
+	if r.Review != "" {
+		// Only a file with review rules adds this, so older answers stay.
+		h.Write([]byte("\x00review\x00" + r.Review))
 	}
 	r.Hash = hex.EncodeToString(h.Sum(nil))
 	return r

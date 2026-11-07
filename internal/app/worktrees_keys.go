@@ -38,8 +38,9 @@ func worktreeKeyRows() []confirm.KeyRow {
 		[]string{"N", "the notes agents left on it, with their times"},
 		[]string{"d", "diff vs base: what it changed since it left its base · keep or revert each change"},
 		[]string{"n", "new worktree: name, start point, agent and first task"},
-		[]string{"c", "new child worktree: from this one's branch, listed under it"},
+		[]string{"c", "new child worktree: from this one's branch, listed under it; its PR targets that branch"},
 		[]string{"I", "start from an issue: pick an open issue, the form fills in branch, agent and task"},
+		[]string{"e", "restack a child: replay its commits onto its parent's branch (asks first)"},
 		[]string{"H", "hand off: a new agent goes on with a note of this work, here or in a child"},
 		[]string{"L", "show the setup of a new worktree (its terminal tab)"},
 		[]string{"r", "run the dev server on the worktree's own port ($PORT) · again: show its tab"},
@@ -87,6 +88,7 @@ func worktreePaletteItems() []picker.Item {
 		{ID: wtNewPaletteID, Title: "Worktree: New…"},
 		{ID: wtChildPaletteID, Title: "Worktree: New Child of Selected…"},
 		{ID: wtHandoffPaletteID, Title: "Worktree: Hand Off Selected…"},
+		{ID: wtRestackPaletteID, Title: "Worktree: Restack Selected onto Parent…"},
 		{ID: wtSetupLogPaletteID, Title: "Worktree: Show Setup Log"},
 		{ID: wtRunPaletteID, Title: "Worktree: Run Dev Server of Selected"},
 		{ID: wtRunOpenPaletteID, Title: "Worktree: Open Dev Server of Selected"},
@@ -144,6 +146,8 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.openWorktreeNewChild(), true
 	case wtHandoffPaletteID:
 		return m.worktreeHandoff(), true
+	case wtRestackPaletteID:
+		return m.worktreeRestack(), true
 	case wtSetupLogPaletteID:
 		return m.worktreeSetupLog(), true
 	case wtRunPaletteID:
@@ -261,6 +265,8 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.openWorktreeIssues()
 	case "H":
 		return m, m.worktreeHandoff()
+	case "e":
+		return m, m.worktreeRestack()
 	case "L":
 		return m, m.worktreeSetupLog()
 	case "r":

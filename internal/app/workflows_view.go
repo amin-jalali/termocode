@@ -344,6 +344,23 @@ func wfxStepWhat(s *workflow.Step) string {
 	case s.Write != nil:
 		t, _, _ := wfxDescribe(*s.Write)
 		return t
+	case s.Loop != nil:
+		w := fmt.Sprintf("up to %d rounds", s.Loop.Max)
+		if s.Loop.Until != "" {
+			w += " · until " + s.Loop.Until
+		}
+		if s.Loop.BudgetUSD > 0 {
+			w += fmt.Sprintf(" · cap $%.2f", s.Loop.BudgetUSD)
+		}
+		return w
+	case s.Branch != nil:
+		names := make([]string, len(s.Branch.Branches))
+		for i, b := range s.Branch.Branches {
+			names[i] = b.Name
+		}
+		return strings.Join(names, " ‖ ") + " · join " + s.Branch.Join
+	case s.Wait != nil:
+		return "wait for " + s.Wait.For + " · PR " + s.Wait.PR + " · every " + s.Wait.Every.String()
 	}
 	return ""
 }
@@ -401,6 +418,9 @@ func (m *Model) wfxFileLines(name string, w int, now time.Time) []wfxLine {
 	}
 	mark, word, tint := m.wfxDot(e)
 	when := "by hand"
+	if e.File != nil && len(e.File.Triggers) > 0 {
+		when = fmt.Sprintf("on %d trigger(s)", len(e.File.Triggers))
+	}
 	if e.File != nil && e.File.Schedule != nil {
 		sc := e.File.Schedule
 		when = strings.TrimSpace(firstNonEmpty(sc.Cron, sc.Preset+" "+sc.Time) + " " + sc.TZ)
@@ -424,6 +444,12 @@ func (m *Model) wfxFileLines(name string, w int, now time.Time) []wfxLine {
 		out = append(out, wfxLine{" FILE      " + wfxRel(e), "dim"})
 		return append(out, wfxRule(w), wfxLine{" [Edit file (e)] [Back (Esc)]", "dim"})
 	}
+	if len(e.File.Triggers) > 0 {
+		out = append(out, wfxLine{" TRIGGERS  (Workflows: Trigger Events… lists what came in)", "head"})
+		for _, t := range e.File.Triggers {
+			out = append(out, wfxLine{"   " + wfxTrigWords(t), ""})
+		}
+	}
 	out = append(out, wfxLine{" STEPS", "head"})
 	var add func(steps []workflow.Step, depth int)
 	add = func(steps []workflow.Step, depth int) {
@@ -437,9 +463,19 @@ func (m *Model) wfxFileLines(name string, w int, now time.Time) []wfxLine {
 			if len(s.Else) > 0 {
 				row += "  else → " + wfxStepKey(&s.Else[0])
 			}
+			if s.Handoff != "" {
+				row += "  ← handoff " + s.Handoff
+			}
 			out = append(out, wfxLine{row, ""})
-			if s.Each != nil {
-				add(s.Each.Steps, depth+1)
+			if s.Branch != nil {
+				for _, b := range s.Branch.Branches {
+					out = append(out, wfxLine{"   " + ind + "  ‖ " + b.Name, "dim"})
+					add(b.Steps, depth+2)
+				}
+				continue
+			}
+			for _, l := range s.Lists() {
+				add(l, depth+1)
 			}
 		}
 	}
@@ -580,9 +616,16 @@ func (m *Model) wfxRunLines(id string, w int, now time.Time) []wfxLine {
 					mark += fmt.Sprintf(" %d", len(ss.Items))
 				}
 			}
+			if st.stepTab == i+1 {
+				chain = append(chain, "‹"+k+" "+mark+"›")
+				continue
+			}
 			chain = append(chain, k+" "+mark)
 		}
 		out = append(out, wfxLine{" " + strings.Join(chain, "  →  "), ""})
+		if i := st.stepTab - 1; i >= 0 && i < len(e.File.Steps) {
+			out = append(out, wfxStepTabLines(&e.File.Steps[i], rf.Steps[wfxStepKey(&e.File.Steps[i])])...)
+		}
 		out = append(out, wfxLine{" STEPS", "head"})
 		for i := range e.File.Steps {
 			s := &e.File.Steps[i]
@@ -606,7 +649,11 @@ func (m *Model) wfxRunLines(id string, w int, now time.Time) []wfxLine {
 			if ss.Error != "" {
 				row += " · " + ss.Error
 			}
+			if ss.Wait != "" && ss.State == run.StateRunning {
+				row += " · " + ss.Wait
+			}
 			out = append(out, wfxLine{row, tint})
+			out = append(out, wfxGraphRows(s, ss)...)
 			if ss.Each != nil && len(ss.Each.Items) > 0 {
 				out = append(out, wfxLine{" ITEMS", "head"})
 				for _, it := range ss.Each.Items {
@@ -681,8 +728,56 @@ func (m *Model) wfxRunLines(id string, w int, now time.Time) []wfxLine {
 		}
 	} else if rf.Dry {
 		verbs = " [Run for real (r)] [Dry run again (d)] [Back (Esc)]"
+	} else if wfxRetryable(e, rf) {
+		verbs = " [Retry (t)]" + verbs
 	}
 	return append(out, wfxRule(w), wfxLine{verbs, "dim"})
+}
+
+// wfxGraphRows are the rounds of a loop step and the branches of a
+// branch step under its row in the run view (CMP-42).
+func wfxGraphRows(s *workflow.Step, ss *run.StepState) []wfxLine {
+	var out []wfxLine
+	if ss.Loop != nil {
+		for i, rs := range ss.Loop.Rounds {
+			row := fmt.Sprintf("     round %-2d %s %s", i+1, wfxStepMark(rs.State), wfxStepMarks(rs.Steps))
+			if rs.Error != "" {
+				row += " · " + rs.Error
+			}
+			out = append(out, wfxLine{row, "dim"})
+		}
+	}
+	if s.Branch != nil && ss.Branches != nil {
+		for _, b := range s.Branch.Branches {
+			bs := ss.Branches[b.Name]
+			if bs == nil {
+				continue
+			}
+			row := fmt.Sprintf("     ‖ %-8s %s %s", rcCut(b.Name, 8), wfxStepMark(bs.State), wfxStepMarks(bs.Steps))
+			tint := "dim"
+			if bs.State == run.StateFailed {
+				row, tint = row+" · "+bs.Error, "err"
+			}
+			out = append(out, wfxLine{row, tint})
+		}
+	}
+	return out
+}
+
+// wfxStepMarks is "id mark · id mark" for a list's step states, by id.
+func wfxStepMarks(steps map[string]*run.StepState) string {
+	keys := make([]string, 0, len(steps))
+	for k := range steps {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var parts []string
+	for _, k := range keys {
+		if s := steps[k]; s != nil {
+			parts = append(parts, k+" "+wfxStepMark(s.State))
+		}
+	}
+	return strings.Join(parts, " · ")
 }
 
 func wfxItemRow(it *run.ItemState) wfxLine {
@@ -742,7 +837,7 @@ func (m Model) wfxPageTitle() string {
 func (m *Model) wfxShowPage(detail string, focus bool) tea.Cmd {
 	st := m.wfxS()
 	if st.detail != detail {
-		st.pageScroll = 0
+		st.pageScroll, st.stepTab = 0, 0
 	}
 	st.pageOn, st.detail = true, detail
 	if detail != "" && !strings.HasPrefix(detail, "run:") {

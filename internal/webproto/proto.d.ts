@@ -258,6 +258,14 @@ export interface ControlAskArgs {
   credential: string;
 }
 
+export interface PhonePrefsArgs {
+  alerts: boolean;
+  quiet_from?: string;
+  quiet_to?: string;
+  utc_offset_min?: number;
+  lock?: boolean;
+}
+
 export interface LspRangeArgs {
   buf: number;
   tick: number;
@@ -1089,6 +1097,7 @@ export interface MdNode {
   href?: string;
   start?: number;
   rows?: MdNode[][];
+  diagram?: string;
 }
 
 export interface ChatRun {
@@ -2069,6 +2078,25 @@ export interface TaskStarted {
 
 export interface ControlChallenge {
   options: unknown;
+}
+
+export interface PhoneLaptop {
+  name: string;
+  this?: boolean;
+}
+
+export interface PhoneInfo {
+  device: string;
+  name: string;
+  role: Role;
+  guest?: boolean;
+  passkey: boolean;
+  needs_repair?: boolean;
+  remembered?: boolean;
+  paired_ms: number;
+  last_seen_ms?: number;
+  prefs: PhonePrefsArgs;
+  laptops: PhoneLaptop[];
 }
 
 export interface LspActions {
@@ -3314,6 +3342,9 @@ export interface OpArgs {
   "runs.resume": KeyArgs;
   "control.challenge": EmptyArgs;
   "control.ask": ControlAskArgs;
+  "phone.get": EmptyArgs;
+  "phone.prefs": PhonePrefsArgs;
+  "phone.forget": EmptyArgs;
   "lsp.code_actions": LspRangeArgs;
   "lsp.code_action_apply": LspApplyArgs;
   "lsp.inlay_hints": LspRowsArgs;
@@ -3619,6 +3650,7 @@ export interface OpResult {
   "git.discard": AskRef;
   "tasks.run": TaskStarted;
   "control.challenge": ControlChallenge;
+  "phone.get": PhoneInfo;
   "lsp.code_actions": LspActions;
   "lsp.code_action_apply": EditRes;
   "lsp.inlay_hints": LspHints;

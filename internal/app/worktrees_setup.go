@@ -27,6 +27,12 @@ import (
 // one after the other; the output goes to a log file in the git dir
 // (Worktree: Show Setup Log, L in the view). The worktree card shows
 // setup ● running / ✓ / ✗.
+//
+// CMP-96: "env" adds plain variables to the setup (in the tab and in the
+// background). With "warm", a setup that worked leaves a copy of its
+// paths in the git dir (worktreeform.SaveWarm); the next new worktree
+// with the same key gets the copy back and skips the setup. The trust
+// card names both, and a warm copy is used only after that trust.
 
 const confirmKindWTSetupTrust confirmKindEnum = 3602
 
@@ -40,8 +46,15 @@ const (
 // wtSetupRun is the setup of one worktree.
 type wtSetupRun struct {
 	state string
-	log   string // the log file (a setup run without an editor)
-	buf   int    // the terminal tab's buffer (a setup run in a tab)
+	log   string  // the log file (a setup run without an editor)
+	buf   int     // the terminal tab's buffer (a setup run in a tab)
+	warm  *wtWarm // keep a warm copy when the tab ends well (nil: no warm)
+}
+
+// wtWarm is where the warm copy of one setup goes.
+type wtWarm struct {
+	common, snap string
+	paths        []string
 }
 
 // wtSetupSpawn opens the setup's terminal tab (a var: tests; nil = the
@@ -67,6 +80,31 @@ func wtSetupScript(lines []string) string {
 type wtSetupPending struct {
 	folder, hash, common string
 	setup                []string
+	cfg                  worktreeform.Config // env and warm (the setup lines are in setup)
+}
+
+// warm is the warm copy of the pending setup (nil: none asked, or its
+// key could not be made).
+func (p *wtSetupPending) warm() *wtWarm {
+	if !p.cfg.WarmOn() {
+		return nil
+	}
+	key, err := worktreeform.WarmKey(p.folder, p.hash, p.cfg)
+	if err != nil {
+		recordError("[worktrees] warm key: " + err.Error())
+		return nil
+	}
+	return &wtWarm{common: p.common, snap: worktreeform.WarmDir(p.common, key), paths: p.cfg.Warm.Paths}
+}
+
+// keep saves the warm copy of folder and drops old ones; errors only go
+// to the log (the setup itself worked).
+func (w *wtWarm) keep(folder string) {
+	if _, err := worktreeform.SaveWarm(folder, w.snap, w.paths); err != nil {
+		recordError("[worktrees] warm copy: " + err.Error())
+		return
+	}
+	worktreeform.PruneWarm(w.common, worktreeform.WarmKeep)
 }
 
 // wtSetupLogPath is the log file of the worktree folder.
@@ -77,7 +115,7 @@ func wtSetupLogPath(common, folder string) string {
 // wtSetupAsk runs the setup when this file is trusted, else opens the
 // trust card.
 func (m *Model) wtSetupAsk(f *wtForm, folder string) tea.Cmd {
-	p := &wtSetupPending{folder: folder, hash: f.hash, common: f.common, setup: append([]string(nil), f.cfg.Setup...)}
+	p := &wtSetupPending{folder: folder, hash: f.hash, common: f.common, setup: append([]string(nil), f.cfg.Setup...), cfg: f.cfg}
 	if worktreeform.SetupTrusted(f.hash, loadSession().WorktreeSetupTrusted) {
 		return m.wtSetupStart(p)
 	}
@@ -86,6 +124,13 @@ func (m *Model) wtSetupAsk(f *wtForm, folder string) tea.Cmd {
 	b.WriteString(worktreeform.ConfigFile + " in this repository asks to run, in " + wtShortPath(folder) + ":\n")
 	for _, l := range p.setup {
 		b.WriteString("\n    " + aiCleanText(l))
+	}
+	if names := worktreeform.EnvNames(p.cfg.Env); len(names) > 0 {
+		b.WriteString("\n\nIt adds these variables: " + aiCleanText(strings.Join(names, ", ")) + ".")
+	}
+	if p.cfg.WarmOn() {
+		b.WriteString("\n\nAfter it works, a copy of " + aiCleanText(strings.Join(p.cfg.Warm.Paths, ", ")) +
+			" is kept in the git folder. A new worktree with the same lock files gets that copy and skips the setup.")
 	}
 	b.WriteString("\n\nIt runs with your environment minus termocode's secrets. Run it only if you trust this repository; a changed file asks again.")
 	m.confirm = confirm.Risky("Run this repository's setup?", b.String(),
@@ -117,11 +162,13 @@ func (m *Model) answerWTSetupTrust(id string) tea.Cmd {
 type wtSetupDoneMsg struct {
 	folder string
 	ok     bool
-	failed string // the line that failed
+	failed string   // the line that failed
+	warm   []string // the warm paths that came back (the setup did not run)
+	kept   bool     // a warm copy was kept for the next worktree
 }
 
 // wtSetupExec runs the lines in dir, output to logPath (a var: tests).
-var wtSetupExec = func(dir, logPath string, lines []string) (failed string, err error) {
+var wtSetupExec = func(dir, logPath string, lines []string, extra map[string]string) (failed string, err error) {
 	if err := os.MkdirAll(filepath.Dir(logPath), 0o700); err != nil {
 		return "", err
 	}
@@ -130,7 +177,7 @@ var wtSetupExec = func(dir, logPath string, lines []string) (failed string, err 
 		return "", err
 	}
 	defer logf.Close()
-	env := clistep.CleanEnv(os.Environ())
+	env := worktreeform.SetupEnv(clistep.CleanEnv(os.Environ()), extra)
 	for _, l := range lines {
 		fmt.Fprintf(logf, "$ %s\n", l)
 		cmd := spawn.Command("/bin/sh", "-c", l)
@@ -152,13 +199,17 @@ func (m *Model) wtSetupStart(p *wtSetupPending) tea.Cmd {
 	if st.setups == nil {
 		st.setups = map[string]*wtSetupRun{}
 	}
+	warm := p.warm()
+	if warm != nil && worktreeform.HasWarm(warm.snap) {
+		return m.wtSetupWarmStart(p, warm)
+	}
 	spawnTab := wtSetupSpawn
 	if spawnTab == nil && m.nvim != nil {
 		spawnTab = (*Model).spawnTerminalJob
 	}
 	if spawnTab != nil {
 		env := map[string]any{}
-		for _, kv := range clistep.CleanEnv(os.Environ()) {
+		for _, kv := range worktreeform.SetupEnv(clistep.CleanEnv(os.Environ()), p.cfg.Env) {
 			if k, v, ok := strings.Cut(kv, "="); ok {
 				env[k] = v
 			}
@@ -167,7 +218,7 @@ func (m *Model) wtSetupStart(p *wtSetupPending) tea.Cmd {
 			Cmdline: "/bin/sh -c " + wtShellQuote(wtSetupScript(p.setup))}
 		buf, err := spawnTab(m, j)
 		if err == nil {
-			st.setups[p.folder] = &wtSetupRun{state: wtSetupRunning, buf: buf}
+			st.setups[p.folder] = &wtSetupRun{state: wtSetupRunning, buf: buf, warm: warm}
 			st.touch()
 			return nil
 		}
@@ -178,10 +229,49 @@ func (m *Model) wtSetupStart(p *wtSetupPending) tea.Cmd {
 	st.touch()
 	ch := make(chan tea.Msg, 1)
 	crash.Go("worktree setup", func() {
-		failed, err := wtSetupExec(p.folder, logPath, p.setup)
+		failed, err := wtSetupExec(p.folder, logPath, p.setup, p.cfg.Env)
+		kept := false
+		if err == nil && warm != nil {
+			warm.keep(p.folder)
+			kept = worktreeform.HasWarm(warm.snap)
+		}
+		ch <- wtSetupDoneMsg{folder: p.folder, ok: err == nil, failed: failed, kept: kept}
+	})
+	return func() tea.Msg { return <-ch }
+}
+
+// wtSetupWarmStart puts the warm copy into the new worktree in the
+// background; when that fails the setup runs after all.
+func (m *Model) wtSetupWarmStart(p *wtSetupPending, warm *wtWarm) tea.Cmd {
+	st := m.wt
+	logPath := wtSetupLogPath(p.common, p.folder)
+	st.setups[p.folder] = &wtSetupRun{state: wtSetupRunning, log: logPath}
+	st.touch()
+	ch := make(chan tea.Msg, 1)
+	crash.Go("worktree warm copy", func() {
+		got, err := worktreeform.RestoreWarm(warm.snap, p.folder, warm.paths)
+		if err == nil && len(got) > 0 {
+			wtSetupNote(logPath, "✓ warm copy of "+strings.Join(got, ", ")+" restored; the setup did not run\n")
+			ch <- wtSetupDoneMsg{folder: p.folder, ok: true, warm: got}
+			return
+		}
+		why := "nothing to restore"
+		if err != nil {
+			why = err.Error()
+		}
+		recordError("[worktrees] warm restore: " + why)
+		failed, err := wtSetupExec(p.folder, logPath, p.setup, p.cfg.Env)
 		ch <- wtSetupDoneMsg{folder: p.folder, ok: err == nil, failed: failed}
 	})
 	return func() tea.Msg { return <-ch }
+}
+
+// wtSetupNote writes text as the setup log of a warm start.
+func wtSetupNote(logPath, text string) {
+	if err := os.MkdirAll(filepath.Dir(logPath), 0o700); err != nil {
+		return
+	}
+	_ = os.WriteFile(logPath, []byte(text), 0o600)
 }
 
 // onWTSetupDone puts the result on the card and in a toast.
@@ -194,7 +284,15 @@ func (m *Model) onWTSetupDone(msg wtSetupDoneMsg) tea.Cmd {
 	st.touch()
 	if msg.ok {
 		r.state = wtSetupOK
-		return m.pushToastDetail(toast.Info, "Setup done", wtShortPath(msg.folder))
+		if len(msg.warm) > 0 {
+			return m.pushToastDetail(toast.Info, "Setup skipped: warm copy restored",
+				strings.Join(msg.warm, ", ")+" came from an earlier setup with the same lock files ("+wtShortPath(msg.folder)+").")
+		}
+		detail := wtShortPath(msg.folder)
+		if msg.kept {
+			detail += " · a warm copy is kept for the next worktree"
+		}
+		return m.pushToastDetail(toast.Info, "Setup done", detail)
 	}
 	r.state = wtSetupFailed
 	why := "See its output (L in WORKTREES)."
@@ -211,6 +309,10 @@ func (m *Model) wtSetupExit(buf, code int) (tea.Cmd, bool) {
 	}
 	for folder, r := range m.wt.setups {
 		if r.buf == buf && r.state == wtSetupRunning {
+			if code == 0 && r.warm != nil {
+				w, f := r.warm, folder
+				crash.Go("worktree warm save", func() { w.keep(f) })
+			}
 			return m.onWTSetupDone(wtSetupDoneMsg{folder: folder, ok: code == 0}), true
 		}
 	}

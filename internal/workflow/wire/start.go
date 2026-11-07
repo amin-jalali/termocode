@@ -39,12 +39,19 @@ type Config struct {
 	Exec     func(ctx context.Context, argv []string, dir string) (string, int, error)
 	TestArgv []string
 	Gate     func(ctx context.Context, a GateAsk) (GateDecision, error)
-	Notify   func(ctx context.Context, m Message) error
+	// ApprovePlan asks before a plan step with "approve": true goes on
+	// (nil: such a step fails).
+	ApprovePlan func(ctx context.Context, c run.ApproveCall) (bool, error)
+	Notify      func(ctx context.Context, m Message) error
 	// GitHubComment and FindComment back github.comment writes.
 	GitHubComment func(ctx context.Context, pr, body string) (ledger.Result, error)
 	Find          func(ctx context.Context, spec workflow.WriteSpec, marker string) (ledger.Result, bool, error)
 	// PR pushes an item's branch and opens its pull request (pr writes).
-	PR      func(ctx context.Context, p PRCall) (ledger.Result, error)
+	PR func(ctx context.Context, p PRCall) (ledger.Result, error)
+	// Wait backs wait steps: one read-only look at a pull request (pr is
+	// a number, #N or its link; what is one of workflow.WaitFors). Nil:
+	// wait steps fail.
+	Wait    func(ctx context.Context, pr, what string) (run.WaitStatus, error)
 	OnEvent func(run.Event)
 	OnAI    func(step, item string, e agentrun.Event)
 	// OnAuditError hears a line of audit.jsonl that could not be written.
@@ -121,9 +128,19 @@ func Start(ctx context.Context, cfg Config) (*run.Handle, error) {
 		RunID: id, Dry: cfg.Dry, NoPlan: cfg.NoPlan, Vars: cfg.Vars, LastOKAt: cfg.LastOKAt,
 		Eval: ev, Source: &Sources{Src: cfg.Src, Eval: ev}, Plan: steps, Run: steps, Write: w,
 		Each: &Worktrees{Workspace: cfg.Workspace, RunID: id}, ParallelMax: cfg.ParallelMax,
-		Tools: cfg.Tools, Ask: cfg.AskTool, OnEvent: onEvent, Store: store, Resume: cfg.Resume,
+		Tools: cfg.Tools, Ask: cfg.AskTool, Approve: cfg.ApprovePlan, OnEvent: onEvent, Store: store, Resume: cfg.Resume,
+	}
+	if cfg.Wait != nil {
+		opts.Wait = waitFunc(cfg.Wait)
 	}
 	return run.Start(ctx, f, opts), nil
+}
+
+// waitFunc is a run.Waiter from Config.Wait.
+type waitFunc func(ctx context.Context, pr, what string) (run.WaitStatus, error)
+
+func (w waitFunc) Check(ctx context.Context, c run.WaitCall) (run.WaitStatus, error) {
+	return w(ctx, c.PR, c.For)
 }
 
 // seenStore saves run files; when a real run ends well it marks the

@@ -86,6 +86,10 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAISkillsPicked(id), true
 	case pickerKindAIPowers: // ai_powers.go
 		return m.onAIPowersPicked(id), true
+	case pickerKindPromptActions: // prompt_actions.go (CMP-74)
+		return m.onPromptActionPicked(id), true
+	case pickerKindPromptActionTarget:
+		return m.onPromptActionTarget(id), true
 	case pickerKindAIWebTools: // ai_web_tools.go
 		return m.onAIWebToolsPicked(id), true
 	case pickerKindAIProofs: // ai_proof.go
@@ -110,6 +114,10 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onBugspecPicked(id), true
 	case pickerKindAgentAccounts: // agent_accounts.go
 		return m.onAgentAccountPicked(id), true
+	case pickerKindAgentProfiles: // agent_profiles.go
+		return m.onAgentProfilePicked(id), true
+	case pickerKindAgentProfileMode:
+		return m.onAgentProfileModePicked(id), true
 	case pickerKindAgentSessionsHits: // agent_sessions_search.go
 		return m.onAgentSearchPicked(id), true
 	case pickerKindRunsMore: // runs_state.go
@@ -146,10 +154,24 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onWTBgTask(value), true
 	case promptKindBugspecTitle: // bugspec_ui.go
 		return m.onBugspecTitle(value), true
+	case promptKindRaceBroadcast: // agent_race_broadcast.go
+		return m.onRaceBroadcastText(value), true
+	case promptKindRaceRun:
+		return m.onRaceRunText(value), true
 	case promptKindCanvasAdd, promptKindCanvasTitle, promptKindCanvasNote: // CMP-92: canvas_ui.go
 		return m.onCanvasPrompt(m.promptKind, value), true
+	case promptKindAIChatSchedWhen: // ai_chat_sched.go
+		return m.onAIChatSchedWhen(value), true
+	case promptKindAIChatSchedPrompt:
+		return m.onAIChatSchedPrompt(value), true
 	case promptKindAgentAccountNew: // agent_accounts.go
 		return m.onAgentAccountLabel(value), true
+	case promptKindAgentProfileName: // agent_profiles.go
+		return m.onAgentProfileName(value), true
+	case promptKindAgentProfileModel:
+		return m.onAgentProfileModel(value), true
+	case promptKindAgentProfileEnv:
+		return m.onAgentProfileEnv(value), true
 	case promptKindAgentSessionsSearch: // agent_sessions_search.go
 		return m.onAgentSessionsSearch(value), true
 	case promptKindWTPull: // worktrees_move.go
@@ -160,6 +182,8 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onRaceRestackMessage(value), true
 	case promptKindAgentPacksSource: // agent_packs_ui.go
 		return m.onAgentPackSource(value), true
+	case promptKindAgentGoalVerify: // agent_goal.go
+		return m.onAgentGoalVerify(value), true
 	case promptKindAIWebKey: // ai_web_tools.go
 		return m.onAIWebKeyEntered(value), true
 	case promptKindAIModel:
@@ -181,6 +205,14 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onAgentsSend(value), true
 	case promptKindDiffComment: // diff_comments.go (CMP-51)
 		return m.onDiffCommentEntered(value), true
+	case promptKindPromptActionName: // prompt_actions.go (CMP-74)
+		return m.onPromptActionName(value), true
+	case promptKindPromptActionBody:
+		return m.onPromptActionBody(value), true
+	case promptKindPromptActionImport:
+		return m.onPromptActionImportPath(value), true
+	case promptKindPromptActionExport:
+		return m.onPromptActionExportPath(value), true
 	}
 	return m.handleMCPPromptSubmit(value)
 }
@@ -285,12 +317,18 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerWTPull(id), true
 	case confirmKindAITaskList: // ai_task_list.go
 		return m.answerAITaskList(id), true
+	case confirmKindWTRestack: // worktrees_stack.go
+		return m.answerWTRestack(id), true
 	case confirmKindWTDelete, confirmKindWTDeleteDirty: // worktrees_delete.go
 		return m.answerWTDelete(m.confirmKind, id), true
 	case confirmKindWTCleanup, confirmKindWTCleanupDirty: // worktrees_cleanup.go
 		return m.answerWTCleanup(m.confirmKind, id), true
 	case confirmKindAISkillsTrust: // ai_skills.go
 		return m.answerAISkillsTrust(id), true
+	case confirmKindPromptActionsImport: // prompt_actions.go (CMP-74)
+		return m.answerPromptActionsImport(id), true
+	case confirmKindPromptActionsExport:
+		return m.answerPromptActionsExport(id), true
 	case confirmKindAIHooksTrust: // ai_hooks.go
 		return m.answerAIHooksTrust(id), true
 	case confirmKindAgentEnvCreate: // ai_agent_env.go
@@ -319,14 +357,20 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAgentPackUndo(id), true
 	case confirmKindAIPowerInstall, confirmKindAIPowerRemove: // ai_powers.go
 		return m.answerAIPowerCard(m.confirmKind, id), true
+	case confirmKindAgentGoalStart: // agent_goal.go
+		return m.answerAgentGoalStart(id), true
 	case confirmKindRaceConflict, confirmKindRaceOthers, confirmKindRaceDiscard, confirmKindRaceJudgePick: // agent_race_compare.go, agent_race_judge.go
 		return m.answerRaceCard(m.confirmKind, id), true
 	case confirmKindRaceRestack: // agent_race_restack.go
 		return m.answerRaceRestack(id), true
+	case confirmKindRaceBroadcast, confirmKindRaceRun: // agent_race_broadcast.go
+		return m.answerRaceBroadcastCard(m.confirmKind, id), true
 	case confirmKindWorkflowGate: // workflow_gate.go
 		return m.answerWorkflowGate(id), true
+	case confirmKindWorkflowTrigger, confirmKindWorkflowTriggerList: // workflows_triggers.go
+		return m.answerWorkflowTrigger(id), true
 	case confirmKindWorkflowRun, confirmKindWorkflowDry, confirmKindWorkflowTrust, confirmKindWorkflowOnOff, confirmKindWorkflowStop,
-		confirmKindWorkflowUndo, confirmKindWorkflowBudget, confirmKindWorkflowOffStop: // workflows_state.go, workflows_trust.go
+		confirmKindWorkflowUndo, confirmKindWorkflowBudget, confirmKindWorkflowOffStop, confirmKindWorkflowRetry: // workflows_state.go, workflows_trust.go, workflows_again.go
 		return m.answerWorkflowCard(id), true
 	case confirmKindAgentTranscripts: // agent_chat.go
 		return m.answerAgentTranscripts(id), true
@@ -334,12 +378,20 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAgentChatAnswer(id), true
 	case confirmKindAgentHibernate: // agent_hibernate.go
 		return m.answerAgentHibernate(id), true
+	case confirmKindAIChatSched: // ai_chat_sched.go
+		return m.answerAIChatSchedCard(id), true
+	case confirmKindAIChatUnsched:
+		return m.answerAIChatUnschedCard(id), true
 	case confirmKindAgentAccountSignIn: // agent_accounts.go
 		return m.answerAgentAccountCard(id), true
 	case confirmKindAgentImport: // agent_import.go
 		return m.answerAgentImport(id), true
 	case confirmKindAgentAccountSwitch: // agent_switch.go (CMP-13)
 		return m.answerAgentSwitch(id), true
+	case confirmKindAgentProfileSave: // agent_profiles.go
+		return m.answerAgentProfileSave(id), true
+	case confirmKindAgentProfileUse:
+		return m.answerAgentProfileCard(id), true
 	case confirmKindAgentInstall, confirmKindAgentSignIn, confirmKindAgentInstallPage: // agent_install.go
 		return m.answerAgentPickCard(m.confirmKind, id), true
 	case confirmKindAIMemoryLesson, confirmKindAIMemoryForget, confirmKindAIMemoryForgetAll: // ai_memory_picker.go
@@ -400,6 +452,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAIToolConfirm("deny")
 	case confirmKindWorkflowGate: // Esc denies the write
 		return m.answerWorkflowGate("deny")
+	case confirmKindWorkflowTrigger: // Esc: Cancel (the next event's card comes)
+		return m.answerWorkflowTrigger("cancel")
 	case confirmKindAIPlan: // G-PLAN: Esc denies the plan
 		return m.answerAIPlan("deny")
 	case confirmKindAIWorktreeConflict, confirmKindAIWorktreeDiscard:
@@ -466,12 +520,18 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerWTPull("") // Esc: Cancel
 	case confirmKindAITaskList:
 		return m.answerAITaskList("") // Esc: Cancel
+	case confirmKindWTRestack:
+		return m.answerWTRestack("") // Esc: Cancel
 	case confirmKindWTDelete, confirmKindWTDeleteDirty:
 		return m.answerWTDelete(m.confirmKind, "") // Esc: Cancel
 	case confirmKindWTCleanup, confirmKindWTCleanupDirty:
 		return m.answerWTCleanup(m.confirmKind, "") // Esc: Cancel / Keep it
 	case confirmKindAISkillsTrust:
 		return m.answerAISkillsTrust("") // Esc: no answer, the message goes back
+	case confirmKindPromptActionsImport:
+		return m.answerPromptActionsImport("") // Esc: Cancel
+	case confirmKindPromptActionsExport:
+		return m.answerPromptActionsExport("") // Esc: Cancel
 	case confirmKindAIHooksTrust:
 		return m.answerAIHooksTrust("") // Esc: no answer, the message goes back
 	case confirmKindAgentEnvCreate:

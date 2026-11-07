@@ -66,6 +66,8 @@ type Device struct {
 	Bookmark *Bookmark `json:"bookmark,omitempty"`
 	// AppKey is the Android app's keystore key (MOB-27), public half only.
 	AppKey *AppKey `json:"app_key,omitempty"`
+	// Phone is what the device chose on its This phone screen (MOBUX-20).
+	Phone *Phone `json:"phone,omitempty"`
 }
 
 // AppKey is the public half of a key the termocode Android app made in
@@ -76,6 +78,19 @@ type AppKey struct {
 	PublicKey []byte    `json:"public_key"`
 	Origin    string    `json:"origin"`
 	Created   time.Time `json:"created"`
+}
+
+// Phone is a paired phone's own choices, kept on the laptop so every
+// part (the page, a push sender) honours them: OS alerts, quiet hours
+// ("HH:MM" in the phone's time, both empty: none), the phone's offset
+// from UTC, and the app lock. Never a secret.
+type Phone struct {
+	Alerts       bool      `json:"alerts"`
+	QuietFrom    string    `json:"quiet_from,omitempty"`
+	QuietTo      string    `json:"quiet_to,omitempty"`
+	UTCOffsetMin int       `json:"utc_offset_min,omitempty"`
+	Lock         bool      `json:"lock,omitempty"`
+	Changed      time.Time `json:"changed"`
 }
 
 // Bookmark is what the laptop keeps of a device's bookmark key: the

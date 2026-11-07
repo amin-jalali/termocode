@@ -126,6 +126,7 @@ func sandbox(t testing.TB, nvim bool) {
 		"TERMOCODE_NERD_FONT":   "",
 		"TERMOCODE_FONT_DELTA":  "0",
 		"TERMOCODE_NO_NVIM":     "1",
+		"TERMOCODE_LITE":        "",  // a Nvim run gets the real editor
 		"TERMOCODE_HEADLESS":    "1", // no re-exec, xdg-open, OSC 52 …
 		// No D-Bus session: the secret store never probes the OS keyring.
 		"DBUS_SESSION_BUS_ADDRESS": "",

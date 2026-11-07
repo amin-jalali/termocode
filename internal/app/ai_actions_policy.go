@@ -107,6 +107,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"terminal-prev-tab":  aiAuto(),
 	"terminal-maximize":  aiAuto(),
 	"terminal-minimize":  aiAuto(),
+	// CMP-67: only the user decides who types in a terminal.
+	"terminal-ai-take-over": aiNever(aiNoTermDrive),
+	"terminal-ai-hand-back": aiNever(aiNoTermDrive),
 	// terminal splits (terminal_split.go)
 	"terminal-split-right":     aiAuto(),
 	"explorer-toggle-preview":  aiAuto(), // UI only: shows or hides the preview pane
@@ -465,6 +468,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"kubernetes-hpa":                    aiAuto(),
 	"kubernetes-nodes":                  aiNever(aiNoPicker + "; cordon and drain are the user's choice"),
 	"kubernetes-apply-file":             aiNever("writes to the cluster; only the user applies a file, after the diff"),
+	"preview-dev-servers":               aiNever(aiNoPicker + "; the agent reads its dev server address with terminal_read"), // devpreview_ui.go
+	"preview-open-newest":               aiNever(aiNoOutside),
 	"containers-context-use":            aiNever("a context switch is the user's choice; it moves every container action to another host"),
 	"containers-context-default":        aiNever("changes the machine-wide Docker default"),
 	"containers-context-create":         aiNever("a new context points every terminal at another host; it is the user's"),
@@ -618,6 +623,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-fix":              aiNever(aiNoNested),
 	"ai-edit":             aiNever(aiNoNested),
 	"ai-doc":              aiNever(aiNoNested),
+	"ai-property-tests":   aiNever(aiNoNested),
 	"ai-attach":           aiNever("adds to the chat input; read the file with read_file"),
 	"ai-apply-code":       aiNever("use write_file to change files"),
 	"ai-apply-proposal":   aiNever("the user reviews proposed edits"),
@@ -630,6 +636,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-trigger-inline":   aiNever("inline completion is for the user's typing"),
 	"ai-toggle-inline":    aiConfirm(ai.ClassIDE),
 	"ai-toggle-next-edit": aiConfirm(ai.ClassIDE),
+	"ai-follow-agent":     aiConfirm(ai.ClassIDE),
 	"ai-cancel":           aiNever("stops the model's own turn"),
 	"ai-configure":        aiNever(aiNoAIConfig),
 	"ai-pick-model":       aiNever(aiNoAIConfig),
@@ -692,6 +699,11 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"workflow-edit-file":  aiAuto(),
 	"workflow-history":    aiAuto(),
 	"workflow-undo-write": aiConfirm(""), // writes to outside systems again; the undo card asks
+	// CMP-38: the list of trigger events only reads; each event's card
+	// is the user's to answer.
+	"workflow-triggers": aiAuto(),
+	"workflow-pause":    aiConfirm(ai.ClassRun),
+	"workflow-retry":    aiConfirm(ai.ClassRun), // runs again; its writes still ask on the gate card
 	// The secret store (secrets_ui.go): unlocking and locking are the
 	// user's; the AI never reads, sets or lists secrets.
 	"secrets-unlock": aiNever(aiNoAIConfig),
@@ -721,6 +733,10 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// Keep going (OMX-7) sends model turns that cost money: only the
 	// user turns it on.
 	"ai-keep-going": aiNever(aiNoAIConfig + "; extra paid turns are the user's choice"),
+	// Chat schedules (CMP-43): the AI proposes its own with
+	// chat_schedule_set (always a card); the palette is the user's.
+	"ai-chat-schedule":   aiNever("paid turns at set times are the user's choice (chat_schedule_set asks the user)"),
+	"ai-chat-unschedule": aiNever("the user's own command (chat_schedule_clear)"),
 	// The side chat (OMX-30) is the user's own question.
 	"ai-side": aiNever("the side chat is the user's own question beside the AI's turn"),
 	// Handoff (OMX-21) ends the AI's own chat; the user starts it.
@@ -732,6 +748,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// forgetting lessons is the user's.
 	"ai-memory":        aiNever(aiNoPicker),
 	"ai-memory-toggle": aiNever(aiNoAIConfig),
+	"ai-memory-learn":  aiNever(aiNoAIConfig),
 	// Skills (OM-4): the AI loads them with skill_load; the picker, new
 	// files and trusting a project's skills are the user's.
 	"ai-skills":       aiNever(aiNoPicker),
@@ -743,7 +760,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-web-tools": aiNever(aiNoPicker),
 	// Proof of work (CMP-52): the AI shoots with proof_screenshot; the
 	// list and deleting the shots are the user's.
-	"ai-proofs": aiNever(aiNoPicker),
+	"ai-proofs":    aiNever(aiNoPicker),
+	"ai-image-gen": aiNever("image generation is paid; only the user turns it on"),
 	// Ship pushes and opens pull requests: only the user starts it.
 	"ai-ship":          aiNever("it pushes and opens a pull request: the user starts it"),
 	"ai-ship-merge":    aiNever("it pushes, opens and merges a pull request: the user starts it and answers the merge card"),
@@ -880,6 +898,8 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_memory_recall":      aiNever(aiNoAIConfig),
 	"ai_web_fetch":          aiNever(aiNoAIConfig + "; the AI never turns on its own web access"),
 	"ai_web_search":         aiNever(aiNoAIConfig + "; the AI never turns on its own web access"),
+	"ai_image_gen":          aiNever(aiNoAIConfig + "; image generation is paid"),
+	"ai_image_model":        aiNever(aiNoAIConfig),
 	// Work until done: the AI never raises its own rounds or budget.
 	"ai_until_done_rounds":     aiNever(aiNoAIConfig),
 	"ai_until_done_budget_usd": aiNever(aiNoAIConfig),
@@ -970,6 +990,8 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"workflows_wait_hours":       aiConfirm(ai.ClassSettings),
 	"workflows_agent_sandbox":    aiNever("where outside agents may write; only the user changes it"),
 	"agent_os_sandbox":           aiNever("the OS sandbox around outside agents; only the user changes it"),
+	"workflows_trigger_poll_min": aiConfirm(ai.ClassSettings),
+	"workflows_webhook_port":     aiNever("opens a port that starts workflows from outside; only the user changes it"),
 
 	// Git blame (GITX-3..5)
 	"git_status_blame":            aiConfirm(ai.ClassSettings),

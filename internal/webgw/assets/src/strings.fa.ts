@@ -2,7 +2,8 @@
 // and every text keeps the English placeholders (strings_test.go). An
 // empty text falls back to English. Simple, everyday Persian; product
 // and command names (termocode, Web: Open in Browser) and key names stay
-// as they are.
+// as they are. The phone app's keys (ph. chips. cust. item. tools.) are
+// English only (owner 2026-11-07): TranslatedKey leaves them out.
 import type { TranslatedKey } from "./strings";
 
 export const FA: Record<TranslatedKey, string> = {
@@ -110,6 +111,9 @@ export const FA: Record<TranslatedKey, string> = {
   "chat.follow": "دنبال کردن لپ‌تاپ",
   "chat.rest": "نشان دادن بقیه",
   "chat.more_code": "بیشتر",
+  "chat.diagram_lang": "{lang} · نمودار",
+  "chat.show_source": "نمایش متن منبع",
+  "chat.show_diagram": "نمایش نمودار",
   "chat.error": "هوش مصنوعی متوقف شد: {text}",
   "chat.retry_laptop": "تلاش دوباره روی لپ‌تاپ",
   "chat.steps": "{n} گام · {tok} توکن · {time}",

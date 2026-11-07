@@ -24,6 +24,8 @@ type ScopedRule struct {
 	Mode        string
 	Name        string
 	Description string
+	// Review is a folder file's review-only rules (CMP-37), cut out of Text.
+	Review string
 }
 
 // The inclusion modes of a .claude/rules file (front matter
@@ -205,7 +207,8 @@ func loadFolderRules(root, realRoot string, bytes *int) []ScopedRule {
 			continue
 		}
 		*bytes += size
-		out = append(out, ScopedRule{File: f, Dir: dir, Text: text})
+		rest, rev := SplitReviewRules(text)
+		out = append(out, ScopedRule{File: f, Dir: dir, Text: rest, Review: rev})
 	}
 	return out
 }
@@ -238,12 +241,24 @@ func (r Rules) ScopedFor(rel string) []ScopedRule {
 // Preview is the rules text the trust card shows: the prompt text, or
 // the scoped rules when there is none.
 func (r Rules) Preview() string {
-	if r.Text != "" {
-		return r.Text
-	}
 	var parts []string
+	if r.Text != "" {
+		parts = append(parts, r.Text)
+	} else {
+		for _, s := range r.Scoped {
+			if s.Text != "" {
+				parts = append(parts, "# "+s.File+"\n"+s.Text)
+			}
+		}
+	}
+	// The review-only rules (CMP-37) are part of the same trust answer.
+	if r.Review != "" {
+		parts = append(parts, "# Review rules\n"+r.Review)
+	}
 	for _, s := range r.Scoped {
-		parts = append(parts, "# "+s.File+"\n"+s.Text)
+		if s.Review != "" {
+			parts = append(parts, "# Review rules, "+s.File+"\n"+s.Review)
+		}
 	}
 	return strings.Join(parts, "\n\n")
 }
@@ -275,7 +290,7 @@ func (j *RulesInjector) Inject(r Rules, rel string) string {
 	defer j.mu.Unlock()
 	var b strings.Builder
 	for _, s := range r.ScopedFor(rel) {
-		if j.seen[s.File] || j.used >= RulesMaxBytes {
+		if s.Text == "" || j.seen[s.File] || j.used >= RulesMaxBytes {
 			continue
 		}
 		if j.seen == nil {

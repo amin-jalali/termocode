@@ -48,6 +48,7 @@ func gitxAutoFetchInit() {
 // gitxSettingsCategories puts the row in the Git Settings group.
 func gitxSettingsCategories(cats map[string]string) map[string]string {
 	cats[gitxAutoFetchRowID] = "Git"
+	cats[aiAttributionRowID] = "Git" // CMP-100 (ai_commit_attribution.go)
 	for _, id := range []string{gitxChecksRowID, gitxFormatRowID, gitxTaskRowID, gitxLargeRowID} {
 		cats[id] = "Git" // GITX-27 (gitx_commit_checks.go)
 	}
@@ -58,6 +59,9 @@ func gitxSettingsCategories(cats map[string]string) map[string]string {
 
 // gitxSettingValue renders the row's value. ok=false: not ours.
 func gitxSettingValue(id string) (string, bool) {
+	if v, ok := aiAttributionSettingValue(id); ok { // CMP-100 (ai_commit_attribution.go)
+		return v, true
+	}
 	if id != gitxAutoFetchRowID {
 		return gitxCheckSettingValue(id) // GITX-27 (gitx_commit_checks.go)
 	}
@@ -66,6 +70,9 @@ func gitxSettingValue(id string) (string, bool) {
 
 // applyGitxSetting checks, saves and applies the row. ok=false: not ours.
 func (m *Model) applyGitxSetting(id, value string) (tea.Cmd, bool) {
+	if c, ok := m.applyAIAttributionSetting(id, value); ok { // CMP-100 (ai_commit_attribution.go)
+		return c, true
+	}
 	if id != gitxAutoFetchRowID {
 		return m.applyGitxCheckSetting(id, value) // GITX-27 (gitx_commit_checks.go)
 	}

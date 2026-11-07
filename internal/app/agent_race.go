@@ -23,7 +23,7 @@ import (
 
 // ── Agent: Race… (AGX-4, plan 2.5) ───────────────────────────────────────
 //
-// One task fanned out to 2–4 outside agents. Each lane gets its own agent
+// One task fanned out to 2–8 lanes of outside agents (an agent may run in several, CMP-18). Each lane gets its own agent
 // worktree from HEAD (hidden in the git dir, like G-WT) and a terminal
 // tab in it that runs the agent. The task is typed into a lane only once
 // the agent's input box is on screen (its screen rules say Done), never
@@ -55,6 +55,7 @@ type raceState struct {
 	worked map[string]bool   // lane id → the agent worked after the task was typed
 	verify map[int][2]string // verify job buffer → race id, lane id
 	target [2]string         // the race and lane a card is about
+	bcast  raceBroadcast     // the message or command a card is about (agent_race_broadcast.go)
 	seq    int               // save generation
 }
 

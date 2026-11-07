@@ -544,3 +544,104 @@ button.ph-tile:active { background: var(--bg-hover); }
 .ph-switch-name { font: 600 var(--p-fs-body) / var(--p-lh-body) var(--p-font); }
 .ph-switch-where { color: var(--p-text-2); font: var(--p-fs-meta) / var(--p-lh-meta) var(--p-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ph-switch-check { color: var(--p-st-done); }
+
+/* States (MOBUX-21): skeletons, the connection bar, the error line. */
+.ph-skel { display: flex; flex-direction: column; gap: var(--p-s2); padding: var(--p-s3) 0; }
+.ph-skel-shapes { display: flex; flex-direction: column; gap: var(--p-s2); }
+.ph-skel-slow { font: var(--p-fs-caption) / var(--p-lh-caption) var(--p-mono); color: var(--p-muted); }
+.ph-sk {
+  display: block;
+  background: var(--p-surface-2);
+  border-radius: var(--p-r-row);
+  animation: pulse-bg var(--t-pulse) var(--p-ease) infinite;
+}
+.ph-sk-row { display: flex; align-items: center; gap: var(--p-s3); min-height: var(--p-tap); }
+.ph-sk-dot { flex: none; width: 0.75rem; height: 0.75rem; border-radius: 50%; }
+.ph-sk-line { flex: 1; height: 0.75rem; max-width: 80%; }
+.ph-sk-row:nth-child(3n + 2) .ph-sk-line { max-width: 56%; }
+.ph-sk-row:nth-child(3n) .ph-sk-line { max-width: 68%; }
+.ph-sk-title { height: 1rem; max-width: 40%; }
+.ph-sk-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-s3);
+  padding: var(--p-s3);
+  border: 1px solid var(--p-line);
+  border-radius: var(--p-r-block);
+  background: var(--p-surface);
+}
+.ph-sk-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--p-gap); }
+.ph-sk-card { height: 5rem; border-radius: var(--p-r-card); }
+.ph-sk-tile { height: 4.5rem; border-radius: var(--p-r-card); }
+@media (prefers-reduced-motion: reduce) {
+  .ph-sk { animation: none; }
+}
+
+/* Connection bar: a shape, words and Try now; never colour alone. */
+.ph-conn {
+  display: flex;
+  align-items: center;
+  gap: var(--p-s2);
+  min-height: var(--p-tap);
+  padding: 0 var(--p-s1) 0 var(--p-gutter);
+  border-bottom: 1px solid var(--p-line);
+  background: var(--p-surface-2);
+  color: var(--p-text);
+  font: var(--p-fs-meta) / var(--p-lh-meta) var(--p-font);
+}
+.ph-conn-text { flex: 1; min-width: 0; }
+.ph-conn-mark { flex: none; font-size: var(--p-fs-body); line-height: 1; }
+.ph-conn-offline { border-inline-start: 3px solid var(--p-st-needs); }
+.ph-conn-offline .ph-conn-mark { color: var(--p-st-needs); }
+.ph-conn-asleep { border-inline-start: 3px solid var(--p-st-asleep); }
+.ph-conn-asleep .ph-conn-mark { color: var(--p-st-asleep); }
+.ph-conn-final { border-inline-start: 3px solid var(--p-st-failed); }
+.ph-conn-final .ph-conn-mark { color: var(--p-st-failed); }
+.ph-conn-act {
+  flex: none;
+  min-width: var(--p-tap);
+  min-height: var(--p-tap);
+  padding: 0 var(--p-s3);
+  border: 0;
+  background: transparent;
+  color: var(--p-focus);
+  font: 600 var(--p-fs-meta) / var(--p-lh-meta) var(--p-font);
+}
+
+/* Error line: where the data was, ✗, calm words, Retry. */
+.ph-err {
+  display: flex;
+  align-items: center;
+  gap: var(--p-s2);
+  min-height: var(--p-tap);
+  padding: 0 var(--p-s1) 0 var(--p-s3);
+  border: 1px solid var(--p-line);
+  border-inline-start: 3px solid var(--p-st-failed);
+  border-radius: var(--p-r-row);
+  background: var(--p-surface);
+  color: var(--p-text);
+  font: var(--p-fs-meta) / var(--p-lh-meta) var(--p-font);
+}
+.ph-err-mark { flex: none; color: var(--p-st-failed); }
+.ph-err-text { flex: 1; min-width: 0; }
+.ph-err-retry {
+  flex: none;
+  min-width: var(--p-tap);
+  min-height: var(--p-tap);
+  padding: 0 var(--p-s3);
+  border: 0;
+  background: transparent;
+  color: var(--p-focus);
+  font: 600 var(--p-fs-meta) / var(--p-lh-meta) var(--p-font);
+}
+.ph-err-retry[aria-disabled="true"],
+.ph-conn-act[aria-disabled="true"] { color: var(--p-muted); }
+.ph-err-retry:focus-visible,
+.ph-conn-act:focus-visible { outline: 2px solid var(--p-focus); outline-offset: 2px; }
+
+/* Offline: every answer in the scope is greyed and takes no taps; reading,
+   scrolling and local actions (Cancel) still work. */
+.ph-scope.is-offline .ph-answer {
+  opacity: 0.55;
+  pointer-events: none;
+}

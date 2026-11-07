@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	east "github.com/yuin/goldmark/extension/ast"
 
+	"github.com/amin-jalali/termocode/internal/diagram"
 	"github.com/amin-jalali/termocode/internal/rtl"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
@@ -17,6 +18,9 @@ import (
 // two cells of padding, and long lines soft-wrapped with a ↪ in the gutter.
 func (r *renderer) code(src []string, lang string, width int) []line {
 	lang = strings.TrimSpace(strings.SplitN(lang, " ", 2)[0])
+	if rows, ok := diagram.Render(lang, strings.Join(src, "\n"), max(width-4, 1)); ok {
+		return r.diagramCard(rows, diagram.Lang(lang), width)
+	}
 	card := r.p.card
 	inner := max(width-4, 1)
 	out := make([]line, 0, len(src)+2)
@@ -49,6 +53,25 @@ func (r *renderer) code(src []string, lang string, width int) []line {
 			}
 			out = append(out, line{s: pre + l.s + pad, w: width})
 		}
+	}
+	return append(out, line{s: r.fill(width, card), w: width})
+}
+
+// diagramCard draws a diagram block (CMP-70) on the same card as code:
+// "<lang> · diagram" on the top row, the drawn rows with two cells of
+// padding. Diagram rows never wrap: diagram.Render keeps them in width.
+func (r *renderer) diagramCard(rows []string, lang string, width int) []line {
+	card := r.p.card
+	inner := max(width-4, 1)
+	label := ansi.Truncate(lang+" · diagram", inner, "…")
+	lw := ansi.StringWidth(label)
+	out := make([]line, 0, len(rows)+2)
+	out = append(out, line{s: r.fill(width-lw-2, card) + r.text(label, attrs{fg: r.p.cardLabel, bg: card, ital: true}) + r.fill(2, card), w: width})
+	pad := r.fill(2, card)
+	for _, row := range rows {
+		row = ansi.Truncate(row, inner, "")
+		l := r.row([]piece{{text: row, a: attrs{fg: r.p.text, bg: card}, w: ansi.StringWidth(row)}}, inner, card, 'l')
+		out = append(out, line{s: pad + l.s + pad, w: width})
 	}
 	return append(out, line{s: r.fill(width, card), w: width})
 }

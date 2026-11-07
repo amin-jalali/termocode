@@ -155,6 +155,32 @@ compose file are masked as `[REDACTED]` in everything the AI reads (logs,
 | No access to the Docker socket | The view shows `sudo usermod -aG docker $USER` (`y` copies it). Members of the `docker` group are root-equal on that machine: think first, or use [rootless Docker](https://docs.docker.com/engine/security/rootless/). termocode never runs `sudo`. |
 | compose.yaml: … | The first error line; `o` opens the file. |
 
+## Preview the app
+
+You or an agent started a dev server, and you want to see the app.
+Run **Preview: Dev Server URLs…** (`F1`, type `preview`).
+
+- termocode reads the newest 600 lines of every terminal tab (also the
+  tabs of agents in other worktrees) and finds local addresses like
+  `http://localhost:5173/`. Colors in the output do not matter.
+  `0.0.0.0` and `[::]` show as `localhost`.
+- It adds the published ports of the services that are up.
+- It checks each address once (2 seconds at most) and shows the HTTP
+  status and the page title, or `not answering (refused)`. The row also
+  says where the address came from: `terminal tab 2 (web)`, `service api`.
+- `Enter` opens the address in your browser.
+
+**Preview: Open Newest Dev Server** skips the list: it opens the newest
+address that answers.
+
+Only addresses on this machine (`localhost`, `127.0.0.1`, `::1`) are
+listed and checked. A check is one `GET`; it uses no proxy and never
+follows a redirect to another machine. Over SSH, `Enter` copies the
+address and the toast shows the forward command (below).
+
+The AI does not run these commands: an agent reads its own dev server
+address with `terminal_read`.
+
 ## Over SSH
 
 Docker runs on the server, so the ports are server ports. `y` copies
