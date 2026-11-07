@@ -26,7 +26,7 @@ function RunCard({ run, since, now, canAct }: { run: RunView; since: number; now
   const elapsed = run.elapsedMs + (run.live ? Math.max(0, now - since) : 0);
   const can = canAct ? run.can : [];
   return (
-    <section class={`run st-${run.state}${run.needsYou ? " needs-you" : ""}`} data-key={run.key}>
+    <section class={`run st-${run.state}${run.needsYou ? " needs-you" : ""}${run.depth > 0 ? " run-sub" : ""}`} data-key={run.key} style={run.depth > 0 ? { marginInlineStart: `${run.depth * 12}px` } : undefined}>
       <p class="run-title" dir="auto">
         {run.title}
       </p>

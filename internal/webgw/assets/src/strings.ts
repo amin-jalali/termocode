@@ -391,6 +391,8 @@ export const S = {
   "runs.none": "No AI runs yet.",
   "runs.resume": "Resume",
   "runs.step": "step {n} of {m}",
+  "runs.subrun": "{n} sub-run",
+  "runs.subruns": "{n} sub-runs",
   "runs.state.running": "working now",
   "runs.state.stalled": "no output",
   "runs.state.pausing": "pausing",

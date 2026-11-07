@@ -53,6 +53,7 @@ type runsState struct {
 	filter, profile string
 	typing          bool
 	older           bool // the older… rows are open
+	flat            bool // "t": a flat list by time, no run tree (CMP-10)
 	scroll          int  // sidebar rows scrolled
 	// page: the editor-area page; detail is the run it shows ("" = the
 	// overview).
@@ -165,8 +166,14 @@ func (m *Model) openRuns(filterProfile string) tea.Cmd {
 func (m *Model) runsItems(now time.Time) []runsItem {
 	all := m.runsCollect(now)
 	st := m.runsS()
+	nest := func(items []runsItem) []runsItem {
+		if st.flat {
+			return items
+		}
+		return runsNest(items)
+	}
 	if st.filter == "" && st.profile == "" {
-		return all
+		return nest(all)
 	}
 	q := strings.ToLower(st.filter)
 	out := all[:0:0]
@@ -179,7 +186,7 @@ func (m *Model) runsItems(now time.Time) []runsItem {
 		}
 		out = append(out, it)
 	}
-	return out
+	return nest(out)
 }
 
 // runsKeys are the selectable rows in list order: runs (older ones only
@@ -531,6 +538,7 @@ func (m *Model) runsKeyCard() tea.Cmd {
 		[]string{"i", "the run's profile in Itermoc (no run: the profiles)"},
 		[]string{"y", "copy the run id"},
 		[]string{"/", "filter the runs"},
+		[]string{"t", "run tree on or off (sub-runs under their parent)"},
 		[]string{"Esc", "back: the page to the list, the filter off"},
 	), help.Loc{Page: runsGuidePage, Anchor: "keys"}, nil)
 }
@@ -556,6 +564,8 @@ func (m *Model) runsCommonKey(key string, it runsItem, have bool) (tea.Cmd, bool
 		return m.runsUsage(it, have), true
 	case "?":
 		return m.runsKeyCard(), true
+	case "t":
+		return m.runsToggleTree(), true
 	case "/":
 		st := m.runsS()
 		st.typing = true

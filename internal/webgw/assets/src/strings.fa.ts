@@ -413,6 +413,8 @@ export const FA: Record<StringKey, string> = {
   "runs.none": "هنوز اجرای هوش مصنوعی نیست.",
   "runs.resume": "ادامه",
   "runs.step": "گام {n} از {m}",
+  "runs.subrun": "{n} اجرای فرعی",
+  "runs.subruns": "{n} اجرای فرعی",
   "runs.state.running": "در حال کار",
   "runs.state.stalled": "بی‌خروجی",
   "runs.state.pausing": "در حال مکث",

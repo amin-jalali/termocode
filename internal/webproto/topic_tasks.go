@@ -82,4 +82,10 @@ type RunItem struct {
 	CostUSD   float64  `json:"cost_usd,omitempty"` // known step costs
 	NeedsYou  bool     `json:"needs_you,omitempty"`
 	Can       []string `json:"can,omitempty"` // what the web may do now: "stop", "pause", "resume"
+	// The run tree (CMP-10): the rows come in tree order; a run the AI
+	// started from a step of another run has that run's Key as Parent and
+	// one more Depth; Kids counts the sub-runs listed under it.
+	Parent string `json:"parent,omitempty"`
+	Depth  int    `json:"depth,omitempty"`
+	Kids   int    `json:"kids,omitempty"`
 }
