@@ -189,7 +189,9 @@ func TestDBImportHeaderToggleChangesRowsAndColumns(t *testing.T) {
 
 func TestDBImportBadRowRollsBackAndNamesTheRow(t *testing.T) {
 	s := &importSession{editSession: newEditSession(0)}
-	d := importDriver(t, s, "", map[string]string{"data.csv": "id,email,plan\n1,a,x\n2,b,y\nBAD,c,z\n4,d,w\n"})
+	// A wide window: a narrow editor pane gets the one-row compact toast,
+	// which shows only the title, and this test reads the detail row.
+	d := xferDriver(t, 130, 40, s, "", map[string]string{"data.csv": "id,email,plan\n1,a,x\n2,b,y\nBAD,c,z\n4,d,w\n"})
 	importCard(t, d)
 	d.Key("enter")
 	if !d.WaitForText("Import failed: row 3 (line 4)", 5*time.Second) {
@@ -297,7 +299,9 @@ func TestDBImportInsideAManualTransactionJoinsIt(t *testing.T) {
 // error log.
 func TestDBImportSkipBadRowsImportsTheRest(t *testing.T) {
 	s := &importSession{editSession: newEditSession(0)}
-	d := importDriver(t, s, "", map[string]string{"data.csv": "id,email,plan\n1,a,x\n2,b,y\nBAD,c,z\n4,d,w\n"})
+	// A wide window: a narrow editor pane gets the one-row compact toast,
+	// which shows only the title, and this test reads the detail row.
+	d := xferDriver(t, 130, 40, s, "", map[string]string{"data.csv": "id,email,plan\n1,a,x\n2,b,y\nBAD,c,z\n4,d,w\n"})
 	card := importCard(t, d)
 	if !strings.Contains(card, "Bad rows: stop") {
 		t.Fatalf("no bad rows toggle:\n%s", card)
