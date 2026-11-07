@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/containers"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -31,13 +32,17 @@ type svcActionEntry struct {
 
 // containersExtraPaletteItems are the extra "Containers: …" rows.
 func containersExtraPaletteItems() []picker.Item {
-	return []picker.Item{
+	items := []picker.Item{
 		{ID: "containers-system", Title: "Containers: Show System Page"},
 	}
+	return append(items, containersBuildsPaletteItems()...)
 }
 
 // dispatchContainersExtra runs one extra containers palette id.
 func (m *Model) dispatchContainersExtra(id string) (tea.Cmd, bool) {
+	if cmd, ok := m.dispatchContainersBuilds(id); ok { // containers_builds.go
+		return cmd, true
+	}
 	switch id {
 	case "containers-system":
 		open := m.revealServicesView(false)
@@ -183,4 +188,68 @@ func (m *Model) onContainersExtraDone(msg containersExtraDoneMsg) tea.Cmd {
 		cmds = append(cmds, m.containersRefresh(msg.section))
 	}
 	return tea.Batch(cmds...)
+}
+
+// ── Extra jobs and their Cancel-first card ───────────────────────────────
+
+// confirmKindContainersExtra is the card of an extra containers job
+// (build cache prune, archive load/import, volume restore/clone …).
+const confirmKindContainersExtra confirmKindEnum = 6131
+
+// containersExtraJob is one engine call (argv without the binary).
+type containersExtraJob struct {
+	label   string
+	section string
+	args    []string
+	timeout time.Duration
+}
+
+// runContainersExtraJob runs one job on the engine host and reports a
+// containersExtraDoneMsg.
+func (m *Model) runContainersExtraJob(j containersExtraJob) tea.Cmd {
+	e, t, ok := m.containersEngineOrToast()
+	if !ok {
+		return t
+	}
+	execFor := m.services.hostExec()
+	argv := append([]string{e.Binary}, j.args...)
+	if j.timeout <= 0 {
+		j.timeout = 2 * time.Minute
+	}
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), j.timeout)
+		defer cancel()
+		stdout, stderr, code, err := execFor.Capture(ctx, "", argv...)
+		if err == nil && code != 0 {
+			err = errString(errLine(stderr))
+		}
+		return containersExtraDoneMsg{label: j.label, section: j.section, output: stdout, err: err}
+	}
+}
+
+// askContainersExtra shows a Cancel-first card; each other button runs
+// its job. The card body ends with the command of the first job.
+func (m *Model) askContainersExtra(title, body string, buttons []confirm.Button, jobs map[string]containersExtraJob) tea.Cmd {
+	all := append([]confirm.Button{{ID: "cancel", Title: "Cancel"}}, buttons...)
+	m.confirm = confirm.New(title, body, all)
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen, m.confirmKind = true, confirmKindContainersExtra
+	m.services.pendingExtra = jobs
+	return nil
+}
+
+// onContainersExtraConfirm runs the picked job of the card.
+func (m *Model) onContainersExtraConfirm(id string) tea.Cmd {
+	jobs := m.services.pendingExtra
+	m.services.pendingExtra = nil
+	j, ok := jobs[id]
+	if id == "cancel" || !ok {
+		return nil
+	}
+	return m.runContainersExtraJob(j)
+}
+
+// containersCommandLine is the shown command of argv (with the binary).
+func (m *Model) containersCommandLine(args []string) string {
+	return svcShellLine(append([]string{m.services.containerEngine.Binary}, args...))
 }

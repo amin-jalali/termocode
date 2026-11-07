@@ -414,6 +414,8 @@ func (m *Model) handleServicesConfirm(id string) (tea.Cmd, bool) {
 		}, true
 	case confirmKindContainerBulk:
 		return m.runContainerBulk(id), true
+	case confirmKindContainersExtra: // containers_system.go
+		return m.onContainersExtraConfirm(id), true
 	case confirmKindContainerRemove:
 		if id == "remove" {
 			return m.runContainerRemove(false), true

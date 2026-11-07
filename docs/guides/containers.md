@@ -227,6 +227,22 @@ closed to it.
 
 The page only reads. The AI may open it.
 
+## Builds
+
+- **Containers: Show Builds (History, Builders, Cache)** opens a read-only
+  page: the recent builds (newest first, with time, length, cached steps and
+  the error of a failed build), the buildx builders (`*` marks the current
+  one, with driver, status and platforms) and the build cache usage.
+- **Containers: Show Build Detail…** lists the recent builds; pick one to see
+  `docker buildx history inspect` in a terminal tab.
+- **Containers: Prune Build Cache…** first reads the cache size, then shows a
+  card: `Cancel` (first), `Prune unused`, and `Prune all` (the next builds
+  start cold). The card names the command. The AI cannot prune.
+- **Containers: Check Dockerfile (Build Checks)** runs `docker build --check .`
+  in the workspace folder in a terminal tab. No image is built.
+
+Build history and builders need docker buildx; with podman the page says so.
+
 ## Registries
 
 REGISTRIES lists the registry hosts from your engine's own login file:

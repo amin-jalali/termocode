@@ -2001,6 +2001,10 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `config-theme` | Open Config: Theme | confirm (ide) |   |
 | `containers-attach` | Containers: Attach | never | opens a picker or prompt that only the user can answer; use a typed tool (container attach) |
 | `containers-browse-tags` | Containers: Browse Remote Tags… | never | opens a picker or prompt that only the user can answer; use a typed tool; it asks a registry over the network on the user's behalf |
+| `containers-build-cache-prune` | Containers: Prune Build Cache… | never | pruning the build cache is the user's; nothing is offered to the model |
+| `containers-build-check` | Containers: Check Dockerfile (Build Checks) | confirm (run) |   |
+| `containers-build-detail` | Containers: Show Build Detail… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `containers-builds` | Containers: Show Builds (History, Builders, Cache) | auto |   |
 | `containers-compose-down` | Containers: Remove Project Containers… | never | project removal requires the user's confirm card |
 | `containers-compose-restart` | Containers: Restart Project | confirm (always asks) |   |
 | `containers-compose-stop` | Containers: Stop Project | confirm (always asks) |   |

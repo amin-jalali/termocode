@@ -124,6 +124,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Attach | `containers-attach` |   |   |
 | Containers: Browse Remote Tags… | `containers-browse-tags` |   |   |
 | Containers: Build Image from Dockerfile… | `containers-image-build` |   |   |
+| Containers: Check Dockerfile (Build Checks) | `containers-build-check` |   |   |
 | Containers: Choose Compose Env File… | `services-env-file` |   |   |
 | Containers: Configure Services (services.json) | `services-configure` |   |   |
 | Containers: Connect Registry… | `containers-registry-connect` |   |   |
@@ -145,6 +146,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Open Shell | `containers-shell` |   |   |
 | Containers: Open in Databases | `containers-open-databases` |   |   |
 | Containers: Pause or Unpause Selected | `containers-pause` |   |   |
+| Containers: Prune Build Cache… | `containers-build-cache-prune` |   |   |
 | Containers: Prune Dangling Images… | `containers-image-prune` |   |   |
 | Containers: Prune Networks… | `containers-network-prune` |   |   |
 | Containers: Prune Stopped Containers… | `containers-prune` |   |   |
@@ -166,6 +168,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Run One-Off Command in Service… | `services-compose-run` |   |   |
 | Containers: Run Selected Image… | `containers-image-run` |   |   |
 | Containers: Search Docker Hub… | `containers-search` |   |   |
+| Containers: Show Build Detail… | `containers-build-detail` |   |   |
+| Containers: Show Builds (History, Builders, Cache) | `containers-builds` |   |   |
 | Containers: Show Image History | `containers-image-history` |   |   |
 | Containers: Show Resolved Compose Config | `services-compose-config` |   |   |
 | Containers: Show Service Logs… | `services-logs` |   |   |

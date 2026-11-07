@@ -461,6 +461,10 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"containers-volume-prune":      aiNever("pruning volumes is the user's; nothing is offered to the model"),
 	"containers-volume-disk-usage": aiNever("disk usage is the user's; nothing is offered to the model"),
 	"containers-system":            aiAuto(), // CTX-25: read-only System page
+	"containers-builds":            aiAuto(), // CTX-26: read-only Builds page
+	"containers-build-detail":      aiNever(aiNoPicker),
+	"containers-build-cache-prune": aiNever("pruning the build cache is the user's; nothing is offered to the model"),
+	"containers-build-check":       aiConfirm(ai.ClassRun),
 
 	// ── Tasks ──
 	"tasks-run":            aiNever(aiNoPicker),

@@ -110,8 +110,9 @@ type servicesState struct {
 	render svcRenderCache
 
 	containerEngine containers.Engine
-	recentEvents    []containers.Event // CTX-25: newest engine events (System page)
-	actionLog       []svcActionEntry   // CTX-25: this session's finished actions
+	recentEvents    []containers.Event            // CTX-25: newest engine events (System page)
+	actionLog       []svcActionEntry              // CTX-25: this session's finished actions
+	pendingExtra    map[string]containersExtraJob // the open extra containers card: button → job
 	// sessionContext is the DOCKER_CONTEXT of this termocode session
 	// ("" = the user's own setting). Never written to the shell or the
 	// global default.
@@ -593,6 +594,10 @@ func (m *Model) handleServicesMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onContainersPage(msg), true
 	case containersExtraDoneMsg:
 		return m.onContainersExtraDone(msg), true
+	case buildsListMsg: // containers_builds.go
+		return m.onBuildsList(msg), true
+	case buildCacheUsageMsg:
+		return m.onBuildCacheUsage(msg), true
 	case servicesSnapshotMsg:
 		return m.onServicesSnapshot(msg), true
 	case containerHostMsg:
