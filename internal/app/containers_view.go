@@ -863,7 +863,7 @@ func (st *servicesState) renderHostItem(r svcRow, active, focused bool, w int) s
 		}
 		glyph := g.String()
 		if st.containerMarked(c.ID) { // CTX-23: marked for a bulk action
-			glyph, gcol = "*", theme.GitAdded
+			glyph, gcol = theme.GlyphContMarked.String(), theme.GitAdded
 		}
 		var cols []hostCol
 		if sc := st.statsRowCol(c, w); sc != nil { // live CPU / memory takes the image's place
