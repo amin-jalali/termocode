@@ -308,6 +308,11 @@ func run(argv []string) int {
 			return runMCPTop(args[1:])
 		case "agent":
 			return runAgent(args[1:])
+		case "ai":
+			if fi, err := os.Stat("ai"); len(args) == 1 && err == nil && fi.IsDir() {
+				break // `termocode ai` with a folder named ai opens that folder
+			}
+			return runAI(args[1:])
 		case "worktree":
 			return runWorktree(args[1:])
 		case "workflow", "workflows":
@@ -416,7 +421,7 @@ func tuiCommand(args []string) bool {
 		return true
 	}
 	switch args[0] {
-	case serverArg, "sessions", "ssh", "mcp", "http", "db", "service", "attach", "kill", "setup", "-h", "--help", "help":
+	case serverArg, "sessions", "ssh", "mcp", "ai", "http", "db", "service", "attach", "kill", "setup", "-h", "--help", "help":
 		return false
 	}
 	return !isVersionArg(args[0])
@@ -441,6 +446,8 @@ func printUsage() {
 	fmt.Println("                             manage MCP servers without the UI (mcp add --help)")
 	fmt.Println("  termocode agent list|prompt|wait|report")
 	fmt.Println("                             drive the agents in termocode's terminal tabs")
+	fmt.Println("  termocode ai -x \"<prompt>\" [--output text|json|stream-json]")
+	fmt.Println("                             one AI turn without the UI, for scripts and CI (ai --help)")
 	fmt.Println("  termocode worktree list|note|status|link")
 	fmt.Println("                             notes and status for the worktree you are in")
 	fmt.Println("  termocode http run [options] <file|folder>…")
