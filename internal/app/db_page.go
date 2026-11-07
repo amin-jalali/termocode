@@ -1043,7 +1043,11 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 		return m.databaseHistory()
 	case "*":
 		return m.databaseQuickFilter(tv, row, col)
-	case "b":
+	case "b": // plan page: bar view (DBX-39); table data: filter builder (DBX-9)
+		if canPlan(s.shown) {
+			s.shown.plan.bars = !s.shown.plan.bars
+			return m.databaseShowPage()
+		}
 		return m.databaseWhereBuilder()
 	case "gc":
 		return m.databaseDataCompareKey()
@@ -1082,12 +1086,6 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 		return nil
 	case "S":
 		return m.databaseExportStart()
-	case "b":
-		if canPlan(s.shown) {
-			s.shown.plan.bars = !s.shown.plan.bars
-			return m.databaseShowPage()
-		}
-		return nil
 	case "c":
 		return m.copyWithToast(dbRedact(dbclient.ToCSV(s.displayedResult())), "Copied rows as CSV")
 	case "C":
