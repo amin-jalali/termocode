@@ -104,10 +104,10 @@ type chunkRef struct {
 // Index is the index of one folder. Its methods are safe for use by
 // several goroutines.
 type Index struct {
-	mu     sync.Mutex
-	root   string
-	opt    Options
-	files  map[string]*fileEntry
+	mu    sync.Mutex
+	root  string
+	opt   Options
+	files map[string]*fileEntry
 	// unread: binary or empty files seen last Update (size, mod), so an
 	// unchanged one is not read again.
 	unread map[string][2]int64
