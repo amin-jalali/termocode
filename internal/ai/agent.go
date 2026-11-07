@@ -271,6 +271,9 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 			continue
 		}
 		if last.Err != nil {
+			if buf.Len() > 0 && ctx.Err() == nil {
+				last.Err = midAnswerError(last.Err)
+			}
 			emit(Event{Kind: EventError, Detail: Redact(last.Err.Error()), Usage: total()})
 			return msgs[start:]
 		}
@@ -321,6 +324,14 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 	emit(Event{Kind: EventText, Text: StepLimitText(steps)})
 	emit(Event{Kind: EventDone, Usage: total()})
 	return msgs[start:]
+}
+
+// midAnswerError is err of an answer that broke off after some text (the
+// connection to the model dropped, or the provider sent an error event):
+// it says the text so far is not complete (SCN-21). The turn is not sent
+// again on its own: the user sees the partial text and decides.
+func midAnswerError(err error) error {
+	return fmt.Errorf("answer stopped in the middle, not complete: %w", err)
 }
 
 // promptTokens is the size of the last request: the server's count, else

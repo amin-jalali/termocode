@@ -62,6 +62,10 @@ If ghost text shows at the cursor, `Tab` accepts the ghost text first.
    tries again up to 3 times). When no text comes for 90 s (or 30 s in
    the middle of an answer) it turns yellow: `no answer for 35 s — Esc
    to stop`. A running tool never shows this warning.
+   When the connection to the model breaks in the middle of an answer,
+   the text that came stays and a red line says `answer stopped in the
+   middle, not complete`. termocode does not send it again by itself:
+   send the message again to retry.
 4. Press `Esc` to go back to the editor. `F6` also moves focus.
 
 The header shows the profile chip, then `⌁ N MCP` (the services the chat
