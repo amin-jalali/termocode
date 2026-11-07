@@ -110,10 +110,13 @@ func TestGitxBlockHistory(t *testing.T) {
 		t.Fatal("no picker")
 	}
 	third := covGit(t, dir, "rev-parse", "--short", "HEAD")
+	second := covGit(t, dir, "rev-parse", "--short", "HEAD~1")
 	first := covGit(t, dir, "rev-parse", "--short", "HEAD~2")
 	v := ansi.Strip(m.picker.View())
 	i, j := strings.Index(v, third+"  third"), strings.Index(v, first+"  first")
-	if i < 0 || j < i || strings.Contains(v, "second") {
+	// Look for the second commit's row, not the word: the hint
+	// "0 seconds ago" has "second" in it too.
+	if i < 0 || j < i || strings.Contains(v, second+"  second") {
 		t.Errorf("rows (want third, then first, no second):\n%s", v)
 	}
 }
