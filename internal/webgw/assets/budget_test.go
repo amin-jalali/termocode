@@ -65,7 +65,7 @@ const budgetDesktopEditor = 1300 << 10
 
 func TestPerfGuardDesktopEditorSize(t *testing.T) {
 	total := 0
-	for _, name := range []string{"monaco.html", "monaco-amd.js", "monaco-frame.js", "monaco-frame.css", "monaco/editor.js", "monaco/editor-host.js", "monaco/editor-contrib.js", "monaco/editor.css"} {
+	for _, name := range []string{"monaco.html", "monaco-amd.js", "monaco-frame.js", "monaco-frame.css", "monaco/editor.js", "monaco/editor-host.js", "monaco/editor-contrib.js", "monaco/editor.css", "monaco-vim.js"} {
 		total += gzSize(t, name)
 	}
 	t.Logf("desktop editor gzipped: %d B", total)
@@ -80,6 +80,31 @@ func TestPerfGuardDesktopEditorSize(t *testing.T) {
 		}
 		if bytes.Contains(b, []byte("monaco/editor.js")) {
 			t.Errorf("%s loads the desktop editor itself", name)
+		}
+	}
+}
+
+// budgetVim is Vim mode of the desktop editor (WEBP-1), gzipped: its
+// own file, monaco-vim.js, that the editor's frame loads only when Vim
+// mode is on (it counts in the desktop editor's budget too).
+const budgetVim = 24 << 10
+
+func TestPerfGuardVimChunk(t *testing.T) {
+	vim := gzSize(t, "monaco-vim.js")
+	t.Logf("monaco-vim.js gzipped: %d B", vim)
+	if vim > budgetVim {
+		t.Errorf("monaco-vim.js is %d B gzipped, budget %d B", vim, budgetVim)
+	}
+	frame := readBuilt(t, "monaco-frame.js")
+	if strings.Contains(frame, "parseMotion") {
+		t.Error("monaco-frame.js holds the Vim keymap: it loads for every desktop editor")
+	}
+	if !strings.Contains(frame, `import("/assets/monaco-vim.js")`) {
+		t.Error("monaco-frame.js does not load monaco-vim.js")
+	}
+	for _, name := range []string{"app.js", "app-chunk.js", "workbench.js", "index.html", "monaco.html"} {
+		if strings.Contains(readBuilt(t, name), "monaco-vim.js") {
+			t.Errorf("%s names monaco-vim.js: only the frame loads it, when Vim mode is on", name)
 		}
 	}
 }
