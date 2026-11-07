@@ -72,7 +72,7 @@ func TestChatHTTPSendDeclinedLeavesNoStaleRequest(t *testing.T) {
 	// A new call whose map "lands at the same address": simulate it by
 	// planting the old request under the new map's key.
 	second := map[string]any{"method": "POST", "url": "http://example.invalid/second", "body": "{}"}
-	httpAICache.Store(httpAIKey(second), httpAIBuild(root, first))
+	httpAICache.Store(httpAIKey(second), httpAIBuild(root, first, nil))
 	run(second)
 	if len(cards) != 2 || !strings.Contains(cards[1], "/second") || strings.Contains(cards[1], "/first") {
 		t.Fatalf("the second call showed the first request: %q", cards)

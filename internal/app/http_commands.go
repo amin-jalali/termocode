@@ -197,9 +197,30 @@ func (m *Model) httpSendRequest(file string, vars []httpclient.Var, req httpclie
 	if s.running != nil {
 		return m.pushToastDetail(toast.Warn, "A request is still running", "Esc on the response page, or HTTP: Cancel Request")
 	}
+	if deps := m.httpMissingDeps(file, req); len(deps) > 0 {
+		m.httpAskChainDep(httpChainStep{file: file, vars: vars, req: req, env: env}, deps)
+		return nil
+	}
+	return m.httpSendResolved(file, vars, req, env, false)
+}
+
+// httpSendResolved resolves and sends req. skipChain: the user chose
+// to send without the missing answers, so {{x.response...}} names do
+// not ask "Send anyway?" again.
+func (m *Model) httpSendResolved(file string, vars []httpclient.Var, req httpclient.Request, env string, skipChain bool) tea.Cmd {
+	s := m.httpS()
 	rv := httpResolver(file, vars, env)
 	rv.Responses = s.chainSource(file)
 	rr, un := rv.Resolve(req)
+	if skipChain {
+		keep := un[:0]
+		for _, u := range un {
+			if !strings.Contains(u.Name, ".response.") {
+				keep = append(keep, u)
+			}
+		}
+		un = keep
+	}
 	label := req.Label()
 	run := &httpRun{rr: rr, file: file, line: req.Line, label: label, env: rv.Env}
 	if len(un) > 0 {
@@ -1162,10 +1183,13 @@ func (m *Model) handleHTTPConfirm(id string) (tea.Cmd, bool) {
 	}
 	s := m.httpS()
 	switch m.confirmKind {
+	case confirmKindHTTPChainDep:
+		return m.httpChainDepConfirm(id), true
 	case confirmKindHTTPUnresolved:
 		run := s.pending
 		s.pending = nil
 		if id != "send" || run == nil {
+			s.chainNext = nil // a dependency that is not sent: drop the queue
 			return nil, true
 		}
 		return m.startHTTPRun(run, httpclient.Hooks{}), true

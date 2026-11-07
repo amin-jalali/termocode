@@ -212,6 +212,16 @@ type httpState struct {
 	shown   *httpRun
 
 	pending     *httpRun // waits for "Send anyway?"
+
+	// chainWait waits for the "Send login first?" card; chainNext are
+	// the requests to send once their dependency answered (a stack:
+	// the top waits for the run that is sending now).
+	chainWait *httpChainStep
+	chainNext []httpChainStep
+	// chainSnap holds the newest good answer per file + request name,
+	// for the AI tools (read off the Update goroutine; guarded).
+	chainMu   sync.Mutex
+	chainSnap map[string]*httpclient.Response
 	pendingHook httpclient.Hooks
 	gitWarned   map[string]bool
 	histIDs     map[string]string // picker item → history entry id
@@ -287,6 +297,14 @@ func (s *httpState) remember(r *httpRun) {
 	}
 	s.last = r
 	s.ring = append(s.ring, r)
+	if r.rr.Template.Name != "" && r.resp != nil && r.resp.Err == "" {
+		s.chainMu.Lock()
+		if s.chainSnap == nil {
+			s.chainSnap = map[string]*httpclient.Response{}
+		}
+		s.chainSnap[r.file+"\x00"+r.rr.Template.Name] = r.resp
+		s.chainMu.Unlock()
+	}
 	if len(s.ring) > httpRingMax {
 		s.ring = s.ring[len(s.ring)-httpRingMax:]
 	}
@@ -327,6 +345,17 @@ func (s *httpState) chainSource(file string) func(string) (*httpclient.Response,
 			}
 		}
 		return nil, false
+	}
+}
+
+// chainSnapshot is chainSource for the AI tools: safe on any
+// goroutine (it reads the guarded copy, not the ring).
+func (s *httpState) chainSnapshot(file string) func(string) (*httpclient.Response, bool) {
+	return func(name string) (*httpclient.Response, bool) {
+		s.chainMu.Lock()
+		defer s.chainMu.Unlock()
+		r, ok := s.chainSnap[file+"\x00"+name]
+		return r, ok && r != nil
 	}
 }
 
@@ -577,6 +606,9 @@ func (m *Model) httpFinish(run *httpRun) tea.Cmd {
 		m.httpRecordLens(run)
 		cmd := m.httpShowRun(&prev, false)
 		m.httpRefreshLens(run.file)
+		if next := m.httpChainContinue(run); next != nil {
+			return tea.Batch(cmd, next)
+		}
 		return cmd
 	}
 	s.remember(run)
@@ -585,6 +617,9 @@ func (m *Model) httpFinish(run *httpRun) tea.Cmd {
 	// (three editor calls) comes after it (FIX-48).
 	cmd := m.httpShowRun(run, false)
 	m.httpRefreshLens(run.file)
+	if next := m.httpChainContinue(run); next != nil {
+		return tea.Batch(cmd, next)
+	}
 	return cmd
 }
 

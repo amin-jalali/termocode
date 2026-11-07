@@ -106,6 +106,18 @@ token / secret / password) show as `[REDACTED]`.
 | `{{$datetime "YYYY-MM-DD HH:mm" 1 d}}` | a custom date format (also `$localDatetime`; text in `[ ]` stays as written) |
 | `{{$random.email}}`, `{{$random.fullName}}`, `{{$random.firstName}}`, `{{$random.lastName}}`, `{{$random.words 5}}` | fake test data |
 
+### Use one answer in the next request
+
+`{{login.response.body.$.token}}` reads the last answer of the request
+named `login` (`# @name login`) in the same file. Also
+`{{login.response.status}}`, `{{login.response.headers.Location}}`,
+`{{login.response.body.*}}` (the whole body) and XPath for XML
+(`{{login.response.body.//user/@id}}`). If `login` has no answer yet,
+sending asks **Send login first?**: yes sends `login`, then your request
+with the fresh value; **Send without it** keeps the placeholder as
+written. The AI's `http_send` reads the same answers and tells the agent
+which request to send first.
+
 Unknown names stay as written and get a wavy underline; sending asks
 "Send anyway?". **HTTP: Select Environment…** picks the environment (per
 workspace). **HTTP: Open Environment File** and **HTTP: Open Private
