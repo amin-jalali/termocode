@@ -50,7 +50,8 @@ const (
 	promptKindContainerRunEnv
 	promptKindContainerStorageName
 	promptKindContainerPull
-	promptKindExtNew // Extensions: New Extension…
+	promptKindComposeRun // CTX-33: compose run (services_compose_extras.go)
+	promptKindExtNew     // Extensions: New Extension…
 	// Group D — watch / conditional breakpoint / logpoint (dap.go).
 	promptKindDebugWatch
 	promptKindDebugCondition
@@ -292,6 +293,8 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 		return m.extNewSubmit(value)
 	case promptKindContainerTag, promptKindContainerRunName, promptKindContainerRunPorts, promptKindContainerRunEnv, promptKindContainerStorageName, promptKindContainerPull:
 		return m.onContainerImagePrompt(m.promptKind, value)
+	case promptKindComposeRun: // services_compose_extras.go
+		return m.onComposeRunPrompt(value)
 	case promptKindRegistryHost, promptKindRegistryUser, promptKindRegistryToken: // containers_registries.go
 		return m.onRegistryPrompt(m.promptKind, value)
 	case promptKindContainerSearch, promptKindContainerBrowse: // containers_remote.go

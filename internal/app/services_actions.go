@@ -1347,7 +1347,7 @@ func (m *Model) handleServicesMenuSelect(id string) tea.Cmd {
 
 // servicesPaletteItems are the "Containers: …" palette rows (the panel's title).
 func servicesPaletteItems() []picker.Item {
-	return []picker.Item{
+	return append([]picker.Item{
 		{ID: "services-focus", Title: "Containers: Focus Project Services"},
 		{ID: "containers-focus", Title: "Containers: Focus"},
 		{ID: "containers-refresh", Title: "Containers: Refresh"},
@@ -1403,7 +1403,7 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "services-configure", Title: "Containers: Configure Services (services.json)"},
 		{ID: "services-open-compose", Title: "Containers: Open Compose File"},
 		{ID: "services-trust", Title: "AI: Services Trust…"},
-	}
+	}, composeExtrasPaletteItems()...)
 }
 
 func containerAITargetRequired(id string) bool {
@@ -1732,6 +1732,9 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 		return nil, false
 	}
 	open := m.revealServicesView(id == "services-focus")
+	if cmd, ok := m.dispatchComposeExtras(id, open); ok {
+		return cmd, true
+	}
 	switch id {
 	case "services-focus", "services-refresh":
 		if id == "services-refresh" {
@@ -1788,6 +1791,9 @@ func (m *Model) openServicesPicker(verb string) tea.Cmd {
 func (m *Model) handleServicesPickerSelect(id string) tea.Cmd {
 	rest := strings.TrimPrefix(id, "svc:")
 	verb, key, _ := strings.Cut(rest, ":")
+	if verb == "envfile" {
+		return m.onComposeEnvFile(key)
+	}
 	section, name, _ := strings.Cut(key, "/")
 	switch verb {
 	case "start":

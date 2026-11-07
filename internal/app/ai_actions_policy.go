@@ -338,17 +338,21 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"testing-results":      aiAuto(),
 
 	// ── Services (services_actions.go; typed tools in ai_services_tools.go) ──
-	"services-focus":        aiAuto(),
-	"services-refresh":      aiAuto(),
-	"services-start-all":    aiConfirm(ai.ClassServices),
-	"services-stop-all":     aiConfirm(ai.ClassServices),
-	"services-start":        aiNever(aiNoPicker + " (services_start)"),
-	"services-stop":         aiNever(aiNoPicker + " (services_stop)"),
-	"services-restart":      aiNever(aiNoPicker + " (services_restart)"),
-	"services-logs":         aiNever(aiNoPicker + " (services_logs)"),
-	"services-configure":    aiConfirm(ai.ClassIDE), // may create .termocode/services.json
-	"services-open-compose": aiAuto(),
-	"services-trust":        aiNever(aiNoAIConfig),
+	"services-focus":          aiAuto(),
+	"services-refresh":        aiAuto(),
+	"services-start-all":      aiConfirm(ai.ClassServices),
+	"services-stop-all":       aiConfirm(ai.ClassServices),
+	"services-start":          aiNever(aiNoPicker + " (services_start)"),
+	"services-stop":           aiNever(aiNoPicker + " (services_stop)"),
+	"services-restart":        aiNever(aiNoPicker + " (services_restart)"),
+	"services-logs":           aiNever(aiNoPicker + " (services_logs)"),
+	"services-configure":      aiConfirm(ai.ClassIDE), // may create .termocode/services.json
+	"services-open-compose":   aiAuto(),
+	"services-compose-config": aiNever("shows values from the env files; the user's page"),
+	"services-compose-run":    aiNever(aiNoPicker + " (services tools)"),
+	"services-compose-watch":  aiNever("starts a long-running watch that rebuilds services; the user's"),
+	"services-env-file":       aiNever(aiNoPicker),
+	"services-trust":          aiNever(aiNoAIConfig),
 
 	// ── Databases (DB-3: connection management only) ──
 	"db-new-console":               aiNever(aiNoPicker),

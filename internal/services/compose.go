@@ -23,9 +23,9 @@ type Compose struct {
 	Root     string
 	Files    []string // -f files (root-relative or absolute)
 	Profiles []string
-	Project  string // -p; "" = compose decides
+	Project  string   // -p; "" = compose decides
 	EnvFiles []string // --env-file files (root-relative); empty = compose's .env
-	Docker   string // the docker binary; "" = "docker"
+	Docker   string   // the docker binary; "" = "docker"
 	X        Exec
 	Timeout  time.Duration // per captured call; 0 = 60 s
 }
