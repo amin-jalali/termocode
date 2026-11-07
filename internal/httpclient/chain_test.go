@@ -170,3 +170,21 @@ func FuzzJSONPath(f *testing.F) {
 		_, _ = XPath(body, path)
 	})
 }
+
+// A server's answer is data: {{...}} inside a chained value is never
+// expanded again (it could pull a secret into the next request).
+func TestChainValueIsNotExpandedAgain(t *testing.T) {
+	evil := &Response{Status: 200, Body: []byte(`{"next":"{{$secret gh}}-{{host}}"}`)}
+	rv := &Resolver{
+		FileVars:  []Var{{Name: "host", Value: "h"}},
+		Secret:    func(string) (string, bool) { return "ghp_" + "realsecret", true },
+		Responses: func(string) (*Response, bool) { return evil, true },
+	}
+	rr, _ := rv.Resolve(Request{URL: "http://x/{{a.response.body.$.next}}/{{host}}", Body: strPtr("{{a.response.body.*}}")})
+	if rr.URL != "http://x/{{$secret gh}}-{{host}}/h" {
+		t.Errorf("url = %q", rr.URL)
+	}
+	if *rr.Body != string(evil.Body) || len(rr.Secrets) != 0 {
+		t.Errorf("body = %q secrets %v", *rr.Body, rr.Secrets)
+	}
+}
