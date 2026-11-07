@@ -52,6 +52,7 @@ var webPaletteAllow = map[string]bool{
 	"ai-mcp-background":    false,
 	"ai-mcp-reset-cache":   false,
 	"ai-mcp-updates":       false,
+	"ai-checkpoint-save":   false, // CMP-62: saves a private git ref, changes no file
 }
 
 // webPaletteUserOnly are the commands the AI itself may never run (its

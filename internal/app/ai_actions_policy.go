@@ -743,6 +743,11 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// Runs is the user's monitoring page (stop, pause and resume are theirs).
 	"ai-runs": aiNever("the user's monitoring page; it holds Stop, Pause and Resume"),
 
+	// CMP-62: rewind and code checkpoints (ai_rewind.go, checkpoints_ui.go).
+	"ai-rewind-turn":        aiNever("the user rewinds the chat and the AI's changes"),
+	"ai-checkpoint-save":    aiAuto(), // saves a private git ref; changes no file
+	"ai-checkpoint-restore": aiNever("the user rolls code back to a checkpoint"),
+
 	// ── HTTP client ──
 	"http-send":              aiNever("sends a network request; use http_send (gated by host and method)"),
 	"http-send-pick":         aiNever(aiNoPicker + " (http_list_requests, http_send)"),

@@ -16,6 +16,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/agentrun"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/aimemory"
+	"github.com/amin-jalali/termocode/internal/checkpoint"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/profileform"
 	"github.com/amin-jalali/termocode/internal/statusbar"
@@ -254,6 +255,15 @@ type aiState struct {
 	restoreGen int
 	turnMsg    int
 	undoTurn   int
+	// rewindAt is the question the rewind card is about (ai_rewind.go,
+	// CMP-62); rewindSet: the card is open.
+	rewindAt  int
+	rewindSet bool
+	// Code checkpoints (checkpoints_ui.go): the picker's folders and the
+	// checkpoint the restore card is about.
+	cpDirs    []string
+	cpPending *checkpoint.Point
+	cpDir     string
 	// auditPending is the started tool call the audit log waits for
 	// (ai_audit.go).
 	auditPending *aiAuditPending
@@ -543,6 +553,9 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-discard-proposal", "AI: Discard Proposed Edit", ""},
 		{"ai-review", "AI: Review Pending Changes", ""},
 		{"ai-undo-turn", "AI: Undo Last Turn", ""},
+		{"ai-rewind-turn", "AI: Rewind Chat to Turn…", ""},
+		{"ai-checkpoint-save", "AI: Save Code Checkpoint", ""},
+		{"ai-checkpoint-restore", "AI: Restore Code Checkpoint…", ""},
 		{"ai-edit-review", "AI: Toggle Edit Review (diff / auto)", ""},
 		{"ai-trigger-inline", "AI: Trigger Inline Completion", "Alt+\\"},
 		{"ai-toggle-inline", "AI: Toggle Inline Completions", "Alt+|"},
@@ -616,7 +629,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
 		"ai-history-rename", "ai-history-delete", "ai-history-clear", "ai-fork-chat",
 		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reconnect-all", "ai-mcp-profile", "ai-mcp-catalog", "ai-mcp-bundle", "ai-mcp-updates", "ai-mcp-reset-cache",
-		"ai-agent-hooks", "ai-agent-packs": // agent CLI files need no provider
+		"ai-agent-hooks", "ai-agent-packs", // agent CLI files need no provider
+		"ai-rewind-turn", "ai-checkpoint-save", "ai-checkpoint-restore": // CMP-62: files and chats only
 	default:
 		if c, ok := m.aiReady(); !ok {
 			return c, true
@@ -660,6 +674,12 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.showAIReview(), true
 	case "ai-undo-turn":
 		return m.aiUndoTurn(-1), true
+	case "ai-rewind-turn": // CMP-62 (ai_rewind.go)
+		return m.openAIRewindPicker(), true
+	case "ai-checkpoint-save": // CMP-62 (checkpoints_ui.go)
+		return m.checkpointSaveNow(), true
+	case "ai-checkpoint-restore":
+		return m.openCheckpointPicker(), true
 	case "ai-edit-review":
 		return m.toggleAIEditReview(), true
 	case "ai-apply-proposal":
