@@ -2462,6 +2462,7 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `git-ai-review-changes` | Git: AI Review My Changes | never | fills the user's chat box; the user reads it and sends it |
 | `git-ai-security-branch` | Git: AI Security Review Branch (Threat Model) | never | fills the user's chat box; the user reads it and sends it |
 | `git-ai-security-changes` | Git: AI Security Review My Changes (Threat Model) | never | fills the user's chat box; the user reads it and sends it |
+| `git-ai-review-rules` | Git: Add Review Rules to AGENTS.md… | never | writes the user's AGENTS.md after a card; the user only |
 | `git-ai-stash` | Git: Stash with AI Message | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-auto-fetch` | Git: Toggle Auto Fetch | never | starts a timer that talks to the remote; only the user turns it on |
 | `git-autosquash` | Git: Autosquash fixup! Commits… | never | rewrites the branch history; only the user starts a rebase |
@@ -2567,6 +2568,7 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `git-pr-filter` | Git: Pull Requests (Filter)… | auto |   |
 | `git-pr-list` | Git: Pull Requests… | auto |   |
 | `git-pr-mine` | Git: My Pull Requests… | auto |   |
+| `git-pr-review-bot` | Git: Set Up PR Review Bot (GitHub)… | never | writes a CI workflow into the user's repository; the user confirms it on a card |
 | `git-publish` | Git: Publish to GitHub… | never | creates a GitHub repository in the user's name and pushes to it; user only |
 | `git-pull` | Git: Pull | confirm (git) |   |
 | `git-pull-options` | Git: Pull… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -2843,6 +2845,7 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `workflow-new` | AI: New Workflow… | never | starts a chat with the user; the AI drafts workflows with workflow_draft |
 | `workflow-run` | Workflows: Run Selected… | confirm (run) |   |
 | `workflow-stop` | Workflows: Stop Selected Run… | confirm (run) |   |
+| `workflow-triggers` | Workflows: Trigger Events… | auto |   |
 | `workflow-undo-write` | Workflows: Undo a Write of Selected Run… | confirm (always asks) |   |
 | `workflows` | Workflows: Open | auto |   |
 | `workspace-add-folder` | Workspace: Add Folder... | never | opens a picker or prompt that only the user can answer; use a typed tool (workspace_folders) |
@@ -3040,7 +3043,9 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `workflows_history_days` | confirm (settings) |   |
 | `workflows_missed_grace_min` | confirm (settings) |   |
 | `workflows_parallel_max` | confirm (settings) |   |
+| `workflows_trigger_poll_min` | confirm (settings) |   |
 | `workflows_wait_hours` | confirm (settings) |   |
 | `worktree_auto_archive_days` | never | archives worktree folders by itself; only the user turns it on |
+| `workflows_webhook_port` | never | opens a port that starts workflows from outside; only the user changes it |
 | `worktree_dir` | never | where new worktrees go on disk; a file-only switch the user edits in config.json |
 | `worktree_max` | never | archives worktree folders by itself; only the user turns it on |

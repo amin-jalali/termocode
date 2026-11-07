@@ -430,6 +430,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Accept Current Change (Conflict at Cursor) | `git-conflict-ours` |   |   |
 | Git: Accept Incoming Change (Conflict at Cursor) | `git-conflict-theirs` |   |   |
 | Git: Add Co-Author… | `git-co-author` |   |   |
+| Git: Add Review Rules to AGENTS.md… | `git-ai-review-rules` |   |   |
 | Git: Add to .gitignore… | `git-ignore-file` |   |   |
 | Git: Apply Patch from Clipboard… | `git-patch-apply-clip` |   |   |
 | Git: Apply Patch from File… | `git-patch-apply-file` |   |   |
@@ -540,6 +541,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Search Log… | `git-log-search` |   |   |
 | Git: Set GitLab Token… | `git-gitlab-token` |   | `saved in the secret store for this GitLab host` |
 | Git: Set Identity (Name and E-mail)… | `git-identity` |   |   |
+| Git: Set Up PR Review Bot (GitHub)… | `git-pr-review-bot` |   |   |
 | Git: Set Upstream Branch… | `git-upstream-set` |   |   |
 | Git: Show Contributors | `git-contributors` |   | `the authors of this branch and their commit counts` |
 | Git: Show Diff for Current File | `git-diff` |   |   |
@@ -901,6 +903,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Workflows: Open | `workflows` |   |   |
 | Workflows: Run Selected… | `workflow-run` |   |   |
 | Workflows: Stop Selected Run… | `workflow-stop` |   |   |
+| Workflows: Trigger Events… | `workflow-triggers` |   |   |
 | Workflows: Turn Selected On/Off… | `workflow-enable` |   |   |
 | Workflows: Undo a Write of Selected Run… | `workflow-undo-write` |   |   |
 

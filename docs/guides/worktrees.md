@@ -344,6 +344,11 @@ secrets hidden; the 50 newest are kept. The card shows the last note and
 the status; `N` lists all notes with their times. A link from the command
 line shows a card first (**Deny** comes first).
 
+To hand a task to a new agent in a new worktree from a script, use
+`termocode agent start "<task>"`: termocode shows this **New worktree**
+card filled in, and nothing is made until you press **Create + Start**
+(see [Start a background task](agents.md#start-a-background-task)).
+
 ## Review changes vs base
 
 `d` on a card (or **Worktree: Review Changes vs Base of Selected**)

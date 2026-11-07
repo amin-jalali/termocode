@@ -600,6 +600,7 @@ missing	git-ai-review-branch	Git|S
 missing	git-ai-review-changes	Git|S
 missing	git-ai-security-branch	Git|S
 missing	git-ai-security-changes	Git|S
+missing	git-ai-review-rules	Git|S
 missing	git-ai-stash	Git|S
 missing	git-auto-fetch	Git|S
 missing	git-autosquash	Git|S
@@ -667,6 +668,7 @@ missing	git-patch-apply-file	Git|S
 missing	git-patch-save	Git|S
 missing	git-pr-filter	Git|S
 missing	git-pr-mine	Git|S
+missing	git-pr-review-bot	Git|S
 missing	git-publish	Git|S
 missing	git-pull-options	Git|S
 missing	git-pull-rebase	Git|S
@@ -760,6 +762,7 @@ missing	workflow-dry-run	Workflows|S
 missing	workflow-history	Workflows|S
 missing	workflow-new	Workflows|S
 missing	workflow-run	Workflows|S
+missing	workflow-triggers	Workflows|S
 missing	workspace-open-container	Workspace|M
 missing	workspace-reopen-devcontainer	Workspace|M
 missing	worktree-add-folder	Worktrees|M

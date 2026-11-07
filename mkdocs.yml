@@ -103,6 +103,7 @@ nav:
       - "Specs: requirements to review": guides/specs.md
       - Connect MCP servers: guides/mcp.md
       - Give your agent the IDE's tools: guides/agents.md
+      - Build on the agent runtime (SDK): guides/sdk.md
       - Test an HTTP API (.http files): guides/http-client.md
       - Debug a program: guides/debug.md
       - Run and explore tests: guides/tests.md

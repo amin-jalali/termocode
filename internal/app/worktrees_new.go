@@ -11,6 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/agentctl"
 	"github.com/amin-jalali/termocode/internal/agents"
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/connectcard"
@@ -72,6 +73,10 @@ type wtForm struct {
 	// preTask / preAgent: a handoff to a child (CMP-11) fills in the
 	// task and picks the agent (by id).
 	preTask, preAgent string
+	// ctl / asker: a task-start (CMP-39) waits for this card; asker says
+	// who asked (agent_ctl_task.go).
+	ctl   *agentCtlCall
+	asker string
 }
 
 // wtFormVals are the typed values of the card.
@@ -113,6 +118,9 @@ func (f *wtForm) autoTitle(v wtFormVals) string {
 type wtNewPrepMsg struct {
 	f   *wtForm
 	err error
+	// ctl / pre: a task-start's card (agent_ctl_task.go).
+	ctl *agentCtlCall
+	pre *wtTaskPreset
 }
 
 // wtNewAgents lists the installed agents for the Agent row (a var for
@@ -219,20 +227,45 @@ func wtNewPrep(root, setting string) wtNewPrepMsg {
 
 // onWTNewPrep opens the dialog.
 func (m *Model) onWTNewPrep(msg wtNewPrepMsg) tea.Cmd {
+	if msg.ctl != nil {
+		m.wt.taskAsk = false
+	}
+	taskFail := func(s string) {
+		if msg.ctl != nil {
+			msg.ctl.reply <- agentctl.Reply{Error: s}
+		}
+	}
 	if msg.err != nil {
+		taskFail("this folder is not in a git repository")
 		return m.pushToastDetail(toast.Info, "No worktree can be made here", "This folder is not in a git repository.")
 	}
-	if m.connectOpen { // another card came first
+	if m.connectOpen || m.confirmOpen && msg.ctl != nil { // another card came first
+		taskFail("termocode is asking something else: try again")
 		return nil
 	}
 	f := msg.f
 	ags := wtNewAgents()
+	if msg.pre != nil {
+		var ok bool
+		if ags, ok = wtTaskAgents(ags, msg.pre.agent); !ok {
+			if msg.pre.agent == "" {
+				taskFail("no coding agent is installed (guides/agents.md)")
+			} else {
+				taskFail(msg.pre.agent + " is not installed (guides/agents.md)")
+			}
+			return nil
+		}
+	}
 	if len(ags) > wtFormAgentsMax {
 		ags = ags[:wtFormAgentsMax]
 	}
 	f.agents = ags
 	if f.pick > len(f.agents) { // a prefill (CMP-32) when no agent is installed
 		f.pick = 0
+	}
+	if msg.pre != nil {
+		wtTaskFill(f, msg.pre)
+		f.ctl = msg.ctl
 	}
 	m.wt.form = f
 	if f.preTask != "" || f.preAgent != "" { // a handoff (worktrees_handoff.go)
@@ -294,6 +327,9 @@ func wtFormCardFor(f *wtForm, v wtFormVals, short bool) connectcard.Card {
 		opts = append(opts, a.Title)
 	}
 	var rows []connectcard.Row
+	if f.asker != "" {
+		rows = append(rows, connectcard.Row{Kind: connectcard.Dim, Text: "Asked by " + f.asker + ". Check the task, then Create + Start (Cancel makes nothing)."})
+	}
 	if f.parent != "" {
 		rows = append(rows, connectcard.Row{Kind: connectcard.Dim, Text: "Child of " + f.parentTitle + " (starts from its branch)"})
 	}
@@ -446,6 +482,7 @@ func (m *Model) handleWTFormMsg(msg tea.Msg) (tea.Cmd, bool) {
 func (m *Model) closeWTForm() {
 	m.connectOpen = false
 	if m.wt != nil {
+		m.wt.form.wtTaskReply(agentctl.Reply{Error: "cancelled: the user made nothing"})
 		m.wt.form = nil
 	}
 }
@@ -605,6 +642,13 @@ func (m *Model) onWTCreated(msg wtCreatedMsg) tea.Cmd {
 		f.fail = wtCreateError(msg.err)
 		m.refreshWTForm()
 		return nil
+	}
+	if f.ctl != nil { // a task-start waits for this (CMP-39)
+		rep := agentctl.Reply{OK: true, State: "created", Worktrees: []agentctl.Worktree{{Path: msg.folder, Branch: msg.branch, Kind: "user"}}}
+		if msg.start && msg.agent.ID != "" {
+			rep.State, rep.Worktrees[0].Agent = "started", msg.agent.ID
+		}
+		f.wtTaskReply(rep)
 	}
 	m.closeWTForm()
 	name := strings.TrimSpace(filepath.Base(msg.folder))

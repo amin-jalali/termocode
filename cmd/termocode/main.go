@@ -321,6 +321,8 @@ func run(argv []string) int {
 			return runWorkflow(args[1:])
 		case "import":
 			return runImport(args[1:])
+		case "review":
+			return runReview(args[1:])
 		case "http":
 			return runHTTP(args[1:])
 		case "db":
@@ -429,7 +431,7 @@ func tuiCommand(args []string) bool {
 		return true
 	}
 	switch args[0] {
-	case serverArg, "sessions", "import", "ssh", "mcp", "acp", "http", "db", "service", "runner", "attach", "kill", "setup", "-h", "--help", "help":
+	case serverArg, "sessions", "import", "ssh", "mcp", "acp", "http", "db", "service", "runner", "review", "attach", "kill", "setup", "-h", "--help", "help":
 		return false
 	}
 	return !isVersionArg(args[0])
@@ -454,7 +456,7 @@ func printUsage() {
 	fmt.Println("  termocode mcp [--dir d]    run as an MCP server for an agent CLI (stdio)")
 	fmt.Println("  termocode mcp add|list|get|remove")
 	fmt.Println("                             manage MCP servers without the UI (mcp add --help)")
-	fmt.Println("  termocode agent list|prompt|wait|report")
+	fmt.Println("  termocode agent list|prompt|wait|report|start|tasks")
 	fmt.Println("                             drive the agents in termocode's terminal tabs")
 	fmt.Println("  termocode acp              be the AI agent of another editor (ACP on stdio)")
 	fmt.Println("  termocode worktree list|note|status|link")
@@ -463,6 +465,8 @@ func printUsage() {
 	fmt.Println("                             the task list agents and people share (task --help)")
 	fmt.Println("  termocode lane pack|info|unpack|pull|push")
 	fmt.Println("                             move a lane (worktree and its work) to another machine")
+	fmt.Println("  termocode review [--post auto|N]")
+	fmt.Println("                             short AI review of the branch (P0/P1 only)")
 	fmt.Println("  termocode http run [options] <file|folder>…")
 	fmt.Println("                             run .http files for CI (http run --help)")
 	fmt.Println("  termocode db list|show|add|remove")

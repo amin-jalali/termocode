@@ -699,6 +699,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"workflow-edit-file":  aiAuto(),
 	"workflow-history":    aiAuto(),
 	"workflow-undo-write": aiConfirm(""), // writes to outside systems again; the undo card asks
+	// CMP-38: the list of trigger events only reads; each event's card
+	// is the user's to answer.
+	"workflow-triggers": aiAuto(),
 	// The secret store (secrets_ui.go): unlocking and locking are the
 	// user's; the AI never reads, sets or lists secrets.
 	"secrets-unlock": aiNever(aiNoAIConfig),
@@ -978,6 +981,8 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"workflows_wait_hours":       aiConfirm(ai.ClassSettings),
 	"workflows_agent_sandbox":    aiNever("where outside agents may write; only the user changes it"),
 	"agent_os_sandbox":           aiNever("the OS sandbox around outside agents; only the user changes it"),
+	"workflows_trigger_poll_min": aiConfirm(ai.ClassSettings),
+	"workflows_webhook_port":     aiNever("opens a port that starts workflows from outside; only the user changes it"),
 
 	// Git blame (GITX-3..5)
 	"git_status_blame":            aiConfirm(ai.ClassSettings),
