@@ -203,3 +203,92 @@ func GrantDDL(driver string, spec GrantSpec) (string, error) {
 	}
 	return s + ";", nil
 }
+
+// pgString quotes a PostgreSQL string literal.
+func pgString(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
+
+// GrantsSQL is the grants query of one role with the role written in as
+// a literal, so it runs as a plain read in the console. host is the
+// MySQL account host ("" = %).
+func GrantsSQL(driver, role, host string) (string, error) {
+	if err := checkName("role", role); err != nil {
+		return "", err
+	}
+	if strings.ContainsAny(host, "\x00\r\n") {
+		return "", errors.New("host has a control character")
+	}
+	q, ok := RoleQueriesFor(driver)
+	if !ok {
+		return "", fmt.Errorf("%s has no users or roles", driver)
+	}
+	if normDriver(driver) == "mysql" {
+		lit := mysqlString(MySQLGrantee(role, host))
+		return strings.ReplaceAll(q.Grants, "?", lit), nil
+	}
+	return strings.Replace(q.Grants, "$1", pgString(role), 1), nil
+}
+
+// ParseAccount splits a typed account: MySQL "user@host" (the last @),
+// any other engine keeps the whole trimmed text as the role name.
+func ParseAccount(driver, s string) (name, host string) {
+	s = strings.TrimSpace(s)
+	if normDriver(driver) == "mysql" {
+		if i := strings.LastIndex(s, "@"); i > 0 {
+			return s[:i], s[i+1:]
+		}
+	}
+	return s, ""
+}
+
+// ParseGrantTarget reads "SELECT, INSERT on schema.table" (or "… on
+// schema" for every table of the schema).
+func ParseGrantTarget(s string) (privs []string, schema, table string, err error) {
+	lower := strings.ToLower(s)
+	i := strings.LastIndex(lower, " on ")
+	if i < 0 {
+		return nil, "", "", errors.New(`write it as "SELECT, INSERT on schema.table"`)
+	}
+	for _, p := range strings.Split(s[:i], ",") {
+		if p = strings.ToUpper(strings.TrimSpace(p)); p != "" {
+			privs = append(privs, p)
+		}
+	}
+	if len(privs) == 0 {
+		return nil, "", "", errors.New("no privilege chosen")
+	}
+	target := strings.TrimSpace(s[i+4:])
+	schema, table, _ = strings.Cut(target, ".")
+	schema, table = strings.TrimSpace(schema), strings.TrimSpace(table)
+	if schema == "" {
+		return nil, "", "", errors.New("schema name is empty")
+	}
+	return privs, schema, table, nil
+}
+
+// RolePreset is one choice of the create / alter role picker.
+type RolePreset struct {
+	ID    string
+	Title string
+	Hint  string
+	Spec  RoleSpec // Name and Host are filled in by the caller
+}
+
+// RolePresets are the role kinds a driver offers; empty when it has no
+// roles.
+func RolePresets(driver string) []RolePreset {
+	switch normDriver(driver) {
+	case "postgres", "postgresql":
+		return []RolePreset{
+			{ID: "login", Title: "Login user", Hint: "LOGIN", Spec: RoleSpec{Login: true, ConnLimit: -1}},
+			{ID: "group", Title: "Group role (no login)", Hint: "NOLOGIN", Spec: RoleSpec{ConnLimit: -1}},
+			{ID: "admin", Title: "Admin user", Hint: "LOGIN CREATEDB CREATEROLE", Spec: RoleSpec{Login: true, CreateDB: true, CreateRole: true, ConnLimit: -1}},
+			{ID: "superuser", Title: "Superuser", Hint: "LOGIN SUPERUSER: every right", Spec: RoleSpec{Login: true, Superuser: true, ConnLimit: -1}},
+		}
+	case "mysql":
+		return []RolePreset{
+			{ID: "login", Title: "Login user", Hint: "account unlocked; rights come from Grant", Spec: RoleSpec{Login: true, ConnLimit: -1}},
+			{ID: "group", Title: "Locked account", Hint: "ACCOUNT LOCK", Spec: RoleSpec{ConnLimit: -1}},
+		}
+	}
+	return nil
+}

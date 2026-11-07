@@ -65,6 +65,12 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-server-info", Title: "Databases: Show Server Info"},
 		{ID: "db-cancel-session", Title: "Databases: Cancel Session Query…"},
 		{ID: "db-end-session", Title: "Databases: End Session…"},
+		{ID: "db-roles", Title: "Databases: Show Users and Roles"},
+		{ID: "db-role-grants", Title: "Databases: Show Grants of a Role…"},
+		{ID: "db-role-create", Title: "Databases: Create Role…"},
+		{ID: "db-role-alter", Title: "Databases: Alter Role…"},
+		{ID: "db-grant", Title: "Databases: Grant Privileges…"},
+		{ID: "db-revoke", Title: "Databases: Revoke Privileges…"},
 		{ID: "db-er-diagram", Title: "Databases: Export ER Diagram…"},
 		{ID: "db-guide", Title: "Databases: Open Guide"},
 		{ID: "redis-set-ttl", Title: "Databases: Set Redis Key TTL…"},
@@ -136,6 +142,18 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseStopSessionPrompt(false), true
 	case "db-end-session":
 		return m.databaseStopSessionPrompt(true), true
+	case "db-roles":
+		return m.databaseRolesShow(), true
+	case "db-role-grants":
+		return m.databaseRolesStart(promptKindDBRoleGrants, "Show the grants of a role", false, false), true
+	case "db-role-create":
+		return m.databaseRolesStart(promptKindDBRoleName, "Create a role (the statement is shown before it runs)", false, false), true
+	case "db-role-alter":
+		return m.databaseRolesStart(promptKindDBRoleName, "Alter a role (the statement is shown before it runs)", true, false), true
+	case "db-grant":
+		return m.databaseRolesStart(promptKindDBGrantRole, "Grant privileges", false, false), true
+	case "db-revoke":
+		return m.databaseRolesStart(promptKindDBGrantRole, "Revoke privileges", false, true), true
 	}
 	open := m.revealDatabasesView(id == "db-focus")
 	switch id {

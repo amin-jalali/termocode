@@ -203,6 +203,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: AI Generate SQL from Schema… | `db-ai-generate-sql` |   |   |
 | Databases: Add Connection… | `db-add` |   |   |
 | Databases: Add SSH Tunnel… | `db-add-tunnel` |   |   |
+| Databases: Alter Role… | `db-role-alter` |   |   |
 | Databases: Cancel Query | `db-cancel` |   |   |
 | Databases: Cancel Session Query… | `db-cancel-session` |   |   |
 | Databases: Commit | `db-commit` |   |   |
@@ -210,6 +211,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Configure | `db-configure` |   |   |
 | Databases: Connect Selected | `db-connect` |   |   |
 | Databases: Count Rows | `db-count-rows` |   |   |
+| Databases: Create Role… | `db-role-create` |   |   |
 | Databases: Delete Redis Key… | `redis-delete-key` |   |   |
 | Databases: Describe Table | `db-describe` |   |   |
 | Databases: Disconnect Selected… | `db-disconnect` |   |   |
@@ -225,6 +227,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Format Statement or Selection | `db-format` |   |   |
 | Databases: Generate Test Data… | `db-generate-data` |   |   |
 | Databases: Go to Definition | `db-goto-definition` |   |   |
+| Databases: Grant Privileges… | `db-grant` |   |   |
 | Databases: History… | `db-history` |   |   |
 | Databases: Import CSV into Table… | `db-import-csv` |   |   |
 | Databases: New Console | `db-new-console` |   |   |
@@ -233,6 +236,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Pin Result Tab | `db-result-pin` |   |   |
 | Databases: Refresh | `db-refresh` |   |   |
 | Databases: Revert Pending Changes… | `db-revert-changes` |   |   |
+| Databases: Revoke Privileges… | `db-revoke` |   |   |
 | Databases: Roll Back | `db-rollback` |   |   |
 | Databases: Run File | `db-run-file` |   |   |
 | Databases: Run Statement or Selection | `db-run` |   |   |
@@ -241,8 +245,10 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Sessions… | `db-open-sessions` |   |   |
 | Databases: Set Redis Key TTL… | `redis-set-ttl` |   |   |
 | Databases: Show DDL | `db-ddl` |   |   |
+| Databases: Show Grants of a Role… | `db-role-grants` |   |   |
 | Databases: Show Server Info | `db-server-info` |   |   |
 | Databases: Show Sessions and Locks | `db-sessions` |   |   |
+| Databases: Show Users and Roles | `db-roles` |   |   |
 | Databases: Submit Pending Changes… | `db-submit-changes` |   |   |
 | Databases: Test Connection | `db-test-connection` |   |   |
 | Databases: Transaction Mode… | `db-transaction-mode` |   |   |

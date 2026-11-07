@@ -62,6 +62,7 @@ type dbRun struct {
 }
 
 type dbConsoleState struct {
+	roles    dbRolesState      // the open users-and-roles flow (DBX-18)
 	lens     map[string]string // file + "\x00" + SQL → the lens status
 	attached map[string]string // project .sql file → connection (session only)
 	pending  *dbRun            // waits for the attach picker or the guard card
@@ -922,6 +923,9 @@ func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
 }
 
 func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
+	if cmd, ok := m.databaseRolesPick(id); ok {
+		return cmd, true
+	}
 	if cmd, ok := m.databaseGeneratePicker(id); ok {
 		return cmd, true
 	}

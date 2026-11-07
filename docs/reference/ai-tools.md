@@ -2076,6 +2076,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-format-file` | Databases: Format File | confirm (fileWrite) |   |
 | `db-generate-data` | Databases: Generate Test Data… | never | it writes a script of rows the user reviews and runs |
 | `db-goto-definition` | Databases: Go to Definition | auto |   |
+| `db-grant` | Databases: Grant Privileges… | never | changes database rights; only the user can choose it |
 | `db-guide` | Databases: Open Guide | auto |   |
 | `db-history` | Databases: History… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-import-csv` | Databases: Import CSV into Table… | never | importing rows is a write the user confirms (db_query) |
@@ -2084,6 +2085,11 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-refresh` | Databases: Refresh | auto |   |
 | `db-result-pin` | Databases: Pin Result Tab | auto |   |
 | `db-revert-changes` | Databases: Revert Pending Changes… | never | the user's pending edits |
+| `db-revoke` | Databases: Revoke Privileges… | never | changes database rights; only the user can choose it |
+| `db-role-alter` | Databases: Alter Role… | never | changes who can log in; only the user can choose it |
+| `db-role-create` | Databases: Create Role… | never | changes who can log in; only the user can choose it |
+| `db-role-grants` | Databases: Show Grants of a Role… | never | SQL runs require the database query tool and its guard |
+| `db-roles` | Databases: Show Users and Roles | never | SQL runs require the database query tool and its guard |
 | `db-rollback` | Databases: Roll Back | never | the user's transaction |
 | `db-run` | Databases: Run Statement or Selection | never | SQL runs require the database query tool and its guard |
 | `db-run-file` | Databases: Run File | never | SQL runs require the database query tool and its guard |
