@@ -70,6 +70,15 @@ func englishStrings(t *testing.T) []entry {
 	return append(parseStrings(t, "src/strings.ts", "S"), parseStrings(t, "src/strings.desk.ts", "SD")...)
 }
 
+// allEnglishStrings adds the phone app's lazy views' strings
+// (strings.phone.ts). They follow the same voice and key rules but are
+// English only (owner 2026-11-07), so the Persian tests use
+// englishStrings.
+func allEnglishStrings(t *testing.T) []entry {
+	t.Helper()
+	return append(englishStrings(t), parseStrings(t, "src/strings.phone.ts", "SP")...)
+}
+
 // bodyKeys may run to 40 words; every other string stays at 12 (P6).
 func isBody(key string) bool {
 	if strings.HasPrefix(key, "e.") || strings.HasPrefix(key, "err.") || strings.Contains(key, "body") {
@@ -169,7 +178,7 @@ func TestStringsLintCatchesEachRule(t *testing.T) {
 }
 
 func TestStringsFollowTheVoice(t *testing.T) {
-	entries := englishStrings(t)
+	entries := allEnglishStrings(t)
 	if len(entries) < 150 {
 		t.Fatalf("only %d strings; web UX 7.4 lists more", len(entries))
 	}
@@ -183,7 +192,7 @@ var keyLiteral = regexp.MustCompile(`"([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+)"`)
 var tCall = regexp.MustCompile(`\btn?\(\s*"([^"]+)"`)
 
 func TestEveryUsedStringKeyExists(t *testing.T) {
-	entries := englishStrings(t)
+	entries := allEnglishStrings(t)
 	keys, spaces := map[string]bool{}, map[string]bool{}
 	for _, e := range entries {
 		keys[e.key] = true
@@ -192,7 +201,7 @@ func TestEveryUsedStringKeyExists(t *testing.T) {
 	exists := func(k string) bool { return keys[k] || (keys[k+".one"] && keys[k+".other"]) }
 	n := 0
 	err := filepath.WalkDir("src", func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || filepath.Base(path) == "strings.ts" || filepath.Base(path) == "strings.desk.ts" || !strings.HasSuffix(path, "x") && !strings.HasSuffix(path, ".ts") {
+		if err != nil || d.IsDir() || filepath.Base(path) == "strings.ts" || filepath.Base(path) == "strings.desk.ts" || filepath.Base(path) == "strings.phone.ts" || !strings.HasSuffix(path, "x") && !strings.HasSuffix(path, ".ts") {
 			return err
 		}
 		b, err := os.ReadFile(path)
@@ -369,13 +378,37 @@ func TestStringsNameRealWebCommands(t *testing.T) {
 		t.Fatal("no Web: palette commands found in web_tui.go")
 	}
 	named := regexp.MustCompile(`Web: [A-Z]\w*(?: (?:in|on|to|[A-Z]\w*))*`)
-	for _, f := range []struct{ file, name string }{{"src/strings.ts", "S"}, {"src/strings.desk.ts", "SD"}, {"src/strings.fa.ts", "FA"}} {
+	for _, f := range []struct{ file, name string }{{"src/strings.ts", "S"}, {"src/strings.desk.ts", "SD"}, {"src/strings.phone.ts", "SP"}, {"src/strings.fa.ts", "FA"}} {
 		for _, e := range parseStrings(t, f.file, f.name) {
 			for _, cmd := range named.FindAllString(e.text, -1) {
 				if !real[cmd] {
 					t.Errorf("%s:%d: %s names %q, not a palette command (have %v)", f.file, e.line, e.key, cmd, real)
 				}
 			}
+		}
+	}
+}
+
+// The phone app's strings are English only: strings.fa.ts has none of
+// them, and none is also a page or workbench key.
+func TestPhoneStringsAreEnglishOnly(t *testing.T) {
+	phone := parseStrings(t, "src/strings.phone.ts", "SP")
+	if len(phone) == 0 {
+		t.Fatal("strings.phone.ts has no strings")
+	}
+	other := map[string]bool{}
+	for _, e := range englishStrings(t) {
+		other[e.key] = true
+	}
+	for _, e := range parseStrings(t, "src/strings.fa.ts", "FA") {
+		other["fa:"+e.key] = true
+	}
+	for _, e := range phone {
+		if other[e.key] {
+			t.Errorf("strings.phone.ts:%d: %s is also in strings.ts or strings.desk.ts", e.line, e.key)
+		}
+		if other["fa:"+e.key] {
+			t.Errorf("strings.fa.ts translates the phone string %s; the phone app is English only", e.key)
 		}
 	}
 }
