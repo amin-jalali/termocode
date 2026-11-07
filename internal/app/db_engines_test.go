@@ -65,3 +65,22 @@ func TestDBCouchbaseIsAnHTTPEngineForTheTree(t *testing.T) {
 		t.Fatal("couchbase is not an HTTP engine")
 	}
 }
+
+// etcd and Memcached consoles run one command per line (DBX-69).
+func TestDBLineCommandsOneCommandPerLine(t *testing.T) {
+	text := "-- @conn kv\n\nget a\nput b 1\n# note\nget c"
+	if got := dbLineCommands(text, 4); len(got) != 1 || got[0] != "put b 1" {
+		t.Fatalf("line 4 = %v", got)
+	}
+	if got := dbLineCommands(text, 5); got != nil {
+		t.Fatalf("a comment line = %v", got)
+	}
+	if got := dbLineCommands(text, 0); strings.Join(got, "|") != "get a|put b 1|get c" {
+		t.Fatalf("all = %v", got)
+	}
+	for _, id := range []string{"etcd", "memcached"} {
+		if e, ok := dbclient.HTTPEngineByID(id); !ok || !e.LineBased {
+			t.Fatalf("%s is not a line-based engine", id)
+		}
+	}
+}
