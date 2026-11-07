@@ -445,6 +445,7 @@ func paletteItems() []picker.Item {
 	items = append(items, kubePaletteItems()...)      // kube_actions.go
 	items = append(items, worktreePaletteItems()...)  // worktrees_keys.go
 	items = append(items, canvasPaletteItems()...)    // CMP-92: the shared plan (canvas_ui.go)
+	items = append(items, specPaletteItems()...)      // specs_ui.go
 	items = append(items, databasesPaletteItems()...) // DB-3
 	items = append(items, extManagePaletteItems()...) // Group I — Extensions: Reload / Open Folder / …
 	items = append(items, httpPaletteItems()...)      // HTTP client (http_commands.go)
@@ -1056,6 +1057,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 			return cmd
 		}
 		if cmd, ok := m.dispatchPromptActionsPalette(id); ok { // prompt_actions.go (CMP-74)
+			return cmd
+		}
+		if cmd, ok := m.dispatchSpecPalette(id); ok { // specs_ui.go
 			return cmd
 		}
 		if cmd, ok := m.dispatchDatabasesPalette(id); ok { // db_actions.go

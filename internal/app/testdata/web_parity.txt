@@ -753,6 +753,9 @@ missing	tracker-show	Workspace|S
 missing	web-forward-port	Web|M
 missing	terminal-ai-hand-back	Terminal|S
 missing	terminal-ai-take-over	Terminal|S
+missing	spec-new	Specs|M
+missing	spec-new-bugfix	Specs|M
+missing	spec-open	Specs|M
 missing	workflow-dry-run	Workflows|S
 missing	workflow-history	Workflows|S
 missing	workflow-new	Workflows|S
