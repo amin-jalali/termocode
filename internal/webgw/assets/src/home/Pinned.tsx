@@ -8,6 +8,7 @@ import { useEffect, useState } from "preact/hooks";
 import type { SavedView } from "../../../../webproto/proto";
 import { link } from "../session";
 import { t } from "../strings";
+import "../strings.phone";
 import { errText } from "../ui/CardSheet";
 import { toast } from "../lib/toasts";
 import { loadSaved, pinView, pinnedViews, saved } from "./saved";
@@ -43,7 +44,7 @@ export function PinnedViews({ run }: { run?: (v: SavedView) => ComponentChildren
                 <span class="pinned-pin" aria-hidden="true">📌</span>
                 <span class="pinned-name">{v.name}</span>
                 <span class={`pinned-state${online ? " is-live" : " is-stale"}`}>
-                  <span aria-hidden="true">{online ? "●" : "◌"}</span> {online ? t("saved.live") : t("saved.stale")}
+                  <span aria-hidden="true">{online ? "●" : "◌"}</span> {online ? t("blk.live") : t("blk.stale")}
                 </span>
               </button>
               <button type="button" class="pinned-unpin" aria-label={t("saved.unpin", { name: v.name })} disabled={!online} onClick={() => void unpin(v)}>

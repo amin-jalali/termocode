@@ -25,6 +25,10 @@ export const SP = {
   "blk.raw": "Raw data",
   "blk.form_send": "Send to the laptop",
   "blk.form_laptop": "Fill this in on the laptop",
+  // Saved and pinned views on the Home (MOB-71)
+  "saved.title": "Pinned views",
+  "saved.unpin": "Unpin view {name}",
+  "saved.unpinned": "{name} is no longer pinned here.",
 } as const;
 
 addStrings(SP);

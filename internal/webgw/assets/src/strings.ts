@@ -799,12 +799,6 @@ export const S = {
   "cmd.failed": "The command did not run.",
   "cmd.ask_text": "Run “{name}” on the laptop?",
   "cmd.ran_laptop": "Done on the laptop: {name}",
-  // Saved and pinned views on the phone's Home (MOB-71)
-  "saved.title": "Pinned views",
-  "saved.live": "live",
-  "saved.stale": "Stale",
-  "saved.unpin": "Unpin view {name}",
-  "saved.unpinned": "{name} is no longer pinned here.",
 } as const;
 
 /** StringKey is a key of the page's strings, of the workbench's
