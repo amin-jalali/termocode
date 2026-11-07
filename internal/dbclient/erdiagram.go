@@ -61,6 +61,7 @@ type erColumn struct {
 type erEdge struct {
 	child, parent int
 	name          string
+	virtual       bool // a virtual FK (DBX-31): a dashed line
 }
 
 // erModel is the part of a schema a diagram shows.
@@ -84,7 +85,7 @@ func erModel(s CanonSchema) ([][]erColumn, []erEdge) {
 					fk[n] = true
 				}
 				if p, ok := index[c.RefTable]; ok {
-					edges = append(edges, erEdge{child: i, parent: p, name: c.Name})
+					edges = append(edges, erEdge{child: i, parent: p, name: c.Name, virtual: c.Virtual})
 				}
 			}
 		}
@@ -93,6 +94,15 @@ func erModel(s CanonSchema) ([][]erColumn, []erEdge) {
 		}
 	}
 	return cols, edges
+}
+
+// erLine is the Mermaid / PlantUML line of an edge: solid, or dotted for a
+// virtual key.
+func erLine(e erEdge) string {
+	if e.virtual {
+		return ".."
+	}
+	return "--"
 }
 
 // ERStyle changes what a diagram shows. Colors gives every table a fill
@@ -241,7 +251,7 @@ func ERDiagramStyled(s CanonSchema, format string, st ERStyle) (string, error) {
 			b.WriteString("  }\n")
 		}
 		for _, e := range edges {
-			fmt.Fprintf(&b, "  %s ||--o{ %s : \"%s\"\n", erIdent(s.Tables[e.parent].Name), erIdent(s.Tables[e.child].Name), erQuote(e.name))
+			fmt.Fprintf(&b, "  %s ||%so{ %s : \"%s\"\n", erIdent(s.Tables[e.parent].Name), erLine(e), erIdent(s.Tables[e.child].Name), erQuote(e.name))
 		}
 		for i, t := range s.Tables {
 			if fills[i] != "" {
@@ -273,7 +283,7 @@ func ERDiagramStyled(s CanonSchema, format string, st ERStyle) (string, error) {
 			b.WriteString("}\n")
 		}
 		for _, e := range edges {
-			fmt.Fprintf(&b, "t%d ||--o{ t%d : %s\n", e.parent, e.child, erQuote(e.name))
+			fmt.Fprintf(&b, "t%d ||%so{ t%d : %s\n", e.parent, erLine(e), e.child, erQuote(e.name))
 		}
 		b.WriteString("@enduml\n")
 	case "dot":
@@ -297,7 +307,11 @@ func ERDiagramStyled(s CanonSchema, format string, st ERStyle) (string, error) {
 			fmt.Fprintf(&b, "  \"%s\" [shape=box, %slabel=\"%s\"];\n", erDot(t.Name), fill, label)
 		}
 		for _, e := range edges {
-			fmt.Fprintf(&b, "  \"%s\" -> \"%s\" [label=\"%s\"];\n", erDot(s.Tables[e.child].Name), erDot(s.Tables[e.parent].Name), erDot(e.name))
+			dash := ""
+			if e.virtual {
+				dash = ", style=dashed"
+			}
+			fmt.Fprintf(&b, "  \"%s\" -> \"%s\" [label=\"%s\"%s];\n", erDot(s.Tables[e.child].Name), erDot(s.Tables[e.parent].Name), erDot(e.name), dash)
 		}
 		b.WriteString("}\n")
 	default:

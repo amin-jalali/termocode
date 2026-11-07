@@ -69,7 +69,7 @@ func (m *Model) databaseERPathStart() tea.Cmd {
 	if schema == "" || sess == nil {
 		return m.pushToastDetail(toast.Info, "Not connected", "Press Enter on the connection in the Databases view first.")
 	}
-	t := dbERTarget{sessKey: key, driver: dbDriverFamily(c.Driver), schema: schema, label: sanitizeDBText(dbConnName(c) + " · " + schema)}
+	t := dbERTarget{sessKey: key, driver: dbDriverFamily(c.Driver), schema: schema, label: sanitizeDBText(dbConnName(c) + " · " + schema), conn: r.conn}
 	s.erPath = &dbERPathState{target: t, from: n.name}
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), dbCompareTimeout)
@@ -95,6 +95,8 @@ func (m *Model) onDBERPathSchema(msg dbERPathSchemaMsg) tea.Cmd {
 		return m.pushToastDetail(toast.Errr, "Reading the schema failed", dbclient.Redact(sanitizeDBText(msg.err.Error())))
 	}
 	p := s.erPath
+	v, _ := s.dbVirtual(p.target.conn) // a path may follow virtual keys (db_virtual.go)
+	msg.schema = v.WithForeignKeys(msg.schema)
 	p.schema = msg.schema
 	var items []picker.Item
 	for _, t := range msg.schema.Tables {
