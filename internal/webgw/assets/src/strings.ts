@@ -469,7 +469,7 @@ export const S = {
   "db.query": "Query",
   "db.query_hint": "One SQL statement. Reads run here; changes need the laptop.",
   "db.run": "Run query",
-  "db.run_q": "Run this read on {conn}?",
+  "db.run_q": "Run this query on {conn}?",
   "db.exec_q": "This may change data on {conn}. Ask the laptop to run it?",
   "db.rows_meta": "{n} rows · {ms} ms",
   "db.masked": "Hidden values: {n}",
