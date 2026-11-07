@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func mustURL(t *testing.T, s string) *url.URL {
+func cookieURL(t *testing.T, s string) *url.URL {
 	t.Helper()
 	u, err := url.Parse(s)
 	if err != nil {
@@ -23,14 +23,14 @@ func mustURL(t *testing.T, s string) *url.URL {
 
 func TestCookieJarIsPerEnvironment(t *testing.T) {
 	s := NewCookieStore("")
-	u := mustURL(t, "https://api.example.com/v1/login")
+	u := cookieURL(t, "https://api.example.com/v1/login")
 	s.Jar("dev").SetCookies(u, []*http.Cookie{{Name: "sid", Value: "d1"}})
 	s.Jar("prod").SetCookies(u, []*http.Cookie{{Name: "sid", Value: "p1"}})
 
-	if got := s.Jar("dev").Cookies(mustURL(t, "https://api.example.com/v1/me")); len(got) != 1 || got[0].Value != "d1" {
+	if got := s.Jar("dev").Cookies(cookieURL(t, "https://api.example.com/v1/me")); len(got) != 1 || got[0].Value != "d1" {
 		t.Fatalf("dev cookies = %v, want sid=d1", got)
 	}
-	if got := s.Jar("prod").Cookies(mustURL(t, "https://api.example.com/v1/me")); len(got) != 1 || got[0].Value != "p1" {
+	if got := s.Jar("prod").Cookies(cookieURL(t, "https://api.example.com/v1/me")); len(got) != 1 || got[0].Value != "p1" {
 		t.Fatalf("prod cookies = %v, want sid=p1", got)
 	}
 	if got := s.Jar("").Cookies(u); len(got) != 0 {
@@ -41,7 +41,7 @@ func TestCookieJarIsPerEnvironment(t *testing.T) {
 func TestCookieJarMatchesDomainPathAndSecure(t *testing.T) {
 	s := NewCookieStore("")
 	j := s.Jar("dev")
-	j.SetCookies(mustURL(t, "https://www.example.com/app/login"), []*http.Cookie{
+	j.SetCookies(cookieURL(t, "https://www.example.com/app/login"), []*http.Cookie{
 		{Name: "host", Value: "1"},                                   // host only, path /app
 		{Name: "wide", Value: "2", Domain: "example.com", Path: "/"}, // all subdomains
 		{Name: "sec", Value: "3", Path: "/", Secure: true},
@@ -49,7 +49,7 @@ func TestCookieJarMatchesDomainPathAndSecure(t *testing.T) {
 	})
 	names := func(u string) map[string]bool {
 		out := map[string]bool{}
-		for _, c := range j.Cookies(mustURL(t, u)) {
+		for _, c := range j.Cookies(cookieURL(t, u)) {
 			out[c.Name] = true
 		}
 		return out
@@ -71,7 +71,7 @@ func TestCookieJarMatchesDomainPathAndSecure(t *testing.T) {
 func TestCookieJarExpiredAndMaxAgeDelete(t *testing.T) {
 	s := NewCookieStore("")
 	j := s.Jar("dev")
-	u := mustURL(t, "https://example.com/")
+	u := cookieURL(t, "https://example.com/")
 	j.SetCookies(u, []*http.Cookie{{Name: "a", Value: "1"}, {Name: "b", Value: "2"}})
 	j.SetCookies(u, []*http.Cookie{{Name: "a", Value: "", MaxAge: -1}})
 	j.SetCookies(u, []*http.Cookie{{Name: "old", Value: "x", Expires: time.Now().Add(-time.Hour)}})
@@ -83,7 +83,7 @@ func TestCookieJarExpiredAndMaxAgeDelete(t *testing.T) {
 
 func TestCookieStoreEditAndDelete(t *testing.T) {
 	s := NewCookieStore("")
-	u := mustURL(t, "https://example.com/")
+	u := cookieURL(t, "https://example.com/")
 	s.Jar("dev").SetCookies(u, []*http.Cookie{{Name: "sid", Value: "old"}, {Name: "theme", Value: "dark"}})
 	c := s.List("dev")[0]
 	if c.Name != "sid" {
@@ -112,7 +112,7 @@ func TestCookieStoreEditAndDelete(t *testing.T) {
 func TestCookieStorePersistsPrivateFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "http", "cookies.json")
 	s := NewCookieStore(path)
-	s.Jar("dev").SetCookies(mustURL(t, "https://example.com/"), []*http.Cookie{
+	s.Jar("dev").SetCookies(cookieURL(t, "https://example.com/"), []*http.Cookie{
 		{Name: "sid", Value: "v1", Expires: time.Now().Add(time.Hour)},
 		{Name: "session", Value: "v2"},
 	})
