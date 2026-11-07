@@ -25,6 +25,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/workflow/run"
 	"github.com/amin-jalali/termocode/internal/workflow/schedule"
 	"github.com/amin-jalali/termocode/internal/workflow/source"
+	"github.com/amin-jalali/termocode/internal/workflow/trigger"
 	"github.com/amin-jalali/termocode/internal/workflow/wire"
 )
 
@@ -90,6 +91,12 @@ type wfxState struct {
 	// notOwner: another process has it (no schedules, no resume here).
 	owner    *ledger.Owner
 	notOwner bool
+	// trig polls and serves the event triggers (workflows_triggers.go;
+	// nil while no workflow has one); trigQueue are the events whose
+	// card waits (the first is on the card); trigRecent the last events.
+	trig       *wfxTrigHost
+	trigQueue  []trigger.Event
+	trigRecent []wfxTrigSeen
 }
 
 // wfxLive is a run of this process.
@@ -603,7 +610,22 @@ func (m *Model) wfxStartRun(e wire.Entry, dry, show bool) (string, *run.Handle, 
 
 // wfxStartRunFrom is wfxStartRun that may continue a recovered run file.
 func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFile) (string, *run.Handle, tea.Cmd, error) {
+	return m.wfxStartRunWith(e, dry, show, resume, wfxRunOpts{})
+}
+
+// wfxRunOpts are the extras of a triggered run (CMP-38).
+type wfxRunOpts struct {
+	vars map[string]any // the run's vars over the file's (trigger_*)
+	dir  string         // the run works here (a new agent worktree); "" is the workspace
+}
+
+// wfxStartRunWith is wfxStartRunFrom with vars and a working dir.
+func (m *Model) wfxStartRunWith(e wire.Entry, dry, show bool, resume *run.RunFile, opts wfxRunOpts) (string, *run.Handle, tea.Cmd, error) {
 	st := m.wfxS()
+	ws := st.ws
+	if opts.dir != "" {
+		ws = opts.dir
+	}
 	if !dry && e.File != nil {
 		if why := wfxPolicy().Blocked(e.File); why != "" {
 			return "", nil, nil, errors.New("blocked: " + why)
@@ -646,14 +668,14 @@ func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFil
 	if mc != nil {
 		tools, check = mc, mc
 	}
-	src := &source.Sources{Workspace: st.ws, Tools: tools, GH: ghci.DefaultRunner(source.DefaultGitHubTimeout), Databases: wfDB{root: st.ws}}
+	src := &source.Sources{Workspace: ws, Tools: tools, GH: ghci.DefaultRunner(source.DefaultGitHubTimeout), Databases: wfDB{root: st.ws}}
 	if s, err := m.secretStore(); err == nil && s != nil {
 		src.Secrets = s
 	}
 	ms := wfxMessenger(id, block)
 	ms.Tools = tools
 	cfg := wire.Config{
-		Workspace: st.ws, Root: st.root, Entry: e, RunID: id, Dry: dry, Resume: resume,
+		Workspace: ws, Root: st.root, Entry: e, RunID: id, Dry: dry, Resume: resume, Vars: opts.vars,
 		Src: src, Tools: check, AI: m.wfxAIEnv(), Exec: wfxExec,
 		Gate: func(ctx context.Context, a wire.GateAsk) (wire.GateDecision, error) { return ask(ctx, a, false) },
 		AskTool: func(ctx context.Context, c run.AskCall) (bool, error) {
@@ -694,7 +716,7 @@ func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFil
 			}
 		},
 	}
-	gh := newWFXGitHub(st.ws)
+	gh := newWFXGitHub(ws)
 	cfg.PR, cfg.GitHubComment, cfg.Find = gh.PR, gh.Comment, gh.Find
 	cfg.ParallelMax, cfg.AgentSandbox = wfxRunSettings()
 	cfg.AgentOSSandbox = agentOSSandboxOn()

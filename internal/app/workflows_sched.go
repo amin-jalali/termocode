@@ -81,6 +81,7 @@ func (m *Model) wfxSchedStop() {
 	if m.wfx != nil && m.wfx.sched != nil {
 		m.wfx.sched.s.Stop()
 	}
+	m.wfxTrigStop()
 }
 
 // wfxSchedWanted are the workflows that should be scheduled now.
@@ -98,9 +99,15 @@ func (m *Model) wfxSchedWanted() map[string]wire.Entry {
 	return want
 }
 
-// wfxSchedSync adds and removes jobs so they match the list. It makes the
-// scheduler the first time a job is wanted and returns its listen cmd.
+// wfxSchedSync makes the scheduler and the event triggers
+// (workflows_triggers.go) match the list.
 func (m *Model) wfxSchedSync() tea.Cmd {
+	return tea.Batch(m.wfxSchedSyncJobs(), m.wfxTrigSync())
+}
+
+// wfxSchedSyncJobs adds and removes jobs so they match the list. It makes the
+// scheduler the first time a job is wanted and returns its listen cmd.
+func (m *Model) wfxSchedSyncJobs() tea.Cmd {
 	st := m.wfxS()
 	want := m.wfxSchedWanted()
 	if len(want) == 0 && st.sched == nil {
@@ -264,6 +271,9 @@ func (h *wfxSchedHost) record(ev schedule.Event) {
 
 // handleWfxSchedMsg handles the scheduler's messages. ok=false: not ours.
 func (m *Model) handleWfxSchedMsg(msg tea.Msg) (tea.Cmd, bool) {
+	if cmd, ok := m.handleWfxTrigMsg(msg); ok {
+		return cmd, true
+	}
 	switch msg := msg.(type) {
 	case wfxBootMsg:
 		return m.wfxBoot(), true

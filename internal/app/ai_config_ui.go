@@ -311,6 +311,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerRaceRestack(id), true
 	case confirmKindWorkflowGate: // workflow_gate.go
 		return m.answerWorkflowGate(id), true
+	case confirmKindWorkflowTrigger, confirmKindWorkflowTriggerList: // workflows_triggers.go
+		return m.answerWorkflowTrigger(id), true
 	case confirmKindWorkflowRun, confirmKindWorkflowDry, confirmKindWorkflowTrust, confirmKindWorkflowOnOff, confirmKindWorkflowStop,
 		confirmKindWorkflowUndo, confirmKindWorkflowBudget, confirmKindWorkflowOffStop: // workflows_state.go, workflows_trust.go
 		return m.answerWorkflowCard(id), true
@@ -384,6 +386,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAIToolConfirm("deny")
 	case confirmKindWorkflowGate: // Esc denies the write
 		return m.answerWorkflowGate("deny")
+	case confirmKindWorkflowTrigger: // Esc: Cancel (the next event's card comes)
+		return m.answerWorkflowTrigger("cancel")
 	case confirmKindAIPlan: // G-PLAN: Esc denies the plan
 		return m.answerAIPlan("deny")
 	case confirmKindAIWorktreeConflict, confirmKindAIWorktreeDiscard:

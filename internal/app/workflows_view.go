@@ -401,6 +401,9 @@ func (m *Model) wfxFileLines(name string, w int, now time.Time) []wfxLine {
 	}
 	mark, word, tint := m.wfxDot(e)
 	when := "by hand"
+	if e.File != nil && len(e.File.Triggers) > 0 {
+		when = fmt.Sprintf("on %d trigger(s)", len(e.File.Triggers))
+	}
 	if e.File != nil && e.File.Schedule != nil {
 		sc := e.File.Schedule
 		when = strings.TrimSpace(firstNonEmpty(sc.Cron, sc.Preset+" "+sc.Time) + " " + sc.TZ)
@@ -423,6 +426,12 @@ func (m *Model) wfxFileLines(name string, w int, now time.Time) []wfxLine {
 		}
 		out = append(out, wfxLine{" FILE      " + wfxRel(e), "dim"})
 		return append(out, wfxRule(w), wfxLine{" [Edit file (e)] [Back (Esc)]", "dim"})
+	}
+	if len(e.File.Triggers) > 0 {
+		out = append(out, wfxLine{" TRIGGERS  (Workflows: Trigger Events… lists what came in)", "head"})
+		for _, t := range e.File.Triggers {
+			out = append(out, wfxLine{"   " + wfxTrigWords(t), ""})
+		}
 	}
 	out = append(out, wfxLine{" STEPS", "head"})
 	var add func(steps []workflow.Step, depth int)

@@ -2735,6 +2735,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `workflow-new` | AI: New Workflow… | never | starts a chat with the user; the AI drafts workflows with workflow_draft |
 | `workflow-run` | Workflows: Run Selected… | confirm (run) |   |
 | `workflow-stop` | Workflows: Stop Selected Run… | confirm (run) |   |
+| `workflow-triggers` | Workflows: Trigger Events… | auto |   |
 | `workflow-undo-write` | Workflows: Undo a Write of Selected Run… | confirm (always asks) |   |
 | `workflows` | Workflows: Open | auto |   |
 | `workspace-add-folder` | Workspace: Add Folder... | never | opens a picker or prompt that only the user can answer; use a typed tool (workspace_folders) |
@@ -2926,7 +2927,9 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `workflows_history_days` | confirm (settings) |   |
 | `workflows_missed_grace_min` | confirm (settings) |   |
 | `workflows_parallel_max` | confirm (settings) |   |
+| `workflows_trigger_poll_min` | confirm (settings) |   |
 | `workflows_wait_hours` | confirm (settings) |   |
 | `worktree_auto_archive_days` | never | archives worktree folders by itself; only the user turns it on |
+| `workflows_webhook_port` | never | opens a port that starts workflows from outside; only the user changes it |
 | `worktree_dir` | never | where new worktrees go on disk; a file-only switch the user edits in config.json |
 | `worktree_max` | never | archives worktree folders by itself; only the user turns it on |

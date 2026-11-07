@@ -137,6 +137,20 @@ func (p Policy) Blocked(f *File) string {
 	return strings.Join(why, "; ")
 }
 
+// DeniesUnattended reports whether a policy file denies schedules. An
+// event trigger with "ask": false runs unattended too, so under such a
+// policy it asks on a card like "ask": true (CMP-38).
+func (p Policy) DeniesUnattended() bool {
+	for _, pf := range p.files {
+		for _, r := range pf.deny {
+			if r.Schedule {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // BlockedSchedule says why f may not run on its schedule ("" = it may).
 func (p Policy) BlockedSchedule(f *File) string {
 	var why []string

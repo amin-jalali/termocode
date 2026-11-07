@@ -145,6 +145,59 @@ it will run by itself; Cancel is first.
 - Every write still asks on its card, unless you allowed it for this
   version of the file.
 
+## Triggers
+
+Add `on` to the file to start the workflow when something happens
+outside. Like a schedule, triggers work only while the workflow is
+trusted and on (`o`).
+
+```jsonc
+"on": [
+  { "github": "issue_labeled", "labels": ["agent"], "worktree": true, "base": "main" },
+  { "github": "ci_failed", "branch": "main" },
+  { "github": "mention", "text": "@termocode" },
+  { "webhook": "deploy", "from": "slack" }
+]
+```
+
+- `github` is `issue_opened`, `issue_labeled`, `pr_opened`, `mention`
+  or `ci_failed`. termocode asks `gh` (your own login) every
+  `workflows_trigger_poll_min` (5) minutes. `labels` keeps only items
+  with one of them; `repo` ("owner/name") reads another repo; `branch`
+  keeps only CI runs on that branch. A `mention` looks for its `text`
+  in the text and comments of open issues and pull requests.
+- The first look only notes what is already there. Old issues never
+  start runs when you turn a trigger on.
+- `webhook` takes `POST /hooks/<name>` on
+  `127.0.0.1:workflows_webhook_port`. The port is 0 (off) until you set
+  it. Put a tunnel or a reverse proxy in front to reach it from
+  outside. `from` is `github`, `slack`, `linear`, `jira` or `generic`
+  (any JSON with `title`, `body`, `url`, `key`, `labels`).
+- Every webhook must be signed. Store the signing secret in the secret
+  store as `workflow-hook.<name>` (**AI: Secret Store…**); the workflow file
+  never holds it. GitHub, Slack and Linear use their own signature
+  headers. Jira and other senders use `X-Termocode-Signature:
+  sha256=<hmac of the body>`, or `Authorization: Bearer <secret>` when
+  they cannot sign. A request without a good signature is refused; a
+  hook takes at most 30 requests a minute; a sent-again event runs once.
+- Each event shows a card first: what came in, from whom, and where the
+  run works. Cancel is first. `"ask": false` starts the run without a
+  card, like a schedule does (an admin policy that denies schedules
+  makes it ask again).
+- The run gets the event as vars: `trigger_kind`, `trigger_title`,
+  `trigger_body`, `trigger_url`, `trigger_number`, `trigger_author`,
+  `trigger_labels`, `trigger_branch`, `trigger_repo`, `trigger_key`.
+  Use them in prompts as `{{vars.trigger_title}}`. This text comes from
+  outside: it is never a command.
+- `"worktree": true` runs the whole run in a new agent worktree from
+  `base` (empty: the current commit). The worktree list shows it, and
+  `trigger_worktree` and `trigger_worktree_branch` name it.
+- The workflow's page lists its triggers. **Workflows: Trigger Events…**
+  in the palette shows what came in and what became of it, and answers
+  events that wait while another card was open.
+- Every write still asks on its card, unless you allowed it for this
+  version of the file.
+
 ## After a crash or restart
 
 A run that was going when termocode ended is marked `interrupted`. When
