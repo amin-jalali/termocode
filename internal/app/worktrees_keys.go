@@ -41,6 +41,10 @@ func worktreeKeyRows() []confirm.KeyRow {
 		[]string{"D", "delete the worktree and its branch (asks, step by step)"},
 		[]string{"C", "clean up: tick merged and old worktrees, archive them together"},
 		[]string{"s", "sleep: end its agent tabs, move it under ASLEEP · again: wake it"},
+		[]string{"Watch"},
+		[]string{"v", "preview: its agent's live screen in the panel, the list keeps the keys · again: close"},
+		[]string{"V", "agent grid: up to 4 agent screens of this window side by side"},
+		[]string{"Enter", "in the preview: jump into the selected agent's tab · Tab picks a tile · g grid"},
 		[]string{"List"},
 		[]string{"f", "filter: All, Mine, Agents, Dirty, Asleep, External"},
 		[]string{"/", "filter by name · Esc clears"},
@@ -71,6 +75,8 @@ func worktreePaletteItems() []picker.Item {
 		{ID: wtArchivePaletteID, Title: "Worktree: Archive or Restore Selected…"},
 		{ID: wtDeletePaletteID, Title: "Worktree: Delete Selected…"},
 		{ID: wtCleanupPaletteID, Title: "Worktree: Clean Up…"},
+		{ID: wtPreviewPaletteID, Title: "Worktree: Preview Agent Screen"},
+		{ID: wtPreviewGridPaletteID, Title: "Worktree: Preview Agent Grid"},
 	}
 }
 
@@ -112,6 +118,10 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.worktreeDelete(), true
 	case wtCleanupPaletteID:
 		return m.worktreeCleanup(), true
+	case wtPreviewPaletteID:
+		return m.worktreePreview(false), true
+	case wtPreviewGridPaletteID:
+		return m.worktreePreview(true), true
 	}
 	return nil, false
 }
@@ -187,6 +197,10 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.worktreeDelete()
 	case "C":
 		return m, m.worktreeCleanup()
+	case "v":
+		return m, m.worktreePreview(false)
+	case "V":
+		return m, m.worktreePreview(true)
 	case "f":
 		m.worktreeNextFilter()
 	case "R":
@@ -220,4 +234,5 @@ func (m *Model) wtMove(items []wtItem, rows []wtRow, cur, d int) {
 	st.cursorPath = items[rows[cards[at]].item].e.Path
 	st.detail = false
 	st.touch()
+	m.wtPreviewMoved() // CMP-8: the preview follows the cursor
 }

@@ -63,7 +63,7 @@ func (m Model) wtTabs() []wtTabAgent {
 		if t.Worktree != "" { // an agent started in a worktree belongs to it (AGX-2)
 			cwd = t.Worktree
 		}
-		out = append(out, wtTabAgent{name: t.agentTitle(), cwd: cwd, state: t.AgentState})
+		out = append(out, wtTabAgent{name: t.agentTitle(), cwd: cwd, state: t.AgentState, buf: t.BufID, asleep: t.Hibernated})
 	}
 	return out
 }

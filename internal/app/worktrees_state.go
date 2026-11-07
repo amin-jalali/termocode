@@ -70,6 +70,7 @@ type wtState struct {
 	archiveAsk *wtArchivePending // the open archive card (worktrees_archive.go)
 	del        *wtDeletePending  // a delete in its steps (worktrees_delete.go)
 	cleanup    *wtCleanup        // the open cleanup list (worktrees_cleanup.go)
+	preview    *wtPreviewState   // the open agent preview (worktrees_preview.go)
 
 	seq    uint64
 	render struct {

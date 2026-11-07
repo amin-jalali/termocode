@@ -716,6 +716,8 @@ missing	worktree-new-child	Worktrees|M
 missing	worktree-notes	Worktrees|M
 missing	worktree-open	Worktrees|M
 missing	worktree-pin	Worktrees|M
+missing	worktree-preview	Worktrees|M
+missing	worktree-preview-grid	Worktrees|M
 missing	worktree-setup-log	Worktrees|M
 missing	worktree-sleep	Worktrees|M
 missing	worktree-view	Worktrees|M

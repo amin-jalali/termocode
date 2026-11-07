@@ -38,6 +38,8 @@ repository's git folder, never in your project.
 | `A` | Adopt a worktree made outside termocode |
 | `F` | Forget a worktree whose folder is gone |
 | `s` | Sleep: end its agent tabs and move it under ASLEEP; again: wake it |
+| `v` | Preview: the agent's live screen in the panel (see below); again: close |
+| `V` | Agent grid: up to 4 agent screens side by side |
 | `x` | Archive: remove the folder, keep the branch; on an archived row: restore |
 | `D` | Delete the worktree and its branch (asks step by step) |
 | `C` | Clean up: tick merged and old worktrees, archive them together |
@@ -45,6 +47,32 @@ repository's git folder, never in your project.
 | `/` | Filter by name (`Esc` clears) |
 | `R` | Read every worktree again |
 | `?` | Show these keys |
+
+## Watch agents: preview and grid
+
+`v` (**Worktree: Preview Agent Screen**) opens a **PREVIEW** tab in the
+bottom panel. It shows the live screen of the agent that works in the
+selected worktree, read only. The list keeps the keys: move with `j` and
+`k` and the preview follows the cursor.
+
+`V` (**Worktree: Preview Agent Grid**) shows an **AGENT GRID** instead:
+up to 4 agent screens of this window side by side (2 by 2 when there are
+3 or 4), the selected worktree's agent first.
+
+| Key in the panel | What it does |
+|---|---|
+| `Tab` `←` `→` | Pick a tile |
+| `Enter` or a click | Jump into that agent's terminal tab |
+| `g` | Switch between one screen and the grid |
+| `r` | Read the screens again now |
+| `Esc` | Give the keys back |
+
+- The screens are read twice a second while the tab is on show, never
+  while it is hidden. Nothing is typed into the agents.
+- An agent of another termocode window has no screen here; the preview
+  says so, and **Ctrl+Shift+J** jumps to it.
+- A hibernated agent tab shows as **asleep**; `Enter` wakes it.
+- `v` or `V` again (the same way) closes the tab.
 
 ## New worktree
 
