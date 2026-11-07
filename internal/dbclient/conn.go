@@ -170,7 +170,7 @@ func defaultPort(d string) int {
 	case "oracle":
 		return 1521
 	}
-	return 0
+	return httpEngineDefaultPort(d, false)
 }
 func normDriver(d string) string {
 	switch d {

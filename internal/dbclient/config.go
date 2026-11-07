@@ -111,7 +111,7 @@ func ParseConfig(data []byte, source, file, root string) ([]Conn, error) {
 		if source == SourceUser && (literalPassword(c.Password) || urlHasPassword(c.URL)) {
 			c.Warning = "literal password in user config; use the secret store"
 		}
-		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "clickhouse" && c.Driver != "cassandra" && c.Driver != "libsql" {
+		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "clickhouse" && c.Driver != "cassandra" && c.Driver != "libsql" && !IsHTTPEngine(c.Driver) {
 			c.Problem = "unsupported database driver"
 		}
 		if c.Options != nil && c.Problem == "" {
@@ -185,7 +185,7 @@ func Validate(c Conn) error {
 		return fmt.Errorf("invalid connection id")
 	}
 	driver := normDriver(c.Driver)
-	if driver != "postgres" && driver != "mysql" && driver != "sqlite" && driver != "redis" && driver != "clickhouse" && driver != "cassandra" && driver != "libsql" {
+	if driver != "postgres" && driver != "mysql" && driver != "sqlite" && driver != "redis" && driver != "clickhouse" && driver != "cassandra" && driver != "libsql" && !IsHTTPEngine(driver) {
 		return fmt.Errorf("unsupported database driver")
 	}
 	if driver == "libsql" {
@@ -195,6 +195,20 @@ func Validate(c Conn) error {
 			return fmt.Errorf("libsql server URL is required")
 		}
 		if c.Source == SourceProject && (literalPassword(c.Password) || urlHasPassword(c.URL) || urlHasToken(c.URL)) {
+			return fmt.Errorf("password must be a reference")
+		}
+		return nil
+	}
+	if IsHTTPEngine(driver) {
+		// An HTTP engine (DBX-68..71): a server address or an http(s)
+		// URL; the port defaults to the engine's.
+		if c.Host == "" && c.URL == "" {
+			return fmt.Errorf("server address is required")
+		}
+		if c.Port < 0 || c.Port > 65535 {
+			return fmt.Errorf("host and valid port are required")
+		}
+		if c.Source == SourceProject && (literalPassword(c.Password) || urlHasPassword(c.URL)) {
 			return fmt.Errorf("password must be a reference")
 		}
 		return nil

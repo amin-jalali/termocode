@@ -591,6 +591,23 @@ func (m *Model) databasePrepareRun(r *dbRun) tea.Cmd {
 	if c.Driver == "redis" {
 		return m.databaseRedisPrepare(r)
 	}
+	if e, ok := dbclient.HTTPEngineByID(c.Driver); ok && e.LineBased {
+		// etcd and Memcached (DBX-69): one command per line.
+		r.statements = dbLineCommands(r.sql, r.line)
+		if r.line < 0 {
+			r.line = -r.line
+		}
+		if len(r.statements) == 0 {
+			return m.pushToastDetail(toast.Info, "No command at the cursor", "")
+		}
+		r.line = max(r.line, 1)
+		r.index = 0
+		r.sql = r.statements[0]
+		s := m.dbConsole()
+		s.batchSeq++
+		r.batch = s.batchSeq
+		return m.databaseReviewRun(r)
+	}
 	if r.line > 0 && r.cursor > 0 && r.plan == nil {
 		if r.mode == dbclient.ExecAsk.String() {
 			return m.databaseExecAsk(r, c.Driver)
@@ -1281,4 +1298,27 @@ func (m *Model) databaseHistoryDelete(id string) tea.Cmd {
 	}
 	s.history = kept
 	return m.pushToast(toast.Info, "History entry deleted")
+}
+
+// dbLineCommands is the command on line (> 0) of text, or every command
+// line (line <= 0), without blank and comment lines.
+func dbLineCommands(text string, line int) []string {
+	lines := strings.Split(text, "\n")
+	keep := func(l string) bool {
+		t := strings.TrimSpace(l)
+		return t != "" && !strings.HasPrefix(t, "--") && !strings.HasPrefix(t, "#") && !strings.HasPrefix(t, "//")
+	}
+	if line > 0 {
+		if line <= len(lines) && keep(lines[line-1]) {
+			return []string{strings.TrimSpace(lines[line-1])}
+		}
+		return nil
+	}
+	var out []string
+	for _, l := range lines {
+		if keep(l) {
+			out = append(out, strings.TrimSpace(l))
+		}
+	}
+	return out
 }

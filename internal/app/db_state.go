@@ -733,7 +733,13 @@ func dbOpenDriverSession(ctx context.Context, c dbclient.Conn, root, password st
 		// A remote libSQL server (DBX-64): the password is its token.
 		sess, err = dbclient.NewLibSQLSession(c, password)
 	default:
-		err = os.ErrInvalid
+		if dbclient.IsHTTPEngine(c.Driver) {
+			// Couchbase, search, time-series, graph and key-value
+			// servers over their own HTTP API (DBX-68..71).
+			sess, err = dbclient.OpenHTTPEngine(c, password)
+		} else {
+			err = os.ErrInvalid
+		}
 	}
 	if err == nil {
 		if err = sess.Ping(ctx); err != nil {
@@ -779,7 +785,7 @@ func dbTestCommandSSH(c dbclient.Conn, password, root string, generation uint64,
 		defer cancel()
 		start := time.Now()
 		var err error
-		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "clickhouse" && c.Driver != "cassandra" && c.Driver != "libsql" {
+		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "clickhouse" && c.Driver != "cassandra" && c.Driver != "libsql" && !dbclient.IsHTTPEngine(c.Driver) {
 			err = fmt.Errorf("this connection type is not available yet")
 		}
 		var sess dbclient.Session
