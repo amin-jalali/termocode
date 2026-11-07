@@ -6,7 +6,8 @@
         "id": "bb40879b7896",
         "name": "app",
         "state": "here",
-        "where": "~/src/app"
+        "where": "~/src/app",
+        "ws": "bb40879b78960cda"
       }
     ],
     "state": "loading"
@@ -20,45 +21,8 @@
           "opened_at": 1700000000000,
           "recent": true,
           "state": "here",
-          "where": "~/src/app"
-        },
-        {
-          "id": "85c426b072ad",
-          "name": "api",
-          "opened_at": 1710000000000,
-          "recent": true,
-          "service": true,
-          "state": "running",
-          "where": "~/src/api",
-          "working": 1
-        },
-        {
-          "id": "1b90dbd2d3bc",
-          "name": "web",
-          "state": "running",
-          "where": "web"
-        },
-        {
-          "id": "3f34b27d8967",
-          "name": "notes",
-          "opened_at": 1690000000000,
-          "recent": true,
-          "state": "asleep",
-          "where": "notes"
-        }
-      ],
-      "state": "ready",
-      "working": 1
-    },
-    {
-      "projects": [
-        {
-          "id": "bb40879b7896",
-          "name": "app",
-          "opened_at": 1700000000000,
-          "recent": true,
-          "state": "here",
-          "where": "~/src/app"
+          "where": "~/src/app",
+          "ws": "bb40879b78960cda"
         },
         {
           "id": "85c426b072ad",
@@ -69,13 +33,15 @@
           "state": "running",
           "waiting": 1,
           "where": "~/src/api",
-          "working": 1
+          "working": 1,
+          "ws": "85c426b072ad8343"
         },
         {
           "id": "1b90dbd2d3bc",
           "name": "web",
           "state": "running",
-          "where": "web"
+          "where": "web",
+          "ws": "1b90dbd2d3bcc59a"
         },
         {
           "id": "3f34b27d8967",
@@ -83,7 +49,8 @@
           "opened_at": 1690000000000,
           "recent": true,
           "state": "asleep",
-          "where": "notes"
+          "where": "notes",
+          "ws": "3f34b27d8967e876"
         }
       ],
       "state": "ready",
@@ -100,7 +67,8 @@
         "where": "~/src/app",
         "state": "here",
         "recent": true,
-        "opened_at": 1700000000000
+        "opened_at": 1700000000000,
+        "ws": "bb40879b78960cda"
       },
       {
         "id": "85c426b072ad",
@@ -111,13 +79,15 @@
         "recent": true,
         "working": 1,
         "waiting": 1,
-        "opened_at": 1710000000000
+        "opened_at": 1710000000000,
+        "ws": "85c426b072ad8343"
       },
       {
         "id": "1b90dbd2d3bc",
         "name": "web",
         "where": "web",
-        "state": "running"
+        "state": "running",
+        "ws": "1b90dbd2d3bcc59a"
       },
       {
         "id": "3f34b27d8967",
@@ -125,7 +95,8 @@
         "where": "notes",
         "state": "asleep",
         "recent": true,
-        "opened_at": 1690000000000
+        "opened_at": 1690000000000,
+        "ws": "3f34b27d8967e876"
       }
     ],
     "working": 1,
