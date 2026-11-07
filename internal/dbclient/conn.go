@@ -12,9 +12,12 @@ import (
 )
 
 type Conn struct {
-	ID          string            `json:"id"`
-	Name        string            `json:"name,omitempty"`
-	Driver      string            `json:"driver"`
+	ID     string `json:"id"`
+	Name   string `json:"name,omitempty"`
+	Driver string `json:"driver"`
+	// Preset names a PostgreSQL family database on the postgres driver
+	// ("cockroachdb", "redshift"; DBX-60). "" = plain, or the host's.
+	Preset      string            `json:"preset,omitempty"`
 	Host        string            `json:"host,omitempty"`
 	Port        int               `json:"port,omitempty"`
 	User        string            `json:"user,omitempty"`
@@ -102,6 +105,7 @@ func (c Conn) DSN(password string) string {
 		if password != "" {
 			u.User = url.UserPassword(user, password)
 		}
+		c.presetDSN(u)
 		return u.String()
 	}
 	u := url.URL{Scheme: "postgres", Host: netHost(c.Host, c.Port), Path: "/" + c.Database}
@@ -112,6 +116,7 @@ func (c Conn) DSN(password string) string {
 			u.User = url.User(c.User)
 		}
 	}
+	c.presetDSN(&u)
 	return u.String()
 }
 func netHost(h string, p int) string {
