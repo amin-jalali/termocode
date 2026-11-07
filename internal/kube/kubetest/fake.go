@@ -21,6 +21,10 @@
 //	logs.txt             answer of `logs …`
 //	pf-port.txt          the local port `port-forward` reports (43123)
 //	pf.err               `port-forward` fails with this stderr
+//	diff.txt             answer of `diff -f …` (present: exit 1 = changes)
+//	diff.err             `diff` fails with this stderr (exit 2)
+//	apply.txt            answer of `apply -f …` (default: "applied")
+//	apply.err            `apply` fails with this stderr (exit 1)
 //
 // Written by the script: argv.log (one call per line), env.log
 // (KUBECONFIG of each call, "|", then its argv), pf.pid (the pid of a
@@ -73,6 +77,14 @@ rollout)
   if [ -f "$D/restart.err" ]; then cat "$D/restart.err" >&2; exit 1; fi
   echo "deployment.apps/$3 restarted"; exit 0 ;;
 logs) cat "$D/logs.txt" 2>/dev/null; exit 0 ;;
+diff)
+  if [ -f "$D/diff.err" ]; then cat "$D/diff.err" >&2; exit 2; fi
+  if [ -f "$D/diff.txt" ]; then cat "$D/diff.txt"; exit 1; fi
+  exit 0 ;;
+apply)
+  if [ -f "$D/apply.err" ]; then cat "$D/apply.err" >&2; exit 1; fi
+  if [ -f "$D/apply.txt" ]; then cat "$D/apply.txt"; else echo applied; fi
+  exit 0 ;;
 port-forward)
   if [ -f "$D/pf.err" ]; then cat "$D/pf.err" >&2; exit 1; fi
   echo $$ > "$D/pf.pid"
