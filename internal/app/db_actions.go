@@ -59,6 +59,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-result-pin", Title: "Databases: Pin Result Tab"},
 		{ID: "db-export", Title: "Databases: Export Result…"},
 		{ID: "db-import-csv", Title: "Databases: Import CSV into Table…"},
+		{ID: "db-open-csv", Title: "Databases: Open CSV/TSV as Table…"},
 		{ID: "db-generate-data", Title: "Databases: Generate Test Data…"},
 		{ID: "db-compare-schemas", Title: "Databases: Compare Schemas…"},
 		{ID: "db-sessions", Title: "Databases: Show Sessions and Locks"},
@@ -107,6 +108,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseCommitKey(false), true
 	case "db-open-sessions":
 		return m.databaseSessionsPicker(), true
+	case "db-open-csv":
+		return m.databaseOpenCSVStart(), true
 	case "db-submit-changes":
 		return m.databaseSubmitCard(), true
 	case "db-revert-changes":

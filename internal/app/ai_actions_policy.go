@@ -398,6 +398,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-result-pin":                aiAuto(),
 	"db-export":                    aiNever(aiNoPicker + " (db_query + write_file)"),
 	"db-import-csv":                aiNever("importing rows is a write the user confirms (db_query)"),
+	"db-open-csv":                  aiNever("the user picks the file; the AI reads files with its own tools"),
 	"db-generate-data":             aiNever("it writes a script of rows the user reviews and runs"),
 	"db-compare-schemas":           aiNever(aiNoPicker),
 	"db-er-diagram":                aiNever(aiNoPicker),

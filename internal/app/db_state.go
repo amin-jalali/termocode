@@ -87,7 +87,8 @@ type dbState struct {
 	addFromURL          bool
 	menuRow             dbTreeRow
 	pendingDisconnectID string
-	closeSessionKey     string // the session Databases: Sessions… asks to close
+	closeSessionKey     string          // the session Databases: Sessions… asks to close
+	csvConns            []dbclient.Conn // session-only CSV/TSV copies (db_csv_open.go)
 	sessions            map[string]dbclient.Session
 	passwords           map[string]string
 	connectionEpochs    map[string]uint64
@@ -302,6 +303,9 @@ func (s *dbState) load(root string) {
 	}
 	if project != nil {
 		s.projectConns = project
+	}
+	for _, c := range s.csvConns {
+		conns = dbReplaceConn(conns, c)
 	}
 	s.conns = conns
 	for _, c := range conns {

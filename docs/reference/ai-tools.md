@@ -2080,6 +2080,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-history` | Databases: History… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-import-csv` | Databases: Import CSV into Table… | never | importing rows is a write the user confirms (db_query) |
 | `db-new-console` | Databases: New Console | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `db-open-csv` | Databases: Open CSV/TSV as Table… | never | the user picks the file; the AI reads files with its own tools |
 | `db-open-sessions` | Databases: Sessions… | never | the user's sessions and transactions |
 | `db-refresh` | Databases: Refresh | auto |   |
 | `db-result-pin` | Databases: Pin Result Tab | auto |   |
