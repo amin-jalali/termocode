@@ -38,6 +38,8 @@ repository's git folder, never in your project.
 | `A` | Adopt a worktree made outside termocode |
 | `F` | Forget a worktree whose folder is gone |
 | `s` | Sleep: end its agent tabs and move it under ASLEEP; again: wake it |
+| `T` | Its agent sessions; `Enter` shows the session's tab |
+| `S` | New agent session: one more agent in it, in its own tab |
 | `x` | Archive: remove the folder, keep the branch; on an archived row: restore |
 | `D` | Delete the worktree and its branch (asks step by step) |
 | `C` | Clean up: tick merged and old worktrees, archive them together |
@@ -130,6 +132,22 @@ tools. A note is one line of plain text, at most 500 characters, with
 secrets hidden; the 50 newest are kept. The card shows the last note and
 the status; `N` lists all notes with their times. A link from the command
 line shows a card first (**Deny** comes first).
+
+## Several agent sessions
+
+One worktree can have more than one agent at work: separate sessions on
+the same files, each in its own terminal tab.
+
+- `S` (**Worktree: New Agent Session in Selected…**) lists the installed
+  agents. The one you pick starts in the worktree in a new tab, even
+  when the same agent already runs there. **Agent: Start…** shows the
+  running tab instead.
+- A second session of the same agent gets a number in the tab bar:
+  **Claude Code 2**.
+- `T` (**Worktree: Agent Sessions of Selected…**) lists the sessions of
+  the worktree: the ones waiting for you first, then the working ones.
+  `Enter` shows the tab; the last row starts one more session.
+- The card counts every session. Close a session like any terminal tab.
 
 ## Sleep and wake
 

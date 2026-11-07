@@ -2485,6 +2485,10 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.openWorkspace(msg.ID)
 	case pickerKindWorktreeJump: // worktrees_jump.go
 		return m.onWorktreeJumpPicked(msg.ID)
+	case pickerKindWTSessions: // worktrees_sessions.go
+		return m.onWTSessionPicked(msg.ID)
+	case pickerKindWTSessionAgent: // worktrees_sessions.go
+		return m.onWTSessionAgentPicked(msg.ID)
 	case pickerKindWTCleanup: // worktrees_cleanup.go: a row ticks, the first row goes on
 		return m.onWTCleanupPicked(msg.ID)
 	case pickerKindWTRef: // worktrees_new.go: back to the dialog with the start point

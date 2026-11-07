@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -138,7 +139,16 @@ func (t terminalTab) agentTabName() string {
 		return l
 	}
 	if t.Account != "" { // AGX-13
-		return t.agentTitle() + " " + t.Account
+		return t.agentSessionTitle() + " " + t.Account
+	}
+	return t.agentSessionTitle()
+}
+
+// agentSessionTitle is the agent's title with its session number when
+// it is a second (or later) session in the same folder (CMP-28).
+func (t terminalTab) agentSessionTitle() string {
+	if t.SessionNo > 1 && t.Agent != "" {
+		return t.agentTitle() + " " + strconv.Itoa(t.SessionNo)
 	}
 	return t.agentTitle()
 }
@@ -328,6 +338,49 @@ func (m *Model) startAgentAs(a agents.Agent, label string) tea.Cmd {
 // startAgentRun is startAgent in folder dir, with a first task, as
 // account label.
 func (m *Model) startAgentRun(a agents.Agent, dir, task, label string) tea.Cmd {
+	return m.startAgentRunOpt(a, dir, task, label, false)
+}
+
+// startAgentSession starts one more session of a in dir, even when a
+// tab already runs it there (CMP-28: several sessions on one worktree).
+func (m *Model) startAgentSession(a agents.Agent, dir string) tea.Cmd {
+	return m.startAgentRunOpt(a, dir, "", "", true)
+}
+
+// agentRunningTab is the tab that already runs agent id in dir as
+// account label, to show instead of a second copy (-1 = start one;
+// always -1 for a new session).
+func agentRunningTab(tabs []terminalTab, id, dir, label string, again bool) int {
+	if again {
+		return -1
+	}
+	for i, t := range tabs {
+		if agentStartedIn(t, id, dir) && t.Account == label {
+			return i
+		}
+	}
+	return -1
+}
+
+// agentSessionNo is the number of a new session of agent id in dir as
+// account label: 0 when it is the only one, else one past the highest
+// (the first session counts as 1).
+func agentSessionNo(tabs []terminalTab, id, dir, label string) int {
+	top := 0
+	for _, t := range tabs {
+		if agentStartedIn(t, id, dir) && t.Account == label {
+			top = max(top, t.SessionNo, 1)
+		}
+	}
+	if top == 0 {
+		return 0
+	}
+	return top + 1
+}
+
+// startAgentRunOpt is startAgentRun; again starts a new session even
+// when a tab already runs the agent there.
+func (m *Model) startAgentRunOpt(a agents.Agent, dir, task, label string, again bool) tea.Cmd {
 	if m.nvim == nil {
 		return nil
 	}
@@ -339,12 +392,10 @@ func (m *Model) startAgentRun(a agents.Agent, dir, task, label string) tea.Cmd {
 	if !m.termOpen && len(m.hiddenTerminalTabs) > 0 {
 		m.toggleTerminalPanel() // bring the hidden tabs back first
 	}
-	for i, t := range m.terminalTabs {
-		if agentStartedIn(t, a.ID, dir) && t.Account == label {
-			m.showPanelTab(panelKindTerminal)
-			m.switchTerminalTab(i)
-			return nil
-		}
+	if i := agentRunningTab(m.terminalTabs, a.ID, dir, label, again); i >= 0 {
+		m.showPanelTab(panelKindTerminal)
+		m.switchTerminalTab(i)
+		return nil
 	}
 	if card, c := m.agentMCPCardIn(a, dir); card != nil {
 		card.task = task
@@ -378,11 +429,13 @@ func (m *Model) launchAgentRun(a agents.Agent, dir, task, label string) tea.Cmd 
 	if _, err := agentAccountLine(a, label, a.Bin); err != nil {
 		return m.pushToastDetail(toast.Errr, a.Title+" not started", err.Error())
 	}
+	no := agentSessionNo(m.terminalTabs, a.ID, dir, label)
 	m.newTerminalTabIn(dir)
 	t := m.activeTerminalTab()
 	if t == nil {
 		return nil
 	}
+	t.SessionNo = no
 	// Without shell integration the mark stays until the tab closes;
 	// with it, the shell's command-end clears it (term_integration.go).
 	t.Agent, t.AgentState, t.Account = a.ID, agents.StartState(a.ID), label

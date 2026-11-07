@@ -41,6 +41,9 @@ func worktreeKeyRows() []confirm.KeyRow {
 		[]string{"D", "delete the worktree and its branch (asks, step by step)"},
 		[]string{"C", "clean up: tick merged and old worktrees, archive them together"},
 		[]string{"s", "sleep: end its agent tabs, move it under ASLEEP · again: wake it"},
+		[]string{"Sessions"},
+		[]string{"T", "its agent sessions: Enter shows the tab"},
+		[]string{"S", "new agent session: one more agent in it, its own tab"},
 		[]string{"List"},
 		[]string{"f", "filter: All, Mine, Agents, Dirty, Asleep, External"},
 		[]string{"/", "filter by name · Esc clears"},
@@ -68,6 +71,8 @@ func worktreePaletteItems() []picker.Item {
 		{ID: wtAdoptPaletteID, Title: "Worktree: Adopt Selected"},
 		{ID: wtForgetPaletteID, Title: "Worktree: Forget Gone Selected"},
 		{ID: wtSleepPaletteID, Title: "Worktree: Sleep or Wake Selected"},
+		{ID: wtSessionsPaletteID, Title: "Worktree: Agent Sessions of Selected…"},
+		{ID: wtSessionNewPaletteID, Title: "Worktree: New Agent Session in Selected…"},
 		{ID: wtArchivePaletteID, Title: "Worktree: Archive or Restore Selected…"},
 		{ID: wtDeletePaletteID, Title: "Worktree: Delete Selected…"},
 		{ID: wtCleanupPaletteID, Title: "Worktree: Clean Up…"},
@@ -106,6 +111,10 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.worktreeForget(), true
 	case wtSleepPaletteID:
 		return m.worktreeSleep(), true
+	case wtSessionsPaletteID:
+		return m.worktreeSessions(), true
+	case wtSessionNewPaletteID:
+		return m.worktreeNewSession(), true
 	case wtArchivePaletteID:
 		return m.worktreeArchive(), true
 	case wtDeletePaletteID:
@@ -181,6 +190,10 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.worktreeForget()
 	case "s":
 		return m, m.worktreeSleep()
+	case "T":
+		return m, m.worktreeSessions()
+	case "S":
+		return m, m.worktreeNewSession()
 	case "x":
 		return m, m.worktreeArchive()
 	case "D":

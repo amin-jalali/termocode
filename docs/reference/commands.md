@@ -831,12 +831,14 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | Worktree: Add Selected as Folder | `worktree-add-folder` |   |   |
 | Worktree: Adopt Selected | `worktree-adopt` |   |   |
+| Worktree: Agent Sessions of Selected… | `worktree-sessions` |   |   |
 | Worktree: Archive or Restore Selected… | `worktree-archive` |   |   |
 | Worktree: Clean Up… | `worktree-cleanup` |   |   |
 | Worktree: Delete Selected… | `worktree-delete` |   |   |
 | Worktree: Forget Gone Selected | `worktree-forget` |   |   |
 | Worktree: Jump… | `worktree-jump` | `Ctrl+Shift+J` | `Ctrl+Shift+J` |
 | Worktree: Link Issue or PR… | `worktree-link` |   |   |
+| Worktree: New Agent Session in Selected… | `worktree-new-session` |   |   |
 | Worktree: New Child of Selected… | `worktree-new-child` |   |   |
 | Worktree: New… | `worktree-new` |   |   |
 | Worktree: Next Filter | `worktree-filter` |   |   |

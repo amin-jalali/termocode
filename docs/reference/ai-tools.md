@@ -2538,9 +2538,11 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `worktree-link` | Worktree: Link Issue or PR… | never | links are the user's choice; the AI reads them with worktrees_list |
 | `worktree-new` | Worktree: New… | never | opens a picker or prompt that only the user can answer; use a typed tool (worktree_create comes later) |
 | `worktree-new-child` | Worktree: New Child of Selected… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `worktree-new-session` | Worktree: New Agent Session in Selected… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks the agent |
 | `worktree-notes` | Worktree: Show Notes of Selected | auto |   |
 | `worktree-open` | Worktree: Open Selected | never | ends or resets the user's session |
 | `worktree-pin` | Worktree: Pin or Unpin Selected | auto |   |
+| `worktree-sessions` | Worktree: Agent Sessions of Selected… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `worktree-setup-log` | Worktree: Show Setup Log | auto |   |
 | `worktree-sleep` | Worktree: Sleep or Wake Selected | confirm (always asks) |   |
 | `worktree-suggest-name` | Worktree: Suggest a Name… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks the name |
