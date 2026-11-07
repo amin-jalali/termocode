@@ -106,6 +106,10 @@ type settingsConfig struct {
 	WebMaxHours    *int   `json:"web_max_hours,omitempty"`
 	WebOpenBrowser *bool  `json:"web_open_browser,omitempty"`
 	WebMaxViewers  *int   `json:"web_max_viewers,omitempty"`
+	// The door (MOB-56): projects open at once from a phone, and the idle
+	// stop of a project the phone opened headless. File only.
+	WebProjectsMax        *int `json:"web_projects_max,omitempty"`
+	WebProjectIdleMinutes *int `json:"web_project_idle_minutes,omitempty"`
 	// Blame (git_blame_view.go). File only; the palette toggles write them.
 	GitInlineBlame      *bool `json:"git_inline_blame,omitempty"`
 	GitStatusBlame      *bool `json:"git_status_blame,omitempty"`

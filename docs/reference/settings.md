@@ -217,6 +217,8 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `web_max_hours` | int | `12` | The web panel stops this many hours after it started, in use or not (1..24). |
 | `web_open_browser` | bool | `true` | Open the one-time link in the browser of this computer when the panel starts. false: only Web: Copy Link. |
 | `web_max_viewers` | int | `4` | How many browsers may be connected at once (1..8). One more is turned away. |
+| `web_projects_max` | int | `4` | How many projects a paired phone may have open at once through the web panel (1..8). The panel is the one door to every project on this computer: it joins projects that already run here, and starts one that does not run only after you say yes on a card on the laptop. One more is turned away; the phone shows Projects open now and the count. |
+| `web_project_idle_minutes` | int | `60` | A project the phone opened (it was not running on the laptop) stops after this many minutes with no use from any phone (5..240). Its views then say asleep, with Open. Projects you opened yourself on the laptop never stop by this setting. |
 
 ## Appearance (file only)
 

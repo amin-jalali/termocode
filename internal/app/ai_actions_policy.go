@@ -921,6 +921,9 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"web_max_hours":    aiNever(aiNoWeb),
 	"web_open_browser": aiNever(aiNoWeb),
 	"web_max_viewers":  aiNever(aiNoWeb),
+	// The door (MOB-56): more open projects = more of the laptop on the phone.
+	"web_projects_max":         aiNever(aiNoWeb),
+	"web_project_idle_minutes": aiNever(aiNoWeb),
 	// Workflows (ADR 0021): the AI may change a limit after its card; it
 	// never turns workflows on or off and never widens the agent sandbox.
 	"workflows_enabled":          aiNever("workflows run unattended and write to outside systems; only the user turns them on or off"),
