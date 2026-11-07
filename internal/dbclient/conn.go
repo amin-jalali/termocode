@@ -146,12 +146,17 @@ func defaultPort(d string) int {
 		return 6379
 	case "clickhouse":
 		return 8123
+	case "cassandra":
+		return 9042
 	}
 	return 0
 }
 func normDriver(d string) string {
-	if d == "mariadb" {
+	switch d {
+	case "mariadb":
 		return "mysql"
+	case "scylla", "scylladb":
+		return "cassandra"
 	}
 	return d
 }

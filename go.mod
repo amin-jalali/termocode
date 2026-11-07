@@ -5,6 +5,7 @@ go 1.26.10
 require (
 	filippo.io/age v1.3.1
 	github.com/alecthomas/chroma/v2 v2.23.1
+	github.com/apache/cassandra-gocql-driver/v2 v2.1.2
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/harmonica v0.2.0
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834
@@ -70,6 +71,7 @@ require (
 	golang.org/x/exp/shiny v0.0.0-20250606033433-dcc06ee1d476 // indirect
 	golang.org/x/mobile v0.0.0-20250606033058-a2a15c67f36f // indirect
 	golang.org/x/sync v0.23.0 // indirect
+	gopkg.in/inf.v0 v0.9.1 // indirect
 )
 
 replace github.com/charmbracelet/bubbletea => ./third_party/bubbletea
