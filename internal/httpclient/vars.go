@@ -118,6 +118,9 @@ func (rv *Resolver) Resolve(req Request) (Resolved, []Unresolved) {
 	if v, ok := out.Directives[SigV4Directive]; ok {
 		un = appendUnresolved(un, v, "directive:"+SigV4Directive)
 	}
+	if v, ok := out.Directives[OAuth2Directive]; ok {
+		un = appendUnresolved(un, v, "directive:"+OAuth2Directive)
+	}
 	un = sc.applyAuth(req, &out, un)
 	out.Secrets = sc.secrets
 	return out, un

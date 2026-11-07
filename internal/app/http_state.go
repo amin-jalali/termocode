@@ -213,6 +213,8 @@ type httpState struct {
 	shown   *httpRun
 
 	pending     *httpRun // waits for "Send anyway?"
+	// oauthWait is the run that waits for its OAuth 2.0 token.
+	oauthWait *httpOAuthWait
 	// promptWait collects the `# @prompt` values of a request.
 	promptWait *httpPromptWait
 
@@ -510,6 +512,9 @@ func httpUserTLS(run *httpRun, hooks *httpclient.Hooks) {
 // startHTTPRun sends run as the user's request: the lens and the status
 // chip say "sending", the page opens on the answer.
 func (m *Model) startHTTPRun(run *httpRun, hooks httpclient.Hooks) tea.Cmd {
+	if cmd, wait := m.httpOAuthGate(run, hooks); wait {
+		return cmd
+	}
 	s := m.httpS()
 	set := loadHTTPSettings()
 	client := s.httpClient(set)
@@ -565,6 +570,9 @@ func (m *Model) startHTTPRun(run *httpRun, hooks httpclient.Hooks) tea.Cmd {
 
 // handleHTTPMsg handles the HTTP client's messages. ok=false: not ours.
 func (m *Model) handleHTTPMsg(msg tea.Msg) (tea.Cmd, bool) {
+	if cmd, ok := m.handleHTTPOAuthMsg(msg); ok {
+		return cmd, true
+	}
 	switch msg := msg.(type) {
 	case httpEventMsg:
 		s := m.httpS()

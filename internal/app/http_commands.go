@@ -1188,6 +1188,9 @@ func (m *Model) handleHTTPConfirm(id string) (tea.Cmd, bool) {
 	if cmd, ok := m.httpCookiesConfirm(id); ok {
 		return cmd, true
 	}
+	if cmd, ok := m.httpOAuthConfirm(id); ok {
+		return cmd, true
+	}
 	s := m.httpS()
 	switch m.confirmKind {
 	case confirmKindHTTPChainDep:
