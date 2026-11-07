@@ -154,7 +154,12 @@ func (m *Model) webViewTopicData(topic string) (json.RawMessage, error) {
 func (h *webHub) pubsKeep() func() {
 	git, wt, runs, wfx, tasks, projects, inbox, cards, chats, mcp := h.git, h.wt, h.runs, h.wfx, h.tasks, h.projects, h.inbox, h.cards, h.chats, h.more.mcp
 	return func() {
+		// A card's id and since are its identity, not a book: keep what the
+		// snapshot handed out, or the next build names it again (new
+		// since, a live view sent with no change).
+		ids, since, diffs, n := h.cards.ids, h.cards.since, h.cards.diffs, h.cards.n
 		h.git, h.wt, h.runs, h.wfx, h.tasks, h.projects, h.inbox, h.cards, h.chats, h.more.mcp = git, wt, runs, wfx, tasks, projects, inbox, cards, chats, mcp
+		h.cards.ids, h.cards.since, h.cards.diffs, h.cards.n = ids, since, diffs, n
 	}
 }
 
