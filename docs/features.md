@@ -55,8 +55,10 @@ its name and key.
 - Explain / Fix / Edit / Doc actions that open as a diff before they apply.
 - Agent steps that run at the same time work in their own git worktree; review, merge or discard each one. → [Own worktrees](guides/ai-profiles.md#own-worktrees-for-parallel-steps)
 - Anthropic, OpenAI, OpenRouter, Ollama, LM Studio or any OpenAI-compatible server. → [Set up AI](guides/ai-setup.md)
-- Outside agents (Claude Code, Codex, …) in terminal tabs: usage-limit readout, opt-in auto-continue, named accounts in their own folders, and hibernation of idle agents. → [Agents](guides/agents.md#usage-limits-and-auto-continue)
-- Race one task across 2 to 4 outside agents, each in its own worktree; compare their diffs, verify them, let an AI judge rank them and pick one, and merge the winner. → [Agents](guides/agents.md#race-agents-on-one-task)
+- Outside agents (Claude Code, Codex, …) in terminal tabs: usage-limit readout, opt-in auto-continue, opt-in auto-accept of permission prompts (never risky ones), a loop that re-runs your check after each turn until it passes (with round, time and token caps), named accounts in their own folders, and hibernation of idle agents. → [Agents](guides/agents.md#usage-limits-and-auto-continue)
+- Launch profiles for outside agents: model, plan mode, permission mode and env per agent, with the full line shown before it runs. → [Agents](guides/agents.md#profiles)
+- Race one task across 2 to 8 lanes of outside agents (run one agent several times, e.g. `claude:3,codex:2`), each in its own worktree; compare their diffs, verify them, let an AI judge rank them and pick one, and merge the winner. → [Agents](guides/agents.md#race-agents-on-one-task)
+- A shared plan per workspace that you and the AI both keep: the AI proposes and updates cards, you approve, reorder and remove them. → [Shared plan](guides/ai-use.md#shared-plan-canvas)
 
 ![AI chat with a Markdown answer and a code card](assets/screenshots/ai-chat-answer.png)
 
@@ -70,6 +72,7 @@ its name and key.
 - Schedules keep going after a restart; `termocode service install` starts the session at login. Results come as a desktop note, on the phone, to a webhook or to Slack. → [Schedules](guides/workflows.md#schedules) · [Notifications](guides/workflows.md#notifications-and-history)
 - Undo a write from the run page, day / run / item AI budgets, an audit file per run and an admin policy file. → [Undo and budgets](guides/workflows.md#undo-budgets-and-the-audit-file)
 - Follow a run and answer its cards from the phone. → [On your phone](guides/workflows.md#on-your-phone)
+- Let one machine serve agent tasks: `termocode runner serve` takes queued tasks (`termocode runner add`, also over SSH) and runs a few at once, each in its own worktree. → [Serve tasks from this machine](guides/runner.md)
 
 ## Run, test and debug
 
@@ -113,6 +116,7 @@ its name and key.
 - Over SSH, a dropped connection loses nothing: run `termocode` again to get the same editor, terminals and jobs back. → [Remote and SSH](guides/remote-ssh.md)
 - `termocode ssh host` reconnects by itself after a network change, a Wi-Fi switch or sleep: the screen stays, typing pauses, and a toast says when it is back. → [Remote and SSH](guides/remote-ssh.md#reconnect-by-itself-termocode-ssh)
 - The web panel (experimental): the same session in a browser tab, for chat and cards, files, terminals and git, on this computer or from a server with `termocode ssh --web`. → [The web panel](guides/web.md)
+- Lite mode: `termocode --lite` (or a machine without Neovim) runs without the editor — terminals, agents, git and worktrees only. → [Lite mode](getting-started/install.md#lite-mode-no-editor)
 - Unsaved files survive a crash or a kill: the next start offers to restore them.
 - Download a file or folder to your own computer, or upload into a folder. Locally it is a plain copy (Downloads folder; the desktop file chooser for uploads); over SSH it goes through the terminal (kitty, iTerm2, trzsz; else a ready scp command). → [Remote and SSH](guides/remote-ssh.md#download-and-upload-files)
 

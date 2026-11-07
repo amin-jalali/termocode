@@ -29,6 +29,8 @@ const (
 	DefaultHistoryDays    = 30
 	DefaultWaitHours      = 12
 	DefaultAgentSandbox   = SandboxWorktree
+	DefaultTriggerPollMin = 5 // github triggers: minutes between polls
+	DefaultWebhookPort    = 0 // inbound webhooks: 0 is off
 	SandboxWorktree       = "worktree"
 	SandboxReadOnly       = "read-only"
 )

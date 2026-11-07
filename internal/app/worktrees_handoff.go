@@ -360,7 +360,7 @@ func (m *Model) onWTHandoffWrote(msg wtHandoffWroteMsg) tea.Cmd {
 // openWorktreeNewPrefilled opens the New worktree form for a child of
 // parent with the agent and the task filled in.
 func (m *Model) openWorktreeNewPrefilled(parent, parentTitle, from, task, agentID string) tea.Cmd {
-	c := m.openWorktreeNewFrom(parent, parentTitle, from)
+	c := m.openWorktreeNewFrom(parent, parentTitle, from, "") // no parentBranch: from may be a commit (CMP-17 merge)
 	if c == nil {
 		return nil
 	}

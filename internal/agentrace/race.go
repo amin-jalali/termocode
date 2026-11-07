@@ -1,5 +1,5 @@
 // Package agentrace is the data of an agent race (AGX-4…6): one task
-// fanned out to 2–4 lanes, each an agent in its own hidden agent worktree
+// fanned out to 2–8 lanes (CMP-18: an agent may run in several), each an agent in its own hidden agent worktree
 // (internal/git agent worktrees), then compared, one lane merged and the
 // rest discarded. It holds the records and the pure rules (lane ids, the
 // state words, the verify result, the summary prompt); the app runs the
@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -36,7 +37,7 @@ const (
 // Lane limits.
 const (
 	MinLanes = 2
-	MaxLanes = 4
+	MaxLanes = 8
 	// MaxKept is how many races the record file keeps (newest).
 	MaxKept = 20
 	// FileName is the record file in the git dir's termocode folder.
@@ -131,7 +132,8 @@ type Race struct {
 // part's own task (CMP-4).
 type LaneSpec struct{ Agent, Title, Prompt string }
 
-// New makes race number n. The task becomes one line; 2–4 lanes.
+// New makes race number n. The task becomes one line; 2–8 lanes. An
+// agent that runs in more than one lane gets "#k" in each lane's title.
 func New(n int, prompt, verify string, lanes []LaneSpec, nowMs int64) (Race, error) {
 	prompt = strings.Join(strings.Fields(prompt), " ")
 	if prompt == "" {
@@ -142,11 +144,19 @@ func New(n int, prompt, verify string, lanes []LaneSpec, nowMs int64) (Race, err
 	}
 	r := Race{ID: fmt.Sprintf("race-%d", n), Number: n, Name: "race/" + Slug(prompt), Prompt: prompt,
 		Verify: strings.TrimSpace(verify), StartedMs: nowMs}
+	total, seen := map[string]int{}, map[string]int{}
+	for _, s := range lanes {
+		total[s.Agent]++
+	}
 	for k, s := range lanes {
 		if !word(s.Agent) {
 			return Race{}, fmt.Errorf("agent %q is not known", s.Agent)
 		}
-		r.Lanes = append(r.Lanes, Lane{ID: LaneID(n, k+1, s.Agent), Agent: s.Agent, Title: s.Title, State: Starting})
+		title := s.Title
+		if seen[s.Agent]++; total[s.Agent] > 1 && title != "" {
+			title += " #" + strconv.Itoa(seen[s.Agent])
+		}
+		r.Lanes = append(r.Lanes, Lane{ID: LaneID(n, k+1, s.Agent), Agent: s.Agent, Title: title, State: Starting})
 	}
 	return r, nil
 }

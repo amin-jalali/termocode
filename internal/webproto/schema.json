@@ -2772,6 +2772,19 @@
       "phase": "v2"
     },
     {
+      "op": "chat.comment",
+      "args": "ChatCommentArgs",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 2000
+      },
+      "max_bytes": 4096,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "containers.host",
       "args": "EmptyArgs",
       "result": "ContainersHost",
@@ -6206,6 +6219,22 @@
         "cards"
       ],
       "additionalProperties": true
+    },
+    "ChatCommentArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "text"
+      ],
+      "additionalProperties": false
     },
     "ChatDelta": {
       "type": "object",

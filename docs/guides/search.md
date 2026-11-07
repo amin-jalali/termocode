@@ -105,6 +105,29 @@ files there are. Save them when you are happy.
 Binary files are skipped. With ripgrep installed, files that `.gitignore`
 lists are skipped too.
 
+## Search by meaning
+
+Not sure of the exact words in the code? Run **Search: Codebase by
+Meaning…** from the palette (`F1`) and describe what the code does, for
+example *where the password is checked*.
+
+1. termocode reads the git-tracked files of the workspace into a local
+   index. The first run takes a few seconds; later runs read only the
+   files that changed.
+2. Names are split into words (`CheckPassword` is *check* and *password*),
+   and related words count too: *remove* also finds `DeleteRow`.
+3. The best places are listed with their file, line and score. Press
+   `Enter` to open one.
+
+The index is built here, on this computer. No file leaves the machine, and
+secret files (`.env`, `.netrc`, key files …) are never read into it. The
+cache lives in your user cache folder (`termocode/codeindex`, one private
+file per workspace). It works on local folders; container workspaces are
+not supported yet.
+
+The AI uses the same index with the `codebase_search` tool, which only
+reads. See [AI tools](../reference/ai-tools.md#codebase_search).
+
 ## Result limit
 
 Find in Files stops after **2000** results by default. The footer then says

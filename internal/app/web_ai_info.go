@@ -145,7 +145,7 @@ func (m *Model) webAIInfoRules() webproto.AIInfo {
 }
 
 func (m *Model) webAIInfoMemory() webproto.AIInfo {
-	out := webproto.AIInfo{Title: "AI Memory", Note: "Memory is " + webOnOff(aiMemoryState() == aiMemoryOn) + " in this workspace", Rows: []webproto.AIInfoRow{}}
+	out := webproto.AIInfo{Title: "AI Memory", Note: "Memory is " + aiMemoryLevelText(aiMemoryState()) + " in this workspace", Rows: []webproto.AIInfoRow{}}
 	ls, err := m.aiS().aiMemoryLoad(aiWorkspaceRoot())
 	if err != nil {
 		out.Note = "Could not read " + aiMemoryRel

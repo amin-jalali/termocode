@@ -90,15 +90,12 @@ func TestFormFlow(t *testing.T) {
 	if len(f.Chosen()) != 2 || !strings.Contains(ansi.Strip(f.Box()), "cannot be typed safely") {
 		t.Errorf("disabled lane: %v\n%s", f.Chosen(), ansi.Strip(f.Box()))
 	}
-	// At most 4.
 	f.SetFocus(FocusLane(2))
 	f, _ = f.Update(key("space"))
 	f.SetFocus(FocusLane(3))
 	f, _ = f.Update(key("space"))
-	f.SetFocus(FocusLane(4))
-	f, _ = f.Update(key("space"))
-	if len(f.Chosen()) != 4 || !strings.Contains(ansi.Strip(f.Box()), "at most 4 lanes") {
-		t.Errorf("fifth lane: %v", f.Chosen())
+	if len(f.Chosen()) != 4 {
+		t.Errorf("four lanes: %v", f.Chosen())
 	}
 	f.SetFocus(FocusVerify)
 	f = typeText(f, "go test ./...")
@@ -139,7 +136,7 @@ func TestFormStartNeedsTaskAndLanes(t *testing.T) {
 	f, _ = f.Update(key("space"))
 	f.SetFocus(FocusStart)
 	f, cmd = f.Update(key("enter"))
-	if run(cmd) != nil || f.Focus() != FocusLane(0) || !strings.Contains(ansi.Strip(f.Box()), "Pick 2 to 4 lanes") {
+	if run(cmd) != nil || f.Focus() != FocusLane(0) || !strings.Contains(ansi.Strip(f.Box()), "Pick 2 to 8 lanes") {
 		t.Errorf("one lane: focus %v\n%s", f.Focus(), ansi.Strip(f.Box()))
 	}
 	// Backspace edits the field.
@@ -174,5 +171,79 @@ func TestFormFits(t *testing.T) {
 		if !strings.Contains(ansi.Strip(box), "Start 2 lanes") {
 			t.Errorf("%v: no Start 2 lanes in\n%s", sz, ansi.Strip(box))
 		}
+	}
+}
+
+// Spec (CMP-18): on a lane, + (or =, →) runs that agent once more and -
+// (or ←) once less; Space or Enter ticks a lane on (one) or off (zero).
+// The box shows the count, the Lanes row the total, and Start sends the
+// agent once per lane in list order. The total is at most 8; a disabled
+// lane gets no count and the card says why.
+func TestFormCounts(t *testing.T) {
+	f := NewForm(testOpts, "fix the toast race", "")
+	f.SetSize(150, 42)
+	f.SetFocus(FocusLane(0))
+	f, _ = f.Update(key("+")) // 0 -> 1
+	f, _ = f.Update(key("+"))
+	f, _ = f.Update(tea.KeyMsg{Type: tea.KeyRight})
+	f.SetFocus(FocusLane(1))
+	f, _ = f.Update(key("="))
+	f, _ = f.Update(key("+"))
+	f, _ = f.Update(key("+"))
+	f, _ = f.Update(key("-"))
+	if got := strings.Join(f.Chosen(), ","); got != "claude,claude,claude,codex,codex" {
+		t.Fatalf("chosen %s", got)
+	}
+	if f.Count(0) != 3 || f.Count(1) != 2 {
+		t.Errorf("counts %d %d", f.Count(0), f.Count(1))
+	}
+	box := ansi.Strip(f.Box())
+	for _, want := range []string{"[3] Claude Code", "[2] Codex", "Lanes  5 of 2–8", "Start 5 lanes", "+/- sets how many of each agent"} {
+		if !strings.Contains(box, want) {
+			t.Errorf("no %q in\n%s", want, box)
+		}
+	}
+	// At most 8 in all.
+	f.SetFocus(FocusLane(2))
+	for i := 0; i < 4; i++ {
+		f, _ = f.Update(key("+"))
+	}
+	if len(f.Chosen()) != 8 || f.Count(2) != 3 || !strings.Contains(ansi.Strip(f.Box()), "at most 8 lanes") {
+		t.Errorf("ninth lane: %v\n%s", f.Chosen(), ansi.Strip(f.Box()))
+	}
+	// Left lowers; - never goes below zero.
+	f, _ = f.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	for i := 0; i < 5; i++ {
+		f, _ = f.Update(key("-"))
+	}
+	if f.Count(2) != 0 {
+		t.Errorf("count after minus %d", f.Count(2))
+	}
+	// Space turns a lane with a count off.
+	f.SetFocus(FocusLane(0))
+	f, _ = f.Update(key("space"))
+	if f.Count(0) != 0 || strings.Join(f.Chosen(), ",") != "codex,codex" {
+		t.Errorf("space on a count: %v", f.Chosen())
+	}
+	// A disabled lane gets no count.
+	f.SetFocus(FocusLane(5))
+	f, _ = f.Update(key("+"))
+	if f.Count(5) != 0 || !strings.Contains(ansi.Strip(f.Box()), "cannot be typed safely") {
+		t.Errorf("disabled lane count %d", f.Count(5))
+	}
+	f.SetFocus(FocusStart)
+	_, cmd := f.Update(key("enter"))
+	st, ok := run(cmd).(StartMsg)
+	if !ok || strings.Join(st.Lanes, ",") != "codex,codex" {
+		t.Errorf("start %+v %v", st, ok)
+	}
+}
+
+// Spec (CMP-18): + and - typed into the task are text, not counts.
+func TestFormCountKeysInFields(t *testing.T) {
+	f := NewForm(testOpts, "", "")
+	f = typeText(f, "a+b-c")
+	if f.Task() != "a+b-c" || len(f.Chosen()) != 0 {
+		t.Errorf("task %q chosen %v", f.Task(), f.Chosen())
 	}
 }

@@ -64,6 +64,7 @@ type wtState struct {
 	polling bool
 
 	form     *wtForm                // Worktree: New… (worktrees_new.go)
+	taskAsk  bool                   // a task-start reads the repository for its card (agent_ctl_task.go)
 	setupAsk *wtSetupPending        // the open setup trust card (worktrees_setup.go)
 	setups   map[string]*wtSetupRun // setups run in this window, by worktree path
 
@@ -77,15 +78,22 @@ type wtState struct {
 	sleepAsk   *wtSleepPending   // the open sleep card (worktrees_sleep.go)
 	archiveAsk *wtArchivePending // the open archive card (worktrees_archive.go)
 	move       *wtMovePending    // the open move, unpack or pull card (worktrees_move.go)
+	restackAsk *wtRestackPending // the open restack card (worktrees_stack.go)
 	del        *wtDeletePending  // a delete in its steps (worktrees_delete.go)
 	cleanup    *wtCleanup        // the open cleanup list (worktrees_cleanup.go)
 	preview    *wtPreviewState   // the open agent preview (worktrees_preview.go)
 
-	bgAsk    *wtBgPending      // a background task between prompt and card (worktrees_bgtask.go)
-	bgAct    *wtBgActPending   // the open card of one background task
-	bgTasks  []bgtask.Task     // the last listed background tasks
-	bgEngine containers.Engine // the engine they were listed on
-	handoff  *wtHandoffForm    // the open handoff card (worktrees_handoff.go)
+	feedbackAsk     *wtFeedbackPending   // the open PR feedback card (worktrees_followup.go)
+	feedbackReading map[string]bool      // PR feedback reads in flight, by path
+	followAt        map[string]time.Time // the follow loop's last read, by path
+	bgAsk           *wtBgPending         // a background task between prompt and card (worktrees_bgtask.go)
+	bgAct           *wtBgActPending      // the open card of one background task
+	bgTasks         []bgtask.Task        // the last listed background tasks
+	bgEngine        containers.Engine    // the engine they were listed on
+	handoff         *wtHandoffForm       // the open handoff card (worktrees_handoff.go)
+
+	autoAt   time.Time // the last auto clean-up check (worktrees_autoclean.go)
+	autoBusy bool      // an auto clean-up runs
 
 	seq    uint64
 	render struct {
@@ -213,7 +221,8 @@ func (m *Model) onWTLoad(msg wtLoadMsg) tea.Cmd {
 			st.badMeta = true
 			cmds = append(cmds, m.pushToastDetail(toast.Warn, "Worktree notes could not be read", "termocode/worktrees.json in the git folder is kept as it is; pins and names are off until it is fixed."))
 		}
-		cmds = append(cmds, st.refreshStatus(), st.wtLinksRefresh(clock.Now()))
+		cmds = append(cmds, st.refreshStatus(), st.wtLinksRefresh(clock.Now()), m.wtFollowRefresh(clock.Now()))
+		cmds = append(cmds, m.wtAutoClean()) // CMP-16: when it is on and due
 	}
 	st.touch()
 	switch {
@@ -274,6 +283,8 @@ func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return c, true
 	}
 	switch msg := msg.(type) {
+	case wtFeedbackMsg: // worktrees_followup.go
+		return m.onWTFeedback(msg), true
 	case wtNewPrepMsg:
 		return m.onWTNewPrep(msg), true
 	case wtCreatedMsg:
@@ -284,10 +295,14 @@ func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onWTArchivePrep(msg), true
 	case wtArchivedMsg:
 		return m.onWTArchived(msg), true
+	case wtRestackedMsg:
+		return m.onWTRestacked(msg), true
 	case wtCleanupPrepMsg:
 		return m.onWTCleanupPrep(msg), true
 	case wtCleanedMsg:
 		return m.onWTCleaned(msg), true
+	case wtAutoCleanedMsg:
+		return m.onWTAutoCleaned(msg), true
 	case wtDeletePrepMsg:
 		return m.onWTDeletePrep(msg), true
 	case wtDeletedMsg:

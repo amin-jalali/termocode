@@ -292,6 +292,9 @@ func wtLinkLine(md worktrees.Meta) string {
 		case "pending":
 			s += " · CI ●"
 		}
+		if md.Follow {
+			s += " · following"
+		}
 	}
 	return theme.ASCIIText(s)
 }

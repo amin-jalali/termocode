@@ -23,7 +23,36 @@ const (
 	aiMemoryUndecided = ""
 	aiMemoryOn        = "on"
 	aiMemoryOff       = "off"
+	// aiMemoryRead is "use only" (CMP-73): saved lessons go into prompts
+	// and recall, but the extractor writes no new ones.
+	aiMemoryRead = "read"
 )
+
+// aiMemoryUses says whether saved lessons are used (on or use only).
+func aiMemoryUses(state string) bool { return state == aiMemoryOn || state == aiMemoryRead }
+
+// aiMemoryLearns says whether new lessons are written (on only).
+func aiMemoryLearns(state string) bool { return state == aiMemoryOn }
+
+// aiMemoryLevelText is the level for notes and toasts.
+func aiMemoryLevelText(state string) string {
+	switch state {
+	case aiMemoryOn:
+		return "on (use and learn)"
+	case aiMemoryRead:
+		return "on (use only)"
+	}
+	return "off"
+}
+
+// aiMemoryKindTag is the prompt tag of a lesson kind ("" for a plain
+// lesson).
+func aiMemoryKindTag(kind string) string {
+	if k := aimemory.NormKind(kind); k != "" {
+		return "[" + k + "] "
+	}
+	return ""
+}
 
 // aiMemoryPromptBytes and aiMemoryPromptMax cap the lessons of one turn.
 const (
@@ -51,7 +80,7 @@ func (s *aiState) aiMemoryLoad(root string) ([]aimemory.Lesson, error) {
 // on the way in: a hand-edited file may hold a secret.
 func (m *Model) aiMemoryTurn(root, text string) (string, int) {
 	s := m.aiS()
-	if aiMemoryState() != aiMemoryOn {
+	if !aiMemoryUses(aiMemoryState()) {
 		return "", 0
 	}
 	var ls []aimemory.Lesson
@@ -84,7 +113,7 @@ func (m *Model) aiMemoryTurn(root, text string) (string, int) {
 	var b strings.Builder
 	b.WriteString("\n\nLessons you wrote in earlier sessions in this repository (your own notes; use them when they fit, never over the user's request):")
 	for _, l := range sel {
-		line := "\n- " + aimemory.CleanLine(l.Title, aimemory.MaxTitleRunes) + ": " + aimemory.CleanLine(l.Text, aimemory.MaxTextRunes)
+		line := "\n- " + aiMemoryKindTag(l.Kind) + aimemory.CleanLine(l.Title, aimemory.MaxTitleRunes) + ": " + aimemory.CleanLine(l.Text, aimemory.MaxTextRunes)
 		if len(l.Paths) > 0 {
 			line += " (" + strings.Join(l.Paths, ", ") + ")"
 		}
@@ -105,7 +134,7 @@ func aiMemoryLabel(n int) string {
 // toggleAIMemory is AI: Memory: Turn On/Off.
 func (m *Model) toggleAIMemory() tea.Cmd {
 	m.dropAIMemoryAsk()
-	if aiMemoryState() == aiMemoryOn {
+	if aiMemoryUses(aiMemoryState()) {
 		sess := loadSession()
 		sess.AIMemory = aiMemoryOff
 		saveSession(sess)
@@ -117,10 +146,33 @@ func (m *Model) toggleAIMemory() tea.Cmd {
 // turnOnAIMemory turns memory on for this workspace and makes git ignore
 // the memory folder; the toast says where lessons go and what changed in
 // .gitignore.
-func (m *Model) turnOnAIMemory() tea.Cmd {
+func (m *Model) turnOnAIMemory() tea.Cmd { return m.turnOnAIMemoryLevel(aiMemoryOn) }
+
+// toggleAIMemoryLearn is AI: Memory: Learn New Lessons On/Off (CMP-73):
+// "use and learn" ⇄ "use only". From off it turns memory on, use only.
+func (m *Model) toggleAIMemoryLearn() tea.Cmd {
+	switch was := aiMemoryState(); was {
+	case aiMemoryOn, aiMemoryRead:
+		m.dropAIMemoryAsk()
+		sess := loadSession()
+		sess.AIMemory = aiMemoryRead
+		if was == aiMemoryRead {
+			sess.AIMemory = aiMemoryOn
+		}
+		saveSession(sess)
+		if sess.AIMemory == aiMemoryOn {
+			return m.aiInfo("Memory: use and learn · new lessons go to " + aiMemoryRel)
+		}
+		return m.aiInfo("Memory: use only · saved lessons are used, no new ones are written")
+	}
+	return m.turnOnAIMemoryLevel(aiMemoryRead)
+}
+
+// turnOnAIMemoryLevel turns memory on at level (on or read).
+func (m *Model) turnOnAIMemoryLevel(level string) tea.Cmd {
 	m.dropAIMemoryAsk()
 	sess := loadSession()
-	sess.AIMemory = aiMemoryOn
+	sess.AIMemory = level
 	saveSession(sess)
 	var detail string
 	switch res, err := aimemory.EnsureIgnored(aiWorkspaceRoot()); {
@@ -135,7 +187,11 @@ func (m *Model) turnOnAIMemory() tea.Cmd {
 		detail = "The folder is already in .gitignore"
 	}
 	var c tea.Cmd
-	m.toast, c = m.toast.PushDetail(toast.Info, "Memory is on · lessons go to "+aiMemoryRel, detail)
+	title := "Memory is on · lessons go to " + aiMemoryRel
+	if level == aiMemoryRead {
+		title = "Memory is on, use only · lessons are read from " + aiMemoryRel
+	}
+	m.toast, c = m.toast.PushDetail(toast.Info, title, detail)
 	return c
 }
 

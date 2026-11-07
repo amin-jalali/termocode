@@ -171,10 +171,16 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 	if cmd, ok := m.handleLayoutConfirm(id); ok { // layout_palette.go
 		return cmd
 	}
+	if cmd, ok := m.handleSpecConfirm(id); ok { // specs_ui.go
+		return cmd
+	}
 	if cmd, ok := m.handleAIConfirm(id); ok { // Group A
 		return cmd
 	}
 	if cmd, ok := m.handleSetupConfirm(id); ok { // setup card: GNOME profile
+		return cmd
+	}
+	if cmd, ok := m.handlePairSyncConfirm(id); ok { // container_pairsync.go
 		return cmd
 	}
 	if cmd, ok := m.handleContainerFilesConfirm(id); ok { // containers_files.go

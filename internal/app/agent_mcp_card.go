@@ -35,6 +35,8 @@ type agentMCPCard struct {
 	out   []byte // what the file will hold
 	dir   string // the folder the agent starts in ("" = the workspace; AGX-2)
 	task  string // the first task to type (WTX-8)
+	// profile is the launch profile to start with (nil = none; CMP-21).
+	profile *agents.LaunchProfile
 }
 
 // opencodeMCPMerge returns the opencode.json that adds termocode to old
@@ -175,7 +177,7 @@ func (m *Model) answerAgentMCPCard(id string) tea.Cmd {
 		}
 		m.agentMCPDeclined[root+"|"+c.agent.ID] = true
 	}
-	cmds = append(cmds, m.launchAgentIn(c.agent, c.dir, c.task))
+	cmds = append(cmds, m.launchAgentFull(c.agent, c.dir, c.task, "", c.profile))
 	return tea.Batch(cmds...)
 }
 

@@ -58,6 +58,11 @@ type gitxIssue struct {
 
 // openIssues asks gh for the open issues (off the UI loop).
 func (m *Model) openIssues() tea.Cmd {
+	return m.openIssuesFor(" Issues ", (*Model).openIssueActions)
+}
+
+// openIssuesFor lists the open issues under title; a pick runs on.
+func (m *Model) openIssuesFor(title string, on func(*Model, gitxIssue) tea.Cmd) tea.Cmd {
 	m.gitEnsureLoaded()
 	if !m.gitIsRepo {
 		return m.gitxInfo("Issues need a folder with a git repository")
@@ -74,12 +79,12 @@ func (m *Model) openIssues() tea.Cmd {
 			if err != nil {
 				return m.prFailToast("Could not read issues", err)
 			}
-			return m.onIssues(issues)
+			return m.onIssues(title, issues, on)
 		}}
 	}))
 }
 
-func (m *Model) onIssues(issues []gitxIssue) tea.Cmd {
+func (m *Model) onIssues(title string, issues []gitxIssue, on func(*Model, gitxIssue) tea.Cmd) tea.Cmd {
 	if len(issues) == 0 {
 		return m.gitxInfo("No open issues")
 	}
@@ -91,10 +96,10 @@ func (m *Model) onIssues(issues []gitxIssue) tea.Cmd {
 		}
 		items = append(items, picker.Item{ID: "issue-" + strconv.Itoa(is.Number), Title: "#" + strconv.Itoa(is.Number) + " " + is.Title, Hint: strings.Join(ls, ", ")})
 	}
-	m.gitxPick(" Issues ", items, func(m *Model, id string) tea.Cmd {
+	m.gitxPick(title, items, func(m *Model, id string) tea.Cmd {
 		for _, is := range issues {
 			if id == "issue-"+strconv.Itoa(is.Number) {
-				return m.openIssueActions(is)
+				return on(m, is)
 			}
 		}
 		return nil
@@ -106,6 +111,7 @@ func (m *Model) openIssueActions(is gitxIssue) tea.Cmd {
 	ref := "#" + strconv.Itoa(is.Number)
 	m.gitxPick(" "+ref+" "+is.Title+" ", []picker.Item{
 		{ID: "start", Title: "Start Work: New Branch", Hint: issueBranch(is)},
+		{ID: "worktree", Title: "Start Work: New Worktree + Agent…", Hint: "a lane of its own"},
 		{ID: "copy", Title: "Copy " + ref},
 	}, func(m *Model, id string) tea.Cmd {
 		switch id {
@@ -126,6 +132,8 @@ func (m *Model) openIssueActions(is gitxIssue) tea.Cmd {
 				m.toast, c = m.toast.PushDetail(toast.Info, "On "+name, "Working on "+ref+" "+is.Title)
 				return tea.Batch(c, fetchGitCmd())
 			})
+		case "worktree":
+			return m.openWorktreeFromIssue(is)
 		case "copy":
 			m.copyToClipboard(ref)
 			return m.gitxInfo("Copied " + ref)

@@ -43,9 +43,11 @@ Rules:
 - Never write secrets, passwords, keys, tokens, personal data or text marked [REDACTED].
 - Paths only relative to the repository root; never paths outside it.
 - Do not repeat a lesson that is already saved (titles listed below).
+- When the user corrected the assistant in this turn (said a result or an approach was wrong), save what to do instead with kind "correction".
+- A choice the user made for the project (a library, a style, a rule) has kind "decision". Anything else has kind "lesson".
 - When nothing is worth keeping, return an empty list.
 Reply with only this JSON in a fenced block:
-` + "```json\n" + `{"lessons":[{"title":"at most 80 characters","text":"at most 300 characters","paths":["repo/relative/path"]}]}` + "\n```"
+` + "```json\n" + `{"lessons":[{"title":"at most 80 characters","text":"at most 300 characters","kind":"lesson|decision|correction","paths":["repo/relative/path"]}]}` + "\n```"
 
 // aiMemoryDoneMsg is the extractor's result.
 type aiMemoryDoneMsg struct {

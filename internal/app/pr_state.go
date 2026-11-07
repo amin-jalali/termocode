@@ -25,6 +25,9 @@ type prState struct {
 	create *ghci.NewPR     // the pull request being created
 	// createTemplate is the template file the description started from
 	createTemplate string
+	// createStacked: the base is the parent's branch of a stacked child
+	// worktree (CMP-17)
+	createStacked bool
 
 	threads    []ghci.Thread // the review threads of detail, open first (pr_threads.go)
 	thread     string        // the id of the thread on the card

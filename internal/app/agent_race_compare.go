@@ -90,6 +90,10 @@ func (m *Model) raceAct(a raceview.ActionMsg) tea.Cmd {
 		return m.raceSummary(r)
 	case raceview.ActJudge:
 		return m.raceJudge(r)
+	case raceview.ActBroadcast: // agent_race_broadcast.go
+		return m.raceOpenBroadcast()
+	case raceview.ActRunAll:
+		return m.raceOpenRunAll()
 	}
 	return nil
 }
