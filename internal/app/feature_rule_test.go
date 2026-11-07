@@ -1,10 +1,14 @@
 package app
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -80,9 +84,11 @@ func appFeatures() []featureRule {
 			out = append(out, f)
 		}
 	}
+	consts := idConstNames()
 	for _, it := range paletteItems() {
 		if !it.File && it.ID != "" {
-			add(featureRule{ID: "palette/" + it.ID, Needles: []string{`"` + it.ID + `"`}})
+			// A test may name the id by its Go constant (aiHistorySearchID).
+			add(featureRule{ID: "palette/" + it.ID, Needles: append([]string{`"` + it.ID + `"`}, consts[it.ID]...)})
 		}
 	}
 	for _, r := range settingsRows {
@@ -91,6 +97,46 @@ func appFeatures() []featureRule {
 	for a := keymap.Action(1); a < 2000; a++ {
 		if name := keymap.ActionName(a); name != "" {
 			add(featureRule{ID: "key/" + name, Needles: []string{"Action" + name, `"` + name + `"`}})
+		}
+	}
+	return out
+}
+
+// idConstNames maps a string value to the names of the package-level
+// constants and variables of this package (non-test files) that hold it,
+// so a test that names aiHistorySearchID names "ai-history-search".
+func idConstNames() map[string][]string {
+	out := map[string][]string{}
+	files, _ := filepath.Glob("*.go")
+	fset := token.NewFileSet()
+	for _, f := range files {
+		if strings.HasSuffix(f, "_test.go") {
+			continue
+		}
+		af, err := parser.ParseFile(fset, f, nil, parser.SkipObjectResolution)
+		if err != nil {
+			continue
+		}
+		for _, d := range af.Decls {
+			gd, ok := d.(*ast.GenDecl)
+			if !ok || (gd.Tok != token.CONST && gd.Tok != token.VAR) {
+				continue
+			}
+			for _, sp := range gd.Specs {
+				vs, ok := sp.(*ast.ValueSpec)
+				if !ok {
+					continue
+				}
+				for i, v := range vs.Values {
+					lit, ok := v.(*ast.BasicLit)
+					if !ok || lit.Kind != token.STRING || i >= len(vs.Names) {
+						continue
+					}
+					if val, err := strconv.Unquote(lit.Value); err == nil {
+						out[val] = append(out[val], vs.Names[i].Name)
+					}
+				}
+			}
 		}
 	}
 	return out

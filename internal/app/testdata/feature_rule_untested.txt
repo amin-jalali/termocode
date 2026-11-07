@@ -55,9 +55,7 @@ palette/ai-toggle-inline
 palette/ai-trigger-inline
 palette/ai-web-tools
 palette/alternate-file
-palette/bookmark-clear
 palette/bookmark-list
-palette/bookmark-toggle
 palette/buffer-info
 palette/code-actions
 palette/config-commands
@@ -90,7 +88,6 @@ palette/debug-step-out
 palette/debug-step-over
 palette/debug-toggle-breakpoint
 palette/debug-view
-palette/edit-custom-theme
 palette/error-log
 palette/explorer-undo-rename
 palette/ext-manage-install-samples
@@ -130,7 +127,6 @@ palette/prev-diagnostic
 palette/preview-md
 palette/replace-in-file
 palette/reverse-lines
-palette/run-doctor
 palette/search-next-result
 palette/search-prev-result
 palette/services-compose-config
@@ -142,8 +138,6 @@ palette/services-restart
 palette/services-stop
 palette/snippet-picker
 palette/snippets-manage
-palette/sort-asc
-palette/sort-desc
 palette/spaces-to-tabs
 palette/tabs-to-spaces
 palette/terminal-focus-next-pane
@@ -174,14 +168,6 @@ palette/workflow-edit-file
 palette/workflow-enable
 palette/workflow-history
 palette/workflow-stop
-palette/worktree-adopt
-palette/worktree-archive
-palette/worktree-cleanup
-palette/worktree-delete
-palette/worktree-forget
-palette/worktree-link
 palette/worktree-new
-palette/worktree-new-child
 palette/worktree-notes
 palette/worktree-setup-log
-palette/worktree-sleep

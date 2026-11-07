@@ -479,7 +479,6 @@ excluded	workflow-edit-file	laptop only: workflow files are edited and trusted o
 excluded	workflow-enable	laptop only: turning a schedule on changes what runs unattended (plan §5.7)
 excluded	workflow-undo-write	laptop only: an undo writes to outside systems again, behind the laptop's card (plan §5.7)
 missing	acp-thread	Agents|M
-missing	agent-sessions-search-all	AI|S
 missing	ai-board	AI|M
 missing	ai-chat-comments	AI|S
 missing	ai-chat-doc-revisions	AI|S
@@ -550,17 +549,34 @@ missing	containers-volume-restore	Containers|S
 missing	db-ai-explain-query	Databases|S
 missing	db-ai-fix-error	Databases|S
 missing	db-ai-generate-sql	Databases|S
+missing	db-alter-table	Databases|M
 missing	db-another-console	Databases|S
 missing	db-cancel-session	Databases|S
 missing	db-chart	Databases|S
 missing	db-cloud-discover	Databases|S
 missing	db-console-history	Databases|S
 missing	db-copy-as	Databases|S
+missing	db-create-table	Databases|M
+missing	db-dependencies	Databases|S
+missing	db-dump	Databases|M
 missing	db-edit-source	Databases|S
 missing	db-end-session	Databases|S
 missing	db-er-diagram	Databases|S
+missing	db-er-text	Databases|S
 missing	db-exec-mode	Databases|S
 missing	db-export-tables	Databases|M
+missing	db-find-object	Databases|S
+missing	db-grant	Databases|S
+missing	db-history-connection	Databases|S
+missing	db-import-connections	Databases|S
+missing	db-quick-fix	Databases|S
+missing	db-rename	Databases|S
+missing	db-restore	Databases|M
+missing	db-revoke	Databases|S
+missing	db-role-alter	Databases|S
+missing	db-role-create	Databases|S
+missing	db-role-grants	Databases|S
+missing	db-roles	Databases|S
 missing	db-run-to-file	Databases|S
 missing	db-er-path	Databases|S
 missing	db-inline-clear	Databases|S
@@ -570,6 +586,8 @@ missing	db-result-column-types	Databases|S
 missing	db-result-create-table	Databases|S
 missing	db-result-row-numbers	Databases|S
 missing	db-run-container	Databases|S
+missing	db-save-query	Databases|S
+missing	db-saved-queries	Databases|S
 missing	db-saved-runs	Databases|M
 missing	db-iam-auth	Databases|S
 missing	db-manage-connection	Databases|S
@@ -797,6 +815,9 @@ missing	spec-new	Specs|M
 missing	spec-new-bugfix	Specs|M
 missing	spec-open	Specs|M
 missing	workflow-history	Workflows|S
+missing	workflow-pause	Workflows|S
+missing	workflow-retry	Workflows|S
+missing	workflow-triggers	Workflows|S
 missing	workspace-open-container	Workspace|M
 missing	workspace-reopen-devcontainer	Workspace|M
 missing	worktree-add-folder	Worktrees|M
