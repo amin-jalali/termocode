@@ -126,6 +126,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	if c, ok := m.handleContainerWSMsg(msg); ok { // container_workspace.go
 		return m, c
 	}
+	if c, ok := m.handleDevContainerMsg(msg); ok { // devcontainer_open.go
+		return m, c
+	}
 	if c, ok := m.handleCIMsg(msg); ok { // ci_watch.go
 		return m, c
 	}

@@ -264,6 +264,7 @@ func paletteItems() []picker.Item {
 		{ID: "workspace-add-folder", Title: "Workspace: Add Folder..."},
 		{ID: "workspace-remove-folder", Title: "Workspace: Remove Folder..."},
 		{ID: "workspace-open-container", Title: "Workspace: Open Folder in Container..."},
+		{ID: "workspace-reopen-devcontainer", Title: "Workspace: Reopen in Dev Container..."},
 		{ID: "toggle-wrap", Title: "View: Toggle Word Wrap", Hint: "Alt+W"},
 		{ID: "trim-whitespace", Title: "Edit: Trim Trailing Whitespace"},
 		{ID: "reveal-fs", Title: "File: Reveal in File System"},
@@ -719,6 +720,8 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.openRemoveRootPicker()
 	case "workspace-open-container": // container_workspace.go
 		return m.openFolderInContainerPalette()
+	case "workspace-reopen-devcontainer": // devcontainer_open.go
+		return m.openDevContainerReopen()
 	case "toggle-wrap":
 		return m.toggleWordWrap()
 	case "trim-whitespace":

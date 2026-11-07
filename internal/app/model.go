@@ -692,12 +692,16 @@ type Model struct {
 	pendingContainerOpen containerRef
 	containerOffline     bool
 	containerStarting    bool
-	hotExitWaiting       []hotBackup
-	saveAfter            saveContinuation
-	confirmTargetID      int
-	keyCardGuide         help.Loc             // the key card's guide page (keycard.go)
-	keyCardBack          func(*Model) tea.Cmd // runs after the key card closes
-	confirmTargetPath    string
+	// RC-7 (devcontainer_open.go): the setup the trust card asks about,
+	// and the one running.
+	devcontainerPending *devcontainerRun
+	devcontainer        *devcontainerRun
+	hotExitWaiting      []hotBackup
+	saveAfter           saveContinuation
+	confirmTargetID     int
+	keyCardGuide        help.Loc             // the key card's guide page (keycard.go)
+	keyCardBack         func(*Model) tea.Cmd // runs after the key card closes
+	confirmTargetPath   string
 	// confirmTargetPaths is the absolute-path list for a bulk-delete
 	// confirm flow (confirmKindDeletePath with len > 1). When the user
 	// confirms, every entry is os.RemoveAll'd and any matching open

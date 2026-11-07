@@ -801,6 +801,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Workspace: Add Folder... | `workspace-add-folder` |   |   |
 | Workspace: Open Folder in Container... | `workspace-open-container` |   |   |
 | Workspace: Remove Folder... | `workspace-remove-folder` |   |   |
+| Workspace: Reopen in Dev Container... | `workspace-reopen-devcontainer` |   |   |
 
 ## Worktree
 

@@ -165,6 +165,23 @@ branches all work there (git must be in the image). Staging one hunk is
 not there yet; use the terminal for it. **Replace in Workspace** reads
 and writes the files through the container too.
 
+### Reopen in a dev container
+
+**Workspace: Reopen in Dev Container…** reads the project's
+`.devcontainer/devcontainer.json` (or `.devcontainer.json`). A card says
+which container it makes and lists every command of the file and where
+it runs (`initializeCommand` on this computer, the others in the new
+container). **Cancel** is first; nothing runs before **Create and Open**.
+termocode builds the image (for `build`), starts the container with the
+project folder mounted, runs the commands, then opens the folder in it.
+`containerEnv` goes in a private env file, never on the command line;
+forwarded ports listen on 127.0.0.1 only.
+
+The container is named `termocode-dc-<id>` and found again next time: an
+existing one is only started, the commands do not run again. Files with
+`dockerComposeFile` or `features` need the devcontainer CLI; create the
+container with it, then open it with `w` in Containers.
+
 ## Live CPU and memory
 
 While the Containers view is on screen and the CONTAINERS section is open,
