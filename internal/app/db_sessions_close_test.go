@@ -35,9 +35,9 @@ func dbSessionsModel(t *testing.T) (*Model, *int, *int) {
 // Databases: Sessions… lists every open session with its transaction.
 func TestDBSessionsPickerLists(t *testing.T) {
 	m, _, _ := dbSessionsModel(t)
-	cmd, ok := m.dispatchDatabasesPalette("db-sessions")
+	cmd, ok := m.dispatchDatabasesPalette("db-open-sessions")
 	if !ok {
-		t.Fatal("db-sessions not dispatched")
+		t.Fatal("db-open-sessions not dispatched")
 	}
 	_ = cmd
 	if !m.pickerOpen || m.pickerKind != pickerKindDBSessions {
@@ -51,10 +51,10 @@ func TestDBSessionsPickerLists(t *testing.T) {
 	}
 	found := false
 	for _, it := range databasesPaletteItems() {
-		found = found || it.ID == "db-sessions"
+		found = found || it.ID == "db-open-sessions"
 	}
 	if !found {
-		t.Fatal("db-sessions not in the palette")
+		t.Fatal("db-open-sessions not in the palette")
 	}
 }
 
@@ -62,7 +62,7 @@ func TestDBSessionsPickerLists(t *testing.T) {
 // closes only that session and drops its transaction.
 func TestDBSessionsCloseOne(t *testing.T) {
 	m, mainClosed, auditClosed := dbSessionsModel(t)
-	m.dispatchDatabasesPalette("db-sessions")
+	m.dispatchDatabasesPalette("db-open-sessions")
 	if _, ok := m.handleHTTPPickerSelect("local-pg/db/audit"); !ok {
 		t.Fatal("pick not routed")
 	}
@@ -77,7 +77,7 @@ func TestDBSessionsCloseOne(t *testing.T) {
 	if *auditClosed != 0 || m.databases.sessions["local-pg/db/audit"] == nil {
 		t.Fatal("cancel closed the session")
 	}
-	m.dispatchDatabasesPalette("db-sessions")
+	m.dispatchDatabasesPalette("db-open-sessions")
 	m.handleHTTPPickerSelect("local-pg/db/audit")
 	m.confirmOpen = false
 	m.databaseConsoleConfirm("close")
@@ -95,7 +95,7 @@ func TestDBSessionsCloseOne(t *testing.T) {
 // The first (focused) button of the card is Cancel.
 func TestDBSessionsCardSafeFirst(t *testing.T) {
 	m, _, _ := dbSessionsModel(t)
-	m.dispatchDatabasesPalette("db-sessions")
+	m.dispatchDatabasesPalette("db-open-sessions")
 	m.handleHTTPPickerSelect("local-pg/db/audit")
 	if b := m.confirm.Buttons(); len(b) == 0 || b[0].ID != "cancel" {
 		t.Fatalf("buttons = %+v, want Cancel first", b)
@@ -107,7 +107,7 @@ func TestDBSessionsNone(t *testing.T) {
 	m := &Model{w: 120, h: 40}
 	m.databases = newDBState()
 	m.databases.loaded = true
-	m.dispatchDatabasesPalette("db-sessions")
+	m.dispatchDatabasesPalette("db-open-sessions")
 	if m.pickerOpen {
 		t.Fatal("picker opened with no sessions")
 	}

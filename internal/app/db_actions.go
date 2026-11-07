@@ -53,7 +53,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-transaction-mode", Title: "Databases: Transaction Mode…"},
 		{ID: "db-commit", Title: "Databases: Commit"},
 		{ID: "db-rollback", Title: "Databases: Roll Back"},
-		{ID: "db-sessions", Title: "Databases: Sessions…"},
+		{ID: "db-open-sessions", Title: "Databases: Sessions…"},
 		{ID: "db-submit-changes", Title: "Databases: Submit Pending Changes…"},
 		{ID: "db-revert-changes", Title: "Databases: Revert Pending Changes…"},
 		{ID: "db-result-pin", Title: "Databases: Pin Result Tab"},
@@ -103,7 +103,7 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseCommitKey(true), true
 	case "db-rollback":
 		return m.databaseCommitKey(false), true
-	case "db-sessions":
+	case "db-open-sessions":
 		return m.databaseSessionsPicker(), true
 	case "db-submit-changes":
 		return m.databaseSubmitCard(), true
