@@ -751,6 +751,7 @@ missing	tracker-show	Workspace|S
 missing	web-forward-port	Web|M
 missing	terminal-ai-hand-back	Terminal|S
 missing	terminal-ai-take-over	Terminal|S
+missing	tasks-suggest	Tasks|S
 missing	workflow-dry-run	Workflows|S
 missing	workflow-history	Workflows|S
 missing	workflow-new	Workflows|S
