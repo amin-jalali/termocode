@@ -70,7 +70,7 @@ func TestViewCacheMatchesDraw(t *testing.T) {
 		}
 		for i, b := range m.bufs {
 			c := m.tabCells(i)
-			f := renderTabCellsSfx(b, b.ID == m.activeID, m.suffix(b), m.isWelcome(b), 0)
+			f := renderTabCellsSfx(b, b.ID == m.activeID, m.suffix(b), m.gitBadge(b), m.isWelcome(b), 0)
 			if len(c) != len(f) {
 				t.Fatalf("step %d: cached cells differ", step)
 			}

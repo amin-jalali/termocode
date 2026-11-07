@@ -193,6 +193,8 @@ func (m *Model) applyGitSnapshot(msg GitMsg) {
 	m.gitSubmodules = msg.Submodules
 	defer m.gitSelPrune() // after the clamp: marks of rows that went
 	m.gitFiles = msg.Files
+	// Editor tabs show each open file's status letter (GITX-39).
+	m.tabs.SetGitStatus(m.gitStatusMap())
 	m.setGitCommits(msg.Graph, msg.More)
 	// Clamp against the visible-row count: the accordion interleaves
 	// section headers, dir headers, and graph rows, so the row count
