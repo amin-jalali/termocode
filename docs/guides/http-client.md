@@ -83,6 +83,8 @@ token / secret / password) show as `[REDACTED]`.
 | `{{$processEnv NAME}}` | from the environment |
 | `{{$secret NAME}}` | from `ai/credentials.json` (the store MCP uses) |
 | `{{$guid}}`, `{{$timestamp -1 d}}`, `{{$datetime iso8601}}`, `{{$randomInt 1 10}}` | dynamic values |
+| `{{$datetime "YYYY-MM-DD HH:mm" 1 d}}` | a custom date format (also `$localDatetime`; text in `[ ]` stays as written) |
+| `{{$random.email}}`, `{{$random.fullName}}`, `{{$random.firstName}}`, `{{$random.lastName}}`, `{{$random.words 5}}` | fake test data |
 
 Unknown names stay as written and get a wavy underline; sending asks
 "Send anyway?". **HTTP: Select Environment…** picks the environment (per
