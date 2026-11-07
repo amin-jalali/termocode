@@ -170,3 +170,31 @@ func mustDur(s string) time.Duration {
 	}
 	return d
 }
+
+// CheckProxy takes what # @proxy takes; templates are checked at send.
+func TestCheckProxy(t *testing.T) {
+	for _, ok := range []string{"", "none", "http://p:3128", "socks5://127.0.0.1:1080", "{{proxyUrl}}"} {
+		if err := CheckProxy(ok); err != nil {
+			t.Errorf("%q: %v", ok, err)
+		}
+	}
+	for _, bad := range []string{"ftp://p", "p:3128", "http://"} {
+		if CheckProxy(bad) == nil {
+			t.Errorf("%q: no error", bad)
+		}
+	}
+}
+
+// RateWait keeps two starts 1/rate apart.
+func TestRateWait(t *testing.T) {
+	t0 := time.Unix(100, 0)
+	if RateWait(0, t0, t0) != 0 || RateWait(2, time.Time{}, t0) != 0 {
+		t.Fatal("no cap or first request must not wait")
+	}
+	if got := RateWait(2, t0, t0.Add(100*time.Millisecond)); got != 400*time.Millisecond {
+		t.Fatalf("wait = %v", got)
+	}
+	if got := RateWait(2, t0, t0.Add(time.Second)); got != 0 {
+		t.Fatalf("late wait = %v", got)
+	}
+}

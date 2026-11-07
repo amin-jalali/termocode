@@ -46,6 +46,18 @@ func requestProxy(dirs map[string]string, h Hooks) (func(*http.Request) (*url.UR
 	return http.ProxyURL(u), true, nil
 }
 
+// CheckProxy reports whether v is a value `# @proxy` takes: an http,
+// https or socks5 URL, or none/off/direct. A {{template}} is not
+// checked (it is resolved at send time).
+func CheckProxy(v string) error {
+	v = strings.TrimSpace(v)
+	if v == "" || strings.Contains(v, "{{") {
+		return nil
+	}
+	_, _, err := requestProxy(map[string]string{"proxy": v}, Hooks{})
+	return err
+}
+
 // retryLimit reads `# @retry N`: extra tries, 0 when unset or bad.
 func retryLimit(v string) int {
 	n, err := strconv.Atoi(strings.TrimSpace(v))

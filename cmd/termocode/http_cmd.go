@@ -28,6 +28,7 @@ Options:
   --iterations N      run the whole set N times (default 1, or once per data row)
   --data FILE         a .csv or .json data file; each iteration uses one row
   --delay DURATION    wait between two requests (e.g. 200ms)
+  --rate N            at most N requests per second (e.g. 2 or 0.5)
   --stop-on-fail      stop at the first failed request
   --json FILE         also write the report as JSON
   --junit FILE        also write the report as JUnit XML
@@ -68,6 +69,7 @@ func runHTTPIn(args []string, out, errw io.Writer, root string) int {
 	iters := fs.Int("iterations", 0, "")
 	dataPath := fs.String("data", "", "")
 	delay := fs.Duration("delay", 0, "")
+	rate := fs.Float64("rate", 0, "")
 	stop := fs.Bool("stop-on-fail", false, "")
 	jsonPath := fs.String("json", "", "")
 	junitPath := fs.String("junit", "", "")
@@ -78,7 +80,7 @@ func runHTTPIn(args []string, out, errw io.Writer, root string) int {
 		}
 		return 2
 	}
-	if fs.NArg() == 0 || *iters < 0 || *delay < 0 {
+	if fs.NArg() == 0 || *iters < 0 || *delay < 0 || *rate < 0 {
 		fmt.Fprint(errw, "termocode http run: give at least one .http file or folder\n\n"+httpUsage)
 		return 2
 	}
@@ -98,7 +100,7 @@ func runHTTPIn(args []string, out, errw io.Writer, root string) int {
 		}
 		files = append(files, httpclient.RunFile{Path: displayPath(root, p), File: httpclient.Parse(string(src))})
 	}
-	opts := httpclient.RunOptions{Iterations: *iters, Delay: *delay, StopOnFail: *stop}
+	opts := httpclient.RunOptions{Iterations: *iters, Delay: *delay, Rate: *rate, StopOnFail: *stop}
 	if *dataPath != "" {
 		if opts.Data, err = httpclient.LoadRunData(*dataPath); err != nil {
 			return fail("%v", err)

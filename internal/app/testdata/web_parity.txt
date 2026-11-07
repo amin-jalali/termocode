@@ -603,8 +603,13 @@ missing	http-cookies	HTTP|S
 missing	http-copy-snippet	HTTP|S
 missing	http-export-har	HTTP|S
 missing	http-fields	HTTP|S
+missing	http-gql-complete	HTTP|S
+missing	http-gql-docs	HTTP|S
+missing	http-gql-schema	HTTP|S
+missing	http-gql-validate	HTTP|S
 missing	http-import-collection	HTTP|S
 missing	http-import-openapi	HTTP|S
+missing	http-proxy-set	HTTP|S
 missing	http-ws-close	HTTP|S
 missing	http-ws-send	HTTP|S
 missing	kubernetes-snippet	Kubernetes|S

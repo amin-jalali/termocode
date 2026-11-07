@@ -70,7 +70,7 @@ const (
 
 // httpPaletteItems are the palette's "HTTP: …" commands.
 func httpPaletteItems() []picker.Item {
-	return []picker.Item{
+	return append([]picker.Item{
 		{ID: "http-send", Title: "HTTP: Send Request at Cursor", Hint: "Ctrl+Alt+R"},
 		{ID: "http-send-pick", Title: "HTTP: Send Request…"},
 		{ID: "http-quick", Title: "HTTP: Quick Request…"},
@@ -97,13 +97,16 @@ func httpPaletteItems() []picker.Item {
 		{ID: "http-clear-script-vars", Title: "HTTP: Clear Script Variables"},
 		{ID: "http-ws-send", Title: "HTTP: WebSocket Send Message…"},
 		{ID: "http-ws-close", Title: "HTTP: WebSocket Disconnect"},
-	}
+	}, append(httpGQLPaletteItems(), httpProxyPaletteItems()...)...)
 }
 
 // dispatchHTTPPalette runs an "http-…" palette id. ok=false: not ours.
 func (m *Model) dispatchHTTPPalette(id string) (tea.Cmd, bool) {
 	if !strings.HasPrefix(id, "http-") {
 		return nil, false
+	}
+	if cmd, ok := m.dispatchHTTPGQL(id); ok {
+		return cmd, true
 	}
 	switch id {
 	case "http-send":
@@ -159,6 +162,8 @@ func (m *Model) dispatchHTTPPalette(id string) (tea.Cmd, bool) {
 		return m.httpClearScriptVars(), true
 	case "http-api-docs":
 		return m.httpOpenAPIDocs(), true
+	case "http-proxy-set":
+		return m.openHTTPProxyPrompt(), true
 	}
 	return nil, false
 }
@@ -493,6 +498,9 @@ func (m *Model) handleHTTPPickerSelect(id string) (tea.Cmd, bool) {
 	if cmd, ok := m.httpCookiesPickerSelect(id); ok {
 		return cmd, true
 	}
+	if cmd, ok := m.httpGQLPickerSelect(id); ok {
+		return cmd, true
+	}
 	s := m.httpS()
 	switch m.pickerKind {
 	case pickerKindDBSave:
@@ -693,6 +701,9 @@ func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.httpCookiesPrompt(value); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.httpProxyPrompt(value); ok {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseTransferPrompt(m.promptKind, value); ok {
