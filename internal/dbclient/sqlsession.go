@@ -722,6 +722,12 @@ func (s *SQLSession) Introspect(ctx context.Context, req IntrospectionRequest) (
 		if err := s.readCatalog(ctx, queries["databases"], &result.Databases); err != nil {
 			return result, err
 		}
+		// Optional (DBX-13): a user without access to the role catalog
+		// still sees the databases.
+		var roles []string
+		if s.readCatalog(ctx, queries["roles"], &roles) == nil {
+			result.Roles = roles
+		}
 		return result, nil
 	}
 	if req.Schema == "" && req.Object == "" {
@@ -825,6 +831,12 @@ func (s *SQLSession) introspectObject(ctx context.Context, req IntrospectionRequ
 					out.ForeignKeys = append(out.ForeignKeys, SchemaForeignKey{Name: row[0].Text, Column: row[1].Text, RefTable: row[2].Text, RefColumn: row[3].Text})
 				}
 			}
+		}
+	}
+	if q := queries["partitions"]; q != "" {
+		var parts []string
+		if s.readCatalog(ctx, q, &parts, req.Schema, req.Object) == nil {
+			out.Partitions = parts
 		}
 	}
 	if q := queries["checks"]; q != "" {

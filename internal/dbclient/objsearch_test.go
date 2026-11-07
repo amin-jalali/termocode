@@ -55,3 +55,15 @@ func TestSearchObjects(t *testing.T) {
 		t.Errorf("blank query: %d hits", n)
 	}
 }
+
+func TestListObjectsAll(t *testing.T) {
+	src := []ObjectSource{{Conn: "b", Schemas: []CanonSchema{{Schema: "public", Tables: []CanonTable{{Name: "users", Columns: []CanonColumn{{Name: "id"}}}}}}},
+		{Conn: "a", Schemas: []CanonSchema{{Schema: "app", Views: []CanonView{{Name: "v"}}, Routines: []CanonRoutine{{Name: "f"}}}}}}
+	hits := ListObjects(src)
+	if len(hits) != 4 {
+		t.Fatalf("hits = %+v", hits)
+	}
+	if hits[0].Conn != "a" || hits[len(hits)-1].Conn != "b" {
+		t.Fatalf("not sorted by connection: %+v", hits)
+	}
+}

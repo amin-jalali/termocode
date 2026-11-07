@@ -109,6 +109,11 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-manage-connection", Title: "Databases: Manage Connection…", Hint: "edit, comment, rename, duplicate, copy, delete"},
 		{ID: "db-paste-connection", Title: "Databases: Paste Connection from Clipboard", Hint: "connection JSON copied with Copy as JSON"},
 		{ID: "db-new-from-template", Title: "Databases: New Connection from Template…"},
+		{ID: "db-find-object", Title: "Databases: Find Object…"},
+		{ID: "db-dependencies", Title: "Databases: Show Dependencies"},
+		{ID: "db-er-text", Title: "Databases: Show ER Diagram (Text)"},
+		{ID: "db-create-table", Title: "Databases: Create Table…"},
+		{ID: "db-alter-table", Title: "Databases: Alter Table…"},
 		{ID: "db-guide", Title: "Databases: Open Guide"},
 		{ID: "db-pgtap-run", Title: "Databases: Run pgTAP Tests…"},
 		{ID: "redis-set-ttl", Title: "Databases: Set Redis Key TTL…"},
@@ -240,6 +245,16 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseTemplateStart(), true
 	case "db-pgtap-run":
 		return m.databasePgTAPStart(""), true
+	case "db-find-object":
+		return m.databaseFindObjectStart(), true
+	case "db-dependencies":
+		return m.databaseDependsStart(false), true
+	case "db-er-text":
+		return m.databaseDependsStart(true), true
+	case "db-create-table":
+		return m.databaseDesignStart(true), true
+	case "db-alter-table":
+		return m.databaseDesignStart(false), true
 	case "db-guide":
 		return m.openHelp(help.Loc{Page: databasesGuidePage}), true
 	case "db-goto-definition":
@@ -272,7 +287,7 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 	case "db-describe":
 		return tea.Batch(open, m.databaseTableMeta(false)), true
 	case "db-ddl":
-		return tea.Batch(open, m.databaseTableMeta(true)), true
+		return tea.Batch(open, m.databaseShowDDLKey()), true
 	case "db-count-rows":
 		return tea.Batch(open, m.databaseCountFromTree()), true
 	case "db-import-csv":
@@ -473,7 +488,7 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	case "d":
 		return m, m.databaseTableMeta(false)
 	case "D":
-		return m, m.databaseTableMeta(true)
+		return m, m.databaseShowDDLKey()
 	case "s":
 		return m, m.databaseSelectInConsole()
 	case "c":

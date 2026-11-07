@@ -526,6 +526,8 @@ func (m *Model) databaseTransferPrompt(kind promptKindEnum, value string) (tea.C
 		return m.databaseSaveQueryNamed(value), true
 	case promptKindDBRename:
 		return m.databaseRenamePlan(value), true
+	case promptKindDBDesign:
+		return m.databaseDesignSubmit(value), true
 	}
 	return nil, false
 }

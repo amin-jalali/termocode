@@ -353,6 +353,8 @@ func dbNodeGlyph(kind dbNodeKind) string {
 			return "\uf12e" // a puzzle piece
 		case dbNodeVirtualView:
 			return "\uf06e" // an eye
+		case dbNodeRole:
+			return "\uf007" // a user
 		case dbNodeColumn, dbNodeDetail:
 			return "\uf0f6"
 		case dbNodeSuggestion:
@@ -391,6 +393,8 @@ func dbNodeGlyph(kind dbNodeKind) string {
 			return "x"
 		case dbNodeVirtualView:
 			return "v"
+		case dbNodeRole:
+			return "u"
 		case dbNodeColumn:
 			return "."
 		case dbNodeDetail:
@@ -430,6 +434,8 @@ func dbNodeGlyph(kind dbNodeKind) string {
 		return "∗"
 	case dbNodeVirtualView:
 		return "◇"
+	case dbNodeRole:
+		return "@"
 	case dbNodeColumn:
 		return "·"
 	case dbNodeDetail:

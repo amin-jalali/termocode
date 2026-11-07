@@ -41,6 +41,7 @@ const (
 	dbNodeLoading   // "Loading…": the node's children are on their way (quiet, not a problem)
 	dbNodeTrigger   // a trigger of a schema (DBX-13)
 	dbNodeExtension // an extension installed in a schema (DBX-13)
+	dbNodeRole      // a user or role of the server (DBX-13)
 )
 
 type dbNode struct {
@@ -132,6 +133,7 @@ type dbState struct {
 	cloud               *dbCloudState               // containers, cloud discovery, IAM login (db_cloud.go)
 	manage              *dbManageState              // Manage Connection, templates (db_connmanage.go)
 	erPath              *dbERPathState              // Diagram Path Between Tables (db_er_path.go)
+	design              *dbDesignState              // the table designer (db_designer.go)
 	lastClickAt         time.Time                   // double-click detection (db_view.go)
 	lastClickPath       string
 	remoteNext          bool // "Add remote…" picked: the type picker is open
@@ -856,6 +858,16 @@ func (s *dbState) addIntrospection(path string, result dbclient.IntrospectionRes
 			n.children = append(n.children, path+"/schema")
 			s.nodes[path+"/schema"] = dbNode{kind: dbNodeSchema, name: "public", path: path + "/schema", conn: n.conn}
 		}
+		if len(result.Roles) > 0 { // DBX-13: server users and roles
+			g := dbNode{kind: dbNodeGroup, name: "Roles", path: path + "/Roles", conn: n.conn, loaded: true}
+			for _, name := range result.Roles {
+				child := g.path + "/" + name
+				s.nodes[child] = dbNode{kind: dbNodeRole, name: name, path: child, conn: n.conn}
+				g.children = append(g.children, child)
+			}
+			s.nodes[g.path] = g
+			n.children = append(n.children, g.path)
+		}
 	} else if n.kind == dbNodeDatabase || n.kind == dbNodeSchema {
 		for _, name := range result.Schemas {
 			if !opts.ShowSchema(name) {
@@ -904,6 +916,11 @@ func (s *dbState) addIntrospection(path string, result dbclient.IntrospectionRes
 		for _, fk := range result.ForeignKeys {
 			child := path + "/fk/" + fk.Name
 			s.nodes[child] = dbNode{kind: dbNodeDetail, name: "Foreign key · " + fk.Column + " → " + fk.RefTable + "." + fk.RefColumn, path: child, conn: n.conn}
+			n.children = append(n.children, child)
+		}
+		for _, p := range result.Partitions {
+			child := path + "/part/" + p
+			s.nodes[child] = dbNode{kind: dbNodeDetail, name: "Partition · " + p, path: child, conn: n.conn}
 			n.children = append(n.children, child)
 		}
 		for _, ck := range result.Checks {

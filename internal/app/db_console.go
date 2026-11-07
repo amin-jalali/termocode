@@ -63,6 +63,7 @@ type dbRun struct {
 	cursor              int          // caret byte offset + 1 in sql (0: unknown) (DBX-25)
 	mode                string       // execution mode (dbclient.ExecMode names)
 	selOne              bool         // send the selection as one text
+	reviewed            bool         // its exact SQL was shown on a card already (the table designer)
 }
 
 type dbConsoleState struct {
@@ -95,8 +96,8 @@ type dbConsoleState struct {
 	cacheKey   dbViewKey
 	history    []dbclient.HistoryEntry
 	hist       *dbclient.History
-	rename   *dbRenameState    // the SQL rename being asked for (db_rename.go)
-	askCands []dbclient.StmtSpan // the Run… choices (db_execmode.go)
+	rename     *dbRenameState      // the SQL rename being asked for (db_rename.go)
+	askCands   []dbclient.StmtSpan // the Run… choices (db_execmode.go)
 
 	// Search Data (db_datasearch.go): the schema while the value is asked,
 	// then the last search's hits (the hit picker opens them).
@@ -645,7 +646,7 @@ func (m *Model) databaseReviewRun(r *dbRun) tea.Cmd {
 		return m.databaseAskParams(r, refs)
 	}
 	kind, stmts := dbclient.Classify(r.sql, c.Driver)
-	if kind == dbclient.KindRead {
+	if kind == dbclient.KindRead || r.reviewed {
 		return m.databaseStartRun(r)
 	}
 	s.pending = r
@@ -1014,6 +1015,8 @@ func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
 	switch m.confirmKind {
 	case confirmKindDBRename:
 		return m.databaseRenameApply(id), true
+	case confirmKindDBDesign:
+		return m.databaseDesignConfirm(id), true
 	case confirmKindDBExplain:
 		return m.databaseExplainConfirm(id), true
 	case confirmKindDBRun:
@@ -1094,6 +1097,9 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseManagePicker(id); ok { // db_connmanage.go
+		return cmd, true
+	}
+	if cmd, ok := m.databaseFindObjectPicker(id); ok { // db_findobj.go
 		return cmd, true
 	}
 	switch m.pickerKind {

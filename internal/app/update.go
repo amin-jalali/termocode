@@ -280,6 +280,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBCompareSides(msg)
 	case dbCompareReadyMsg:
 		return m, m.onDBCompareReady(msg)
+	case dbObjectDDLMsg:
+		return m, m.onDBObjectDDL(msg)
 	case dbERReadyMsg:
 		return m, m.onDBERReady(msg)
 	case dbSourceLoadedMsg:
