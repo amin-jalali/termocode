@@ -21,7 +21,7 @@ import {
   type MCPServer,
   type SavedView,
   type Target,
-} from "./alltools";
+} from "./alltoolsdata";
 
 /** CatalogState is how far the laptop's catalog is. */
 export type CatalogState = { state: "loading" } | { state: "ok"; catalog: Catalog } | { state: "failed" };

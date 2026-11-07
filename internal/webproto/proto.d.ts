@@ -6,8 +6,7 @@ export type Subprotocol = "termocode.v2";
 export type Role = "viewer" | "controller";
 export type ErrCode = "bad_request" | "forbidden" | "limit" | "conflict" | "gone" | "busy" | "not_found" | "internal";
 export type CloseCode = 1000 | 1003 | 1008 | 1009 | 4001 | 4002 | 4003 | 4004 | 4005 | 4006 | 4007 | 4008 | 4009 | 4010 | 4011 | 4012 | 4013;
-export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "workflows" | "worktrees" | "inbox" | "projects";
-export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "workflows" | "worktrees" | "races";
+export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "workflows" | "worktrees" | "inbox" | "projects" | "races";
 
 export interface Bye {
   t: "bye";
@@ -291,18 +290,6 @@ export interface LspRowsArgs {
   last: number;
 }
 
-export interface AIRunStartArgs {
-  task: string;
-  profile?: string;
-  ref?: string;
-}
-
-export interface RunsSendArgs {
-  key: string;
-  step?: string;
-  text: string;
-}
-
 export interface DebugExpandArgs {
   key: string;
   open: boolean;
@@ -427,15 +414,6 @@ export interface SymbolQueryArgs {
   query: string;
 }
 
-export interface PushSubscribeArgs {
-  kind: "unifiedpush";
-  endpoint: string;
-}
-
-export interface PushUnsubscribeArgs {
-  kind: "unifiedpush";
-}
-
 export interface SearchReplaceArgs {
   find: string;
   replace: string;
@@ -483,19 +461,6 @@ export interface UserCmd {
   title: string;
   cmd: string;
   cwd?: string;
-}
-
-export interface WorkflowRunArgs {
-  run: string;
-}
-
-export interface WorkflowNameArgs {
-  name: string;
-}
-
-export interface WorkflowSaveArgs {
-  name: string;
-  content: string;
 }
 
 export interface WorkspacePathArgs {
@@ -549,6 +514,18 @@ export interface GitTextArgs {
   rev: string;
 }
 
+export interface AIRunStartArgs {
+  task: string;
+  profile?: string;
+  ref?: string;
+}
+
+export interface RunsSendArgs {
+  key: string;
+  step?: string;
+  text: string;
+}
+
 export interface KubeScopeArgs {
   context?: string;
   namespace?: string;
@@ -593,6 +570,67 @@ export interface ServiceArgs {
   name: string;
 }
 
+export interface ViewSaveArgs {
+  spec: ViewSpec;
+  name: string;
+  pin?: boolean;
+}
+
+export interface ViewSpec {
+  view: string;
+  ws?: string;
+  args?: Record<string, string>;
+  fields?: string[];
+  filter?: ViewCond[];
+  sort?: ViewSort[];
+  group?: string;
+  limit?: number;
+  layout?: string;
+  density?: "compact" | "detailed";
+  title?: string;
+  refresh?: number;
+}
+
+export interface ViewCond {
+  field: string;
+  op: "eq" | "ne" | "gt" | "lt" | "ge" | "le" | "contains" | "starts" | "in" | "empty" | "not_empty";
+  value?: string;
+  in?: string[];
+}
+
+export interface ViewSort {
+  field: string;
+  desc?: boolean;
+}
+
+export interface ViewRenameArgs {
+  id: string;
+  name: string;
+}
+
+export interface ViewRefArgs {
+  id: string;
+}
+
+export interface ViewPinArgs {
+  id: string;
+  on: boolean;
+  order?: number;
+}
+
+export interface WorkflowRunArgs {
+  run: string;
+}
+
+export interface WorkflowNameArgs {
+  name: string;
+}
+
+export interface WorkflowSaveArgs {
+  name: string;
+  content: string;
+}
+
 export interface WorktreeOnArgs {
   id: string;
   on: boolean;
@@ -603,14 +641,14 @@ export interface WorktreeNoteArgs {
   text: string;
 }
 
+export interface WorktreeArgs {
+  id: string;
+}
+
 export interface WorktreeLinkArgs {
   id: string;
   kind: "issue" | "pr" | "none";
   number: number;
-}
-
-export interface WorktreeArgs {
-  id: string;
 }
 
 export interface WorktreeTaskArgs {
@@ -636,6 +674,12 @@ export interface AIWorktreeArgs {
   id: string;
 }
 
+export interface AILaneStartArgs {
+  agent: string;
+  task: string;
+  from?: string;
+}
+
 export interface AIRaceStartArgs {
   task: string;
   agents: string[];
@@ -644,25 +688,6 @@ export interface AIRaceStartArgs {
 
 export interface AIRaceArgs {
   race: string;
-}
-
-export interface AILaneStartArgs {
-  agent: string;
-  task: string;
-  from?: string;
-}
-
-export interface AIWorktreeNotesArgs {
-  id: string;
-  chat_id?: string;
-  notes: ReviewNote[];
-}
-
-export interface ReviewNote {
-  path: string;
-  line: number;
-  side: "new" | "old";
-  text: string;
 }
 
 export interface AIMCPProfileArgs {
@@ -1012,11 +1037,6 @@ export interface PaletteArgs {
   id: string;
 }
 
-export interface ProjectTasksArgs {
-  only?: "checklist" | "issues" | "prs" | "mrs";
-  done?: boolean;
-}
-
 export interface PRNumberArgs {
   number: number;
 }
@@ -1032,12 +1052,73 @@ export interface PRReviewArgs {
   body?: string;
 }
 
+export interface ProjectTasksArgs {
+  only?: "checklist" | "issues" | "prs" | "mrs";
+  done?: boolean;
+}
+
+export interface PushKeyArgs {
+  make?: boolean;
+}
+
+export interface PushSubArgs {
+  kind?: "webpush" | "unifiedpush";
+  endpoint: string;
+  p256dh?: string;
+  auth?: string;
+}
+
+export interface PushUnsubscribeArgs {
+  kind?: "webpush" | "unifiedpush";
+}
+
+export interface AIWorktreeNotesArgs {
+  id: string;
+  chat_id?: string;
+  notes: ReviewNote[];
+}
+
+export interface ReviewNote {
+  path: string;
+  line: number;
+  side: "new" | "old";
+  text: string;
+}
+
+export interface ChatHomeArgs {
+  text?: string;
+}
+
 export interface AIUseArgs {
   name: string;
 }
 
 export interface AutoApproveArgs {
   id: string;
+}
+
+export interface MCPViewRunArgs {
+  view: string;
+  args?: MCPViewArg[];
+  compact?: boolean;
+}
+
+export interface MCPViewArg {
+  id: string;
+  value: string;
+}
+
+export interface ViewRunArgs {
+  spec: ViewSpec;
+  live?: boolean;
+}
+
+export interface ViewStopArgs {
+  id: string;
+}
+
+export interface ProjectArgs {
+  ws: string;
 }
 
 export interface StatusSnap {
@@ -1164,11 +1245,6 @@ export interface ChatMsg {
   blocks?: Block[];
 }
 
-export interface AttachChip {
-  kind: string;
-  label: string;
-}
-
 export interface MdNode {
   k: "doc" | "p" | "h" | "em" | "strong" | "code" | "codeblock" | "ul" | "ol" | "li" | "blockquote" | "link" | "hr" | "br" | "table" | "th" | "td" | "text";
   text?: string;
@@ -1179,6 +1255,11 @@ export interface MdNode {
   start?: number;
   rows?: MdNode[][];
   diagram?: string;
+}
+
+export interface AttachChip {
+  kind: string;
+  label: string;
 }
 
 export interface ChatRun {
@@ -1228,33 +1309,6 @@ export interface Block {
   total?: number;
   truncated?: boolean;
   stale?: boolean;
-}
-
-export interface ViewSpec {
-  view: string;
-  ws?: string;
-  args?: Record<string, string>;
-  fields?: string[];
-  filter?: ViewCond[];
-  sort?: ViewSort[];
-  group?: string;
-  limit?: number;
-  layout?: string;
-  density?: "compact" | "detailed";
-  title?: string;
-  refresh?: number;
-}
-
-export interface ViewCond {
-  field: string;
-  op: "eq" | "ne" | "gt" | "lt" | "ge" | "le" | "contains" | "starts" | "in" | "empty" | "not_empty";
-  value?: string;
-  in?: string[];
-}
-
-export interface ViewSort {
-  field: string;
-  desc?: boolean;
 }
 
 export interface BlockItem {
@@ -1882,16 +1936,16 @@ export interface AISnap {
   raceAgents?: AIRaceAgent[];
 }
 
-export interface AIRaceAgent {
-  id: string;
-  title: string;
-}
-
 export interface AIProfile {
   name: string;
   source: "builtin" | "user" | "project";
   trust: "use" | "ask" | "refused";
   hint?: string;
+}
+
+export interface AIRaceAgent {
+  id: string;
+  title: string;
 }
 
 export interface WorkflowsSnap {
@@ -2077,13 +2131,34 @@ export interface SearchHit {
   after?: string[];
 }
 
-export interface WSGone {
-  why: "closed" | "not_running" | "busy" | "limit" | "off" | "bad";
-}
-
 export interface SearchMark {
   s: number;
   e: number;
+}
+
+export interface ViewUpdate {
+  id: string;
+  block: Block;
+}
+
+export interface SavedViewList {
+  items: SavedView[];
+  max: number;
+  max_pinned: number;
+}
+
+export interface SavedView {
+  id: string;
+  name: string;
+  spec: ViewSpec;
+  pinned?: boolean;
+  order?: number;
+  saved: number;
+  by?: string;
+}
+
+export interface WSGone {
+  why: "closed" | "not_running" | "busy" | "limit" | "off" | "bad";
 }
 
 export interface TreeListRes {
@@ -2219,11 +2294,6 @@ export interface ControlChallenge {
   options: unknown;
 }
 
-export interface PhoneLaptop {
-  name: string;
-  this?: boolean;
-}
-
 export interface PhoneInfo {
   device: string;
   name: string;
@@ -2236,6 +2306,11 @@ export interface PhoneInfo {
   last_seen_ms?: number;
   prefs: PhonePrefsArgs;
   laptops: PhoneLaptop[];
+}
+
+export interface PhoneLaptop {
+  name: string;
+  this?: boolean;
 }
 
 export interface LspActions {
@@ -2619,46 +2694,10 @@ export interface VimMap {
   noremap?: boolean;
 }
 
-export interface ViewSaveArgs {
-  spec: ViewSpec;
-  name: string;
-  pin?: boolean;
-}
-
-export interface ViewRefArgs {
-  id: string;
-}
-
-export interface ViewRenameArgs {
-  id: string;
-  name: string;
-}
-
-export interface ViewPinArgs {
-  id: string;
-  on: boolean;
-  order?: number;
-}
-
-export interface SavedViewList {
-  items: SavedView[];
-  max: number;
-  max_pinned: number;
-}
-
-export interface SavedView {
-  id: string;
-  name: string;
-  spec: ViewSpec;
-  pinned?: boolean;
-  order?: number;
-  saved: number;
-  by?: string;
-}
-
-export interface ViewSaved {
-  id: string;
-  replaced?: boolean;
+export interface WatchToken {
+  token: string;
+  path: string;
+  expires: number;
 }
 
 export interface WorkspaceList {
@@ -2865,6 +2904,28 @@ export interface ServiceDone {
   note?: string;
 }
 
+export interface AIUsage {
+  scope: string;
+  by_model: AIUsageLine[];
+  by_agent: AIUsageLine[];
+  total: AIUsageLine;
+}
+
+export interface AIUsageLine {
+  name: string;
+  calls: number;
+  input: number;
+  output: number;
+  cost_usd?: number;
+  priced?: boolean;
+  billing?: string;
+}
+
+export interface ViewSaved {
+  id: string;
+  replaced?: boolean;
+}
+
 export interface WorktreeDone {
   asked?: boolean;
   note?: string;
@@ -2937,6 +2998,17 @@ export interface AIWorktreeText {
   truncated?: boolean;
 }
 
+export interface AILaneAgents {
+  noRepo?: boolean;
+  items: AILaneAgent[];
+}
+
+export interface AILaneAgent {
+  id: string;
+  title: string;
+  state: "ready" | "signin" | "unknown";
+}
+
 export interface AIRaceSummary {
   race: string;
   lines: string[];
@@ -2947,17 +3019,6 @@ export interface AIRaceDone {
   race: string;
   lanes: number;
   message: string;
-}
-
-export interface AILaneAgents {
-  noRepo?: boolean;
-  items: AILaneAgent[];
-}
-
-export interface AILaneAgent {
-  id: string;
-  title: string;
-  state: "ready" | "signin" | "unknown";
 }
 
 export interface MCPProfiles {
@@ -3514,23 +3575,6 @@ export interface PaletteList {
   items: PaletteItem[];
 }
 
-export interface AIUsage {
-  scope: string;
-  by_model: AIUsageLine[];
-  by_agent: AIUsageLine[];
-  total: AIUsageLine;
-}
-
-export interface AIUsageLine {
-  name: string;
-  calls: number;
-  input: number;
-  output: number;
-  cost_usd?: number;
-  priced?: boolean;
-  billing?: string;
-}
-
 export interface PaletteItem {
   id: string;
   title: string;
@@ -3632,6 +3676,12 @@ export interface ProjectTask {
   url?: string;
 }
 
+export interface PushState {
+  state: "ready" | "none" | "locked" | "off";
+  key?: string;
+  on: boolean;
+}
+
 export interface MCPItems {
   items: MCPItem[];
 }
@@ -3646,10 +3696,6 @@ export interface ChatSide {
   answer: string;
 }
 
-export interface ChatHomeArgs {
-  text?: string;
-}
-
 export interface AutoApprove {
   rows: AutoApproveRow[];
 }
@@ -3661,8 +3707,112 @@ export interface AutoApproveRow {
   header?: boolean;
 }
 
-export interface ProjectArgs {
-  ws: string;
+export interface MCPViews {
+  servers: MCPViewServer[];
+}
+
+export interface MCPViewServer {
+  name: string;
+  known: boolean;
+  off?: boolean;
+  views: MCPViewInfo[];
+}
+
+export interface MCPViewInfo {
+  id: string;
+  tool: string;
+  title: string;
+  description?: string;
+  params: MCPViewParam[];
+  fields: MCPViewField[];
+  layout: "table" | "list" | "card" | "detail" | "text" | "json";
+  typed?: "schema" | "learned";
+  run?: boolean;
+  why?: string;
+  resources?: MCPViewChoice[];
+}
+
+export interface MCPViewParam {
+  id: string;
+  label: string;
+  kind: "string" | "int" | "number" | "bool" | "enum" | "uri";
+  enum?: string[];
+  required?: boolean;
+  hint?: string;
+}
+
+export interface MCPViewField {
+  id: string;
+  label: string;
+  kind: "text" | "num" | "time" | "bool" | "link" | "json";
+}
+
+export interface MCPViewChoice {
+  uri: string;
+  name: string;
+  template?: boolean;
+  vars?: string[];
+}
+
+export interface MCPViewData {
+  view: string;
+  title: string;
+  layout: "table" | "list" | "card" | "detail" | "text" | "json" | "status";
+  block?: Block;
+  raw: string;
+  truncated?: boolean;
+  error?: boolean;
+  ask?: string;
+}
+
+export interface ViewRunResult {
+  block: Block;
+  live?: string;
+}
+
+export interface ViewCatalog {
+  features: string[];
+  views: ViewDef[];
+}
+
+export interface ViewDef {
+  id: string;
+  feature: string;
+  title: string;
+  source: ViewSource;
+  params?: ViewParam[];
+  fields: ViewField[];
+  layouts: string[];
+  default: ViewSpec;
+  actions?: BlockAction[];
+  role: "viewer" | "controller";
+  live?: boolean;
+  refresh?: number;
+}
+
+export interface ViewSource {
+  topic?: string;
+  op?: string;
+  tool?: string;
+  mcp_server?: string;
+  mcp_tool?: string;
+}
+
+export interface ViewParam {
+  id: string;
+  label: string;
+  kind: "ws" | "string" | "int" | "enum" | "path" | "table" | "conn" | "number_pr" | "uri";
+  enum?: string[];
+  required?: boolean;
+}
+
+export interface ViewField {
+  id: string;
+  label: string;
+  kind: "text" | "num" | "time" | "state" | "path" | "link" | "bool" | "cost" | "md";
+  sortable?: boolean;
+  filterable?: boolean;
+  default?: boolean;
 }
 
 export interface ProjectClosed {
@@ -3727,8 +3877,6 @@ export interface OpArgs {
   "lsp.inlay_hints": LspRowsArgs;
   "board.get": EmptyArgs;
   "board.projects": EmptyArgs;
-  "ai.run_start": AIRunStartArgs;
-  "runs.send": RunsSendArgs;
   "debug.expand": DebugExpandArgs;
   "debug.sources": EmptyArgs;
   "debug.start": DebugConfigArgs;
@@ -3775,8 +3923,6 @@ export interface OpArgs {
   "files.recent": EmptyArgs;
   "lsp.workspace_symbols": SymbolQueryArgs;
   "snippets.list": BufArgs;
-  "push.subscribe": PushSubscribeArgs;
-  "push.unsubscribe": PushUnsubscribeArgs;
   "search.replace": SearchReplaceArgs;
   "snippets.user": EmptyArgs;
   "snippets.save": SnippetSaveArgs;
@@ -3790,20 +3936,11 @@ export interface OpArgs {
   "theme.set": ThemeArgs;
   "theme.colors": EmptyArgs;
   "theme.color_set": ThemeColorArgs;
-  "ai.usage": EmptyArgs;
   "usercmds.list": EmptyArgs;
   "usercmds.save": UserCmdSaveArgs;
   "editor.vim_maps": EmptyArgs;
   "editor.vim_buf_maps": BufArgs;
-  "view.list": EmptyArgs;
-  "view.save": ViewSaveArgs;
-  "view.rename": ViewRenameArgs;
-  "view.delete": ViewRefArgs;
-  "view.pin": ViewPinArgs;
-  "workflows.stop": WorkflowRunArgs;
-  "workflows.dry_run": WorkflowNameArgs;
-  "workflows.run": WorkflowNameArgs;
-  "workflows.save": WorkflowSaveArgs;
+  "app.watch_token": EmptyArgs;
   "workspace.list": EmptyArgs;
   "workspace.add_folder": WorkspacePathArgs;
   "workspace.remove_folder": IDArgs;
@@ -3816,6 +3953,8 @@ export interface OpArgs {
   "git.file_log": GitFileLogArgs;
   "git.text": GitTextArgs;
   "buf.symbols": BufArgs;
+  "ai.run_start": AIRunStartArgs;
+  "runs.send": RunsSendArgs;
   "kube.contexts": EmptyArgs;
   "kube.namespaces": KubeScopeArgs;
   "kube.list": KubeScopeArgs;
@@ -3834,6 +3973,16 @@ export interface OpArgs {
   "services.start": ServiceArgs;
   "services.restart": ServiceArgs;
   "services.stop": ServiceArgs;
+  "ai.usage": EmptyArgs;
+  "view.list": EmptyArgs;
+  "view.save": ViewSaveArgs;
+  "view.rename": ViewRenameArgs;
+  "view.delete": ViewRefArgs;
+  "view.pin": ViewPinArgs;
+  "workflows.stop": WorkflowRunArgs;
+  "workflows.dry_run": WorkflowNameArgs;
+  "workflows.run": WorkflowNameArgs;
+  "workflows.save": WorkflowSaveArgs;
   "worktrees.refresh": EmptyArgs;
   "worktrees.pin": WorktreeOnArgs;
   "worktrees.sleep": WorktreeOnArgs;
@@ -3849,13 +3998,12 @@ export interface OpArgs {
   "ai.worktree_text": AIWorktreeTextArgs;
   "ai.worktree_merge": AIWorktreeArgs;
   "ai.worktree_discard": AIWorktreeArgs;
+  "ai.lane_agents": EmptyArgs;
+  "ai.lane_start": AILaneStartArgs;
   "ai.race_start": AIRaceStartArgs;
   "ai.race_summary": AIRaceArgs;
   "ai.race_verify": AIRaceArgs;
   "ai.race_stop": AIRaceArgs;
-  "ai.lane_agents": EmptyArgs;
-  "ai.lane_start": AILaneStartArgs;
-  "ai.worktree_notes": AIWorktreeNotesArgs;
   "ai.mcp_profiles": EmptyArgs;
   "ai.use_mcp_profile": AIMCPProfileArgs;
   "ai.catalog": AICatalogArgs;
@@ -3975,6 +4123,11 @@ export interface OpArgs {
   "pr.merge": PRMergeArgs;
   "pr.review": PRReviewArgs;
   "pr.checkout": PRNumberArgs;
+  "project.tasks": ProjectTasksArgs;
+  "push.key": PushKeyArgs;
+  "push.subscribe": PushSubArgs;
+  "push.unsubscribe": PushUnsubscribeArgs;
+  "ai.worktree_notes": AIWorktreeNotesArgs;
   "ai.mcp_items": EmptyArgs;
   "chat.side": ChatSendArgs;
   "chat.home": ChatHomeArgs;
@@ -3982,9 +4135,13 @@ export interface OpArgs {
   "ai.use_model": AIUseArgs;
   "ai.auto_approve": EmptyArgs;
   "ai.set_auto_approve": AutoApproveArgs;
+  "mcp.views": EmptyArgs;
+  "mcp.view_run": MCPViewRunArgs;
+  "view.run": ViewRunArgs;
+  "view.stop": ViewStopArgs;
+  "view.catalog": EmptyArgs;
   "project.open": ProjectArgs;
   "project.close": ProjectArgs;
-  "project.tasks": ProjectTasksArgs;
 }
 
 export type OpName = keyof OpArgs;
@@ -4023,6 +4180,7 @@ export interface EventData {
   "answered": Answered;
   "attention": Attention;
   "search.batch": SearchBatch;
+  "view_update": ViewUpdate;
   "views_saved": SavedViewList;
   "ws.gone": WSGone;
 }
@@ -4060,7 +4218,6 @@ export interface OpResult {
   "lsp.inlay_hints": LspHints;
   "board.get": Board;
   "board.projects": BoardProjects;
-  "ai.run_start": AskRef;
   "debug.sources": DebugSources;
   "debug.open_launch": DebugLaunch;
   "lsp.type_definition": LspLocations;
@@ -4101,19 +4258,11 @@ export interface OpResult {
   "theme.set": ThemeList;
   "theme.colors": ThemeColors;
   "theme.color_set": ThemeColors;
-  "ai.usage": AIUsage;
   "usercmds.list": UserCmdList;
   "usercmds.save": UserCmdList;
   "editor.vim_maps": VimMapList;
   "editor.vim_buf_maps": VimMapList;
-  "view.list": SavedViewList;
-  "view.save": ViewSaved;
-  "view.rename": SavedViewList;
-  "view.delete": SavedViewList;
-  "view.pin": SavedViewList;
-  "workflows.dry_run": WorkflowRunArgs;
-  "workflows.run": AskRef;
-  "workflows.save": AskRef;
+  "app.watch_token": WatchToken;
   "workspace.list": WorkspaceList;
   "workspace.add_folder": AskRef;
   "workspace.remove_folder": AskRef;
@@ -4126,6 +4275,7 @@ export interface OpResult {
   "git.file_log": GitFileLog;
   "git.text": GitText;
   "buf.symbols": BufSymbols;
+  "ai.run_start": AskRef;
   "kube.contexts": KubeContexts;
   "kube.namespaces": KubeNamespaces;
   "kube.list": KubeList;
@@ -4143,6 +4293,15 @@ export interface OpResult {
   "services.start": ServiceDone;
   "services.restart": ServiceDone;
   "services.stop": AskRef;
+  "ai.usage": AIUsage;
+  "view.list": SavedViewList;
+  "view.save": ViewSaved;
+  "view.rename": SavedViewList;
+  "view.delete": SavedViewList;
+  "view.pin": SavedViewList;
+  "workflows.dry_run": WorkflowRunArgs;
+  "workflows.run": AskRef;
+  "workflows.save": AskRef;
   "worktrees.pin": WorktreeDone;
   "worktrees.sleep": WorktreeDone;
   "worktrees.note": WorktreeDone;
@@ -4157,13 +4316,12 @@ export interface OpResult {
   "ai.worktree_text": AIWorktreeText;
   "ai.worktree_merge": AskRef;
   "ai.worktree_discard": AskRef;
+  "ai.lane_agents": AILaneAgents;
+  "ai.lane_start": AskRef;
   "ai.race_start": AskRef;
   "ai.race_summary": AIRaceSummary;
   "ai.race_verify": AIRaceDone;
   "ai.race_stop": AIRaceDone;
-  "ai.lane_agents": AILaneAgents;
-  "ai.lane_start": AskRef;
-  "ai.worktree_notes": ChatRef;
   "ai.mcp_profiles": MCPProfiles;
   "ai.use_mcp_profile": AskRef;
   "ai.catalog": AICatalog;
@@ -4277,6 +4435,11 @@ export interface OpResult {
   "pr.merge": AskRef;
   "pr.review": AskRef;
   "pr.checkout": AskRef;
+  "project.tasks": ProjectTasks;
+  "push.key": PushState;
+  "push.subscribe": PushState;
+  "push.unsubscribe": PushState;
+  "ai.worktree_notes": ChatRef;
   "ai.mcp_items": MCPItems;
   "chat.side": ChatSide;
   "chat.home": ChatSnap;
@@ -4284,7 +4447,10 @@ export interface OpResult {
   "ai.use_model": AskRef;
   "ai.auto_approve": AutoApprove;
   "ai.set_auto_approve": AskRef;
+  "mcp.views": MCPViews;
+  "mcp.view_run": MCPViewData;
+  "view.run": ViewRunResult;
+  "view.catalog": ViewCatalog;
   "project.open": AskRef;
   "project.close": ProjectClosed;
-  "project.tasks": ProjectTasks;
 }

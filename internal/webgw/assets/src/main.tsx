@@ -22,6 +22,12 @@ import "./styles/hl.css";
 import "./styles/media.css";
 import "./styles/saved.css";
 import "./styles/home-catalog.css"; // MOB-13: the Home's catalog and pinned tracker blocks (home.js has no style sheet)
+import "./styles/research.css"; // moved from a chunk file (chunks may not import style sheets)
+import "./styles/race-models.css"; // moved from a chunk file (chunks may not import style sheets)
+import "./styles/viewblock.css"; // moved from a chunk file (chunks may not import style sheets)
+import "./styles/race.css"; // moved from a chunk file (chunks may not import style sheets)
+import "./styles/phone-projects.css"; // moved from a chunk file (chunks may not import style sheets)
+import "./styles/mcpviews.css"; // moved from a chunk file (chunks may not import style sheets)
 import { App } from "./app";
 import { loadPersian } from "./lib/lazy";
 import { prefs } from "./lib/prefs";

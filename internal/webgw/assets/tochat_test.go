@@ -38,7 +38,7 @@ func TestToChatSendsOnlyAReference(t *testing.T) {
 		t.Fatal("tochat.ts has no cleanRef")
 	}
 	for _, bad := range []string{"text", "content", "body", "label", "value", "...r", "...ref"} {
-		if regexp.MustCompile(`\b` + regexp.QuoteMeta(bad) + `\s*:`).MatchString(m) || strings.Contains(m, "{ ...") {
+		if regexp.MustCompile(`\b`+regexp.QuoteMeta(bad)+`\s*:`).MatchString(m) || strings.Contains(m, "{ ...") {
 			t.Errorf("cleanRef copies %q: a reference must stay kind / id / path / line", bad)
 		}
 	}

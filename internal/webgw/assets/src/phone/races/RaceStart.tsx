@@ -5,7 +5,6 @@
 // (AskLaptop: Cancel first, armed after 600 ms); nothing starts until
 // the laptop says yes. The laptop checks again that each agent is
 // installed and says why when one is not. 44 px targets.
-import "../../styles/race.css";
 import { h } from "preact";
 import { useState } from "preact/hooks";
 import { link, live } from "../../session";

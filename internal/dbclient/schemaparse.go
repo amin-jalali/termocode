@@ -279,15 +279,15 @@ func tableConstraint(part string) (CanonConstraint, bool) {
 		if strings.HasPrefix(strings.TrimSpace(r), "(") {
 			c.RefColumns, r = identList(r)
 		}
-		c.OnUpdate, c.OnDelete = fkActions(r)
+		c.OnUpdate, c.OnDelete = schemaFKActions(r)
 	default:
 		return c, false
 	}
 	return c, true
 }
 
-// fkActions reads "ON UPDATE x ON DELETE y" in any order.
-func fkActions(s string) (onUpdate, onDelete string) {
+// schemaFKActions reads "ON UPDATE x ON DELETE y" in any order.
+func schemaFKActions(s string) (onUpdate, onDelete string) {
 	up := asciiUpper(s)
 	u, d := strings.Index(up, "ON UPDATE "), strings.Index(up, "ON DELETE ")
 	cut := func(from, other int) string {

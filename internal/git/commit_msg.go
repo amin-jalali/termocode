@@ -158,25 +158,3 @@ func ChangesDiff(dir string, staged bool, max int) (diff string, cut bool, err e
 	}
 	return out, false, nil
 }
-
-// SubjectsSince lists the subjects of the commits on HEAD after base,
-// newest first, at most n (CMP-11: the handoff note).
-func SubjectsSince(dir, base string, n int) ([]string, error) {
-	if err := noOption("ref", base); err != nil {
-		return nil, err
-	}
-	if n <= 0 {
-		n = 20
-	}
-	out, err := runOut(dir, "git", "log", fmt.Sprintf("-n%d", n), "--format=%s", base+"..HEAD", "--")
-	if err != nil {
-		return nil, err
-	}
-	var subs []string
-	for _, l := range strings.Split(out, "\n") {
-		if l = strings.TrimSpace(l); l != "" {
-			subs = append(subs, l)
-		}
-	}
-	return subs, nil
-}

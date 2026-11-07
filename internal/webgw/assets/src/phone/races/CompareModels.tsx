@@ -7,7 +7,6 @@
 // lanes then show in the races view like any race. Offline or as a
 // viewer the start button is off. 44 px targets; a picked model shows a
 // check mark as well as its color.
-import "../../styles/race-models.css";
 import { h } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import type { AIRaceModelAgent, AIRaceModelsArgs } from "../../../../../webproto/proto";
