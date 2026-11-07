@@ -340,13 +340,14 @@ func (m Model) renderTreeRow(
 	// same "glass-black faint" highlight so a multi-select reads as a
 	// uniform group; the cursor row only stands apart by being bold (when
 	// the panel is focused).
-	highlighted := isCursor || m.IsSelected(e.Node.Path)
+	drop := m.dropTarget != "" && e.Node.Path == m.dropTarget // a drag is over it
+	highlighted := isCursor || drop || m.IsSelected(e.Node.Path)
 	rowBgC := theme.LG(theme.BgSidebar)
 	if highlighted {
 		// Soft accent wash for the cursor / selection; stronger while the
 		// panel has focus.
 		lvl := theme.WashSelected
-		if focused {
+		if focused || drop {
 			lvl = theme.WashSelectedFocused
 		}
 		rowBgC = theme.Wash(theme.BgSidebar, lvl)

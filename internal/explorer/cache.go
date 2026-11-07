@@ -35,6 +35,7 @@ type viewKey struct {
 	cursor, top int
 	w, h        int
 	err         string
+	dropTarget  string
 	showHidden  bool
 	meta        [2]string // workspace, branch
 	metaIsRepo  bool
@@ -51,7 +52,7 @@ type viewKey struct {
 func (m *Model) viewKey(focused bool, activePath string, activeDirty bool, gs GitStatus) viewKey {
 	return viewKey{
 		gen: treeGen.Load(), root: m.root, extraRoots: m.extraRoots,
-		cursor: m.cursor, top: m.top, w: m.w, h: m.h, err: m.err, showHidden: m.showHidden,
+		cursor: m.cursor, top: m.top, w: m.w, h: m.h, err: m.err, dropTarget: m.dropTarget, showHidden: m.showHidden,
 		meta: [2]string{m.metaWorkspace, m.metaBranch}, metaIsRepo: m.metaIsRepo, metaFiles: m.metaTotalFiles,
 		scroll: m.scroll, animOn: anim.Enabled,
 		focused: focused, activePath: activePath, activeDirty: activeDirty, git: gs,
@@ -61,7 +62,7 @@ func (m *Model) viewKey(focused bool, activePath string, activeDirty bool, gs Gi
 
 func (a *viewKey) equal(b *viewKey) bool {
 	if a.gen != b.gen || a.root != b.root || a.cursor != b.cursor || a.top != b.top ||
-		a.w != b.w || a.h != b.h || a.err != b.err || a.showHidden != b.showHidden ||
+		a.w != b.w || a.h != b.h || a.err != b.err || a.dropTarget != b.dropTarget || a.showHidden != b.showHidden ||
 		a.meta != b.meta || a.metaIsRepo != b.metaIsRepo || a.metaFiles != b.metaFiles ||
 		a.scroll != b.scroll || a.animOn != b.animOn || a.focused != b.focused ||
 		a.activePath != b.activePath || a.activeDirty != b.activeDirty || a.rk != b.rk ||
