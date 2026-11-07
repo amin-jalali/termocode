@@ -249,8 +249,9 @@ func TestChatSendAndStop(t *testing.T) {
 	}
 }
 
-// The laptop refuses: another chat is open there (conflict) or the AI is
-// still answering (busy). A calm line says why and the draft stays.
+// The laptop refuses: it cannot send in that chat (conflict), the AI is
+// still answering (busy) or the chat is gone. A calm line says why and
+// the draft stays.
 func TestChatConflictAndBusyKeepTheDraft(t *testing.T) {
 	p, c := openChat(t, Phone, chatWith(false, userMsg(0, "hi")))
 	typeDraft(p, "fix it")
@@ -258,8 +259,9 @@ func TestChatConflictAndBusyKeepTheDraft(t *testing.T) {
 		code webproto.ErrCode
 		want string
 	}{
-		{webproto.CodeConflict, "This chat is not open on the laptop. Open it there first."},
+		{webproto.CodeConflict, "The laptop cannot send in this chat now."},
 		{webproto.CodeBusy, "The AI is still answering. Stop it or wait."},
+		{webproto.CodeNotFound, "That chat is gone."},
 	} {
 		p.TapJS(composer + `.querySelector(".send")`)
 		r := expectReq(t, c, "chat.send")
@@ -363,8 +365,9 @@ func noReq(t *testing.T, c *HubConn, d time.Duration) {
 }
 
 // The chat list opens a stored chat to read here: the page pins it (it
-// stops following the laptop's chat), cannot write to it, and Follow
-// goes back to the laptop's chat, whatever it is by then.
+// stops following the laptop's chat), a line says a send opens it on the
+// laptop, and Follow goes back to the laptop's chat, whatever it is by
+// then.
 func TestChatListOpensAndFollows(t *testing.T) {
 	for _, vp := range Both {
 		t.Run(vp.Name, func(t *testing.T) {
@@ -392,8 +395,8 @@ func TestChatListOpensAndFollows(t *testing.T) {
 			}
 			c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID})
 			p.WaitJS(view + `.innerText.includes("old question") && ` + view + `.querySelector(".chat-pinned")`)
-			if Eval[bool](p, composer+`?.querySelector("textarea") != null`) {
-				t.Error("a chat not open on the laptop can be written to")
+			if !Eval[bool](p, composer+`?.querySelector("textarea") != null && `+view+`.querySelector(".chat-continue") != null`) {
+				t.Error("an old chat has no composer and no line that a send opens it on the laptop")
 			}
 			// WEBP-10: the Follow button shows its whole name beside the
 			// pin mark, and the page never gets wider than the screen (a
@@ -420,6 +423,52 @@ func TestChatListOpensAndFollows(t *testing.T) {
 			c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID})
 			p.WaitJS(view + `.innerText.includes("laptop moved on") && !` + view + `.querySelector(".chat-pinned")`)
 			p.WaitJS(composer + `?.querySelector("textarea")`)
+		})
+	}
+}
+
+// WEBP-10: an old chat read here goes on. A send names that chat; when
+// the laptop takes it (it opened the chat) the page follows the laptop
+// again and the draft is gone.
+func TestChatListContinuesOldChat(t *testing.T) {
+	for _, vp := range Both {
+		t.Run(vp.Name, func(t *testing.T) {
+			p, c := openChat(t, vp, chatWith(false, userMsg(0, "hi")))
+			c.Send(t, Snap("chats", 1, map[string]any{"chats": []any{
+				map[string]any{"id": "c-1", "title": "Fix the build", "updated": 3000, "msgs": 1, "open": true},
+				map[string]any{"id": "c-2", "title": "Old idea", "updated": 2000, "msgs": 1},
+			}}))
+			const view = `document.querySelector('[data-view="chat"]')`
+			p.TapJS(view + `.querySelector(".chat-list-btn")`)
+			p.WaitJS(view + `.querySelectorAll(".chat-row").length === 2`)
+			p.TapJS(`[...` + view + `.querySelectorAll(".chat-row")].find((r) => r.textContent.includes("Old idea"))`)
+			r := expectReq(t, c, "chat.open")
+			c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(map[string]any{"id": "c-2", "title": "Old idea", "busy": false,
+				"messages": []any{userMsg(0, "old question")}})})
+			r = expectReq(t, c, "chat.pin")
+			c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID})
+			p.WaitJS(view + `.querySelector(".chat-pinned")`)
+
+			typeDraft(p, "go on")
+			if vp.Mobile {
+				p.TapJS(composer + `.querySelector(".send")`)
+			} else {
+				p.Key(kb.Enter)
+			}
+			r = expectReq(t, c, "chat.send")
+			var a webproto.ChatSendArgs
+			if err := json.Unmarshal(r.Args, &a); err != nil || a.Text != "go on" || a.ChatID != "c-2" {
+				t.Fatalf("chat.send args %s", r.Args)
+			}
+			c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(map[string]any{"id": "c-2"})})
+			r = expectReq(t, c, "chat.pin")
+			if !strings.Contains(string(r.Args), `false`) {
+				t.Fatalf("chat.pin args %s", r.Args)
+			}
+			c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID})
+			c.Send(t, Delta("chat", 2, map[string]any{"op": "switched", "chat": map[string]any{"id": "c-2", "title": "Old idea", "busy": true,
+				"messages": []any{userMsg(0, "old question"), userMsg(1, "go on")}}}))
+			p.WaitJS(`!` + view + `.querySelector(".chat-pinned") && ` + view + `.innerText.includes("go on") && ` + composer + `.querySelector(".stop")`)
 		})
 	}
 }

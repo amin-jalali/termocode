@@ -813,6 +813,14 @@ func (m *Model) onAIHistoryPicked(id string) tea.Cmd {
 	if !s.holdChat(id) {
 		return m.aiInfo("This chat is open in another termocode window")
 	}
+	m.aiShowStoredChat(c)
+	return m.openAIPanel(true)
+}
+
+// aiShowStoredChat makes the loaded (and held) chat c the open one; any
+// turn in the old one stops. The panel and focus are left as they are.
+func (m *Model) aiShowStoredChat(c ai.Conversation) {
+	s := m.aiS()
 	if s.chatCancel != nil {
 		s.chatCancel()
 		m.cancelAIReviewTurn()
@@ -825,7 +833,6 @@ func (m *Model) onAIHistoryPicked(id string) tea.Cmd {
 	s.scroll = 0
 	s.restored = true
 	m.persistAIState()
-	return m.openAIPanel(true)
 }
 
 // aiInfo pushes an info toast.
