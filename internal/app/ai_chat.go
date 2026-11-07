@@ -678,6 +678,9 @@ func (m *Model) onAIChatDone(msg aiChatDoneMsg) tea.Cmd {
 	_, cmd := m.aiSyncIDE("", aiSyncDisk) // each tool synced already; this catches the rest
 	mem := m.aiMemoryAfterTurn()          // OM-2: lessons, beside the chat
 	queued := m.aiStartQueuedRun()        // G-API: a run the AI started waits for this turn
+	if rc, ok := m.updateRestartAfterAI(); ok {
+		return tea.Batch(cmd, rc) // SCN-32: Restart waited for this turn
+	}
 	var more tea.Cmd
 	if msg.run == nil {
 		more = m.aiKeepGoingNext() // OMX-7: open todos, keep going on
