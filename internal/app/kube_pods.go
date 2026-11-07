@@ -145,6 +145,31 @@ func (m *Model) onKubeDescribe(msg kubeDescribeMsg) tea.Cmd {
 	return nil
 }
 
+type kubeYAMLMsg struct {
+	kind, name, text string
+	err              error
+}
+
+// kubeYAML reads one object as YAML (`kubectl get -o yaml`, read only;
+// a Secret's values come back masked).
+func (m *Model) kubeYAML(kind, name string) tea.Cmd {
+	c := m.kube.client()
+	return func() tea.Msg {
+		text, err := c.YAML(context.Background(), kind, name)
+		return kubeYAMLMsg{kind: kind, name: name, text: text, err: err}
+	}
+}
+
+func (m *Model) onKubeYAML(msg kubeYAMLMsg) tea.Cmd {
+	if msg.err != nil {
+		return m.servicesToast(toast.Errr, "Cannot read the YAML of "+msg.kind, msg.err.Error())
+	}
+	if err := m.openReadOnlyPage("yaml: "+msg.kind+"/"+msg.name, msg.text, "", "yaml"); err != nil {
+		return m.servicesToast(toast.Errr, "Cannot open the YAML page", err.Error())
+	}
+	return nil
+}
+
 // kubeCopyName copies the object's name.
 func (m *Model) kubeCopyName(name string) tea.Cmd {
 	m.copyToClipboard(name)
