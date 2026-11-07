@@ -16,15 +16,17 @@ import (
 type Action int
 
 const (
-	ActNone    Action = iota
-	ActReview         // Enter: the lane's diff (read only)
-	ActMerge          // m: merge the lane into your files
-	ActDiscard        // d: discard the lane (a card asks)
-	ActVerify         // v: run the verify command in every finished lane
-	ActSummary        // s: ask the quick model for a summary
-	ActStop           // x: stop every lane that still works
-	ActRefresh        // r: read the lanes' files again
-	ActClose          // Esc
+	ActNone      Action = iota
+	ActReview           // Enter: the lane's diff (read only)
+	ActMerge            // m: merge the lane into your files
+	ActDiscard          // d: discard the lane (a card asks)
+	ActVerify           // v: run the verify command in every finished lane
+	ActSummary          // s: ask the quick model for a summary
+	ActStop             // x: stop every lane that still works
+	ActRefresh          // r: read the lanes' files again
+	ActClose            // Esc
+	ActBroadcast        // b: type one message into every lane's agent (a card asks)
+	ActRunAll           // c: run a command in every open lane (a card asks)
 )
 
 // ActionMsg is a key's action; Lane is the selected lane's id.
@@ -117,6 +119,10 @@ func (c *Compare) Key(k tea.KeyMsg) tea.Cmd {
 		}
 	case "v":
 		return act(ActVerify, sel)
+	case "b":
+		return act(ActBroadcast, sel)
+	case "c":
+		return act(ActRunAll, sel)
 	case "s":
 		return act(ActSummary, sel)
 	case "x":
@@ -329,9 +335,9 @@ func (c Compare) Box() string {
 	bottom = append(bottom, paint([]seg{{" " + status, bg.Foreground(p.muted)}}, iw, bg), hairline(p, iw))
 	if wide {
 		bottom = append(bottom, hint(p, iw, "enter", "review diff", "m", "merge this lane", "d", "discard lane", "v", "verify all",
-			"s", spark+" summarize", "x", "stop all", "r", "refresh", "esc", "close"))
+			"b", "message all", "c", "run in all", "s", spark+" summarize", "x", "stop all", "r", "refresh", "esc", "close"))
 	} else {
-		bottom = append(bottom, hint(p, iw, "enter", "diff", "m", "merge", "d", "discard", "v", "verify", "s", "summary", "esc", "close", "x", "stop"))
+		bottom = append(bottom, hint(p, iw, "enter", "diff", "m", "merge", "d", "discard", "v", "verify", "s", "summary", "esc", "close", "x", "stop", "b", "message", "c", "run"))
 	}
 
 	// Middle: the selected lane's files, as many as fit.

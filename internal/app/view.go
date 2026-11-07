@@ -143,6 +143,7 @@ func (m Model) viewFrame() string {
 	if m.promptOpen {
 		base := m.renderBase()
 		base = m.overlayToastsInEditor(base)
+		base = m.raceLayer(base) // a prompt can sit on the race page
 		return modalOverlay(base, m.prompt.Box(), m.w, m.h, m.modalOpts())
 	}
 	if m.confirmOpen {

@@ -82,6 +82,10 @@ func (m *Model) raceAct(a raceview.ActionMsg) tea.Cmd {
 		return m.raceVerify(r)
 	case raceview.ActSummary:
 		return m.raceSummary(r)
+	case raceview.ActBroadcast: // agent_race_broadcast.go
+		return m.raceOpenBroadcast()
+	case raceview.ActRunAll:
+		return m.raceOpenRunAll()
 	}
 	return nil
 }

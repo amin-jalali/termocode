@@ -305,6 +305,8 @@ input box is on screen, never into a question.
 | `m` | Merge this lane into your folder; a conflict stops first and asks (**Cancel** first) |
 | `d` | Discard one lane (**Cancel** first) |
 | `v` | Run the verify command in every finished lane |
+| `b` | Type one message into every agent that sits at its input box (finished lanes); a card shows who gets it and who is skipped (**Cancel** first) |
+| `c` | Run a command in every open lane's worktree, one task tab each (**Cancel** first) |
 | `s` | Ask your **Quick** model for a 3-line summary of the differences (capped, secrets hidden; the cost is shown) |
 | `x` | Stop every lane |
 
