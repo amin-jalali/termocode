@@ -28,6 +28,8 @@ func (MySQLDialect) CatalogQueries() map[string]string {
 		"foreign_keys": `SELECT constraint_name, column_name, referenced_table_name, referenced_column_name FROM information_schema.key_column_usage WHERE table_schema=? AND referenced_table_name IS NOT NULL AND table_name = ? ORDER BY constraint_name`,
 		"routines":     `SELECT routine_name FROM information_schema.routines WHERE routine_schema=? ORDER BY routine_name`,
 		"sequences":    `SELECT CAST(NULL AS CHAR) WHERE 1=0`,
+		"triggers":     `SELECT trigger_name FROM information_schema.triggers WHERE trigger_schema=? ORDER BY trigger_name`,
+		"checks":       `SELECT tc.constraint_name, cc.check_clause FROM information_schema.table_constraints tc JOIN information_schema.check_constraints cc ON cc.constraint_schema=tc.constraint_schema AND cc.constraint_name=tc.constraint_name WHERE tc.constraint_type='CHECK' AND tc.table_schema=? AND tc.table_name = ? ORDER BY tc.constraint_name`,
 	}
 }
 
