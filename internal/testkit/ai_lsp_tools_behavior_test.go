@@ -21,7 +21,9 @@ func init() {
 //   - workspace/symbol: bravoThing in b.txt line 2
 //   - typeDefinition: b.txt line 3; implementation: b.txt line 1 and c.txt line 2
 //   - rename: first word of a.txt and of b.txt become newName
-//   - codeAction: "Uppercase first line" (a.txt) and "Add header to b.txt"
+//   - references: a.txt line 1 (only with includeDeclaration), b.txt line 1, c.txt line 3
+//   - codeAction: "Uppercase first line" (a.txt), "Add header to b.txt" and
+//     the quick fix "Fix capital letter" (a.txt)
 const fakeLSPLua = `
 local root = ...
 local ua = vim.uri_from_fname(root .. '/a.txt')
@@ -38,6 +40,7 @@ local function server(dispatchers)
           textDocumentSync = 1, hoverProvider = true, documentSymbolProvider = true,
           workspaceSymbolProvider = true, typeDefinitionProvider = true,
           implementationProvider = true, renameProvider = true, codeActionProvider = true,
+          referencesProvider = true,
         } }
       elseif method == 'textDocument/hover' then
         res = { contents = { kind = 'markdown', value = '**alpha** is the first word' } }
@@ -50,6 +53,11 @@ local function server(dispatchers)
         res = { uri = ub, range = rg(2, 0, 5) }
       elseif method == 'textDocument/implementation' then
         res = { { uri = ub, range = rg(0, 0, 3) }, { uri = uc, range = rg(1, 0, 5) } }
+      elseif method == 'textDocument/references' then
+        res = { { uri = ub, range = rg(0, 0, 3) }, { uri = uc, range = rg(2, 0, 5) } }
+        if params.context and params.context.includeDeclaration then
+          table.insert(res, 1, { uri = ua, range = rg(0, 0, 5) })
+        end
       elseif method == 'textDocument/rename' then
         res = { changes = {
           [ua] = { { range = rg(0, 0, 5), newText = params.newName } },
@@ -61,6 +69,8 @@ local function server(dispatchers)
             edit = { changes = { [ua] = { { range = rg(0, 0, 5), newText = 'ALPHA' } } } } },
           { title = 'Add header to b.txt', kind = 'source',
             edit = { changes = { [ub] = { { range = rg(0, 0, 0), newText = '# header\n' } } } } },
+          { title = 'Fix capital letter', kind = 'quickfix',
+            edit = { changes = { [ua] = { { range = rg(0, 0, 1), newText = 'A' } } } } },
         }
       end
       vim.schedule(function() callback(nil, res) end)
@@ -298,6 +308,70 @@ var aiLSPToolCases = []aiToolCase{
 			}
 			if diskFile(d, "a.txt") != "alpha\nbravo\ncharlie\n" {
 				t.Errorf("a.txt changed: %q", diskFile(d, "a.txt"))
+			}
+		},
+	},
+	{
+		name:  "lsp_nav references lists the declaration and every use",
+		call:  toolCall{"lsp_nav", map[string]any{"path": "a.txt", "line": 1, "character": 1, "kind": "references"}},
+		setup: withFakeLSP,
+		check: func(t *testing.T, d *Driver, r []string) {
+			got := oneResult(t, r)
+			for _, want := range []string{"a.txt:1:1", "b.txt:1:1", "c.txt:3:1"} {
+				if !strings.Contains(got, want) {
+					t.Errorf("result %q has no %q", got, want)
+				}
+			}
+		},
+	},
+	{
+		name: "lsp_nav references on a tab with unsaved edits answers and changes nothing",
+		call: toolCall{"lsp_nav", map[string]any{"path": "a.txt", "line": 1, "character": 1, "kind": "references"}},
+		setup: func(d *Driver) {
+			withFakeLSP(d)
+			lua(d, `vim.api.nvim_buf_set_lines(0, 2, 3, false, { "mine" }); return ''`)
+		},
+		check: func(t *testing.T, d *Driver, r []string) {
+			if got := oneResult(t, r); !strings.Contains(got, "b.txt:1:1") {
+				t.Errorf("result %q", got)
+			}
+			if bufLines(d) != "alpha\nbravo\nmine" {
+				t.Errorf("buffer %q", bufLines(d))
+			}
+			if diskFile(d, "a.txt") != "alpha\nbravo\ncharlie\n" {
+				t.Errorf("a.txt %q", diskFile(d, "a.txt"))
+			}
+		},
+	},
+	{
+		name:  "lsp_code_actions lists the quick fix with its kind",
+		call:  toolCall{"lsp_code_actions", map[string]any{"path": "a.txt", "line": 1, "character": 1}},
+		setup: withFakeLSP,
+		check: func(t *testing.T, d *Driver, r []string) {
+			if got := oneResult(t, r); !strings.Contains(got, "3. Fix capital letter [quickfix]") {
+				t.Errorf("result %q", got)
+			}
+		},
+	},
+	{
+		name: "lsp_code_actions quick fix on a tab with unsaved edits applies it and keeps the tab unsaved",
+		call: toolCall{"lsp_code_actions", map[string]any{"path": "a.txt", "line": 1, "character": 1,
+			"op": "apply", "title": "fix capital letter"}},
+		setup: func(d *Driver) {
+			withFakeLSP(d)
+			lua(d, `vim.api.nvim_buf_set_lines(0, 2, 3, false, { "mine" }); return ''`)
+		},
+		confirm:  true,
+		noReview: true,
+		check: func(t *testing.T, d *Driver, r []string) {
+			if got := oneResult(t, r); !strings.Contains(got, "not saved") {
+				t.Errorf("result %q", got)
+			}
+			if bufLines(d) != "Alpha\nbravo\nmine" {
+				t.Errorf("buffer %q", bufLines(d))
+			}
+			if diskFile(d, "a.txt") != "alpha\nbravo\ncharlie\n" {
+				t.Errorf("a.txt saved with the user's edits: %q", diskFile(d, "a.txt"))
 			}
 		},
 	},
