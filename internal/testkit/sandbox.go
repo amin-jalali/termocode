@@ -35,6 +35,19 @@ var DefaultFiles = map[string]string{
 	"data/config.json":    "{\n  \"name\": \"demo\"\n}\n",
 }
 
+// sandboxGitUnset are the git variables that point git at another repo,
+// index or config. git sets several of them for hooks (a pre-push
+// `go test`), and leaked into a test they make the temp workspace's git
+// calls work on the outer repo: its stash, its index (STAB-8).
+var sandboxGitUnset = []string{
+	"GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR",
+	"GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_NAMESPACE",
+	"GIT_CEILING_DIRECTORIES", "GIT_DISCOVERY_ACROSS_FILESYSTEM",
+	"GIT_CONFIG", "GIT_CONFIG_GLOBAL", "GIT_CONFIG_SYSTEM",
+	"GIT_CONFIG_COUNT", "GIT_CONFIG_PARAMETERS", "GIT_PREFIX",
+	"GIT_EXEC_PATH", "GIT_REFLOG_ACTION", "GIT_EDITOR", "GIT_SEQUENCE_EDITOR",
+}
+
 // sandbox points every place the app reads or writes user state at temp
 // dirs, and cuts the network and the system clipboard off.
 func sandbox(t testing.TB, nvim bool) {
@@ -122,6 +135,10 @@ func sandbox(t testing.TB, nvim bool) {
 	}
 	for k, v := range env {
 		t.Setenv(k, v)
+	}
+	for _, k := range sandboxGitUnset {
+		t.Setenv(k, "") // restores the old value after the test
+		_ = os.Unsetenv(k)
 	}
 	if cliGuard != nil {
 		t.Setenv(servicestest.GuardTestEnv, t.Name())

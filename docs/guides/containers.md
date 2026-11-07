@@ -225,9 +225,60 @@ says `stopped` and a card offers **Wait** (keep the open files),
 
 In a container workspace, Source Control runs git inside the container:
 stage, unstage, discard, commit, push, pull, fetch, checkout, and new
-branches all work there (git must be in the image). Staging one hunk is
-not there yet; use the terminal for it. **Replace in Workspace** reads
-and writes the files through the container too.
+branches all work there (git must be in the image). Staging, unstaging
+or discarding one hunk or a few lines works too: the patch goes to
+`git apply` on its input, so no file is written in the container.
+**Replace in Workspace** reads and writes the files through the
+container too.
+
+The **Testing** view finds the tests in the container's files and runs
+them there (`go test`, `pytest`, `cargo test`, jest or vitest must be
+in the image, and the image needs `sh`). termocode writes no report
+file in the container: pytest results come from its `-v` lines, jest
+and vitest print their JSON report into the output. Stop ends the run
+in the container too.
+
+The AI agent works on the container's files as well. `read_file`,
+`write_file`, `edit_file`, `search`, `glob`, the git tools and
+`run_command` all run in the container, with the same approval cards as
+for a local folder. A file with unsaved edits in the editor is never
+overwritten. MCP clients served by this window get the same tools.
+
+**File: Download** and **File: Upload** work in a container workspace
+too. A download first copies the file or folder out of the container
+into a private temp folder on this computer, then saves it like any
+download (Downloads folder, kitty, iTerm2, or the scp card); the temp
+copy is removed when the download ends. An upload first takes the files
+from your computer the usual way, then a card with **Cancel** first asks
+before it copies them into the container folder. Nothing in the
+container is replaced: a name that is already there gets ` (1)`. New
+files belong to the user the workspace runs as.
+
+#### Containers on another machine (ssh://)
+
+On an engine context over `ssh://` (or `tcp://`), every engine command
+opens a new connection, so each small file operation is slow. termocode
+then keeps one `sh` open in the container for the workspace and sends
+the short commands (listing a folder, rename, delete, git status…)
+through it. It is the image's own shell; nothing is copied into the
+container, and it is closed when termocode quits. If that shell stops,
+termocode goes back to one command per call, with the same results.
+
+Copies (open, save, download, upload) still open a connection each. To
+make them fast, let ssh reuse one connection. Add this to
+`~/.ssh/config` for the host of the context:
+
+```
+Host prod
+  ControlMaster auto
+  ControlPath ~/.ssh/cm-%r@%h:%p
+  ControlPersist 10m
+```
+
+**Help: Run Doctor** lists each docker context over ssh under
+`containers` and says whether ssh reuses its connection, with the lines
+to add when it does not. The check only reads your config; it
+connects to nothing.
 
 ### Reopen in a dev container
 
@@ -242,9 +293,20 @@ project folder mounted, runs the commands, then opens the folder in it.
 forwarded ports listen on 127.0.0.1 only.
 
 The container is named `termocode-dc-<id>` and found again next time: an
-existing one is only started, the commands do not run again. Files with
-`dockerComposeFile` or `features` need the devcontainer CLI; create the
-container with it, then open it with `W` in Containers.
+existing one is only started, the commands do not run again.
+
+Files with `dockerComposeFile` or `features` use the devcontainer CLI
+(`npm install -g @devcontainers/cli`); termocode says so when it is not
+installed. The card then also lists every feature (each one runs its own
+install script in the container), and one `devcontainer up` makes the
+container and runs the commands. termocode marks that container with the
+`termocode.devcontainer` label, so next time it is only started. A
+changed command or feature asks again.
+
+When you open a local folder with a devcontainer.json, one quiet toast
+offers to reopen it in a dev container. A click shows **Not now** (first),
+**Never for this project** and **Reopen in Dev Container**, which goes on
+to the card above. Nothing is made from the toast itself.
 
 The right-click menu of a container also has **Duplicate…** and
 **Recreate (pull, same settings)…**. Both read the container's settings

@@ -48,6 +48,8 @@ type Docker struct {
 	received []tar.Header
 	delays   map[string]time.Duration
 	streams  int
+	// endpoints answer `context inspect` (SetEndpoint).
+	endpoints map[string]string
 }
 
 // Container is one fake container. Its "/" is the local folder Root.
@@ -331,8 +333,44 @@ func (d *Docker) run(ctx context.Context, args []string, input []byte) result {
 		if len(args) > 1 && args[1] == "inspect" {
 			return d.imageInspect(args[2:])
 		}
+	case "context":
+		if len(args) > 1 && args[1] == "inspect" {
+			return d.contextInspect(args[2:])
+		}
 	}
 	return fail("fakedocker: unknown command %q", args[0])
+}
+
+// SetEndpoint makes `context inspect <name>` answer endpoint (name ""
+// is the current context). Unknown contexts fail like the real CLI.
+func (d *Docker) SetEndpoint(name, endpoint string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.endpoints == nil {
+		d.endpoints = map[string]string{}
+	}
+	d.endpoints[name] = endpoint
+}
+
+// contextInspect is `context inspect [--format f] [name]`; it prints the
+// endpoint whatever the format asks.
+func (d *Docker) contextInspect(args []string) result {
+	name := ""
+	for i := 0; i < len(args); i++ {
+		switch {
+		case args[i] == "--format" || args[i] == "-f":
+			i++
+		case !strings.HasPrefix(args[i], "-"):
+			name = args[i]
+		}
+	}
+	d.mu.Lock()
+	ep, ok := d.endpoints[name]
+	d.mu.Unlock()
+	if !ok {
+		return fail("context %q does not exist", name)
+	}
+	return result{out: ep + "\n"}
 }
 
 // start is `docker start <name>`: the container runs again.

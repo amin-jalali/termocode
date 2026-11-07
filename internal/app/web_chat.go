@@ -216,11 +216,15 @@ func (w *webChatSent) same(sm *ai.StoredMessage) bool {
 // webChatKey sums up the parts of a message besides its text that the
 // page shows (run, steps, model, images), to see a change cheaply.
 func webChatKey(sm *ai.StoredMessage) string {
-	if sm.Run == nil && len(sm.Steps) == 0 && sm.Model == "" && len(sm.Images) == 0 && sm.Rules == "" {
+	if sm.Run == nil && len(sm.Steps) == 0 && sm.Model == "" && len(sm.Images) == 0 && sm.Rules == "" && sm.Block == nil {
 		return ""
 	}
 	var b strings.Builder
 	b.WriteString(sm.Model + "\x00" + sm.Rules + "\x00" + strconv.Itoa(len(sm.Images)))
+	if sm.Block != nil { // MOB-10: a block arrives with the result
+		bl := sm.Block
+		fmt.Fprintf(&b, "\x00block %s %s %s %d %d %d", bl.ID, bl.Kind, bl.Title, len(bl.Items), len(bl.Rows), len(bl.Fields))
+	}
 	if r := sm.Run; r != nil {
 		fmt.Fprintf(&b, "\x00%s %s %s %d %g %v", r.ID, r.Profile, r.State, r.ElapsedMs, r.Spent, r.PlanWait)
 	}
@@ -297,11 +301,20 @@ func webChatMsgOf(i int, sm *ai.StoredMessage, streaming bool, max int) (webprot
 	for _, img := range sm.Images {
 		cm.Images = append(cm.Images, filepath.Base(img))
 	}
+	for _, a := range sm.Attached {
+		if len(cm.Attached) == webproto.MaxAttachedChips {
+			break
+		}
+		cm.Attached = append(cm.Attached, webproto.AttachChip{Kind: a.Kind, Label: webName(webChatRedact(a.Label))})
+	}
 	if r := sm.Run; r != nil {
 		cm.Run = &webproto.ChatRun{ID: r.ID, Profile: r.Profile, State: webRunState(r.State), ElapsedMs: r.ElapsedMs, CostUSD: r.Spent, PlanWait: r.PlanWait}
 	}
 	for j := range sm.Steps {
 		cm.Steps = append(cm.Steps, webChatStep(&sm.Steps[j]))
+	}
+	if b := webChatBlock(sm.Block); b != nil {
+		cm.Blocks = []webproto.Block{*b}
 	}
 	return cm, sent
 }

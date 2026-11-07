@@ -1,0 +1,9 @@
+{
+  "note": "a text view: the run's last lines as one code block",
+  "spec": {"view": "workflow.tail", "args": {"run": "run-2"}},
+  "src": {"workflows": [], "runs": [
+    {"id": "run-1", "workflow": "nightly", "state": "done", "started": 1, "tail": ["old"]},
+    {"id": "run-2", "workflow": "nightly", "state": "running", "started": 2, "tail": ["step 1 ok", "step 2 …"]}
+  ]},
+  "want": {"kind": "text", "total": 2, "md": {"k": "doc", "c": [{"k": "codeblock", "text": "step 1 ok\nstep 2 …"}]}}
+}

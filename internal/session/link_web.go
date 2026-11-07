@@ -26,6 +26,9 @@ type WebHandoff struct {
 	Sock   string // the far gateway's unix socket
 	Secret string // the one-time launch secret
 	Err    string // set instead when the far side could not start the panel
+	// Fwd is set instead (and nothing else) for a port forward request
+	// of the far UI (WEB-54, link_fwd.go).
+	Fwd *PortForward
 }
 
 const (
@@ -118,14 +121,14 @@ type webFilter struct {
 func newWebFilter() *webFilter { return &webFilter{} }
 
 // Filter returns p without the hand-off strings and the good hand-offs
-// found, in order.
+// found, in order. A port forward request (link_fwd.go) is a hand-off
+// with Fwd set.
 func (f *webFilter) Filter(p []byte) ([]byte, []WebHandoff) {
 	data := p
 	if len(f.held) > 0 {
 		data = append(f.held, p...)
 		f.held = nil
 	}
-	prefix := []byte(webAPCPrefix)
 	var out []byte
 	var found []WebHandoff
 	start := 0 // data[start:i] is plain output not yet copied
@@ -134,8 +137,9 @@ func (f *webFilter) Filter(p []byte) ([]byte, []WebHandoff) {
 			continue
 		}
 		rest := data[i:]
-		if !bytes.HasPrefix(rest, prefix) {
-			if len(rest) < len(prefix) && bytes.HasPrefix(prefix, rest) {
+		prefix := apcPrefixOf(rest)
+		if prefix == nil {
+			if partialAPCPrefix(rest) {
 				out = append(out, data[start:i]...)
 				f.held = append([]byte(nil), rest...)
 				return out, found
@@ -153,8 +157,12 @@ func (f *webFilter) Filter(p []byte) ([]byte, []WebHandoff) {
 			continue // too long to be ours: let it through
 		}
 		out = append(out, data[start:i]...)
-		if h, ok := parseWebHandoff(body[:end]); ok {
-			found = append(found, h)
+		if string(prefix) == webAPCPrefix {
+			if h, ok := parseWebHandoff(body[:end]); ok {
+				found = append(found, h)
+			}
+		} else if fw, ok := parsePortForward(body[:end]); ok {
+			found = append(found, WebHandoff{Fwd: &fw})
 		}
 		i += len(prefix) + end + len(apcEnd) - 1
 		start = i + 1
@@ -163,4 +171,28 @@ func (f *webFilter) Filter(p []byte) ([]byte, []WebHandoff) {
 		return data, nil
 	}
 	return append(out, data[start:]...), found
+}
+
+// apcPrefixes are the private strings the filter takes out (all of the
+// same length, so the held tail stays bounded).
+var apcPrefixes = [][]byte{[]byte(webAPCPrefix), []byte(fwdAPCPrefix)}
+
+// apcPrefixOf is the prefix b starts with, or nil.
+func apcPrefixOf(b []byte) []byte {
+	for _, p := range apcPrefixes {
+		if bytes.HasPrefix(b, p) {
+			return p
+		}
+	}
+	return nil
+}
+
+// partialAPCPrefix: b (the end of a read) may be the start of a prefix.
+func partialAPCPrefix(b []byte) bool {
+	for _, p := range apcPrefixes {
+		if len(b) < len(p) && bytes.HasPrefix(p, b) {
+			return true
+		}
+	}
+	return false
 }

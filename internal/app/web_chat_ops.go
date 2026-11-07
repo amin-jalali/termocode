@@ -40,17 +40,30 @@ func (m *Model) webChatSend(call *webCall) tea.Cmd {
 	case s.streaming:
 		call.fail(webproto.CodeBusy, "The AI is still answering. Stop it or wait.")
 		return nil
+	case s.home.busy: // MOB-16: one AI turn at a time per workspace
+		call.fail(webproto.CodeBusy, "The phone chat is answering. Stop it or wait.")
+		return nil
 	case !m.aiConfigured():
 		call.fail(webproto.CodeConflict, "AI is not set up on the laptop.")
 		return nil
 	case a.ChatID != "" && a.ChatID != s.conv.ID && !m.webOpenStoredChat(call, a.ChatID):
 		return nil
 	}
-	if cmd, ok := m.aiMCPPromptSubmit(strings.TrimSpace(a.Text)); ok { // "/server.prompt" (MCPX-13), as Enter on the laptop
+	if len(a.Attach) > 0 { // MOB-5: resolved on the laptop first (web_chat_attach.go)
+		return m.webChatSendAttached(call, a)
+	}
+	return m.webChatSendNow(call, a.Text)
+}
+
+// webChatSendNow sends text in the open chat (with the attachments the
+// laptop holds) and answers the chat's id.
+func (m *Model) webChatSendNow(call *webCall, text string) tea.Cmd {
+	s := m.aiS()
+	if cmd, ok := m.aiMCPPromptSubmit(strings.TrimSpace(text)); ok { // "/server.prompt" (MCPX-13), as Enter on the laptop
 		call.reply(webproto.ChatRef{ID: s.conv.ID})
 		return cmd
 	}
-	cmd := m.sendAIChat(a.Text)
+	cmd := m.sendAIChat(text)
 	call.reply(webproto.ChatRef{ID: s.conv.ID})
 	return cmd
 }

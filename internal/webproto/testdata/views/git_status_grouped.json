@@ -1,0 +1,14 @@
+{
+  "note": "the default git.status spec: a list grouped by state, first seen first",
+  "spec": {"view": "git.status"},
+  "src": {"repo": true, "branch": {"name": "main", "ahead": 0, "behind": 0}, "log": [], "files": [
+    {"path": "a.go", "x": "M", "y": " ", "staged": true},
+    {"path": "b.go", "x": " ", "y": "M", "unstaged": true},
+    {"path": "c.go", "x": "?", "y": "?", "untracked": true}
+  ]},
+  "want": {"kind": "list", "total": 3, "live": true, "groups": [
+    {"label": "staged", "count": 1, "items": [{"id": "f0", "title": "a.go", "sub": "staged", "tone": "ok", "ref": {"kind": "file", "path": "a.go"}}]},
+    {"label": "changed", "count": 1, "items": [{"id": "f1", "title": "b.go", "sub": "changed", "tone": "warn"}]},
+    {"label": "new", "count": 1, "items": [{"id": "f2", "title": "c.go", "sub": "new", "tone": "info"}]}
+  ]}
+}

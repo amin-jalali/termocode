@@ -317,16 +317,41 @@ input box is on screen, never into a question.
 | `Enter` | Review the lane's diff (read only) |
 | `m` | Merge this lane into your folder; a conflict stops first and asks (**Cancel** first) |
 | `d` | Discard one lane (**Cancel** first) |
+| `b` | Restack the lane: put its work on top of your current commit as clean commits (**Cancel** first) |
 | `v` | Run the verify command in every finished lane |
 | `s` | Ask your **Quick** model for a 3-line summary of the differences (capped, secrets hidden; the cost is shown) |
 | `p` | Ask your **Main** model to judge: it ranks the finished lanes with one reason each and picks one (★). Verify results count first; diffs are capped and secrets hidden; the cost is shown. A card then offers to merge the pick (**Cancel** first) |
 | `x` | Stop every lane |
+
+Restack (`b`) cleans up a lane before you merge, push or open a pull
+request from its branch. **Squash into one commit** asks for the message
+(the task is filled in) and makes one commit on top of your current
+commit. **Keep commits** replays the lane's commits as they are. Only the
+lane's branch changes: your files, index and branch stay. If the lane
+clashes with your commit, nothing changes and the lane's note names the
+files. The old commits stay in the branch's reflog.
 
 The judge only advises: nothing merges until you press **Merge** on its
 card, and that runs the same merge as `m`. After a merge, a card asks about the other lanes: **Keep** is first. A
 lane whose agent still works is never merged or discarded. The AI chat can
 start a race with `agent_race_start`, always behind a card (**Deny**
 first).
+
+### Each lane in its own sandbox
+
+Turn on `agent_os_sandbox` (Settings, Workflows group) to start every
+lane's agent inside an OS sandbox: **bwrap** on Linux, **sandbox-exec**
+on macOS. Inside it the whole disk is read-only. The agent can write only
+its own worktree, the temp folder and its own config folder (for example
+`~/.claude` or `~/.codex`, where its login lives). It can still commit in
+its lane, but it cannot change git hooks or the repo config. The network
+stays on, so the agent can reach its service.
+
+The same setting covers workflow `agent` steps and AI run steps that use
+Claude Code or Codex. If no sandbox tool is installed, the lane does not
+start and says why; it never runs without the sandbox. The sandbox stops
+writes, not reads: the agent can still read your files. Only you can
+change this setting; the AI chat cannot.
 
 ## Split one task between agents
 

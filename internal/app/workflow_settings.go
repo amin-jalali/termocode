@@ -36,6 +36,8 @@ var workflowSettingRows = []workflowSettingRow{
 		"Hours a run waits for an answer on a card (a write to allow, a budget pause) before the step is marked waiting too long.", 1, 168},
 	{"setting-workflows-agent-sandbox", "workflows_agent_sandbox", "enum", workflow.DefaultAgentSandbox,
 		"Where an outside agent step works: worktree (it may change files in its own git worktree) or read-only (it may only read).", 0, 0},
+	{"setting-agent-os-sandbox", "agent_os_sandbox", "bool", "false",
+		"Outside agents (workflow agent steps, AI run CLI steps, race lanes) run inside an OS sandbox: bwrap on Linux, sandbox-exec on macOS. The disk is read-only; only the lane's worktree, the temp folder and the agent's own config folders can be written. The network stays on. No sandbox tool: the agent does not start.", 0, 0},
 }
 
 func init() {

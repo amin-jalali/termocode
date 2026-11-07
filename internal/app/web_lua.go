@@ -22,10 +22,23 @@ package app
 
 const webLuaPrelude = `
 local W = _G.termocode_web
-if not W or W.v ~= 3 then
-  W = { v = 3, bufs = (W and W.bufs) or {} }
+if not W or W.v ~= 4 then
+  W = { v = 4, bufs = (W and W.bufs) or {} }
   _G.termocode_web = W
   local api = vim.api
+  W.LOGMAX = 512
+  -- W.since_edits returns the edits made on buffer b after tick, oldest
+  -- first, as on_bytes numbers (G-COL), or nil when the log does not
+  -- reach back to tick.
+  function W.since_edits(b, tick)
+    local st = W.bufs[b]
+    if not st or not st.log or tick < st.since then return nil end
+    local out = {}
+    for _, e in ipairs(st.log) do
+      if e[1] > tick then out[#out + 1] = { e[2], e[3], e[4], e[5], e[6], e[7] } end
+    end
+    return out
+  end
   local function notify(...)
     if _G.termocode_notify then _G.termocode_notify(...) end
   end
@@ -46,9 +59,18 @@ if not W or W.v ~= 3 then
     if not api.nvim_buf_is_valid(b) or not api.nvim_buf_is_loaded(b) then return { err = 'gone' } end
     local st = W.bufs[b]
     if not st then
-      st = { seq = 0 }
+      st = { seq = 0, log = {}, since = api.nvim_buf_get_changedtick(b) }
       W.bufs[b] = st
       api.nvim_buf_attach(b, false, {
+        on_bytes = function(_, buf, tick, sr, sc, _, oer, oec, _, ner, nec)
+          if W.bufs[buf] ~= st then return true end
+          local log = st.log
+          log[#log + 1] = { tick, sr, sc, oer, oec, ner, nec }
+          if #log > W.LOGMAX then
+            st.since = log[1][1]
+            table.remove(log, 1)
+          end
+        end,
         on_lines = function(_, buf, tick, first, last, new_last)
           if W.bufs[buf] ~= st then return true end
           st.seq = st.seq + 1
@@ -62,6 +84,7 @@ if not W or W.v ~= 3 then
         end,
         on_reload = function(_, buf)
           if W.bufs[buf] ~= st then return end
+          st.log, st.since = {}, api.nvim_buf_get_changedtick(buf)
           st.seq = st.seq + 1
           notify('termocode_web_reset', buf, st.seq, api.nvim_buf_get_changedtick(buf),
             api.nvim_buf_get_lines(buf, 0, -1, false))
@@ -151,7 +174,10 @@ return { first = from, lines = api.nvim_buf_get_lines(b, from, to, false) }`
 
 // webLuaSetText replaces a range of buffer b if its changedtick is still
 // tick: one chunk, so nothing can come in between (nvim runs it at
-// once). Positions are checked here, against the buffer itself: rows in
+// once). On an older tick it answers conflict with the edits made since
+// (when the buffer's log reaches back that far), so Go can move the
+// page's range over them and try once more (G-COL). Positions are
+// checked here, against the buffer itself: rows in
 // the buffer, columns inside the line and not inside a multi-byte
 // character. An undo break first makes each web edit one undo step.
 const webLuaSetText = webLuaPrelude + `
@@ -160,7 +186,11 @@ local api = vim.api
 if not api.nvim_buf_is_valid(b) or not api.nvim_buf_is_loaded(b) then return { err = 'gone' } end
 if not vim.bo[b].modifiable or vim.bo[b].readonly then return { err = 'readonly' } end
 local cur = api.nvim_buf_get_changedtick(b)
-if cur ~= tick then return { err = 'conflict', tick = cur } end
+if cur ~= tick then
+  local edits = W.since_edits(b, tick)
+  if edits then return { err = 'conflict', tick = cur, edits = (#edits > 0) and edits or nil, rebase = true } end
+  return { err = 'conflict', tick = cur }
+end
 local n = api.nvim_buf_line_count(b)
 if sr >= n or er >= n then return { err = 'range' } end
 local function col_ok(r, c)

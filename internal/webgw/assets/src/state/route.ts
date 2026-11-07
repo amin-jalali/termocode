@@ -1,10 +1,13 @@
 // Routes of the page, all in the URL hash so the gateway serves one path
 // (web UX 4.4): #/chat, #/files/<path>, #/term/<buf>, #/git, #/git/<path>,
-// #/more, #/more/search?q=, #/card/<id>. The hash never carries a token.
+// #/more, #/more/search?q=, #/card/<id>, #/home (the phone's chat-first
+// Home, MOB-4; a wider screen shows the chat). The hash never carries a
+// token.
 // Pure: parse and format only; lib/router.ts talks to history.
 import { dict } from "./dict";
 
-export const TABS = ["chat", "files", "term", "git", "more"] as const;
+// home is last, so Ctrl+1…5 keep their tabs.
+export const TABS = ["chat", "files", "term", "git", "more", "home"] as const;
 export type Tab = (typeof TABS)[number];
 
 export interface Route {

@@ -3,10 +3,13 @@ package theme
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/cfgfile"
 )
 
 // UserThemeID is the stable id used to refer to the user's custom palette.
@@ -70,16 +73,38 @@ func LoadUserOverrides() map[string]string {
 // `entries` are preserved (read-modify-write); entries with empty values
 // are deleted.
 func SaveUserOverrides(entries map[string]string) error {
+	_, err := SaveUserOverridesNote(entries)
+	return err
+}
+
+// SaveUserOverridesNote is SaveUserOverrides that also says when the old
+// file was not valid JSON: it is then kept as user_theme.json.broken
+// (a hand edit is never lost) and note names it for a toast; "" when
+// the old file was fine or missing. The file is written through a temp
+// file and a rename (cfgfile.WriteFile), so a crash never leaves half a
+// file and a read-only file is not replaced.
+func SaveUserOverridesNote(entries map[string]string) (note string, err error) {
 	path, err := UserThemePath()
 	if err != nil {
-		return err
+		return "", err
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
+		return "", err
 	}
 	out := userThemeFile{}
-	if b, err := os.ReadFile(path); err == nil {
-		_ = json.Unmarshal(b, &out)
+	b, rerr := os.ReadFile(path)
+	if rerr == nil && len(strings.TrimSpace(string(b))) > 0 {
+		if jerr := json.Unmarshal(b, &out); jerr != nil {
+			out = userThemeFile{}
+			kept := path + ".broken"
+			if werr := cfgfile.WriteFile(kept, b); werr != nil {
+				return "", fmt.Errorf("user_theme.json is not valid JSON and a copy could not be kept, so nothing was changed: %w", werr)
+			}
+			note = "user_theme.json was not valid JSON. The old file is kept as user_theme.json.broken."
+		}
+	}
+	if out == nil { // the file said null
+		out = userThemeFile{}
 	}
 	for k, v := range entries {
 		v = strings.TrimSpace(v)
@@ -91,9 +116,12 @@ func SaveUserOverrides(entries map[string]string) error {
 	}
 	enc, err := json.MarshalIndent(out, "", "  ")
 	if err != nil {
-		return err
+		return "", err
 	}
-	return os.WriteFile(path, enc, 0o644)
+	if err := cfgfile.WriteFile(path, append(enc, '\n')); err != nil {
+		return "", err
+	}
+	return note, nil
 }
 
 // HasUserTheme reports whether a non-empty user theme file exists. The

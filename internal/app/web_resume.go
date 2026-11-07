@@ -120,6 +120,9 @@ func (h *webHub) pruneResume() {
 			need[name] = true
 		}
 	}
+	for _, v := range h.views.live { // a live view's topic keeps publishing (web_views.go)
+		need[v.def.Source.Topic] = true
+	}
 	for name := range h.rings {
 		if !need[name] {
 			delete(h.rings, name)

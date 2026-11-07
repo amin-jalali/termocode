@@ -42,6 +42,9 @@ func (m *Model) webChatSide(call *webCall) tea.Cmd {
 	a := call.args.(*webproto.ChatSendArgs)
 	s := m.aiS()
 	switch {
+	case len(a.Attach) > 0: // MOB-5: attaches go with chat.send only
+		call.fail(webproto.CodeBadRequest, "A side question takes no attached items.")
+		return nil
 	case a.ChatID != "" && a.ChatID != s.conv.ID:
 		call.fail(webproto.CodeConflict, "This chat is not open on the laptop. Open it there first.")
 		return nil

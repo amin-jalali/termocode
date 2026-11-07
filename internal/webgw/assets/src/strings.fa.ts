@@ -3,9 +3,9 @@
 // empty text falls back to English. Simple, everyday Persian; product
 // and command names (termocode, Web: Open in Browser) and key names stay
 // as they are.
-import type { StringKey } from "./strings";
+import type { TranslatedKey } from "./strings";
 
-export const FA: Record<StringKey, string> = {
+export const FA: Record<TranslatedKey, string> = {
   // Shell and connect
   "connect.title": "termocode",
   "connect.once": "این پیوند فقط یک بار و تا ۵ دقیقه کار می‌کند.",

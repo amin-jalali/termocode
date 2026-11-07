@@ -61,10 +61,11 @@ type kubeObj struct {
 	Name     string
 	Created  time.Time
 	Mark     kubeMark
-	Right    string // the right column (before the age)
-	Wide     string // added to Right when the view is wide
-	Detail   string // the footer line
-	Replicas int    // statefulsets: the wanted replicas (s scales)
+	Right    string   // the right column (before the age)
+	Wide     string   // added to Right when the view is wide
+	Detail   string   // the footer line
+	Replicas int      // statefulsets: the wanted replicas (s scales)
+	Keys     []string // secrets: the key names (V reveals one value, asks first)
 }
 
 // kubeReadyMark is the mark of "ready of wanted".
@@ -163,7 +164,7 @@ func kubeLoadExtra(ctx context.Context, c kube.Client, sec string, now time.Time
 		xs, err := c.Secrets(ctx)
 		for _, x := range xs {
 			out = append(out, kubeObj{Name: x.Name, Created: x.Created, Right: kubeKeyCount(len(x.Keys)), Wide: " " + x.Type,
-				Detail: x.Type + " · keys: " + joinOr(x.Keys, "none")})
+				Detail: x.Type + " · keys: " + joinOr(x.Keys, "none"), Keys: x.Keys})
 		}
 		return out, err
 	case "ingresses":

@@ -31,7 +31,8 @@ var sourceRules = []rule{
 	{name: "javascript: URL", re: regexp.MustCompile(`(?i)javascript:`)},
 	{name: "external URL", re: regexp.MustCompile(`(?i)\b(https?|wss?)://`)},
 	// The page's dynamic imports (lib/lazy.ts) load the editor file
-	// (WEB-39), the desktop workbench and the Persian strings; the desktop
+	// (WEB-39), the desktop workbench, the Persian strings and the phone's
+	// Home (MOB-4); the desktop
 	// editor's frame loads its Vim mode (monaco-vim.js, WEBP-1). Each is a
 	// fixed path.
 	{name: "dynamic import", re: regexp.MustCompile(`\bimport\s*\(`), allow: map[string]bool{"lib/lazy.ts": true, "monaco/frame.ts": true}},
@@ -189,10 +190,11 @@ func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
 			// load anything. The other rules hold for it too.
 			text = regexp.MustCompile(`(?i)(https?|wss?):\/\/|\bimport\s*\(`).ReplaceAllString(text, "")
 		}
-		if e.Path == "app.js" || e.Path == "app-chunk.js" { // the page's three dynamic imports (lib/lazy.ts), fixed paths
+		if e.Path == "app.js" || e.Path == "app-chunk.js" { // the page's four dynamic imports (lib/lazy.ts), fixed paths
 			text = strings.Replace(text, `import("/assets/editor.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/workbench.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/strings-fa.js")`, "", 1)
+			text = strings.Replace(text, `import("/assets/home.js")`, "", 1)
 		}
 		if e.Path == "monaco-frame.js" { // the frame's one dynamic import: Vim mode (WEBP-1), a fixed path
 			text = strings.Replace(text, `import("/assets/monaco-vim.js")`, "", 1)
@@ -308,5 +310,86 @@ func TestStoreAndGuardArePure(t *testing.T) {
 				t.Errorf("%s/%s uses %s; keep state and proto pure", dir, e.Name(), m)
 			}
 		}
+	}
+}
+
+// The phone's Home (home.js, MOB-4) is built alone and gets Preact, the
+// signals, the link and the page's views from the page (src/home/api.ts):
+// a second Preact or a second session would split the page's state. So
+// its sources import types only from the page, and code only from each
+// other and from the pure helpers below.
+var homePure = map[string]bool{"state/home.ts": true, "state/dict.ts": true, "state/cards.ts": true, "state/tasks.ts": true, "state/git.ts": true, "state/route.ts": true, "lib/actions.ts": true}
+
+var importLine = regexp.MustCompile(`(?m)^\s*(import|export)\s+(type\s+)?[^;]*?\bfrom\s+"([^"]+)"`)
+
+// homeImportsBad returns the code imports of a Home source (rel, under
+// src/) that are not allowed.
+func homeImportsBad(rel, text string) []string {
+	var bad []string
+	for _, m := range importLine.FindAllStringSubmatch(text, -1) {
+		if m[2] != "" {
+			continue // types only: nothing of the page's code comes along
+		}
+		target := m[3]
+		if !strings.HasPrefix(target, ".") {
+			bad = append(bad, rel+": imports "+target)
+			continue
+		}
+		to := filepath.ToSlash(filepath.Clean(filepath.Join(filepath.Dir(rel), target)))
+		to = strings.TrimSuffix(strings.TrimSuffix(to, ".ts"), ".tsx")
+		if strings.HasPrefix(to, "home/") || homePure[to+".ts"] {
+			continue
+		}
+		bad = append(bad, rel+": imports "+target)
+	}
+	return bad
+}
+
+func TestHomeImportsCatch(t *testing.T) {
+	for _, bad := range []string{`import { h } from "preact";`, `import { signal } from "@preact/signals";`, `import { link } from "../session";`, `import { t } from "../strings";`, `export { x } from "../lib/router";`} {
+		if len(homeImportsBad("home/x.tsx", bad)) == 0 {
+			t.Errorf("passed %q", bad)
+		}
+	}
+	for _, ok := range []string{`import type { HomeHost } from "./api";`, `import type { Card } from "../../../../webproto/proto";`, `import { h, H } from "./jsx";`, `import { mergeStream } from "../state/home";`, `import { dict } from "../state/dict";`} {
+		if got := homeImportsBad("home/x.tsx", ok); len(got) != 0 {
+			t.Errorf("refused %q: %v", ok, got)
+		}
+	}
+}
+
+func TestHomeChunkImportsNoState(t *testing.T) {
+	n := 0
+	err := filepath.WalkDir("src/home", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel("src", path)
+		for _, bad := range homeImportsBad(filepath.ToSlash(rel), string(b)) {
+			t.Error(bad)
+		}
+		n++
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for f := range homePure {
+		b, err := os.ReadFile(filepath.Join("src", f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, m := range importLine.FindAllStringSubmatch(string(b), -1) {
+			if m[2] == "" && !homePure[filepath.ToSlash(filepath.Join(filepath.Dir(f), m[3]))+".ts"] {
+				t.Errorf("%s: a pure helper of the Home imports %s", f, m[3])
+			}
+		}
+	}
+	if n == 0 {
+		t.Fatal("no Home sources scanned")
 	}
 }

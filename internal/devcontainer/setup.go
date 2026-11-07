@@ -14,8 +14,8 @@ import (
 )
 
 // ErrNeedsCLI: compose files and features need the devcontainer CLI;
-// termocode makes only image and build containers itself.
-var ErrNeedsCLI = errors.New("this dev container uses compose or features: create it with the devcontainer CLI, then open it from Containers (w)")
+// PlanSetup makes only image and build containers, PlanCLISetup the rest.
+var ErrNeedsCLI = errors.New("this dev container uses compose or features: it needs the devcontainer CLI")
 
 // ErrNoImage: the file names no image, Dockerfile or compose file.
 var ErrNoImage = errors.New("devcontainer.json names no image or Dockerfile")
@@ -29,6 +29,9 @@ type Step struct {
 	// Lifecycle is true for the file's own commands (the trust card
 	// lists them); false for the engine steps termocode adds.
 	Lifecycle bool
+	// Up is the "devcontainer up" step: its stdout is the result with
+	// the container id and folder (ParseUpResult).
+	Up bool
 }
 
 // Setup is how termocode makes a dev container for root and what to
@@ -41,6 +44,9 @@ type Setup struct {
 	// and run); Lifecycle runs in it after (onCreate … postAttach).
 	Create    []Step
 	Lifecycle []Step
+	// CLI: the devcontainer CLI makes the container and runs the
+	// lifecycle; Name is "" until its result names the container.
+	CLI bool
 }
 
 // ContainerName is the name termocode gives the dev container of root:

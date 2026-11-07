@@ -59,6 +59,7 @@ web	ai-profile-show	cmd:aiProfileShow
 web	ai-profile-switch	op:ai.use_profile
 web	ai-reasoning-next	palette
 web	ai-review	op:cards.answer
+web	ai-review-order	palette
 web	ai-rules	op:ai.info
 web	ai-runs	cmd:runs
 web	ai-ship	palette
@@ -453,6 +454,7 @@ excluded	update-rollback	laptop only: updates the termocode binary, never from a
 excluded	view/Search	removed from the laptop activity bar (the enum value is kept for back-compat only)
 excluded	web-copy-link	laptop only: copies to the laptop clipboard
 excluded	web-devices	laptop only: the paired devices (list, rename, revoke) are managed on the laptop; a web page never sees or changes who may come in
+excluded	web-forwarded-ports	laptop only: the open port forwards and their stop are the laptop's; a web page never sees or ends a forward
 excluded	web-start	laptop only: starts the web panel itself
 excluded	web-start-panel	laptop only: starts the web panel itself
 excluded	web-stop	laptop only: stops the web panel itself
@@ -464,6 +466,7 @@ missing	ai-board	AI|M
 missing	ai-proofs	AI|S
 missing	agent-sessions-search-all	AI|S
 missing	ai-history-search	AI|S
+missing	ai-mcp-accounts	AI|S
 missing	ai-powers	AI|S
 missing	ai-run-task-list	AI|M
 missing	bugfix-spec-fix	AI|S
@@ -574,6 +577,8 @@ missing	git-ai-explain-line	Git|S
 missing	git-ai-pr-text	Git|S
 missing	git-ai-review-branch	Git|S
 missing	git-ai-review-changes	Git|S
+missing	git-ai-security-branch	Git|S
+missing	git-ai-security-changes	Git|S
 missing	git-ai-stash	Git|S
 missing	git-auto-fetch	Git|S
 missing	git-autosquash	Git|S
@@ -663,6 +668,7 @@ missing	git-tag-delete	Git|S
 missing	git-tag-delete-remote	Git|S
 missing	git-tag-details	Git|S
 missing	git-tag-push	Git|S
+missing	git-threat-model	Git|S
 missing	git-uncommit	Git|S
 missing	git-unshallow	Git|S
 missing	git-upstream-set	Git|S
@@ -677,6 +683,7 @@ missing	http-gql-complete	HTTP|S
 missing	http-gql-docs	HTTP|S
 missing	http-gql-schema	HTTP|S
 missing	http-gql-validate	HTTP|S
+missing	http-grpc-describe	HTTP|S
 missing	http-import-collection	HTTP|S
 missing	http-import-openapi	HTTP|S
 missing	http-mock-start	HTTP|S
@@ -699,6 +706,10 @@ missing	kubernetes-top	Kubernetes|S
 missing	local-history	Git|S
 missing	local-history-deleted	Git|S
 missing	local-history-label	Git|S
+missing	lsp-container-diagnostics	Workspace|S
+missing	lsp-container-where	Workspace|S
+missing	lsp-mirror-clear	Workspace|S
+missing	lsp-mirror-refresh	Workspace|S
 missing	redis-copy-key	Databases|S
 missing	redis-rename-key	Databases|S
 missing	redis-slowlog	Databases|S
@@ -710,6 +721,7 @@ missing	services-env-file	Containers|S
 missing	session-recap	Session|S
 missing	tracker-add	Workspace|S
 missing	tracker-show	Workspace|S
+missing	web-forward-port	Web|M
 missing	workflow-dry-run	Workflows|S
 missing	workflow-history	Workflows|S
 missing	workflow-new	Workflows|S

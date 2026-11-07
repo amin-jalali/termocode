@@ -35,6 +35,7 @@ func (m *Model) applyTerminalChange(msg TerminalChangedMsg) tea.Cmd {
 	termCaps = msg.Graphics
 	ApplyDisplaySettings(ConfigDisplay())
 	m.termGen = msg.Gen
+	m.dropTerminalDownload() // transfer.go: the old terminal is gone
 	if m.w > 0 && m.h > 0 {
 		m.applyLayout()
 	}

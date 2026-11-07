@@ -328,6 +328,8 @@ func run(argv []string) int {
 			return runService(args[1:])
 		case "runner":
 			return runRunner(args[1:])
+		case "lsp-proxy":
+			return runLSPProxy(args[1:])
 		case "attach", "kill":
 			dir := "."
 			if len(args) > 1 {

@@ -111,6 +111,10 @@ func (m *Model) handleKubePickerSelect(id string) tea.Cmd {
 	if kind == "pfile" {
 		return m.handleKubeFilePick(value) // kube_podfiles.go
 	}
+	if kind == "secretkey" {
+		m.askKubeReveal(st.revealSecret, value) // kube_secret.go
+		return nil
+	}
 	if kind == "snippet" {
 		return m.kubeOpenSnippet(value)
 	}

@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/blocks"
 	"github.com/amin-jalali/termocode/internal/crash"
 )
 
@@ -25,6 +26,12 @@ const (
 	StoredNote      = "note" // a status line of termocode (keep going stopped …); only shown
 )
 
+// StoredAttach is one chip of an item sent back with a message.
+type StoredAttach struct {
+	Kind  string `json:"kind"`
+	Label string `json:"label"`
+}
+
 // StoredMessage is one persisted chat line.
 type StoredMessage struct {
 	Role string `json:"role"`
@@ -32,6 +39,10 @@ type StoredMessage struct {
 	// Context is attached file / selection text sent to the model with a
 	// user message but not shown in the transcript.
 	Context string `json:"context,omitempty"`
+	// Attached are the chips of the items the user sent back from the
+	// web page with a user message (MOB-5): kind and label only, their
+	// resolved text is in Context. Only shown.
+	Attached []StoredAttach `json:"attached,omitempty"`
 	// Images are paths of image files sent with a user message. Only the
 	// path is stored; the file is read again for every request.
 	Images []string `json:"images,omitempty"`
@@ -62,6 +73,10 @@ type StoredMessage struct {
 	// KeepGoing is set on a user message the keep-going loop sent
 	// (OMX-7): the push number, from 1.
 	KeepGoing int `json:"keep_going,omitempty"`
+	// Block is the visual block of a tool line (MOB-10): what the tool's
+	// View hook built from the call. Only shown (the phone draws it);
+	// never sent to the model.
+	Block *blocks.Block `json:"block,omitempty"`
 }
 
 // Run states (StoredRun.State).
@@ -195,6 +210,15 @@ type Conversation struct {
 	// "keep going" message by itself (AI: Toggle Keep Going).
 	Todos     []Todo `json:"todos,omitempty"`
 	KeepGoing bool   `json:"keep_going,omitempty"`
+	// Home marks the background chat of a paired phone (MOB-16: the web's
+	// chat.home): the device id and the workspace root it belongs to.
+	Home *HomeChat `json:"home,omitempty"`
+}
+
+// HomeChat is whose phone chat a conversation is.
+type HomeChat struct {
+	Device string `json:"device"`
+	Root   string `json:"root"`
 }
 
 const (

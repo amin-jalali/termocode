@@ -184,12 +184,25 @@ func (c Config) Plan() []Command {
 	return append([]Command(nil), c.commands...)
 }
 
-// TrustHash is a stable hash of the lifecycle commands only, so the trust
-// card asks again when a command changes but not when other fields do.
+// TrustHash is a stable hash of the lifecycle commands and the features
+// only, so the trust card asks again when one changes but not when other
+// fields do.
 func (c Config) TrustHash() string {
 	h := sha256.New()
 	for _, cmd := range c.commands {
 		b, _ := json.Marshal([]any{cmd.Stage, cmd.Name, cmd.Shell, cmd.Args, cmd.Local})
+		h.Write(b)
+		h.Write([]byte{'\n'})
+	}
+	// Features run install scripts too (devcontainer CLI): a changed
+	// feature or option asks again. No features: the hash is as before.
+	ids := make([]string, 0, len(c.Features))
+	for k := range c.Features {
+		ids = append(ids, k)
+	}
+	sort.Strings(ids)
+	for _, k := range ids {
+		b, _ := json.Marshal([]any{"feature", k, string(bytes.TrimSpace(c.Features[k]))})
 		h.Write(b)
 		h.Write([]byte{'\n'})
 	}
