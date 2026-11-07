@@ -2114,13 +2114,27 @@ func renderGitGraphCommitMark(c git.GraphCommit, mark string, active, focused bo
 	sb.WriteString(rowStyle.Render(" "))
 	used := 3
 
-	// The right edge: [ AJ] ⇡ age — age right-aligned in 3 cells.
-	age := git.CompactAge(c.Committed)
-	initials := ""
-	if w >= 40 {
-		initials = git.Initials(c.Author)
+	// The right edge: [ sha][ AJ] ⇡ [age] — age right-aligned in 3 cells.
+	// Each column can be hidden (GITX-39, gitx_graph_columns.go).
+	showDate := gitGraphColOn(gitColDate)
+	age := ""
+	tail := 0
+	if showDate {
+		age = git.CompactAge(c.Committed)
+		tail = 1 + 3 // " " + age
 	}
-	tail := 1 + 3 // " " + age
+	initials, sha := "", ""
+	if w >= 40 {
+		if gitGraphColOn(gitColAuthor) {
+			initials = git.Initials(c.Author)
+		}
+		if gitGraphColOn(gitColSHA) {
+			sha = c.Hash
+		}
+	}
+	if sha != "" {
+		tail += 1 + runewidth.StringWidth(sha)
+	}
 	marked := c.Unpushed || mark != ""
 	if marked {
 		tail += 2 // "⇡ "
@@ -2158,6 +2172,11 @@ func renderGitGraphCommitMark(c git.GraphCommit, mark string, active, focused bo
 		sb.WriteString(rowStyle.Render(strings.Repeat(" ", pad)))
 		used += pad
 	}
+	if sha != "" {
+		sb.WriteString(rowStyle.Render(" "))
+		sb.WriteString(fg(theme.LG(theme.TextDimmer)).Render(sha))
+		used += 1 + runewidth.StringWidth(sha)
+	}
 	if initials != "" {
 		sb.WriteString(rowStyle.Render(" "))
 		sb.WriteString(fg(theme.LG(theme.TextDim)).Render(initials))
@@ -2171,9 +2190,11 @@ func renderGitGraphCommitMark(c git.GraphCommit, mark string, active, focused bo
 		sb.WriteString(rowStyle.Render(" "))
 		sb.WriteString(fg(theme.LG(theme.GitAdded)).Render(theme.GlyphUnpushed.String()))
 	}
-	sb.WriteString(rowStyle.Render(" "))
-	sb.WriteString(fg(theme.LG(theme.TextDim)).Render(fmt.Sprintf("%3s", age)))
-	used += 4
+	if showDate {
+		sb.WriteString(rowStyle.Render(" "))
+		sb.WriteString(fg(theme.LG(theme.TextDim)).Render(fmt.Sprintf("%3s", age)))
+		used += 4
+	}
 	if marked {
 		used += 2
 	}

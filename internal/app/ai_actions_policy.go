@@ -210,6 +210,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"git-blame-commit":       aiAuto(),
 	"git-blame-before":       aiAuto(),
 	"git-line-history":       aiNever(aiNoPicker + " (git_log)"),
+	"git-line-lens":          aiAuto(),
+	"git-block-history":      aiNever(aiNoPicker + " (git_log)"),
 	"git-rev-prev":           aiAuto(),
 	"git-rev-next":           aiAuto(),
 	"git-history":            aiNever(aiNoPicker),
@@ -758,6 +760,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"git_inline_blame":            aiConfirm(ai.ClassSettings),
 	"git_blame_ignore_whitespace": aiConfirm(ai.ClassSettings),
 	"git_blame_detect_moves":      aiConfirm(ai.ClassSettings),
+	"git_line_lens":               aiConfirm(ai.ClassSettings),
 }
 
 // aiNoWeb is why the AI never touches the web panel.
