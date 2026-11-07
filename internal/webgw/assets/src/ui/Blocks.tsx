@@ -27,6 +27,9 @@ import "../strings.phone";
 import { Button } from "./Button";
 import { CodeBlock, Md } from "./Markdown";
 import { DiffRow } from "./rows";
+import { ToChat } from "./ToChat";
+import { addRef, blockRef, itemRef, rowRef } from "../lib/tochat";
+import { toast } from "../lib/toasts";
 
 /** KINDS are the block kinds this page draws (internal/blocks.Kinds). */
 export const KINDS = ["list", "table", "diff", "card", "detail", "chart", "status", "form", "json", "text", "board"] as const;
@@ -78,6 +81,15 @@ export function ToneMark({ tone }: { tone?: string }) {
   );
 }
 
+/** attachAction runs an attach action on the page (MOBUX-19): its ref,
+ * else the item's or the block's, goes into the composer. */
+function attachAction(a: BlockAction, block: Block, item?: BlockItem): void {
+  const r = addRef(a.ref ?? (item ? itemRef(block, item) : blockRef(block)), item?.title ?? block.title);
+  if (r === "secret") toast("warn", t("tochat.secret"));
+  else if (r === "full") toast("warn", t("tochat.full"));
+  else if (r === "bad") toast("warn", t("tochat.bad"));
+}
+
 /** safeFirst puts safe actions before risky ones (safe choice first). */
 function safeFirst(as: BlockAction[]): BlockAction[] {
   return [...as.filter((a) => !a.risky), ...as.filter((a) => a.risky)];
@@ -89,7 +101,7 @@ function Actions({ list, block, item, onAction, small }: { list?: BlockAction[];
   return (
     <div class="blk-actions">
       {as.map((a) => (
-        <Button key={a.id} small={small} kind={a.risky ? "danger" : "neutral"} needsLink={a.kind === "op"} disabled={!onAction} onClick={() => onAction?.(a, block, item)}>
+        <Button key={a.id} small={small} kind={a.risky ? "danger" : "neutral"} needsLink={a.kind === "op"} disabled={!onAction && a.kind !== "attach"} onClick={() => (a.kind === "attach" ? attachAction(a, block, item) : onAction?.(a, block, item))}>
           {a.label}
         </Button>
       ))}
@@ -118,6 +130,7 @@ function Item({ it, block, onAction, now }: { it: BlockItem; block: Block; onAct
       )}
       {it.time ? <span class="blk-age">{age(it.time, now)}</span> : null}
       <Actions list={it.actions} block={block} item={it} onAction={onAction} small />
+      <ToChat to={itemRef(block, it)} title={it.title} />
     </li>
   );
 }
@@ -172,7 +185,7 @@ function Cell({ col, v }: { col: BlockColumn; v: string }) {
   );
 }
 
-function Rows({ rows, cols }: { rows: string[][]; cols: BlockColumn[] }) {
+function Rows({ rows, cols, block, base }: { rows: string[][]; cols: BlockColumn[]; block: Block; base: number }) {
   return (
     <>
       {rows.map((r, i) => (
@@ -180,6 +193,9 @@ function Rows({ rows, cols }: { rows: string[][]; cols: BlockColumn[] }) {
           {cols.map((c, j) => (
             <Cell key={c.id + j} col={c} v={typeof r?.[j] === "string" ? r[j] : ""} />
           ))}
+          <td class="blk-td is-act">
+            <ToChat to={rowRef(block, base + i)} title={typeof r?.[0] === "string" ? r[0] : undefined} />
+          </td>
         </tr>
       ))}
     </>
@@ -201,22 +217,23 @@ function TableBlock({ b }: { b: Block }) {
                 {c.label}
               </th>
             ))}
+            <td class="blk-td is-act" />
           </tr>
         </thead>
         {groups.length ? (
           groups.map((g, i) => (
             <tbody key={i}>
               <tr>
-                <th colSpan={cols.length || 1} scope="rowgroup" class="blk-th-group">
+                <th colSpan={cols.length + 1} scope="rowgroup" class="blk-th-group">
                   <GroupHead g={g} />
                 </th>
               </tr>
-              <Rows rows={arr(g.rows)} cols={cols} />
+              <Rows rows={arr(g.rows)} cols={cols} block={b} base={groups.slice(0, i).reduce((n, x) => n + arr(x.rows).length, 0)} />
             </tbody>
           ))
         ) : (
           <tbody>
-            <Rows rows={rows} cols={cols} />
+            <Rows rows={rows} cols={cols} block={b} base={0} />
           </tbody>
         )}
       </table>
@@ -525,6 +542,7 @@ export function BlockView({ block, onAction, onLaptop, onForm, now = Date.now() 
           </span>
         )}
         {b.stale && <span class="blk-stale">{t("blk.stale")}</span>}
+        {ok && <ToChat to={blockRef(b)} title={b.title} />}
       </header>
       {ok ? (
         <div class="blk-body">

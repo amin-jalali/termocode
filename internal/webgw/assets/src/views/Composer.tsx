@@ -22,6 +22,8 @@ import { Button } from "../ui/Button";
 import { Cod } from "../ui/icons";
 import { errText } from "../ui/CardSheet";
 import { canDictate, dictateChat, listening, stopDictate, toggleDictate } from "../lib/dictate";
+import { attachArgs, clearRefs } from "../lib/tochat";
+import { RefChips } from "../ui/RefChips";
 
 const MAX_ROWS_PX = 160;
 
@@ -83,7 +85,9 @@ export function Composer({
     if (!live.peek() || sending || !body.trim()) return;
     setSending(true);
     const attach = getAttaches(chat); // MOB-5: references only, the laptop reads them
-    const sent = inProject(attach, ws); // MOB-55: one project per send (the laptop checks)
+    // The refs from ↩ go with the text, as references only (MOBUX-19).
+    const refs = attachArgs() ?? [];
+    const sent = inProject([...attach, ...refs], ws); // MOB-55: one project per send (the laptop checks)
     const args = { text: body, ...(chat ? { chat_id: chat } : {}), ...(sent.length ? { attach: sent } : {}) };
     link.requestWithID("chat.send", args, ws || undefined).result.then(
       () => {
@@ -91,6 +95,7 @@ export function Composer({
         setNote(null);
         if (getDraft(chat) === body) setDraft(chat, "");
         if (getAttaches(chat) === attach) clearAttaches(chat);
+        if (refs.length) clearRefs();
         onSent?.();
       },
       (e: unknown) => {
@@ -124,6 +129,7 @@ export function Composer({
           {note}
         </p>
       )}
+      {!desk && <RefChips />}
       <div class={desk ? "composer-frame" : "composer-plain"}>
       {getAttaches(chat).length > 0 && (
         <ul class="composer-attach" aria-label="Sent with the message">

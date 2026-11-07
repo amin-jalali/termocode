@@ -130,6 +130,14 @@ export const SP = {
   // A view the AI built from a chat command (MOBUX-17)
   "ph.spec.built": "Built",
   "ph.spec.open": "Built {what}. Change it",
+
+  // "↩ to chat" on rows and blocks (MOBUX-19)
+  "tochat.add": "Add {name} to the message",
+  "tochat.remove": "Remove {name} from the message",
+  "tochat.list": "{n} references go with the message",
+  "tochat.secret": "This file may hold secrets. It stays on the laptop.",
+  "tochat.full": "A message takes up to 8 references. Remove one first.",
+  "tochat.bad": "This cannot go into the chat.",
 } as const;
 
 addStrings(SP);
