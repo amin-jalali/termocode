@@ -488,6 +488,8 @@ func (m *Model) databaseTransferPrompt(kind promptKindEnum, value string) (tea.C
 		return m.databaseImportLoad(value), true
 	case promptKindDBGenRows:
 		return m.databaseGenerateRows(value), true
+	case promptKindDBSaveQuery:
+		return m.databaseSaveQueryNamed(value), true
 	case promptKindDBRename:
 		return m.databaseRenamePlan(value), true
 	}

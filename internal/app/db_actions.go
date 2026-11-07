@@ -33,6 +33,10 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-format-file", Title: "Databases: Format File"},
 		{ID: "db-explain-analyze", Title: "Databases: Explain Analyze Statement…"},
 		{ID: "db-history", Title: "Databases: History…"},
+		{ID: "db-history-connection", Title: "Databases: History of This Connection…"},
+		{ID: "db-save-query", Title: "Databases: Save Query…"},
+		{ID: "db-saved-queries", Title: "Databases: Saved Queries…"},
+		{ID: "db-another-console", Title: "Databases: Another Console"},
 		{ID: "db-cancel", Title: "Databases: Cancel Query"},
 		{ID: "db-add", Title: "Databases: Add Connection…"},
 		{ID: "db-connect", Title: "Databases: Connect Selected"},
@@ -99,6 +103,14 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseExplainKey(true), true
 	case "db-history":
 		return m.databaseHistory(), true
+	case "db-history-connection":
+		return m.databaseHistoryOfConn(), true
+	case "db-save-query":
+		return m.databaseSaveQueryStart(), true
+	case "db-saved-queries":
+		return m.databaseSavedQueries(), true
+	case "db-another-console":
+		return m.databaseAnotherConsole(), true
 	case "db-cancel":
 		return m.databaseCancelRun(), true
 	case "db-transaction-mode":

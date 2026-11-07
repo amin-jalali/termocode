@@ -2053,6 +2053,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-ai-explain-query` | Databases: AI Explain Query | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `db-ai-fix-error` | Databases: AI Fix Query Error | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `db-ai-generate-sql` | Databases: AI Generate SQL from Schema… | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `db-another-console` | Databases: Another Console | auto |   |
 | `db-cancel` | Databases: Cancel Query | auto |   |
 | `db-cancel-session` | Databases: Cancel Session Query… | never | stops another session's work; only the user can choose it |
 | `db-commit` | Databases: Commit | never | the user's transaction |
@@ -2078,6 +2079,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-goto-definition` | Databases: Go to Definition | auto |   |
 | `db-guide` | Databases: Open Guide | auto |   |
 | `db-history` | Databases: History… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `db-history-connection` | Databases: History of This Connection… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-import-csv` | Databases: Import CSV into Table… | never | importing rows is a write the user confirms (db_query) |
 | `db-new-console` | Databases: New Console | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-open-sessions` | Databases: Sessions… | never | the user's sessions and transactions |
@@ -2089,6 +2091,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-rollback` | Databases: Roll Back | never | the user's transaction |
 | `db-run` | Databases: Run Statement or Selection | never | SQL runs require the database query tool and its guard |
 | `db-run-file` | Databases: Run File | never | SQL runs require the database query tool and its guard |
+| `db-save-query` | Databases: Save Query… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `db-saved-queries` | Databases: Saved Queries… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-select` | Databases: Select 100 Rows in Console | never | SQL runs require the database query tool and its guard |
 | `db-server-info` | Databases: Show Server Info | never | SQL runs require the database query tool and its guard |
 | `db-sessions` | Databases: Show Sessions and Locks | never | SQL runs require the database query tool and its guard |

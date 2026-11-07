@@ -203,6 +203,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: AI Generate SQL from Schema… | `db-ai-generate-sql` |   |   |
 | Databases: Add Connection… | `db-add` |   |   |
 | Databases: Add SSH Tunnel… | `db-add-tunnel` |   |   |
+| Databases: Another Console | `db-another-console` |   |   |
 | Databases: Apply SQL Quick Fix | `db-quick-fix` |   |   |
 | Databases: Cancel Query | `db-cancel` |   |   |
 | Databases: Cancel Session Query… | `db-cancel-session` |   |   |
@@ -226,6 +227,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Format Statement or Selection | `db-format` |   |   |
 | Databases: Generate Test Data… | `db-generate-data` |   |   |
 | Databases: Go to Definition | `db-goto-definition` |   |   |
+| Databases: History of This Connection… | `db-history-connection` |   |   |
 | Databases: History… | `db-history` |   |   |
 | Databases: Import CSV into Table… | `db-import-csv` |   |   |
 | Databases: New Console | `db-new-console` |   |   |
@@ -239,6 +241,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Run File | `db-run-file` |   |   |
 | Databases: Run Statement or Selection | `db-run` |   |   |
 | Databases: SSL Settings… | `db-ssl` |   |   |
+| Databases: Save Query… | `db-save-query` |   |   |
+| Databases: Saved Queries… | `db-saved-queries` |   |   |
 | Databases: Select 100 Rows in Console | `db-select` |   |   |
 | Databases: Sessions… | `db-open-sessions` |   |   |
 | Databases: Set Redis Key TTL… | `redis-set-ttl` |   |   |

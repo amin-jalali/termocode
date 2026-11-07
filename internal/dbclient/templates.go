@@ -36,3 +36,21 @@ func Templates() []string {
 	sort.Strings(out)
 	return out
 }
+
+// Template is one live template: the abbreviation, the SQL and the byte
+// offset of the cursor in it.
+type Template struct {
+	Abbr, Text string
+	Cursor     int
+}
+
+// TemplateList is every live template, by abbreviation.
+func TemplateList() []Template {
+	names := Templates()
+	out := make([]Template, 0, len(names))
+	for _, n := range names {
+		text, cur, _ := ExpandTemplate(n)
+		out = append(out, Template{Abbr: n, Text: text, Cursor: cur})
+	}
+	return out
+}

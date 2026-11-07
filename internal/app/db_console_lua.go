@@ -247,6 +247,13 @@ function _G._termocode_sql_omni(findstart,base)
    end
   end
  end
+ -- Live templates (DBX-6): "sel" offers SELECT * FROM ; with the cursor
+ -- put where the table goes (CompleteDone below).
+ if #lb>0 then
+  for _,t in ipairs(S1.templates or {}) do
+   if t.a:sub(1,#lb)==lb then out[#out+1]={word=t.t,abbr=t.a,menu='template',user_data={termocode_tpl=t.c}} end
+  end
+ end
  local upper=base:match('%u') and not base:match('%l')
  for _,k in ipairs(KW) do
   if k:sub(1,#lb)==lb then add(upper and k:upper() or k,'keyword') end
@@ -296,6 +303,15 @@ api.nvim_create_autocmd('FileType',{group=g,pattern='sql',callback=function(args
   vim.b[buf].termocode_sql_attached=true
   api.nvim_buf_attach(buf,false,{on_lines=function() changed(buf) end,on_detach=function() pcall(function() vim.b[buf].termocode_sql_attached=nil end) end})
  end
+ api.nvim_create_autocmd('CompleteDone',{group=g,buffer=buf,callback=function()
+  local it=vim.v.completed_item
+  local ud=type(it)=='table' and it.user_data
+  if type(ud)~='table' or not ud.termocode_tpl or type(it.word)~='string' then return end
+  local pos=api.nvim_win_get_cursor(0)
+  local start=pos[2]-#it.word
+  if start<0 or api.nvim_get_current_line():sub(start+1,pos[2])~=it.word then return end
+  api.nvim_win_set_cursor(0,{pos[1],start+ud.termocode_tpl})
+ end})
  vim.keymap.set('n','<leader>x',function() if _G.termocode_notify then _G.termocode_notify('termocode_db_explain','plan') end end,{buffer=buf,silent=true,desc='Explain the statement'})
  vim.keymap.set('n','<leader>.',function() if _G.termocode_notify then _G.termocode_notify('termocode_db_quickfix') end end,{buffer=buf,silent=true,desc='Apply the SQL quick fix'})
  vim.keymap.set('n','<leader>X',function() if _G.termocode_notify then _G.termocode_notify('termocode_db_explain','analyze') end end,{buffer=buf,silent=true,desc='Explain Analyze the statement'})

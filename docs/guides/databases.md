@@ -147,7 +147,7 @@ Press `x` on a connection and choose **Disconnect** to close all its sessions. S
 
 ## The SQL console
 
-Press `n` on a connection to open its console. Consoles live in your user configuration under `db/consoles/<workspace>/<connection>.sql` (mode 0600) and start with a `-- @conn <id>` line. A project `.sql` file can use the same line; without it, the first run asks which connection to use and remembers the answer until you quit.
+Press `n` on a connection to open its console. Consoles live in your user configuration under `db/consoles/<workspace>/<connection>.sql` (mode 0600) and start with a `-- @conn <id>` line. **Databases: Another Console** opens one more console for the same connection (up to 9; the tab says *SQL console 2*, *3* …). A project `.sql` file can use the same line; without it, the first run asks which connection to use and remembers the answer until you quit.
 
 Press `Ctrl+Alt+R` (or `Ctrl+Enter` in terminals that send it) to run the statement under the cursor. In visual mode the selection runs as typed. **Databases: Run File** runs every statement in order. It stops at the first error and asks: **Continue** runs the remaining statements, **Stop** ends the run. A small note at the end of each statement shows the key, the connection and the last result. `Esc` cancels a running query.
 
@@ -308,7 +308,13 @@ A statement with parameters asks for each value before it runs: `?`, `:name`, `$
 
 ## SQL history
 
-Press `h` on the result page, `H` in the Databases view, or use **Databases: History…**. The newest run is at the top; `Enter` runs it again (writes ask again). **Clear history…** asks before it deletes. The history is `db/history.jsonl` in your user configuration (mode 0600): passwords are removed, each entry keeps at most 4 KB of SQL, and `db_history_max` (default 500) limits the count.
+Press `h` on the result page, `H` in the Databases view, or use **Databases: History…**. The newest run is at the top; `Enter` runs it again (writes ask again). **Clear history…** asks before it deletes. The history is `db/history.jsonl` in your user configuration (mode 0600): passwords are removed, each entry keeps at most 4 KB of SQL, and `db_history_max` (default 500) limits the count. **Databases: History of This Connection…** shows only the runs of the console's connection; type in either picker to search the SQL.
+
+## Saved queries and live templates
+
+**Databases: Save Query…** saves the statement at the cursor under a name (the same name on the same connection replaces it). **Databases: Saved Queries…** lists them; `Enter` puts the query below the cursor of a console of that connection, or opens its console. **Delete a saved query…** removes one. They are kept in `db/saved-queries.json` in your user configuration (mode 0600), with passwords removed.
+
+In a SQL buffer, completion also offers live templates: type `sel`, `ins`, `upd`, `del`, `jn` or `cnt` and pick the *template* item; the cursor goes where the table name belongs (`SELECT * FROM |;`).
 
 Nothing polls while you wait: an idle console or result page uses no CPU. Hiding the Databases view (another view, a hidden sidebar or zen mode) cancels a running query and closes its sessions, except a session with an open manual transaction. The command palette and other dialogs do not.
 

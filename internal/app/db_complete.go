@@ -133,7 +133,11 @@ func (s *dbState) schemaPayload(conn dbclient.Conn) map[string]any {
 	for _, t := range tables {
 		list = append(list, map[string]any{"n": t.N, "k": t.K})
 	}
-	return map[string]any{"quote": quote, "tables": list, "schemas": schemas, "cols": cols, "types": types, "fks": fks}
+	tpl := []map[string]any{}
+	for _, t := range dbclient.TemplateList() {
+		tpl = append(tpl, map[string]any{"a": t.Abbr, "t": t.Text, "c": t.Cursor})
+	}
+	return map[string]any{"quote": quote, "tables": list, "schemas": schemas, "cols": cols, "types": types, "fks": fks, "templates": tpl}
 }
 
 // setFullSchema stores the whole schema of a connection loaded in the
