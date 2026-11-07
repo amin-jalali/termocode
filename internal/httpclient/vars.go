@@ -22,8 +22,9 @@ var placeholderRe = lazyre.New(`\{\{\s*([^{}]*?)\s*\}\}`)
 const maxNesting = 5
 
 // Resolver substitutes {{name}} placeholders. Sources, first hit wins:
-// file variables, the selected environment (private file wins over the
-// public one), $shared, then the $-functions ($dotenv, $processEnv,
+// prompted values (# @prompt), file variables, the selected environment
+// (private file wins over the public one), $shared, folder variables
+// (http-client.vars.json), globals, then the $-functions ($dotenv, $processEnv,
 // $secret, $guid, $uuid, $timestamp, $isoTimestamp, $datetime,
 // $localDatetime with iso8601, rfc1123 or a quoted custom format,
 // $randomInt, $random.email/firstName/lastName/fullName/words).
@@ -44,6 +45,13 @@ type Resolver struct {
 	// Responses returns the last response of the request called name,
 	// for {{name.response.body.$.token}} (chain.go); nil = no chaining.
 	Responses func(name string) (*Response, bool)
+	// Prompted holds the values the user typed for `# @prompt name`
+	// (they win over every other source). A secret-looking name is
+	// hidden like a private env value.
+	Prompted map[string]string
+	// Globals are the global variables (http/globals.json); they come
+	// after file, environment and folder variables.
+	Globals map[string]string
 	// BaseDir is the .http file's folder: `< ./file` bodies are read
 	// there ("" = unsaved request, no file bodies).
 	BaseDir string
@@ -281,13 +289,24 @@ func (rv *Resolver) named(name string) (val string, private, ok bool) {
 	if !isPlainName(name) {
 		return "", false, false
 	}
+	if v, ok := rv.Prompted[name]; ok {
+		return v, SecretHeader(name), true
+	}
 	for i := len(rv.FileVars) - 1; i >= 0; i-- {
 		if rv.FileVars[i].Name == name {
 			return rv.FileVars[i].Value, false, true
 		}
 	}
 	if rv.Envs != nil {
-		return rv.Envs.Lookup(rv.Env, name)
+		if v, private, ok := rv.Envs.Lookup(rv.Env, name); ok {
+			return v, private, true
+		}
+		if v, ok := rv.Envs.Folder[name]; ok {
+			return v, false, true
+		}
+	}
+	if v, ok := rv.Globals[name]; ok {
+		return v, SecretHeader(name), true
 	}
 	return "", false, false
 }

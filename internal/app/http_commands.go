@@ -79,6 +79,7 @@ func httpPaletteItems() []picker.Item {
 		{ID: "http-env-select", Title: "HTTP: Select Environment…"},
 		{ID: "http-env-open", Title: "HTTP: Open Environment File"},
 		{ID: "http-env-open-private", Title: "HTTP: Open Private Environment File"},
+		{ID: "http-globals-open", Title: "HTTP: Open Global Variables File"},
 		{ID: "http-saved", Title: "HTTP: Saved Requests…"},
 		{ID: "http-save", Title: "HTTP: Save Request to Saved…"},
 		{ID: "http-copy-curl", Title: "HTTP: Copy as curl"},
@@ -118,6 +119,8 @@ func (m *Model) dispatchHTTPPalette(id string) (tea.Cmd, bool) {
 		return m.httpOpenEnvFile(false), true
 	case "http-env-open-private":
 		return m.httpOpenEnvFile(true), true
+	case "http-globals-open":
+		return m.httpOpenGlobals(), true
 	case "http-saved":
 		return m.openHTTPSaved(), true
 	case "http-save":
@@ -201,15 +204,16 @@ func (m *Model) httpSendRequest(file string, vars []httpclient.Var, req httpclie
 		m.httpAskChainDep(httpChainStep{file: file, vars: vars, req: req, env: env}, deps)
 		return nil
 	}
-	return m.httpSendResolved(file, vars, req, env, false)
+	return m.httpAskPrompts(httpChainStep{file: file, vars: vars, req: req, env: env}, false)
 }
 
 // httpSendResolved resolves and sends req. skipChain: the user chose
 // to send without the missing answers, so {{x.response...}} names do
 // not ask "Send anyway?" again.
-func (m *Model) httpSendResolved(file string, vars []httpclient.Var, req httpclient.Request, env string, skipChain bool) tea.Cmd {
+func (m *Model) httpSendResolved(file string, vars []httpclient.Var, req httpclient.Request, env string, skipChain bool, prompted map[string]string) tea.Cmd {
 	s := m.httpS()
 	rv := httpResolver(file, vars, env)
+	rv.Prompted = prompted
 	rv.Responses = s.chainSource(file)
 	rr, un := rv.Resolve(req)
 	if skipChain {
@@ -663,6 +667,9 @@ func (m *Model) httpShowEntry(e httpclient.Entry) tea.Cmd {
 
 // handleHTTPPromptSubmit routes the HTTP prompts. ok=false: not ours.
 func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
+	if cmd, ok := m.httpPromptVarSubmit(value); ok {
+		return cmd, true
+	}
 	if cmd, ok := m.httpCookiesPrompt(value); ok {
 		return cmd, true
 	}

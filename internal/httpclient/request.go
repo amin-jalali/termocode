@@ -44,7 +44,19 @@ type Request struct {
 	// Asserts holds the `# @assert <check>` lines in order (see
 	// RunAsserts); they are not in Directives.
 	Asserts []string `json:"asserts,omitempty"`
+	// Prompts holds the `# @prompt name [label]` lines in order: the
+	// user types each value before the request is sent.
+	Prompts []Prompt `json:"prompts,omitempty"`
 }
+
+// Prompt is one `# @prompt name [label]` line.
+type Prompt struct {
+	Name  string `json:"name"`
+	Label string `json:"label,omitempty"`
+}
+
+// Secret reports a name whose value is hidden while typing and after.
+func (p Prompt) Secret() bool { return SecretHeader(p.Name) }
 
 // File is a parsed `.http` file.
 type File struct {

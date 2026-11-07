@@ -97,8 +97,11 @@ token / secret / password) show as `[REDACTED]`.
 
 | Source | Example |
 |---|---|
+| values you type: `# @prompt user` (or `# @prompt password Your password`) above the request asks for each one when you send; a name like password or token is typed hidden | `# @prompt user` |
 | file variables | `@host = http://localhost:8080` |
 | the selected environment in `http-client.private.env.json`, then `http-client.env.json` (next to the file or in a parent folder up to the workspace root), then their `$shared` | `{"dev": {"host": "…"}}` |
+| folder variables: `http-client.vars.json` (a flat map) in the file's folder or a parent up to the workspace root; the nearest folder wins | `{"tenant": "acme"}` |
+| global variables for every workspace: **HTTP: Open Global Variables File** (`http/globals.json` in the config folder, 0600) | `{"region": "eu"}` |
 | `{{$dotenv NAME}}` | from `.env` |
 | `{{$processEnv NAME}}` | from the environment |
 | `{{$secret NAME}}` | from `ai/credentials.json` (the store MCP uses) |

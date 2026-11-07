@@ -411,6 +411,7 @@ excluded	git-merge-undo	laptop only: TUI merge view undo (web editor has its own
 excluded	help-context	laptop only: explains TUI widgets
 excluded	help-guide	laptop only: opens the TUI guide
 excluded	http-env-open-private	security: private environment file stays on the laptop
+excluded	http-globals-open	security: global variables live in the laptop config folder and may hold tokens
 excluded	open-docs	laptop only: opens docs in the laptop browser
 excluded	open-shell	laptop only: opens an external shell window on the laptop
 excluded	prefs-import-editor	laptop only: imports from other editors on the laptop disk

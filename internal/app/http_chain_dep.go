@@ -106,7 +106,7 @@ func (m *Model) httpChainDepConfirm(id string) tea.Cmd {
 		s.chainNext = append(s.chainNext, *w)
 		return m.httpSendRequest(w.file, f.Vars, *dep, w.env)
 	case "without":
-		return m.httpSendResolved(w.file, w.vars, w.req, w.env, true)
+		return m.httpAskPrompts(*w, true)
 	}
 	s.chainNext = nil
 	return nil

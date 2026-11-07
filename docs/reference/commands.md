@@ -549,6 +549,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | HTTP: New .http File… | `http-new-file` |   |   |
 | HTTP: Open API Docs | `http-api-docs` |   |   |
 | HTTP: Open Environment File | `http-env-open` |   |   |
+| HTTP: Open Global Variables File | `http-globals-open` |   |   |
 | HTTP: Open Private Environment File | `http-env-open-private` |   |   |
 | HTTP: Quick Request… | `http-quick` |   |   |
 | HTTP: Save Request to Saved… | `http-save` |   |   |

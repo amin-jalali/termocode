@@ -142,6 +142,7 @@ func httpConfigDir() string {
 func httpHistoryPath() string { return filepath.Join(httpConfigDir(), "history.jsonl") }
 func httpStatePath() string   { return filepath.Join(httpConfigDir(), "state.json") }
 func httpSavedPath() string   { return filepath.Join(httpConfigDir(), "saved.http") }
+func httpGlobalsPath() string { return filepath.Join(httpConfigDir(), "globals.json") }
 
 // httpHistoryStore is the history file with the current cap; every text
 // passes ai.Redact before it reaches the disk.
@@ -212,6 +213,8 @@ type httpState struct {
 	shown   *httpRun
 
 	pending     *httpRun // waits for "Send anyway?"
+	// promptWait collects the `# @prompt` values of a request.
+	promptWait *httpPromptWait
 
 	// chainWait waits for the "Send login first?" card; chainNext are
 	// the requests to send once their dependency answered (a stack:
@@ -423,7 +426,12 @@ func httpResolver(file string, fileVars []httpclient.Var, env string) *httpclien
 	} else if env == "-" {
 		env = ""
 	}
+	globals, err := httpclient.LoadGlobals(httpGlobalsPath())
+	if err != nil {
+		recordError("http globals: " + err.Error())
+	}
 	return &httpclient.Resolver{
+		Globals:  globals,
 		FileVars: fileVars,
 		Env:      env,
 		Envs:     httpclient.LoadEnvs(dir, root),
