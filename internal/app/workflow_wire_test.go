@@ -12,6 +12,7 @@ import (
 
 var (
 	_ source.ToolCaller = (*wfMCP)(nil)
+	_ source.ToolLister = (*wfMCP)(nil)
 	_ run.ToolCheck     = (*wfMCP)(nil)
 	_ source.DBOpener   = wfDB{}
 )
@@ -66,6 +67,25 @@ func TestWorkflowMCPChecksReadOnlyBeforeTheCall(t *testing.T) {
 	}
 	if _, _, err := c.CallTool(ctx, "linear", "missing", nil); err == nil || calls != 2 {
 		t.Fatalf("unknown tool: %v", err)
+	}
+}
+
+// Spec (WFX-18 follow-up): the app lists a server's tools (its
+// tools/list) for a message step, with each tool's input schema; a tool
+// turned off for termocode is left out; a server that is not known is
+// "not connected".
+func TestWorkflowMCPListsTools(t *testing.T) {
+	calls := 0
+	c := wfTestMCP(&calls)
+	got, err := c.ListTools(context.Background(), "linear")
+	if err != nil || len(got) != 2 || got[0].Name != "list_issues" || got[1].Name != "create_comment" {
+		t.Fatalf("tools %+v err %v", got, err)
+	}
+	if _, err := c.ListTools(context.Background(), "nope"); !errors.Is(err, source.ErrNotConnected) {
+		t.Fatalf("unknown server: %v", err)
+	}
+	if calls != 0 {
+		t.Fatalf("listing called a tool %d times", calls)
 	}
 }
 

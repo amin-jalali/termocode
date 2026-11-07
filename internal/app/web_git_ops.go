@@ -33,7 +33,7 @@ func init() {
 
 // webGitRoot is the workspace folder when it is a git repository.
 func (m *Model) webGitRoot(call *webCall) (string, bool) {
-	root, err := m.rootDir()
+	root, err := m.gitRootDir()
 	switch {
 	case err != nil:
 		call.fail(webproto.CodeConflict, "No workspace is open on the laptop.")

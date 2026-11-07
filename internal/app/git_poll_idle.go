@@ -108,7 +108,7 @@ func (m *Model) gitIdleGated() bool {
 	if m.gitGate == nil || !m.gitLoaded || !m.gitIsRepo {
 		return false
 	}
-	_, err := m.rootDir()
+	_, err := m.gitRootDir()
 	return err == nil
 }
 
@@ -119,7 +119,7 @@ func (m *Model) gitAutoRefreshTick() tea.Cmd {
 		return gitAutoRefreshTick()
 	}
 	gate := m.gitGate
-	cwd, _ := m.rootDir()
+	cwd, _ := m.gitRootDir()
 	return func() tea.Msg { return gitIdleWait(gate, cwd, time.Sleep) }
 }
 
