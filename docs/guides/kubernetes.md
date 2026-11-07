@@ -29,7 +29,21 @@ context and that context's namespace (`default` when it names none).
 | **DEPLOYMENTS** | ready pods (`1/2`) and age. A wide view also shows updated and available pods. |
 | **SERVICES** | the type (`ClusterIP`, `NodePort`, …). A wide view also shows the ports. |
 | **JOBS** | finished runs (`2/5`) and age. |
+| **EVENTS** | the namespace's newest 50 events: the object (`pod/api-1`), the reason (`BackOff`) and when it last happened. A warning has a red mark. The footer shows the message. `i`, `v` and `E` on an event act on its object. |
+| **STATEFULSETS** | ready pods (`1/2`) and age. |
+| **DAEMONSETS** | ready pods of the wanted ones (`3/3`) and age. A wide view also shows updated and available pods. |
+| **REPLICASETS** | ready pods (`2/2`) and age. The footer shows the owner (`Deployment/api`). |
+| **CRONJOBS** | the schedule (`*/5 * * * *`, `(off)` when suspended) and age. The footer shows when it last ran. |
+| **CONFIGMAPS** | how many keys it has. The footer lists the key names. |
+| **SECRETS** | how many keys it has; a wide view also shows the type. The footer lists the key names. The values are never read. |
+| **INGRESSES** | the hosts (`shop.example.com`, `*` for any host). A wide view also shows the ports. |
+| **PVCS** | the status (`Bound`, `Pending`) and the size. A wide view also shows the access modes. |
+| **NODES** | the status (`Ready`, `NotReady`, `SchedulingDisabled`). A wide view also shows the version. Nodes belong to the whole cluster, not to the namespace. |
 | **FORWARDS** | only while a port-forward runs: each forward (`svc/web`), its local port and the remote port (`:43123 → 80`). |
+
+The sections from **EVENTS** to **NODES** start folded. A folded
+section does not load; open it (`Space`, `Enter` or a click) and it
+loads now and then with the others. Fold it again and it stops loading.
 
 The mark at the start of a row is green when all is well, yellow while
 it is on its way, red when it is broken and grey when it is done.
@@ -61,13 +75,14 @@ kubeconfig, so other terminals keep their context.
 | `i` | Describe the row (a read-only page). |
 | `v` | Show the row as YAML (a read-only page; Secret values are masked). |
 | `E` | Events of the row, newest first (a read-only page). On a section header: all events of the namespace. |
+| `L` | Pod: pick how to show the logs (previous container, last 5 minutes or hour, time stamps, save to a file). Deployment: the logs of all its pods. |
 | `e` | Pod: open a shell in it. |
 | `f` | Pod, service or deployment: start or stop a port-forward. On a **FORWARDS** row: stop it. |
 | `y` | Copy the name. On a **FORWARDS** row: copy the local address. |
 | `!` | Your custom commands for the row (pods, deployments, services, jobs; see the Containers guide, "Custom commands"). Each asks first. |
 | `r` | Deployment: restart it (asks first). |
-| `s` | Deployment: scale it (asks the number, then asks first). |
-| `d` | Delete the row's object (asks first). |
+| `s` | Deployment or statefulset: scale it (asks the number, then asks first). |
+| `d` | Delete the row's object (asks first). Not on a node or an event. |
 | `c` / `n` | Pick the context / the namespace. |
 | `[` / `]` | Back / forward to the context and namespace you had before. |
 | `R` | Load the lists now. |
@@ -81,6 +96,19 @@ kubeconfig, so other terminals keep their context.
 last 200 lines. `e` opens a shell in the pod (`bash`, or `sh` when there
 is no bash). A pod with more than one container asks which container
 first.
+
+`L` on a pod picks how to show its logs:
+
+- **Follow logs**: as `Enter`.
+- **Previous container**: the logs of the container before its last
+  restart (useful for a crashing pod). They do not follow.
+- **Last 5 minutes** / **Last hour**: only the newer lines, then new ones.
+- **With time stamps**: a time before each line.
+- **Save to a file…**: every line, once. termocode asks the file name
+  (in the workspace) and never overwrites a file.
+
+`L` on a deployment follows the logs of all its pods and containers in
+one tab; each line starts with its pod and container.
 
 ## Port-forward
 
@@ -104,9 +132,9 @@ context, the namespace and the command (`kubectl rollout restart`).
 **Cancel** is the first button and has the focus, so `Enter` or `Esc`
 alone never restarts anything. **Restart** replaces the pods one by one.
 
-## Scale a deployment
+## Scale a deployment or a statefulset
 
-`s` on a deployment asks for the number of replicas; it starts at the
+`s` on a deployment or a statefulset asks for the number of replicas; it starts at the
 current number. A number from 0 to 1000 opens a card with the change
 (`2 → 5`), the context, the namespace and the command (`kubectl
 scale`). 0 stops every pod, and the card says so. **Cancel** is the

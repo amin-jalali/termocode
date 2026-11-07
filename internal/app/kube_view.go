@@ -267,6 +267,17 @@ func (st *kubeState) itemParts(r kubeRow, w int, now time.Time) (theme.Icon, the
 		g, c := kubeJobGlyph(j)
 		return g, c, j.Completions() + " " + kube.Age(j.Created, now)
 	}
+	if o, ok := st.extraObj(r); ok {
+		g, c := o.Mark.glyph()
+		right := o.Right
+		if wide {
+			right += o.Wide
+		}
+		if age := kube.Age(o.Created, now); age != "" {
+			right += " " + age
+		}
+		return g, c, right
+	}
 	return theme.Icon{}, theme.TextDim, ""
 }
 
@@ -325,7 +336,7 @@ func (st *kubeState) footer(now time.Time) []string {
 		if fw := st.forward(p.Name); fw != nil {
 			line = fmt.Sprintf("127.0.0.1:%d %s %d · %s", fw.Local, kubeArrow(), fw.Remote, line)
 		}
-		return []string{line, "l logs · e shell · f forward · ? keys"}
+		return []string{line, "l logs · L options · e shell · f forward · ? keys"}
 	case "deployments":
 		d := st.deploys[r.idx]
 		line := fmt.Sprintf("ready %s · updated %d · available %d", d.Ready(), d.Updated, d.Available)
@@ -347,6 +358,12 @@ func (st *kubeState) footer(now time.Time) []string {
 	case "jobs":
 		j := st.jobs[r.idx]
 		return []string{fmt.Sprintf("%s · %s done · %d failed", j.Status(), j.Completions(), j.Failed), "i describe · y copy name · ? keys"}
+	}
+	if o, ok := st.extraObj(r); ok {
+		if r.section == "statefulsets" {
+			return []string{o.Detail, "s scale · i describe · v YAML · ? keys"}
+		}
+		return []string{o.Detail, "i describe · v YAML · E events · ? keys"}
 	}
 	return []string{"", keys}
 }

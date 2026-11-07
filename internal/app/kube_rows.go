@@ -52,6 +52,10 @@ func (st *kubeState) names(sec string) []string {
 		for _, k := range st.forwardKeys() {
 			out = append(out, st.forwardLabel(k))
 		}
+	default:
+		for _, o := range st.extra[sec] {
+			out = append(out, o.Name)
+		}
 	}
 	return out
 }
@@ -71,9 +75,9 @@ func (st *kubeState) rows() []kubeRow {
 		return []kubeRow{{kind: kubeRowNote, text: st.err}}
 	}
 	var out []kubeRow
-	secs := kubeSections
+	secs := append(kubeSections[:len(kubeSections):len(kubeSections)], kubeExtraSections...)
 	if len(st.forwards) > 0 { // last, so starting one never moves the cursor
-		secs = append(secs[:len(secs):len(secs)], kubeForwardsSection)
+		secs = append(secs, kubeForwardsSection)
 	}
 	for _, sec := range secs {
 		out = append(out, kubeRow{kind: kubeRowSection, section: sec})
@@ -82,6 +86,10 @@ func (st *kubeState) rows() []kubeRow {
 		}
 		if e := st.errs[sec]; e != "" {
 			out = append(out, kubeRow{kind: kubeRowNote, section: sec, text: e})
+			continue
+		}
+		if kubeIsExtra(sec) && !st.extraLoaded[sec] {
+			out = append(out, kubeRow{kind: kubeRowHint, section: sec, text: "Loading…"})
 			continue
 		}
 		names := st.names(sec)
@@ -105,6 +113,9 @@ func (st *kubeState) rows() []kubeRow {
 
 // count is a section header's number: "5", or "2/5" while filtering.
 func (st *kubeState) count(sec string) string {
+	if kubeIsExtra(sec) && !st.extraLoaded[sec] {
+		return "" // folded and never loaded: no number to show
+	}
 	names := st.names(sec)
 	n := len(names)
 	if st.filter == "" {

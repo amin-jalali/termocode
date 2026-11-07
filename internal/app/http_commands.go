@@ -756,6 +756,9 @@ func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 	if m.promptKind == promptKindKubeSaveScreen { // kube_nav.go
 		return m.kubeSaveScreen(value), true
 	}
+	if m.promptKind == promptKindKubeSaveLogs { // kube_logs.go
+		return m.kubeSaveLogs(value), true
+	}
 	if m.promptKind == promptKindDBAIGenerate {
 		return m.databaseAIGeneratePrompt(value), true
 	}

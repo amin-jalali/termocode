@@ -55,12 +55,11 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		st.jumpSection(-1)
 	case " ":
 		if have && r.kind == kubeRowSection {
-			st.toggleFold(r.section)
+			return m, m.kubeFold(r.section)
 		}
 	case "enter", "l":
 		if have && r.kind == kubeRowSection {
-			st.toggleFold(r.section)
-			return m, nil
+			return m, m.kubeFold(r.section)
 		}
 		if p, ok := st.selectedPod(); ok {
 			return m, m.kubePodTerminal("logs", p, "")
@@ -69,21 +68,23 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, nil // nothing to describe; f stops it
 		}
 		if have && r.kind == kubeRowItem && k.String() == "enter" {
-			return m, m.kubeDescribe(kubeKindOf(r.section), r.name)
+			return m, m.kubeDescribe(st.rowTarget(r))
 		}
 	case "i":
 		if have && r.kind == kubeRowItem && r.section != kubeForwardsSection {
-			return m, m.kubeDescribe(kubeKindOf(r.section), r.name)
+			return m, m.kubeDescribe(st.rowTarget(r))
 		}
 	case "v":
 		if have && r.kind == kubeRowItem {
-			return m, m.kubeYAML(kubeKindOf(r.section), r.name)
+			return m, m.kubeYAML(st.rowTarget(r))
 		}
 	case "E":
 		if have && r.kind == kubeRowItem {
-			return m, m.kubeEvents(kubeKindOf(r.section), r.name)
+			return m, m.kubeEvents(st.rowTarget(r))
 		}
 		return m, m.kubeEvents("", "")
+	case "L":
+		return m, m.kubeAskLogOptions()
 	case "e":
 		if p, ok := st.selectedPod(); ok {
 			return m, m.kubePodTerminal("shell", p, "")
@@ -95,10 +96,22 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		}
 	case "s":
 		if d, ok := st.selectedDeployment(); ok {
-			m.askKubeScale(d, "", "")
+			m.askKubeScale("deployment", d.Name, d.Replicas, "", "")
+			return m, nil
+		}
+		if have && r.kind == kubeRowItem && r.section == "statefulsets" {
+			if o, ok := st.extraObj(r); ok {
+				m.askKubeScale("statefulset", o.Name, o.Replicas, "", "")
+			}
 			return m, nil
 		}
 	case "d":
+		if have && r.kind == kubeRowItem && r.section == "nodes" {
+			return m, m.servicesToast(toast.Info, "Nodes are not deleted here", "Use kubectl for that")
+		}
+		if have && r.kind == kubeRowItem && r.section == "events" {
+			return m, m.servicesToast(toast.Info, "Events are not deleted", "d works on the object's own row")
+		}
 		if have && r.kind == kubeRowItem {
 			m.askKubeDelete(kubeKindOf(r.section), r.name)
 			return m, nil
@@ -146,20 +159,24 @@ func kubeKeyRows() []confirm.KeyRow {
 		[]string{"Move"},
 		[]string{"↑ ↓ j k", "move · g G top, end"},
 		[]string{"Tab", "next section"},
-		[]string{"Space", "fold or open a section"},
+		[]string{"Space", "fold or open a section (folded ones load when opened)"},
 		[]string{"/", "filter by name · Esc clears"},
 		[]string{"Pods"},
 		[]string{"Enter l", "follow logs"},
+		[]string{"L", "logs: previous, since, time stamps, save"},
 		[]string{"e", "open a shell"},
 		[]string{"f", "start or stop a port-forward"},
 		[]string{"Every row"},
 		[]string{"i", "describe (read only)"},
 		[]string{"v", "YAML (read only, secrets masked)"},
 		[]string{"E", "events · on a header: the namespace's"},
+		[]string{"Events"},
+		[]string{"i v E", "act on the event's object"},
 		[]string{"y", "copy the name"},
 		[]string{"!", "your custom commands for the row (asks first)"},
 		[]string{"r", "deployment: restart (asks first)"},
-		[]string{"s", "deployment: scale (asks first)"},
+		[]string{"s", "deployment, statefulset: scale (asks first)"},
+		[]string{"L", "deployment: logs of all its pods"},
 		[]string{"d", "delete (asks first)"},
 		[]string{"Cluster"},
 		[]string{"c n", "pick the context, the namespace"},

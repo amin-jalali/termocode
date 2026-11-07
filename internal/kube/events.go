@@ -75,8 +75,18 @@ func ParseEvents(b []byte) ([]Event, error) {
 	return out, nil
 }
 
-// eventKind is the API kind of a view kind ("pod" → "Pod").
-func eventKind(kind string) string {
+// apiKinds are the API kinds of the view kinds with more than one word.
+var apiKinds = map[string]string{
+	"statefulset": "StatefulSet", "daemonset": "DaemonSet", "replicaset": "ReplicaSet",
+	"cronjob": "CronJob", "configmap": "ConfigMap", "persistentvolumeclaim": "PersistentVolumeClaim",
+}
+
+// EventKind is the API kind of a view kind ("pod" → "Pod",
+// "statefulset" → "StatefulSet").
+func EventKind(kind string) string {
+	if k, ok := apiKinds[kind]; ok {
+		return k
+	}
 	switch kind {
 	case "deployment":
 		return "Deployment"
@@ -98,7 +108,7 @@ func eventKind(kind string) string {
 func (c Client) Events(ctx context.Context, kind, name string) ([]Event, error) {
 	args := []string{"get", "events", "-o", "json"}
 	if kind != "" && name != "" {
-		args = append(args, "--field-selector", "involvedObject.kind="+eventKind(kind)+",involvedObject.name="+name)
+		args = append(args, "--field-selector", "involvedObject.kind="+EventKind(kind)+",involvedObject.name="+name)
 	}
 	out, err := c.capture(ctx, append(args, c.scope(true)...)...)
 	if err != nil {

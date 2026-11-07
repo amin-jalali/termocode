@@ -49,6 +49,13 @@ func kubeKindOf(section string) string {
 		return "service"
 	case "jobs":
 		return "job"
+	case "pvcs":
+		return "persistentvolumeclaim"
+	case "ingresses":
+		return "ingress"
+	}
+	if kubeIsExtra(section) {
+		return strings.TrimSuffix(section, "s") // statefulsets → statefulset
 	}
 	return ""
 }

@@ -41,6 +41,10 @@ func kubeDeleteNote(kind string) string {
 		return "Its pods are deleted too."
 	case "service":
 		return "Its pods stay; traffic to the service stops."
+	case "statefulset", "daemonset", "replicaset", "cronjob":
+		return "Its pods are deleted too."
+	case "persistentvolumeclaim":
+		return "Its data may be deleted with it (the volume's reclaim policy)."
 	}
 	return ""
 }
