@@ -9,6 +9,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/webproto"
+	"github.com/amin-jalali/termocode/internal/webtools"
 )
 
 // The ai topic (WEBP-3): the laptop's AI as the chat header's profile
@@ -135,6 +136,11 @@ func (m *Model) webAIBuild() webproto.AISnap {
 		Inline: s.settings.InlineEnabled(), NextEdit: s.settings.NextEditEnabled(), Worktrees: s.settings.UseWorktrees()}
 	if kind := s.webAIKind(); kind != "" {
 		out.Provider = ai.KindLabel(kind)
+	}
+	web := loadAIWebSettings()
+	out.WebFetch = web.Fetch
+	if p, ok := webtools.ProviderByName(web.Search); ok {
+		out.WebSearch = webName(p.Title)
 	}
 	for _, id := range s.webAIModels() {
 		out.Models = append(out.Models, webName(id))

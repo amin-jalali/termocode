@@ -1570,6 +1570,8 @@ export interface AISnap {
   inline: boolean;
   nextEdit: boolean;
   worktrees: boolean;
+  webFetch?: boolean;
+  webSearch?: string;
 }
 
 export interface AIProfile {

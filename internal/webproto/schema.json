@@ -4598,6 +4598,12 @@
         "provider": {
           "type": "string"
         },
+        "webFetch": {
+          "type": "boolean"
+        },
+        "webSearch": {
+          "type": "string"
+        },
         "worktrees": {
           "type": "boolean"
         }
