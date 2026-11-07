@@ -163,7 +163,7 @@ func (m *Model) webGitRebase(call *webCall) *webAsk {
 			if m.gitRebase.InProgress {
 				return m.rebaseBusyToast()
 			}
-			cwd, err := m.rootDir()
+			cwd, err := m.gitRootDir()
 			if err != nil {
 				return nil
 			}

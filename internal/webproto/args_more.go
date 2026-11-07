@@ -52,9 +52,12 @@ const (
 	MaxStashMsg = 1 << 10
 )
 
-// GitCheckoutArgs switches to a local branch (one git.branches lists).
+// GitCheckoutArgs switches to a local branch (one git.branches lists),
+// or, with Remote ("origin/x"), makes a local branch x that tracks a
+// listed remote branch. Exactly one of the two is set.
 type GitCheckoutArgs struct {
-	Branch string `json:"branch"`
+	Branch string `json:"branch,omitempty"`
+	Remote string `json:"remote,omitempty"`
 }
 
 // GitStashArgs stashes the changes, with an optional message.
@@ -64,6 +67,15 @@ type GitStashArgs struct {
 
 func (a *GitCheckoutArgs) validate(int) error {
 	b := a.Branch
+	if a.Remote != "" {
+		if b != "" {
+			return invalid("branch and remote")
+		}
+		b = a.Remote
+		if r, short, ok := strings.Cut(b, "/"); !ok || r == "" || short == "" {
+			return invalid("bad remote branch")
+		}
+	}
 	if b == "" || len(b) > MaxBranch || hasControl(b) || strings.HasPrefix(b, "-") || strings.ContainsAny(b, " ~^:?*[\\") || strings.Contains(b, "..") {
 		return invalid("bad branch")
 	}

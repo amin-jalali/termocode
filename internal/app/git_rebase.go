@@ -67,7 +67,7 @@ func (m *Model) gitRebaseFromCmd(full string) tea.Cmd {
 	if m.gitRebase.InProgress {
 		return m.rebaseBusyToast()
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -197,7 +197,7 @@ func (m *Model) onRebaseCardMsg(msg tea.Msg) tea.Cmd {
 
 // rebaseCheckCmd reads what the confirm card must say.
 func (m *Model) rebaseCheckCmd(todo git.RebaseTodo) tea.Cmd {
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -286,7 +286,7 @@ func (m *Model) onRebaseConfirm(id string) tea.Cmd {
 	}
 	opt := git.RebaseOptions{Autostash: id == "rebase-stash"}
 	m.closeRebaseCard()
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -431,7 +431,7 @@ func (m *Model) openRebaseControl() {
 
 // onRebaseControl runs Continue, Skip or Abort off the loop.
 func (m *Model) onRebaseControl(id string) tea.Cmd {
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}

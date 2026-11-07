@@ -139,7 +139,7 @@ func (m *Model) gitTagItems() ([]picker.Item, tea.Cmd) {
 	if !m.gitEnsureLoaded() {
 		return nil, nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil, nil
 	}
@@ -170,7 +170,7 @@ func (m *Model) openTagPickerFor(kind pickerKindEnum, title string, extra ...pic
 
 // onGitTagPicked runs the action of the tag picker that was open.
 func (m *Model) onGitTagPicked(kind pickerKindEnum, id string) tea.Cmd {
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -250,7 +250,7 @@ func (m *Model) showTagDetails(cwd, name string) tea.Cmd {
 
 // onGitRefConfirm answers this file's cards; Cancel does nothing.
 func (m *Model) onGitRefConfirm(kind confirmKindEnum, id string) tea.Cmd {
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -277,7 +277,7 @@ func (m *Model) openRemotesPicker() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -316,7 +316,7 @@ func (m *Model) onRemotePicked(id string) tea.Cmd {
 }
 
 func (m *Model) onRemoteActionPicked(id string) tea.Cmd {
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -348,7 +348,7 @@ func (m *Model) openUpstreamPicker() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -369,7 +369,7 @@ func (m *Model) openUpstreamPicker() tea.Cmd {
 
 func (m *Model) onUpstreamPicked(id string) tea.Cmd {
 	up, ok := strings.CutPrefix(id, "up-")
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if !ok || err != nil {
 		return nil
 	}
@@ -382,7 +382,7 @@ func (m *Model) gitUnsetUpstream() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -416,7 +416,7 @@ func (m *Model) openForcePushCard() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -453,7 +453,7 @@ func (m *Model) handleGitRefPromptSubmit(value string) (tea.Cmd, bool) {
 	default:
 		return nil, false
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil, true
 	}

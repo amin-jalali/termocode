@@ -5,7 +5,8 @@
 // the file's name, its folder dim, its count; each match with the found
 // text marked. A match opens the file in the editor at that place; a
 // result can be dismissed; the title has Refresh, Clear and Collapse All.
-// The search and its results stay while other views show.
+// The search and its results stay while other views show. It searches
+// as you type: a short pause after the last key runs it (Enter at once).
 import { Fragment, h } from "preact";
 import { signal } from "@preact/signals";
 import { useEffect, useRef } from "preact/hooks";
@@ -15,13 +16,19 @@ import { byFile, readBatch, readSummary, segments, type SearchHit, type SearchSu
 import { t } from "../../strings";
 import { Cod, FileIcon } from "../../ui/icons";
 import { Act, PaneView, Row, Tree } from "../../ui/pane";
-import { gitFailed as failed } from "../git/errors";
+import { gitErrText, gitFailed as failed } from "../git/errors";
 
 interface Run {
   id: number;
   hits: SearchHit[];
   done: SearchSummary | null;
+  /** err: why a typed search was refused (a half-typed regex), shown in place. */
+  err?: string;
 }
+
+/** typeWait is the pause after the last key before a typed search runs. */
+const typeWait = 300;
+let timer: ReturnType<typeof setTimeout> | undefined;
 
 const query = signal("");
 const opts = signal({ cs: false, word: false, regex: false });
@@ -42,7 +49,9 @@ link.onEvent((kind, data) => {
   run.value = { ...r, hits: [...r.hits, ...b.hits] };
 });
 
-function start(): void {
+function start(typed = false): void {
+  clearTimeout(timer);
+  timer = undefined;
   const q = query.peek();
   if (!q.trim() || !live.peek()) return;
   const o = opts.peek();
@@ -64,13 +73,32 @@ function start(): void {
     },
     (e: unknown) => {
       if (current !== id) return;
+      if (typed) {
+        run.value = { id, hits: [], done: null, err: gitErrText(e) };
+        return;
+      }
       run.value = null;
       failed(e);
     },
   );
 }
 
+/** later runs the search after a pause; an empty query clears the results. */
+function later(): void {
+  clearTimeout(timer);
+  timer = undefined;
+  if (query.peek().trim()) {
+    timer = setTimeout(() => start(true), typeWait);
+    return;
+  }
+  if (run.peek() && !run.peek()?.done && !run.peek()?.err) link.request("search.stop").catch(() => undefined);
+  current = 0;
+  run.value = null;
+}
+
 function clear(): void {
+  clearTimeout(timer);
+  timer = undefined;
   if (run.peek() && !run.peek()?.done) link.request("search.stop").catch(() => undefined);
   current = 0;
   run.value = null;
@@ -150,7 +178,7 @@ export function DeskSearch() {
   const n = groups.reduce((a, x) => a + x.hits.length, 0);
   const d = r?.done;
   let note = "";
-  if (r && d) {
+  if (r && d && !r.err) {
     if (n === 0 && d.stopped === "") note = t("search.none");
     else note = t(groups.length === 1 ? (n === 1 ? "sv.count_one" : "sv.count_file") : "sv.count", { n, files: groups.length });
     if (d.stopped === "timeout") note += " · " + t("search.timeout");
@@ -163,7 +191,7 @@ export function DeskSearch() {
       title={t("more.search")}
       actions={
         <>
-          <Act icon="refresh" label={t("ctr.refresh")} disabled={!query.value.trim()} onClick={start} />
+          <Act icon="refresh" label={t("ctr.refresh")} disabled={!query.value.trim()} onClick={() => start()} />
           <Act icon="clear-all" label={t("sv.clear")} disabled={!r && !query.value} onClick={clear} />
           <Act
             icon={allShut ? "expand-all" : "collapse-all"}
@@ -185,7 +213,10 @@ export function DeskSearch() {
             disabled={!live.value}
             aria-label={t("more.search")}
             placeholder={live.value ? t("more.search") : t("offline.input")}
-            onInput={(e) => (query.value = (e.currentTarget as HTMLInputElement).value)}
+            onInput={(e) => {
+              query.value = (e.currentTarget as HTMLInputElement).value;
+              later();
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
@@ -208,20 +239,28 @@ export function DeskSearch() {
               {t("search.include")}
             </label>
             <div class="pv-input">
-              <input id="sv-inc" dir="ltr" spellcheck={false} value={include.value} onInput={(e) => (include.value = (e.currentTarget as HTMLInputElement).value)} onKeyDown={(e) => e.key === "Enter" && start()} />
+              <input id="sv-inc" dir="ltr" spellcheck={false} value={include.value} onInput={(e) => {
+                  include.value = (e.currentTarget as HTMLInputElement).value;
+                  if (query.peek().trim()) later();
+                }} onKeyDown={(e) => e.key === "Enter" && start()} />
             </div>
             <label class="pv-label" for="sv-exc">
               {t("search.exclude")}
             </label>
             <div class="pv-input">
-              <input id="sv-exc" dir="ltr" spellcheck={false} value={exclude.value} onInput={(e) => (exclude.value = (e.currentTarget as HTMLInputElement).value)} onKeyDown={(e) => e.key === "Enter" && start()} />
+              <input id="sv-exc" dir="ltr" spellcheck={false} value={exclude.value} onInput={(e) => {
+                  exclude.value = (e.currentTarget as HTMLInputElement).value;
+                  if (query.peek().trim()) later();
+                }} onKeyDown={(e) => e.key === "Enter" && start()} />
             </div>
           </>
         )}
       </div>
       {r && (
         <p class="sv-note" role="status">
-          {!d ? (
+          {r.err ? (
+            r.err
+          ) : !d ? (
             <span>
               <Cod name="loading" /> {t("search.running")}
               {" · "}

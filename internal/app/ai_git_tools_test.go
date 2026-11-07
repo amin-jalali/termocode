@@ -19,9 +19,9 @@ func aiGitTool(t *testing.T, name string) ai.Tool {
 	return tl
 }
 
-// K4: read ops run at once; stage/unstage/stash push|apply|pop ask with
-// class git; hunk discard and stash drop ask with class "" (no Always
-// allow: they lose data).
+// K4: read ops run at once; stage/unstage/stash save|apply ask with
+// class git; hunk discard and stash drop|pop ask with class "" (no Always
+// allow, a Cancel-first card: drop loses the entry, pop removes it).
 func TestAIGitToolGates(t *testing.T) {
 	type want struct {
 		mutating bool
@@ -36,9 +36,10 @@ func TestAIGitToolGates(t *testing.T) {
 		{"git_hunk", map[string]any{"op": "unstage"}, want{true, ai.ClassGit}},
 		{"git_hunk", map[string]any{"op": "discard"}, want{true, ""}},
 		{"git_stash", map[string]any{"op": "list"}, want{false, ""}},
-		{"git_stash", map[string]any{"op": "push"}, want{true, ai.ClassGit}},
+		{"git_stash", map[string]any{"op": "save"}, want{true, ai.ClassGit}},
+		{"git_stash", map[string]any{"op": "push"}, want{true, ai.ClassGit}}, // the old name of save
 		{"git_stash", map[string]any{"op": "apply"}, want{true, ai.ClassGit}},
-		{"git_stash", map[string]any{"op": "pop"}, want{true, ai.ClassGit}},
+		{"git_stash", map[string]any{"op": "pop"}, want{true, ""}},
 		{"git_stash", map[string]any{"op": "drop"}, want{true, ""}},
 	}
 	for _, c := range cases {
@@ -67,7 +68,7 @@ func TestAIGitToolValidate(t *testing.T) {
 		{"git_hunk", map[string]any{"op": "revert", "path": "a", "line": 1}, "stage, unstage, discard"},
 		{"git_hunk", map[string]any{"op": "stage", "path": "a", "line": 0}, "line"},
 		{"git_hunk", map[string]any{"op": "stage", "path": "../x", "line": 1}, "outside"},
-		{"git_stash", map[string]any{"op": "clear"}, "list, push, pop, apply, drop"},
+		{"git_stash", map[string]any{"op": "clear"}, "list, save, apply, pop, drop"},
 		{"git_stash", map[string]any{"op": "drop", "index": -1}, "index"},
 		{"git_unstage", map[string]any{"paths": []any{}}, "empty"},
 	}
