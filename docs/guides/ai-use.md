@@ -281,6 +281,41 @@ mixing it into the chat.
 - Side questions are never added to the chat or sent to its model.
   A new chat starts a new side chat.
 
+### Voice input
+
+Speak your message instead of typing it. The words go into the chat
+input; nothing is sent until you press `Enter`.
+
+- termocode records nothing itself. It runs a local speech-to-text
+  program you choose. Run **AI: Dictate into Chat… (voice input)**; the
+  first time it offers **Open voice.json**.
+- In `voice.json` (in termocode's config folder) name the program in
+  `"command"`. It runs without a shell. `{seconds}` and `{lang}` are
+  filled in from `"max_seconds"` (default 60, at most 600) and
+  `"language"` (empty = `auto`):
+
+  ```json
+  {
+    "command": ["my-dictate", "--seconds", "{seconds}", "--language", "{lang}"],
+    "language": "en",
+    "max_seconds": 60
+  }
+  ```
+
+- The program listens on the microphone and prints the words. Plain
+  text and timestamped lines both work; timestamps and silence marks
+  are removed. It should stop by itself after `{seconds}`, or on an
+  interrupt (Ctrl+C), and print what it heard.
+- Each time a card shows the program and asks first: **Cancel** is
+  first and `Esc` cancels. **Listen** starts it.
+- While it listens, **Stop and use** asks the program to finish; the
+  words go in at the cursor. **Discard** (or `Esc`) throws them away.
+- The AI can never start voice input.
+- On the web page, the microphone button in the chat box uses the
+  browser's own speech input (where the browser has it). Some browsers
+  send the audio to their own online speech service. Click it again to
+  stop. The words go into the box; press Send when you are ready.
+
 ### Files in and out of the chat
 
 Add files to your next message in three ways:

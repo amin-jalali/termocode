@@ -358,6 +358,7 @@ export const SD = {
   "quick.ask_go": "Enter to ask the AI",
   "quick.ask_type": "Type what should change.",
   "cmd.agents": "View: Show Agent Worktrees",
+  "cmd.ai_dictate": "AI: Dictate into Chat (voice input)",
   "cmd.add_folder": "Workspace: Add Folder…",
   "cmd.add_folder_ask": "Add the folder {path} to this workspace on the laptop?",
   "cmd.bm_clear": "Bookmarks: Clear All",
