@@ -786,3 +786,42 @@ func TestHTTPSendSeesEditBeforeRefresh(t *testing.T) {
 	}
 	waitPage(d, "1 redirect")
 }
+
+// API-14: Import OpenAPI reads a spec file, writes <title>.http next to
+// it with one request per operation, adds baseUrl to a new env file and
+// opens the .http file.
+func TestHTTPImportOpenAPI(t *testing.T) {
+	if testing.Short() {
+		t.Skip("starts nvim")
+	}
+	files := textFiles()
+	files["api/spec.yaml"] = "openapi: 3.0.0\ninfo:\n  title: Pet Store\nservers:\n  - url: https://pets.example.com\npaths:\n  /pets/{id}:\n    get:\n      operationId: getPet\n"
+	d := New(t, Options{W: 120, H: 34, Nvim: true, Files: files})
+	d.Palette("http-import-openapi")
+	if !d.WaitForText("OpenAPI file:", 3*time.Second) {
+		t.Fatalf("no prompt:\n%s", screen(d))
+	}
+	d.Type("api/spec.yaml")
+	d.Key("enter")
+	if !d.WaitFor(func() bool {
+		return strings.Contains(bufLines(d), "### getPet\nGET {{baseUrl}}/pets/{{id}}")
+	}, 5*time.Second) {
+		t.Fatalf("buffer:\n%s\nscreen:\n%s", bufLines(d), screen(d))
+	}
+	if got := diskFile(d, "api/pet-store.http"); !strings.Contains(got, "@id = 1") {
+		t.Fatalf("pet-store.http:\n%s", got)
+	}
+	if got := diskFile(d, "api/http-client.env.json"); !strings.Contains(got, `"baseUrl": "https://pets.example.com"`) {
+		t.Fatalf("env file:\n%s", got)
+	}
+	// A second import never overwrites the first file or the env file.
+	d.Palette("http-import-openapi")
+	if !d.WaitForText("OpenAPI file:", 3*time.Second) {
+		t.Fatalf("no prompt:\n%s", screen(d))
+	}
+	d.Type("api/spec.yaml")
+	d.Key("enter")
+	if !d.WaitFor(func() bool { return diskFile(d, "api/pet-store-2.http") != "" }, 5*time.Second) {
+		t.Fatalf("no pet-store-2.http:\n%s", screen(d))
+	}
+}
