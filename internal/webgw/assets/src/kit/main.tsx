@@ -12,11 +12,14 @@ import "../styles/base.css";
 import "../styles/shell.css";
 import "../styles/ui.css";
 import "../styles/components.css";
+import "../styles/chat.css";
+import "../styles/blocks.css";
 import "./kit.css";
 import { toast } from "../lib/toasts";
 import type { StatusView } from "../state/status";
 import { t, tn, type StringKey } from "../strings";
 import { AttentionView } from "../ui/AttentionPill";
+import { Blocks } from "../ui/Blocks";
 import { Button } from "../ui/Button";
 import { Card, type CardKind, type CardState } from "../ui/Card";
 import { Chip } from "../ui/Chip";
@@ -31,6 +34,51 @@ import { StripView } from "../ui/Strip";
 import { Toasts, ToastView } from "../ui/Toasts";
 import { WaitingLaptop } from "../ui/Waiting";
 import "./replay";
+import type { Block } from "../../../../webproto/proto";
+
+/** blockSamples: one block of each kind (MOB-3), plus one kind this page
+ * does not know. Sample data only. */
+const KIT_NOW = Date.UTC(2026, 10, 7, 12, 0, 0);
+const prRef = { kind: "pr", id: "418" };
+const blockSamples: Block[] = [
+  {
+    id: "k1", kind: "list", title: "Open pull requests", live: true, total: 5, truncated: true,
+    items: [
+      { id: "418", title: "fix toast", sub: "main ← fix/toast", tone: "bad", badge: "CI ✗", time: KIT_NOW - 2 * 3600e3, ref: prRef, actions: [{ id: "chat", label: "To chat", kind: "attach", ref: prRef }] },
+      { id: "412", title: "login rate limit", sub: "main ← feat/rate", tone: "busy", badge: "CI ◐", time: KIT_NOW - 86400e3 },
+      { id: "409", title: "docs: pairing", tone: "ok", badge: "CI ✓", time: KIT_NOW - 3 * 86400e3 },
+    ],
+  },
+  {
+    id: "k2", kind: "table", title: "Orders today",
+    columns: [{ id: "n", label: "#", kind: "num" }, { id: "who", label: "customer" }, { id: "st", label: "state", kind: "tone" }, { id: "sum", label: "total", kind: "cost" }],
+    rows: [["1042", "Ada", "ok", "$12.00"], ["1043", "Grace", "warn", "$7.50"], ["1044", "Linus", "bad", "$0.00"]],
+    spec: { view: "db.rows", fields: ["n", "who", "st", "sum"], sort: [{ field: "n", desc: true }], limit: 20 },
+  },
+  {
+    id: "k3", kind: "diff", title: "internal/app/model.go",
+    diff: { path: "internal/app/model.go", adds: 2, dels: 1, hunks: [{ header: "@@ -10,3 +10,4 @@ func (m Model) View()", lines: [{ k: "ctx", a: 10, b: 10, text: "\tvar b strings.Builder" }, { k: "del", a: 11, text: "\tb.WriteString(m.title)" }, { k: "add", b: 11, text: "\tb.WriteString(m.header())" }, { k: "add", b: 12, text: "\tb.WriteString(m.body())" }] }] },
+    actions: [{ id: "laptop", label: "Show on laptop", kind: "laptop" }],
+  },
+  { id: "k4", kind: "card", title: "Run 12 · review", fields: [{ label: "state", value: "running", tone: "busy" }, { label: "step", value: "3/5" }, { label: "cost", value: "$0.42", kind: "cost" }, { label: "model", value: "sonnet", kind: "mono" }] },
+  { id: "k5", kind: "detail", title: "Container web", fields: [{ label: "image", value: "nginx:1.27", kind: "mono" }, { label: "state", value: "up 3 h", tone: "ok" }, { label: "ports", value: "8080 → 80", kind: "mono" }] },
+  { id: "k6", kind: "chart", title: "AI cost today", bars: [{ label: "claude", value: 1.2, text: "$1.20", tone: "info" }, { label: "codex", value: 0.4, text: "$0.40", tone: "info" }, { label: "local", value: 0, text: "$0.00", tone: "idle" }] },
+  { id: "k7", kind: "status", title: "CI on main", state: "ok" },
+  { id: "k8", kind: "form", title: "New issue", form: [{ id: "title", label: "Title", kind: "text", required: true }, { id: "kind", label: "Kind", kind: "choice", choices: ["bug", "idea"] }, { id: "urgent", label: "Urgent", kind: "bool" }, { id: "body", label: "Details", kind: "long", hint: "Plain text" }] },
+  { id: "k9", kind: "json", title: "Raw result", json: '{"ok":true,"items":[1,2,3]}' },
+  { id: "k10", kind: "text", title: "Answer", for_you: "Two files changed; tests pass.", md: { k: "doc", c: [{ k: "p", c: [{ k: "text", text: "The toast now waits for the " }, { k: "code", text: "Esc" }, { k: "text", text: " key." }] }] } },
+  {
+    id: "k11", kind: "board", title: "Board",
+    board: { columns: [
+      { id: "need", label: "Needs you", tone: "warn", items: [{ id: "c1", title: "Allow go test", sub: "termocode · lane 2", tone: "warn" }] },
+      { id: "work", label: "Working", tone: "busy", items: [{ id: "r12", title: "review fix/toast", sub: "step 3/5 · $0.42", tone: "busy" }] },
+      { id: "rev", label: "Review", tone: "info", items: [] },
+      { id: "done", label: "Done", tone: "ok", items: [{ id: "r9", title: "docs: pairing", tone: "ok" }] },
+    ] },
+  },
+  { id: "k12", kind: "map" as Block["kind"], title: "A block from a newer laptop" },
+  { id: "k13", kind: "status", title: "Failing CI · shop", state: "bad", stale: true },
+];
 
 installSafety();
 
@@ -548,6 +596,12 @@ function Kit() {
                 <Connect state="expired" />
               </div>
             )}
+          </Pair>
+        </Section>
+
+        <Section id="blocks" title="Blocks" note="MOB-3: one block of each kind from the laptop; unknown kind = title + Open on laptop; tone = colour + shape; 360 px phone.">
+          <Pair tall>
+            {() => <Blocks list={blockSamples} now={KIT_NOW} onAction={(a) => toast("info", a.label)} onLaptop={(b) => toast("info", b.title)} onForm={() => toast("ok", t("blk.form_send"))} />}
           </Pair>
         </Section>
 

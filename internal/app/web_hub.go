@@ -43,35 +43,37 @@ var errWebHubStopped = errors.New("the web hub stopped")
 
 // webHub links the connection goroutines to Update.
 type webHub struct {
-	ch     chan tea.Msg
-	done   chan struct{}
-	once   sync.Once
-	ctx    context.Context // ends when the hub stops; every call's ctx comes from it
-	cancel context.CancelFunc
-	ops    map[string]webOpFunc       // Update only (tests swap it)
-	topics map[string]webTopicDef     // Update only (tests swap it)
-	live   map[*webConn]bool          // Update only: browsers that said hello
-	gseq   uint64                     // Update only: publishes so far (web_resume.go)
-	rings  map[string]*webRing        // Update only: recent deltas per topic
-	resume map[string]*webResumeEntry // Update only: dropped connections by id
-	shell  webShellState              // Update only: what status, toasts and attention sent (web_after.go)
-	chat   webChatPub                 // Update only: what the chat topic sent (web_chat.go)
-	chats  webChatsPub                // Update only: the chat list (web_chats.go)
-	cards  webCardsPub                // Update only: the waiting cards (web_cards.go)
-	files  *webFiles                  // Update only: file and terminal views (web_files.go)
-	git    webGitPub                  // Update only: what the git topic sent (web_git.go)
-	diag   webDiagPub                 // Update only: what the diagnostics topic sent (web_diag.go)
-	lsp    webLspState                // Update only: calls waiting for a language server (web_lsp.go)
-	asks   webAskState                // Update only: requests waiting for a laptop card (web_ask.go)
-	search webSearches                // the running searches by connection (web_search.go; own lock)
-	tasks  webTasksPub                // Update only: what the tasks topic sent (web_tasks.go)
-	runs   webRunsPub                 // Update only: what the runs topic sent (web_runs.go)
-	wfx    webWorkflowsPub            // Update only: what the workflows topic sent (web_workflows.go)
-	run    webRunPub                  // Update only: the Test, Debug and Services topics (web_tests.go)
-	wt     webWTPub                   // Update only: what the worktrees topic sent (web_worktrees.go)
-	more   webMorePub                 // Update only: the v2 More views (web_more.go)
-	ai     webAICalls                 // Update only: the page's AI calls (web_ai.go)
-	ups    webUploads                 // staged uploads (web_transfer.go; own lock)
+	ch       chan tea.Msg
+	done     chan struct{}
+	once     sync.Once
+	ctx      context.Context // ends when the hub stops; every call's ctx comes from it
+	cancel   context.CancelFunc
+	ops      map[string]webOpFunc       // Update only (tests swap it)
+	topics   map[string]webTopicDef     // Update only (tests swap it)
+	live     map[*webConn]bool          // Update only: browsers that said hello
+	gseq     uint64                     // Update only: publishes so far (web_resume.go)
+	rings    map[string]*webRing        // Update only: recent deltas per topic
+	resume   map[string]*webResumeEntry // Update only: dropped connections by id
+	shell    webShellState              // Update only: what status, toasts and attention sent (web_after.go)
+	chat     webChatPub                 // Update only: what the chat topic sent (web_chat.go)
+	chats    webChatsPub                // Update only: the chat list (web_chats.go)
+	cards    webCardsPub                // Update only: the waiting cards (web_cards.go)
+	files    *webFiles                  // Update only: file and terminal views (web_files.go)
+	git      webGitPub                  // Update only: what the git topic sent (web_git.go)
+	diag     webDiagPub                 // Update only: what the diagnostics topic sent (web_diag.go)
+	lsp      webLspState                // Update only: calls waiting for a language server (web_lsp.go)
+	asks     webAskState                // Update only: requests waiting for a laptop card (web_ask.go)
+	search   webSearches                // the running searches by connection (web_search.go; own lock)
+	tasks    webTasksPub                // Update only: what the tasks topic sent (web_tasks.go)
+	runs     webRunsPub                 // Update only: what the runs topic sent (web_runs.go)
+	wfx      webWorkflowsPub            // Update only: what the workflows topic sent (web_workflows.go)
+	run      webRunPub                  // Update only: the Test, Debug and Services topics (web_tests.go)
+	wt       webWTPub                   // Update only: what the worktrees topic sent (web_worktrees.go)
+	inbox    webInboxPub                // Update only: what the inbox topic sent (web_inbox.go)
+	projects webProjectsPub             // Update only: what the projects topic sent (web_projects.go)
+	more     webMorePub                 // Update only: the v2 More views (web_more.go)
+	ai       webAICalls                 // Update only: the page's AI calls (web_ai.go)
+	ups      webUploads                 // staged uploads (web_transfer.go; own lock)
 	// settled: Update only; the publishers ran once since the hub went
 	// idle (web_after.go).
 	settled bool
