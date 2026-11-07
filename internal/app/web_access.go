@@ -53,6 +53,9 @@ type webAccessState struct {
 	device    string
 	fwds      []*webFwd // open port previews (web_forward.go)
 	fwdPort   int       // the port the forward card asks about
+	// restartLAN: Use this Wi-Fi stopped the loopback panel; its end
+	// starts it again in LAN mode (web_pair_lan.go).
+	restartLAN bool
 }
 
 func (m *Model) webAccess() *webAccessState {
@@ -89,10 +92,23 @@ func (m *Model) dispatchWebAccessPalette(id string) (tea.Cmd, bool) {
 // openWebPair opens a pairing link and shows its QR code. guest is a
 // share with another person (WEB-50): viewer only, more time.
 func (m *Model) openWebPair(guest bool) tea.Cmd {
-	if !webSettings().On {
+	cfg := webSettings()
+	if !cfg.On {
 		return m.webToast(toast.Warn, webOffText)
 	}
 	st := m.webPanel
+	if !guest && !cfg.LAN && !cfg.Tailnet {
+		return m.openWebUseLANCard() // web_pair_lan.go: loopback asks to use this Wi-Fi
+	}
+	if !guest && m.web != nil {
+		switch {
+		case st == nil:
+			return m.startWebPanelForPair() // web_pair_lan.go
+		case !st.up:
+			st.pairOnUp = true
+			return m.webToast(toast.Info, "Starting the web panel…")
+		}
+	}
 	if st == nil || !st.up || m.web == nil {
 		return m.webToast(toast.Warn, "Start the web panel first: Web: Open in Browser.")
 	}
@@ -132,7 +148,7 @@ func (m *Model) openWebPair(guest bool) tea.Cmd {
 	m.confirm = confirm.New(title, body, []confirm.Button{
 		{ID: "close", Title: "Close"},
 		{ID: "copy", Title: "Copy link"},
-	}).WithPicture(webQRLines(acc.link))
+	}).WithPicture(webQRLines(acc.link)).WithCaption("", webPairAddr(st.url))
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindWebPairQR
@@ -538,6 +554,8 @@ func (m *Model) handleWebAccessConfirm(id string) (tea.Cmd, bool) {
 	switch m.confirmKind {
 	case confirmKindWebPairQR:
 		return m.answerWebPairQR(id), true
+	case confirmKindWebUseLAN: // web_pair_lan.go
+		return m.answerWebUseLAN(id), true
 	case confirmKindWebPairAsk:
 		return m.answerWebPairAsk(id), true
 	case confirmKindWebDevice:

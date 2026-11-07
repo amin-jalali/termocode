@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net"
 	"os"
 	"syscall"
 	"time"
@@ -117,3 +118,7 @@ func startWebGatewayProcess(h *webHub, args []string) (*webGatewayProc, error) {
 	})
 	return proc, nil
 }
+
+// webLANAddr is the private address LAN mode would listen on ("Use this
+// Wi-Fi"); ok=false: no Wi-Fi or LAN address here. Tests swap it.
+var webLANAddr = func() (net.IP, bool) { return webgw.PickLANAddr(webgw.LANAddrs()) }
