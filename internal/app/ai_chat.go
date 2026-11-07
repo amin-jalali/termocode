@@ -217,8 +217,10 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 // (the default profile is exactly today's chat); more steps run as a
 // pipeline (ai_runs.go).
 func (m *Model) sendAIChat(text string) tea.Cmd {
-	if c, ok := m.aiReady(); !ok {
-		return c
+	if m.aiS().acp == nil { // an ACP agent thread needs no provider (CMP-83)
+		if c, ok := m.aiReady(); !ok {
+			return c
+		}
 	}
 	s := m.aiS()
 	if s.streaming {
@@ -272,13 +274,16 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 			prof = p
 		}
 	}
-	if s.turnRoot == "" && (len(prof.Steps) > 1 || prof.Planned() || prof.HasCLI()) { // a CLI step always runs as a run (CS-1)
+	if s.acp == nil && s.turnRoot == "" && (len(prof.Steps) > 1 || prof.Planned() || prof.HasCLI()) { // a CLI step always runs as a run (CS-1)
 		return m.startAIRun(text, prof, rules)
 	}
 	step := prof.Run("").Nodes[0]
-	slot, err := s.resolveSlot(step.Slot)
-	if err != nil {
-		return m.aiProfileProblem(prof.Name, err)
+	slot, isACP := s.acpChatSlot() // CMP-83: the turn goes to the agent thread
+	if !isACP {
+		var err error
+		if slot, err = s.resolveSlot(step.Slot); err != nil {
+			return m.aiProfileProblem(prof.Name, err)
+		}
 	}
 	root := aiWorkspaceRoot()
 	if s.turnRoot != "" {
