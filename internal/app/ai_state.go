@@ -577,6 +577,7 @@ func aiPaletteItems() []paletteEntry {
 		{aiTaskListPaletteID, "AI: Run Task List in Waves…", ""},
 		{"ai-usage", "AI: Usage", ""},
 		{"ai-runs", "AI: Runs", ""},
+		{agentBoardPaletteID, "AI: Agent Board…", ""},
 		{"ai-profile-edit", "AI: Edit Profiles", ""},
 		{"ai-profile-new", "AI: New Profile from Current…", ""},
 		{"ai-profile-form", "AI: Edit Profile…", ""},
@@ -762,6 +763,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.showAIUsage(""), true
 	case "ai-runs": // runs_state.go
 		return m.revealRuns(true), true
+	case agentBoardPaletteID: // CMP-2 (agent_board.go)
+		return m.openAgentBoardLoad(), true
 	case "ai-profile-edit":
 		return m.editAIProfiles(), true
 	case "ai-profile-new":

@@ -37,12 +37,18 @@ func worktreeKeyRows() []confirm.KeyRow {
 		[]string{"n", "new worktree: name, start point, agent and first task"},
 		[]string{"c", "new child worktree: from this one's branch, listed under it"},
 		[]string{"L", "show the setup of a new worktree (its terminal tab)"},
+		[]string{"r", "run the dev server on the worktree's own port ($PORT) · again: show its tab"},
+		[]string{"o", "open the running dev server's address in the browser"},
 		[]string{"A", "adopt a worktree made outside termocode (keeps its notes)"},
 		[]string{"F", "forget a worktree whose folder is gone"},
 		[]string{"x", "archive: remove the folder, keep the branch · on an archived row: restore"},
 		[]string{"D", "delete the worktree and its branch (asks, step by step)"},
 		[]string{"C", "clean up: tick merged and old worktrees, archive them together"},
+		[]string{"M", "move to another machine: pack it into one file (commits, changes, new files, notes)"},
+		[]string{"U", "unpack a moved lane as a new worktree, or pull one from a host over ssh"},
 		[]string{"s", "sleep: end its agent tabs, move it under ASLEEP · again: wake it"},
+		[]string{"b", "background task: an agent works on it alone in a sandbox container (asks first)"},
+		[]string{"B", "background tasks: state, follow output, stop, remove"},
 		[]string{"Sessions"},
 		[]string{"T", "its agent sessions: Enter shows the tab"},
 		[]string{"S", "new agent session: one more agent in it, its own tab"},
@@ -71,6 +77,8 @@ func worktreePaletteItems() []picker.Item {
 		{ID: wtNewPaletteID, Title: "Worktree: New…"},
 		{ID: wtChildPaletteID, Title: "Worktree: New Child of Selected…"},
 		{ID: wtSetupLogPaletteID, Title: "Worktree: Show Setup Log"},
+		{ID: wtRunPaletteID, Title: "Worktree: Run Dev Server of Selected"},
+		{ID: wtRunOpenPaletteID, Title: "Worktree: Open Dev Server of Selected"},
 		{ID: wtLinkPaletteID, Title: "Worktree: Link Issue or PR…"},
 		{ID: wtNotesPaletteID, Title: "Worktree: Show Notes of Selected"},
 		{ID: wtDiffPaletteID, Title: "Worktree: Review Changes vs Base of Selected"},
@@ -83,6 +91,11 @@ func worktreePaletteItems() []picker.Item {
 		{ID: wtArchivePaletteID, Title: "Worktree: Archive or Restore Selected…"},
 		{ID: wtDeletePaletteID, Title: "Worktree: Delete Selected…"},
 		{ID: wtCleanupPaletteID, Title: "Worktree: Clean Up…"},
+		{ID: wtBgTaskPaletteID, Title: "Worktree: Run Agent Task in Background…"},
+		{ID: wtBgTasksPaletteID, Title: "Worktree: Background Tasks…"},
+		{ID: wtMovePaletteID, Title: "Worktree: Move Selected to Another Machine…"},
+		{ID: wtUnpackPaletteID, Title: "Worktree: Unpack a Moved Lane…"},
+		{ID: wtPullPaletteID, Title: "Worktree: Pull a Lane from a Host…"},
 	}
 }
 
@@ -114,6 +127,10 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.openWorktreeNewChild(), true
 	case wtSetupLogPaletteID:
 		return m.worktreeSetupLog(), true
+	case wtRunPaletteID:
+		return m.worktreeRun(), true
+	case wtRunOpenPaletteID:
+		return m.worktreeRunOpen(), true
 	case wtLinkPaletteID:
 		return m.worktreeLink(), true
 	case wtNotesPaletteID:
@@ -138,6 +155,16 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.worktreeDelete(), true
 	case wtCleanupPaletteID:
 		return m.worktreeCleanup(), true
+	case wtBgTaskPaletteID:
+		return m.worktreeBgTask(), true
+	case wtBgTasksPaletteID:
+		return m.worktreeBgTasks(), true
+	case wtMovePaletteID:
+		return m.worktreeMove(), true
+	case wtUnpackPaletteID:
+		return m.worktreeUnpack(), true
+	case wtPullPaletteID:
+		return m.worktreePull(), true
 	}
 	return nil, false
 }
@@ -201,6 +228,10 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.openWorktreeNewChild()
 	case "L":
 		return m, m.worktreeSetupLog()
+	case "r":
+		return m, m.worktreeRun()
+	case "o":
+		return m, m.worktreeRunOpen()
 	case "i":
 		return m, m.worktreeLink()
 	case "N":
@@ -223,6 +254,14 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.worktreeDelete()
 	case "C":
 		return m, m.worktreeCleanup()
+	case "b":
+		return m, m.worktreeBgTask()
+	case "B":
+		return m, m.worktreeBgTasks()
+	case "M":
+		return m, m.worktreeMove()
+	case "U":
+		return m, m.worktreeUnpack()
 	case "f":
 		m.worktreeNextFilter()
 	case "R":

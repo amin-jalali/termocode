@@ -115,8 +115,10 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`model_slot_draft`](#model_slot_draft) | confirm (always asks): Deny (first) · Open in form (only the form's own Save writes config.json) | no | Draft a model slot (a named provider and model that profile steps can use) for the user. |
 | [`service_connect`](#service_connect) | confirm (always asks): Deny (first) · Open wizard (you sign in yourself) | no | Open the Connect wizard for an MCP service (github, gitlab, linear, notion, sentry, clickup, atlassian, slack, or one in mcp.json) so the user can sign in. |
 | [`service_set_access`](#service_set_access) | confirm (always asks): Deny (first) · Change | no | Allow writes for a connected MCP service, or make it read only (known services with a read-only endpoint or scopes, such as GitHub and Linear). |
-| [`outside_agent_start`](#outside_agent_start) | confirm (always asks): Deny (first) · Start | no | Start an outside coding agent (claude, codex, gemini, opencode, aider, cursor, amp, goose, qwen, crush, copilot, kimi, droid, pi) in a new terminal tab, with termocode's tools when the agent supports it. |
+| [`outside_agent_start`](#outside_agent_start) | confirm (always asks): Deny (first) · Start | no | Start an outside coding agent (claude, codex, gemini, opencode, aider, cursor, amp, goose, qwen, crush, copilot, kimi, droid, pi, kiro, auggie, grok, cline, continue, vibe) in a new terminal tab, with termocode's tools when the agent supports it. |
 | [`agent_race_start`](#agent_race_start) | confirm (always asks): Deny (first) · Start race | no | Race one task across 2-4 outside coding agents (claude, codex, gemini, opencode, aider): each works in its own git worktree and terminal tab; the user compares the lanes and merges the winner (Agent: Race Compare). |
+| [`agent_split_start`](#agent_split_start) | confirm (always asks): Deny (first) · Start split | no | Coordinate outside coding agents (claude, codex, gemini, opencode, aider): split one goal into 2-4 independent parts, each done by its own agent in its own git worktree and terminal tab, at the same time. |
+| [`agent_split_status`](#agent_split_status) | auto | no | The newest split started with agent_split_start (or the one named): the goal, each lane's id, agent, state (starting, working, waiting, done, stopped, failed, merged, discarded), part, changed files and branch. |
 | [`mcp_server_add`](#mcp_server_add) | confirm (always asks) | no | Propose adding one MCP server to the user's mcp.json, from an mcpServers block the user gave (config) or a remote MCP server URL (url). |
 | [`agent_run_start`](#agent_run_start) | confirm (always asks): Deny (first) · Start run | no | Start another agent run on a task: a profile (profiles_list), or steps you write (each with a title and a prompt, as in profile_draft). |
 | [`agent_run_status`](#agent_run_status) | auto | no | The state of an agent run of this chat: queued, running, paused, done, failed, cancelled, interrupted or not_started; each step's state and model, the cost so far, and what waits for the user (plan approval, budget, a card). |
@@ -1374,7 +1376,7 @@ Allow writes for a connected MCP service, or make it read only (known services w
 
 ### outside_agent_start
 
-Start an outside coding agent (claude, codex, gemini, opencode, aider, cursor, amp, goose, qwen, crush, copilot, kimi, droid, pi) in a new terminal tab, with termocode's tools when the agent supports it. The user confirms first.
+Start an outside coding agent (claude, codex, gemini, opencode, aider, cursor, amp, goose, qwen, crush, copilot, kimi, droid, pi, kiro, auggie, grok, cline, continue, vibe) in a new terminal tab, with termocode's tools when the agent supports it. The user confirms first.
 
 **Gate:** confirm (always asks): Deny (first) · Start
 
@@ -1382,7 +1384,7 @@ Start an outside coding agent (claude, codex, gemini, opencode, aider, cursor, a
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `agent` | string | yes | which agent. One of: `claude`, `codex`, `gemini`, `opencode`, `aider`, `cursor`, `amp`, `goose`, `qwen`, `crush`, `copilot`, `kimi`, `droid`, `pi` |
+| `agent` | string | yes | which agent. One of: `claude`, `codex`, `gemini`, `opencode`, `aider`, `cursor`, `amp`, `goose`, `qwen`, `crush`, `copilot`, `kimi`, `droid`, `pi`, `kiro`, `auggie`, `grok`, `cline`, `continue`, `vibe` |
 | `worktree` | string |   | optional: start it in this worktree (a path or branch from worktrees_list); the workspace when left out |
 
 ### agent_race_start
@@ -1398,6 +1400,33 @@ Race one task across 2-4 outside coding agents (claude, codex, gemini, opencode,
 | `agents` | array | yes | 2 to 4 agents, one lane each (an agent may run twice) |
 | `task` | string | yes | what every agent should do (one paragraph) |
 | `verify` | string |   | optional command run in each finished lane when the user asks, e.g. go test ./... |
+
+### agent_split_start
+
+Coordinate outside coding agents (claude, codex, gemini, opencode, aider): split one goal into 2-4 independent parts, each done by its own agent in its own git worktree and terminal tab, at the same time. Give each part a task that stands on its own and touches different files. Follow them with agent_split_status; the user merges each part (Agent: Race Compare). The user confirms first.
+
+**Gate:** confirm (always asks): Deny (first) · Start split
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `goal` | string | yes | what the parts add up to (one paragraph) |
+| `parts` | array | yes | 2 to 4 parts, one lane each (an agent may take two parts) |
+| `verify` | string |   | optional command run in each finished lane when the user asks, e.g. go test ./... |
+
+### agent_split_status
+
+The newest split started with agent_split_start (or the one named): the goal, each lane's id, agent, state (starting, working, waiting, done, stopped, failed, merged, discarded), part, changed files and branch. With lane, also that finished lane's diff. Read only.
+
+**Gate:** auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `lane` | string |   | optional lane id: add this finished lane's diff |
+| `split` | string |   | split id (race-<n>) from an earlier status; the newest split when left out |
 
 ### mcp_server_add
 
@@ -1959,6 +1988,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `agent-race-compare` | Agent: Race Compare | auto |   |
 | `agent-sessions` | Agent: Sessions… | never | opens a picker or prompt that only the user can answer; use a typed tool; it reads the outside agents' own session files (owner decision D1) |
 | `agent-sessions-search` | Agent: Search Sessions… | never | opens a picker or prompt that only the user can answer; use a typed tool; owner decision D1b: the AI gets no search over the agents' session files |
+| `agent-split` | Agent: Split Task… | never | opens a picker or prompt that only the user can answer; use a typed tool (agent_split_start) |
 | `agent-sessions-search-all` | Agent: Search All Sessions… | never | opens a picker or prompt that only the user can answer; use a typed tool; owner decision D1b: the AI gets no search over the agents' session files |
 | `agent-start` | Agent: Start… | never | opens a picker or prompt that only the user can answer; use a typed tool (outside_agent_start) |
 | `agent-start-claude` | Agent: Start Claude Code | confirm (run) |   |
@@ -1974,6 +2004,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai-apply-proposal` | AI: Apply Proposed Edit | never | the user reviews proposed edits |
 | `ai-attach` | AI: Add File / Selection to Chat | never | adds to the chat input; read the file with read_file |
 | `ai-auto-approve` | AI: Agent Auto-Approve… | never | AI provider, credentials and approvals stay with the user |
+| `ai-board` | AI: Agent Board… | never | the user's board of agent work; it opens a picker and holds Resume |
 | `ai-cancel` | AI: Stop Generating | never | stops the model's own turn |
 | `ai-configure` | AI: Configure Provider… | never | AI provider, credentials and approvals stay with the user |
 | `ai-critic-toggle` | AI: Toggle Critic Review | never | AI provider, credentials and approvals stay with the user |
@@ -2598,6 +2629,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `worktree-add-folder` | Worktree: Add Selected as Folder | never | acts on the worktree the user selected in the WORKTREES view |
 | `worktree-adopt` | Worktree: Adopt Selected | never | acts on the worktree the user selected in the WORKTREES view |
 | `worktree-archive` | Worktree: Archive or Restore Selected… | confirm (always asks) |   |
+| `worktree-bg-task` | Worktree: Run Agent Task in Background… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user writes the task and starts it on the card |
+| `worktree-bg-tasks` | Worktree: Background Tasks… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `worktree-cleanup` | Worktree: Clean Up… | confirm (always asks) |   |
 | `worktree-delete` | Worktree: Delete Selected… | confirm (always asks) |   |
 | `worktree-diff` | Worktree: Review Changes vs Base of Selected | auto |   |
@@ -2614,6 +2647,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `worktree-notes` | Worktree: Show Notes of Selected | auto |   |
 | `worktree-open` | Worktree: Open Selected | never | ends or resets the user's session |
 | `worktree-pin` | Worktree: Pin or Unpin Selected | auto |   |
+| `worktree-run` | Worktree: Run Dev Server of Selected | never | runs the repository's dev server in the worktree the user selected; the user starts it |
+| `worktree-run-open` | Worktree: Open Dev Server of Selected | never | acts on the worktree the user selected in the WORKTREES view |
 | `worktree-reset-order` | Worktree: Reset Order | auto |   |
 | `worktree-sessions` | Worktree: Agent Sessions of Selected… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `worktree-setup-log` | Worktree: Show Setup Log | auto |   |

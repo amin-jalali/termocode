@@ -104,6 +104,8 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onRunsMorePicked(id), true
 	case pickerKindAIWorktrees: // ai_worktree_list.go
 		return m.onAIWorktreePicked(id), true
+	case pickerKindWTBgTasks: // worktrees_bgtask.go
+		return m.onWTBgTaskPicked(id), true
 	}
 	if cmd, ok := m.handleWebAccessPicker(id); ok { // web_access.go
 		return cmd, true
@@ -128,12 +130,16 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onAgentNamesTask(value), true
 	case promptKindWebForwardTo: // web_forward.go
 		return m.onWebForwardPort(value), true
+	case promptKindWTBgTask: // worktrees_bgtask.go
+		return m.onWTBgTask(value), true
 	case promptKindBugspecTitle: // bugspec_ui.go
 		return m.onBugspecTitle(value), true
 	case promptKindAgentAccountNew: // agent_accounts.go
 		return m.onAgentAccountLabel(value), true
 	case promptKindAgentSessionsSearch: // agent_sessions_search.go
 		return m.onAgentSessionsSearch(value), true
+	case promptKindWTPull: // worktrees_move.go
+		return m.onWTPullEntered(value), true
 	case promptKindAIChatSearch: // ai_chat_search.go
 		return m.onAIChatSearch(value), true
 	case promptKindAgentPacksSource: // agent_packs_ui.go
@@ -180,6 +186,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAISide(id), true
 	case confirmKindRunsStop: // runs_state.go
 		return m.answerRunsStop(id), true
+	case confirmKindAgentBoardResume: // agent_board.go (CMP-2)
+		return m.answerAgentBoardResume(id), true
 	case confirmKindAgentsStop: // agents_node_ctl.go
 		return m.answerAgentsStop(id), true
 	case confirmKindAIOAuth:
@@ -231,12 +239,24 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIRulesTrust(id), true
 	case confirmKindWTSetupTrust: // worktrees_setup.go
 		return m.answerWTSetupTrust(id), true
+	case confirmKindWTRunTrust: // worktrees_run.go
+		return m.answerWTRunTrust(id), true
 	case confirmKindWTCtlLink: // worktrees_notes.go
 		return m.answerWTCtlLink(id), true
 	case confirmKindWTSleep: // worktrees_sleep.go
 		return m.answerWTSleep(id), true
 	case confirmKindWTArchive: // worktrees_archive.go
 		return m.answerWTArchive(id), true
+	case confirmKindWTBgTask: // worktrees_bgtask.go
+		return m.answerWTBgTask(id), true
+	case confirmKindWTBgTaskAct:
+		return m.answerWTBgTaskAct(id), true
+	case confirmKindWTMove: // worktrees_move.go
+		return m.answerWTMove(id), true
+	case confirmKindWTUnpack:
+		return m.answerWTUnpack(id), true
+	case confirmKindWTPull:
+		return m.answerWTPull(id), true
 	case confirmKindAITaskList: // ai_task_list.go
 		return m.answerAITaskList(id), true
 	case confirmKindWTDelete, confirmKindWTDeleteDirty: // worktrees_delete.go
@@ -278,7 +298,7 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAgentHibernate(id), true
 	case confirmKindAgentAccountSignIn: // agent_accounts.go
 		return m.answerAgentAccountCard(id), true
-	case confirmKindAgentInstall, confirmKindAgentSignIn: // agent_install.go
+	case confirmKindAgentInstall, confirmKindAgentSignIn, confirmKindAgentInstallPage: // agent_install.go
 		return m.answerAgentPickCard(m.confirmKind, id), true
 	case confirmKindAIMemoryLesson, confirmKindAIMemoryForget, confirmKindAIMemoryForgetAll: // ai_memory_picker.go
 		return m.answerAIMemoryCard(m.confirmKind, id), true
@@ -372,12 +392,24 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAIRulesTrust("") // Esc: no answer, the message goes back
 	case confirmKindWTSetupTrust:
 		return m.answerWTSetupTrust("") // Esc: no answer, nothing runs
+	case confirmKindWTRunTrust:
+		return m.answerWTRunTrust("") // Esc: no answer, nothing runs
 	case confirmKindWTCtlLink:
 		return m.answerWTCtlLink("") // Esc: Deny
 	case confirmKindWTSleep:
 		return m.answerWTSleep("") // Esc: Keep running
 	case confirmKindWTArchive:
 		return m.answerWTArchive("") // Esc: Cancel
+	case confirmKindWTBgTask:
+		return m.answerWTBgTask("") // Esc: Cancel, nothing starts
+	case confirmKindWTBgTaskAct:
+		return m.answerWTBgTaskAct("") // Esc: Close
+	case confirmKindWTMove:
+		return m.answerWTMove("") // Esc: Cancel
+	case confirmKindWTUnpack:
+		return m.answerWTUnpack("") // Esc: Cancel
+	case confirmKindWTPull:
+		return m.answerWTPull("") // Esc: Cancel
 	case confirmKindAITaskList:
 		return m.answerAITaskList("") // Esc: Cancel
 	case confirmKindWTDelete, confirmKindWTDeleteDirty:

@@ -230,7 +230,11 @@ func (c Compare) Box() string {
 
 	// Title: RACE name · "task"                 N lanes · 4 m
 	right := []seg{{strconv.Itoa(len(r.Lanes)) + " lanes · " + since(r.StartedMs, c.nowMs) + " ", bg.Foreground(p.muted)}}
-	left := []seg{{" RACE ", bg.Foreground(p.accent).Bold(true)}, {r.Name, bg.Foreground(p.title).Bold(true)}}
+	kind := " RACE "
+	if r.Split() { // CMP-4: one goal in parts, each lane its own part
+		kind = " SPLIT "
+	}
+	left := []seg{{kind, bg.Foreground(p.accent).Bold(true)}, {r.Name, bg.Foreground(p.title).Bold(true)}}
 	if room := iw - segsWidth(left) - segsWidth(right) - 4; room > 8 {
 		left = append(left, seg{" · ", bg.Foreground(p.dim)}, seg{fit(`"`+r.Prompt+`"`, room), bg.Foreground(p.text)})
 	}
@@ -357,6 +361,9 @@ func (c Compare) Box() string {
 			mark = "> "
 		}
 		mid = append(mid, paint([]seg{{" " + mark + head, bg.Foreground(p.title).Bold(true)}}, iw, bg))
+		if l.Prompt != "" && len(mid) < room { // a split lane's own part
+			mid = append(mid, paint([]seg{{"   part: ", bg.Foreground(p.dim)}, {fit(`"`+l.Prompt+`"`, max(iw-10, 4)), bg.Foreground(p.text)}}, iw, bg))
+		}
 		pw := max(min(iw-20, 60), 10)
 		for i, f := range l.Files {
 			if len(mid) >= room {

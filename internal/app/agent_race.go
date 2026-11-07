@@ -193,6 +193,15 @@ type raceStartedMsg struct {
 // raceStartCmd makes the race and its worktrees off the UI goroutine.
 // taken is the highest race number the UI knows.
 func raceStartCmd(root string, have bool, taken int, task, verify string, specs []agentrace.LaneSpec, now int64) tea.Cmd {
+	return raceStartCmdOf(agentrace.New, root, have, taken, task, verify, specs, now)
+}
+
+// raceNewFunc makes the record: agentrace.New (a race) or
+// agentrace.NewSplit (CMP-4).
+type raceNewFunc func(n int, prompt, verify string, lanes []agentrace.LaneSpec, nowMs int64) (agentrace.Race, error)
+
+// raceStartCmdOf is raceStartCmd with the record made by newRace.
+func raceStartCmdOf(newRace raceNewFunc, root string, have bool, taken int, task, verify string, specs []agentrace.LaneSpec, now int64) tea.Cmd {
 	return func() tea.Msg {
 		dir, err := git.AgentStateDir(root)
 		if err != nil {
@@ -208,7 +217,7 @@ func raceStartCmd(root string, have bool, taken int, task, verify string, specs 
 		for raceNumberUsed(dir, n) { // left-over lanes of a lost record
 			n++
 		}
-		r, err := agentrace.New(n, task, verify, specs, now)
+		r, err := newRace(n, task, verify, specs, now)
 		if err != nil {
 			return raceStartedMsg{err: err}
 		}
@@ -279,6 +288,9 @@ func (m *Model) onRaceStarted(msg raceStartedMsg) tea.Cmd {
 	}
 	m.openRacePage(r.ID)
 	text := fmt.Sprintf("Race started: %d lane%s. Each agent gets the task when its input box shows", started, plural(started))
+	if r.Split() {
+		text = fmt.Sprintf("Split started: %d part%s. Each agent gets its part when its input box shows", started, plural(started))
+	}
 	return tea.Batch(m.raceSave(), m.aiInfo(text))
 }
 
@@ -339,7 +351,7 @@ func (m *Model) raceOnAgentState(buf int, st agents.State) tea.Cmd {
 	var cmds []tea.Cmd
 	switch {
 	case !l.Typed && st == agents.Done: // the input box: type the task, once
-		raceSendKeys(m, buf, r.Prompt)
+		raceSendKeys(m, buf, r.LaneTask(*l)) // a split lane gets its own part (CMP-4)
 		l.Typed, l.State = true, agentrace.Working
 		s.worked[l.ID] = false
 		if t, _ := m.termTabByBuf(buf); t != nil {
@@ -397,6 +409,10 @@ func (m *Model) raceLaneEnded(r *agentrace.Race, l *agentrace.Lane) tea.Cmd {
 		}
 	}
 	var c tea.Cmd
+	if r.Split() {
+		m.toast, c = m.toast.Push(toast.Info, "Split "+r.Name+" is done: F1 → Agent: Race Compare to merge each part")
+		return tea.Batch(append(cmds, c, m.notifyOS("Agent split done"))...)
+	}
 	m.toast, c = m.toast.Push(toast.Info, "Race "+r.Name+" is done: F1 → Agent: Race Compare")
 	return tea.Batch(append(cmds, c, m.notifyOS("Agent race done"))...)
 }

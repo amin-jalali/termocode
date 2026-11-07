@@ -12,6 +12,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Add File / Selection to Chat | `ai-attach` |   |   |
 | AI: Add Model Slot… | `ai-model-slot-add` |   |   |
 | AI: Agent Auto-Approve… | `ai-auto-approve` |   |   |
+| AI: Agent Board… | `ai-board` |   |   |
 | AI: Agent Worktrees… | `ai-worktrees` |   |   |
 | AI: Agents & Connections | `itermoc-open-ai` |   |   |
 | AI: Apply Last Code Block to File | `ai-apply-code` |   |   |
@@ -850,19 +851,25 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Adopt Selected | `worktree-adopt` |   |   |
 | Worktree: Agent Sessions of Selected… | `worktree-sessions` |   |   |
 | Worktree: Archive or Restore Selected… | `worktree-archive` |   |   |
+| Worktree: Background Tasks… | `worktree-bg-tasks` |   |   |
 | Worktree: Clean Up… | `worktree-cleanup` |   |   |
 | Worktree: Delete Selected… | `worktree-delete` |   |   |
 | Worktree: Forget Gone Selected | `worktree-forget` |   |   |
 | Worktree: Jump… | `worktree-jump` | `Ctrl+Shift+J` | `Ctrl+Shift+J` |
 | Worktree: Link Issue or PR… | `worktree-link` |   |   |
+| Worktree: Move Selected to Another Machine… | `worktree-move` |   |   |
 | Worktree: Move Selected Down | `worktree-move-down` |   |   |
 | Worktree: Move Selected Up | `worktree-move-up` |   |   |
 | Worktree: New Agent Session in Selected… | `worktree-new-session` |   |   |
 | Worktree: New Child of Selected… | `worktree-new-child` |   |   |
 | Worktree: New… | `worktree-new` |   |   |
 | Worktree: Next Filter | `worktree-filter` |   |   |
+| Worktree: Open Dev Server of Selected | `worktree-run-open` |   |   |
 | Worktree: Open Selected | `worktree-open` |   |   |
 | Worktree: Pin or Unpin Selected | `worktree-pin` |   |   |
+| Worktree: Run Agent Task in Background… | `worktree-bg-task` |   |   |
+| Worktree: Run Dev Server of Selected | `worktree-run` |   |   |
+| Worktree: Pull a Lane from a Host… | `worktree-pull` |   |   |
 | Worktree: Review Changes vs Base of Selected | `worktree-diff` |   |   |
 | Worktree: Reset Order | `worktree-reset-order` |   |   |
 | Worktree: Show | `worktree-view` | `Alt+Shift+W` | `Alt+Shift+W` |
@@ -871,6 +878,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Show Setup Log | `worktree-setup-log` |   |   |
 | Worktree: Sleep or Wake Selected | `worktree-sleep` |   |   |
 | Worktree: Suggest a Name… | `worktree-suggest-name` |   | `quick model drafts branch names` |
+| Worktree: Unpack a Moved Lane… | `worktree-unpack` |   |   |
 
 ## termocode
 

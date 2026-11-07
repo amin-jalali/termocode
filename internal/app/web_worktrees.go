@@ -149,6 +149,10 @@ func (m *Model) webWorktreesBuild() webproto.WorktreesSnap {
 		if n, ok := it.e.Meta.LastNote(); ok {
 			w.Note = webName(n.Text)
 		}
+		w.Port = it.e.Meta.Port
+		if r := st.runs[it.e.Path]; r != nil {
+			w.Port, w.Running, w.URL = r.port, true, webName(r.url)
+		}
 		if p := it.e.Meta.Parent; p != "" && r.depth > 0 {
 			w.Parent = webWorktreeID(p)
 		}

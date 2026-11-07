@@ -2494,6 +2494,10 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.openWorkspace(msg.ID)
 	case pickerKindWorktreeJump: // worktrees_jump.go
 		return m.onWorktreeJumpPicked(msg.ID)
+	case pickerKindAgentBoard: // agent_board.go (CMP-2)
+		return m.onAgentBoardPicked(msg.ID)
+	case pickerKindWTUnpack: // worktrees_move.go
+		return m.onWTUnpackPicked(msg.ID)
 	case pickerKindWTSessions: // worktrees_sessions.go
 		return m.onWTSessionPicked(msg.ID)
 	case pickerKindWTSessionAgent: // worktrees_sessions.go

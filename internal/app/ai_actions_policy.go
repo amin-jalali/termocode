@@ -756,7 +756,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// AI: Usage (AU-4) is the user's own view of tokens and money.
 	"ai-usage": aiNever("a read-only screen for the user; the AI cannot read its own bill"),
 	// Runs is the user's monitoring page (stop, pause and resume are theirs).
-	"ai-runs": aiNever("the user's monitoring page; it holds Stop, Pause and Resume"),
+	"ai-runs":  aiNever("the user's monitoring page; it holds Stop, Pause and Resume"),
+	"ai-board": aiNever("the user's board of agent work; it opens a picker and holds Resume"),
 
 	// ── HTTP client ──
 	"http-send":              aiNever("sends a network request; use http_send (gated by host and method)"),
