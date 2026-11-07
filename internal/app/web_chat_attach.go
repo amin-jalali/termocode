@@ -304,6 +304,9 @@ func webAttachJSON(v any) string {
 	return ai.RedactSecrets(string(b))
 }
 
+// webAttachFloor is what an attach keeps after the total is used up.
+const webAttachFloor = 256
+
 // webAttachRead reads what the jobs still need (off the UI thread) and
 // returns the attachments, each cut at MaxAttachBytes and all together at
 // MaxAttachTotal.
@@ -327,7 +330,10 @@ func webAttachRead(jobs []webAttachJob, c *nvim.Client) ([]aiAttachment, error) 
 			return nil, err
 		}
 		text = ai.RedactSecrets(text)
-		max := min(webproto.MaxAttachBytes, left)
+		// Each attach keeps a short start even when the ones before it used
+		// the total, so a reference (issue, view) after big files still
+		// reaches the model: at most MaxAttach × webAttachFloor over.
+		max := min(webproto.MaxAttachBytes, max(left, webAttachFloor))
 		if len(text) > max {
 			text = webAttachCut(text, max) + "\n… (cut)"
 		}
