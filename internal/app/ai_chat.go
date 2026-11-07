@@ -600,7 +600,7 @@ func aiToolCardButtons(t ai.Tool) []confirm.Button {
 	if title, ok := aiWorkflowAllow[t.Name]; ok { // WFX-9
 		allow.Title = title
 	}
-	if aiWorkflowCancelFirst[t.Name] {
+	if aiWorkflowCancelFirst[t.Name] || aiStashLosesData(t) {
 		deny.Title = "Cancel"
 	}
 	var more []confirm.Button
