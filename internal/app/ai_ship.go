@@ -55,6 +55,7 @@ type aiShipOps interface {
 	Push(ctx context.Context, branch string) error
 	CreatePR(ctx context.Context, p ghci.NewPR) (string, error)
 	FailedLog(ctx context.Context, run ghci.Run) (ghci.FailedLog, error)
+	Merge(ctx context.Context, number int, method ghci.MergeMethod) error // the full ship (ai_ship_full.go)
 }
 
 // aiShipOpsFor builds the real ops (git and gh in dir; "": the
@@ -93,6 +94,10 @@ func (o aiShipReal) CreatePR(ctx context.Context, p ghci.NewPR) (string, error) 
 	return ghci.Create(ctx, o.run, o.dir, p)
 }
 
+func (o aiShipReal) Merge(ctx context.Context, number int, method ghci.MergeMethod) error {
+	return ghci.Merge(ctx, o.run, o.dir, number, method)
+}
+
 func (o aiShipReal) FailedLog(ctx context.Context, r ghci.Run) (ghci.FailedLog, error) {
 	return ghci.FetchFailedLog(ctx, o.run, o.dir, r.ID)
 }
@@ -107,6 +112,10 @@ type aiShip struct {
 	fixing bool        // a fix turn runs in the chat
 	pr     *ghci.NewPR // the open PR card's request
 	last   aiShipProbe
+	// full: a worktree ship (ai_ship_full.go): the PR text comes from
+	// the AI, green CI asks to merge, a merge offers to archive wtPath.
+	full   bool
+	wtPath string
 }
 
 type (
@@ -205,7 +214,7 @@ func (m *Model) handleAIShipMsg(msg tea.Msg) (tea.Cmd, bool) {
 	case aiPlanShipMsg: // ai_plan_worktree.go
 		return m.onAIPlanShip(msg), true
 	}
-	return nil, false
+	return m.handleWTShipMsg(msg, cur) // ai_ship_full.go
 }
 
 // onAIShipProbe decides the next step.
@@ -223,6 +232,9 @@ func (m *Model) onAIShipProbe(msg aiShipProbeMsg) tea.Cmd {
 	case !p.pushed || p.unpushed > 0:
 		return m.askAIShipPush(p)
 	case p.snap.PR == nil || p.snap.PR.State != "OPEN":
+		if sh.full {
+			return m.aiShipPRText(p) // ai_ship_full.go: the AI writes it
+		}
 		return m.askAIShipPR(p)
 	}
 	// CI of the pushed head: runs for an older commit mean it did not start yet.
@@ -232,6 +244,9 @@ func (m *Model) onAIShipProbe(msg aiShipProbeMsg) tea.Cmd {
 	}
 	switch state {
 	case ghci.StatePass:
+		if sh.full {
+			return m.askAIShipMerge(p) // ai_ship_full.go
+		}
 		return m.aiShipStop("Merge-ready: CI is green on " + aiShipPRName(p.snap.PR) + ". Merge it yourself when you want.")
 	case ghci.StateFail:
 		if sh.fixes >= aiShipMaxFixes {
@@ -312,11 +327,20 @@ func (m *Model) askAIShipPush(p aiShipProbe) tea.Cmd {
 // askAIShipPR shows the pull request card (Cancel first).
 func (m *Model) askAIShipPR(p aiShipProbe) tea.Cmd {
 	title, body := ghci.Compose(p.subjects)
+	return m.askAIShipPRText(p, title, body, "")
+}
+
+// askAIShipPRText shows the pull request card with title and body; note
+// (if any) says where the text came from.
+func (m *Model) askAIShipPRText(p aiShipProbe, title, body, note string) tea.Cmd {
 	req := ghci.NewPR{Title: title, Body: body, Base: p.base, Branch: p.branch}
 	m.aiS().ship.pr = &req
 	text := "Title: " + title + "\n" + p.branch + " → " + p.base + "\n"
 	if body != "" {
 		text += "\nDescription\n" + body + "\n"
+	}
+	if note != "" {
+		text += "\n" + note + "\n"
 	}
 	text += "\nCancel stops the ship."
 	m.confirm = confirm.Risky("Ship: open a pull request?", text,
@@ -353,6 +377,8 @@ func (m *Model) answerAIShipCard(kind confirmKindEnum, id string) tea.Cmd {
 			url, err := ops.CreatePR(ctx, req)
 			return aiShipStepMsg{gen: gen, what: "Pull request", detail: url, err: err}
 		}
+	case kind == confirmKindAIShipMerge:
+		return m.answerAIShipMerge(id) // ai_ship_full.go
 	}
 	return m.aiShipStop("Ship stopped")
 }

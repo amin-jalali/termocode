@@ -41,6 +41,7 @@ repository's git folder, never in your project.
 | `x` | Archive: remove the folder, keep the branch; on an archived row: restore |
 | `D` | Delete the worktree and its branch (asks step by step) |
 | `C` | Clean up: tick merged and old worktrees, archive them together |
+| `S` | Ship: commit (AI message), push, pull request (AI text), CI fixes, merge, archive; each step asks (see below) |
 | `f` | Filter: All, Mine, Agents, Dirty, Asleep, External |
 | `/` | Filter by name (`Esc` clears) |
 | `R` | Read every worktree again |
@@ -145,6 +146,36 @@ keep running; the card says so.
   children). Their agent tabs end too.
 - A worktree with no agent tab and no child sleeps at once.
 - `s` on an asleep worktree wakes it and its asleep children.
+
+## Ship
+
+`S` (**Worktree: Ship Selected (commit, push, PR, merge, archive)…**)
+takes a worktree from finished work to merged in one flow:
+
+1. **Commit.** A worktree with changed files shows a card with a commit
+   message the AI wrote from the diff. **Cancel** comes first;
+   **Commit and ship** commits all its changes in one commit; **Edit
+   message…** lets you change the text first. Without an AI the message
+   is "Work on <branch>" and the card says so. A clean worktree skips
+   this step.
+2. **Push.** A plain push of the branch, never forced (**Not now**
+   first).
+3. **Pull request.** The AI writes the title and the description from
+   the commits and the changed files; the card shows them (**Cancel**
+   first, then **Create** or **Create as Draft**).
+4. **CI.** termocode waits for CI. When it is red, the failing log goes
+   to the AI chat as a fix turn (at most 3), and the fix is pushed after
+   its card, like **AI: Ship Branch to Merge-Ready**.
+5. **Merge.** On green CI a card asks to merge (`gh pr merge`, never
+   `--admin`): **Cancel** first, then **Merge**, **Squash and merge** or
+   **Rebase and merge**. Cancel stops at merge-ready.
+6. **Archive.** After the merge the archive card of the worktree opens
+   (see below), **Cancel** first. The branch stays.
+
+Cancel or Esc on any card stops the flow there. Agent lanes, archived
+rows and worktrees without a branch are not shipped. Running **AI: Ship
+Branch to Merge-Ready** again stops a running ship. The AI never starts
+it.
 
 ## Archive and restore
 

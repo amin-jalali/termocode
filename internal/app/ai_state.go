@@ -114,6 +114,7 @@ type aiState struct {
 	webPreset   string               // the server the open add card is for (ai_web_presets.go)
 	recall      *aiRecallState       // lesson recall per chat (ai_recall.go)
 	ship        *aiShip              // the running ship loop (ai_ship.go)
+	shipCommit  *wtShipPending       // the open ship commit card or prompt (ai_ship_full.go)
 	ctl         *agentCtlState       // the agent control socket's UI side (agent_ctl.go)
 	// agentHooksPlan is the change the open state-hooks card shows (agent_hooks_ui.go).
 	agentHooksPlan *agenthooks.Plan
