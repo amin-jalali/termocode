@@ -119,7 +119,9 @@ func (h *webHub) serve(ln net.Listener, peer func(net.Conn) error, onErr func(er
 	h.wg.Add(1)
 	crash.Go("web: push subscriptions", func() {
 		defer h.wg.Done()
-		_ = h.send(h.ctx, webPushLoad())
+		if apply, ok := webPushLoad().(applyMsg); ok {
+			_ = h.send(h.ctx, webHubApplyMsg{hub: h, apply: apply}) // a bare applyMsg would end waitWeb's chain
+		}
 	})
 }
 

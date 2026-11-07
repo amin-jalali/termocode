@@ -33,9 +33,18 @@ type webHelloMsg struct {
 	resume *webproto.Resume
 }
 
+// webHubApplyMsg is a change the hub's own goroutines hand to Update on
+// the hub channel (the push store load); Update listens again after it.
+type webHubApplyMsg struct {
+	hub   *webHub
+	apply applyMsg
+}
+
 // handleWebMsg routes the hub messages. ok=false: not ours.
 func (m *Model) handleWebMsg(msg tea.Msg) (tea.Cmd, bool) {
 	switch msg := msg.(type) {
+	case webHubApplyMsg:
+		return tea.Batch(msg.apply(m), waitWeb(msg.hub)), true
 	case webCallMsg:
 		return m.onWebCall(msg), true
 	case webSubMsg:
