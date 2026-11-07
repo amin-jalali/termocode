@@ -946,7 +946,7 @@ func (m *Model) databaseExpand(path string) tea.Cmd {
 		req.Database = ""
 	}
 	if n.kind == dbNodeDatabase {
-		if c, ok := s.connection(n.conn); ok && (c.Driver == "mysql" || c.Driver == "clickhouse" || c.Driver == "duckdb" || c.Driver == "trino" || c.Driver == "presto" || dbclient.IsHTTPEngine(c.Driver)) {
+		if c, ok := s.connection(n.conn); ok && (c.Driver == "mysql" || c.Driver == "clickhouse" || c.Driver == "duckdb" || c.Driver == "trino" || c.Driver == "presto" || c.Driver == "mongodb" || dbclient.IsHTTPEngine(c.Driver)) {
 			req.Database, req.Schema = n.name, n.name
 		} else if ok && (c.Driver == "sqlite" || c.Driver == "oracle") {
 			// One file, one session: main and attached databases share it.
@@ -1101,6 +1101,7 @@ func dbTypePickerItems(remote bool) []picker.Item {
 	for _, e := range dbclient.HTTPEngines() {
 		items = append(items, picker.Item{ID: "engine:" + e.ID, Title: e.Title, Hint: e.Hint})
 	}
+	items = append(items, picker.Item{ID: "mongodb", Title: "MongoDB", Hint: "default port 27017"})
 	for _, p := range dbclient.MySQLPresets() {
 		items = append(items, picker.Item{ID: "preset:" + p.ID, Title: p.Title, Hint: p.Hint})
 	}
@@ -1223,6 +1224,11 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 		}
 		s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.User = kind, 8080, "termocode"
 		return m.databaseAddPrompt(promptKindDBHost, title, "Host name or address:", "localhost", false)
+	case "mongodb":
+		s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.Database = "mongodb", 27017, "test"
+		cmd := m.databaseAddPrompt(promptKindDBHost, "MongoDB: server address", "Host name or address:", "localhost", false)
+		m.prompt.SetNote("A replica set or a mongodb+srv:// address: use From a URL.")
+		return cmd
 	case "url":
 		return m.databaseAddPrompt(promptKindDBAdd, "Connection URL", "Paste a database URL:", "postgres://user@localhost:5432/database", false)
 	}
@@ -1836,6 +1842,11 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 		s.pendingConn.Port = port
 		if dbclient.IsHTTPEngine(s.pendingConn.Driver) {
 			cmd := m.databaseAddPrompt(promptKindDBUser, "User", "User name (empty: no sign-in):", s.pendingConn.User, false)
+			m.prompt.SetAllowEmpty(true)
+			return cmd
+		}
+		if s.pendingConn.Driver == "mongodb" {
+			cmd := m.databaseAddPrompt(promptKindDBUser, "Database user", "User name (empty: no sign-in):", s.pendingConn.User, false)
 			m.prompt.SetAllowEmpty(true)
 			return cmd
 		}

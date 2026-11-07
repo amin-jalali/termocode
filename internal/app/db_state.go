@@ -689,6 +689,16 @@ var dbCassandraSessionFactory = func(ctx context.Context, c dbclient.Conn, passw
 	return sess, nil
 }
 
+// dbMongoSessionFactory opens a MongoDB session (DBX-68; replaceable for
+// tests, which never reach a real server).
+var dbMongoSessionFactory = func(ctx context.Context, c dbclient.Conn, password string) (dbclient.Session, error) {
+	sess, err := dbclient.NewMongoSession(ctx, c, password)
+	if err != nil {
+		return nil, err
+	}
+	return sess, nil
+}
+
 // A disconnect invalidates only this connection's outstanding commands.
 // Other connections can finish loading without having their results discarded.
 func (s *dbState) connectionCommand(id string, cmd tea.Cmd) tea.Cmd {
@@ -764,6 +774,8 @@ func dbOpenDriverSession(ctx context.Context, c dbclient.Conn, root, password st
 		sess, err = dbclient.NewClickHouseSession(ctx, c, password)
 	case "cassandra":
 		sess, err = dbCassandraSessionFactory(ctx, c, password)
+	case "mongodb":
+		sess, err = dbMongoSessionFactory(ctx, c, password)
 	case "libsql":
 		// A remote libSQL server (DBX-64): the password is its token.
 		sess, err = dbclient.NewLibSQLSession(c, password)
@@ -829,7 +841,7 @@ func dbTestCommandSSH(c dbclient.Conn, password, root string, generation uint64,
 		defer cancel()
 		start := time.Now()
 		var err error
-		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "clickhouse" && c.Driver != "cassandra" && c.Driver != "libsql" && c.Driver != "sqlserver" && c.Driver != "duckdb" && c.Driver != "trino" && c.Driver != "presto" && !dbclient.IsHTTPEngine(c.Driver) {
+		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "clickhouse" && c.Driver != "cassandra" && c.Driver != "libsql" && c.Driver != "sqlserver" && c.Driver != "duckdb" && c.Driver != "trino" && c.Driver != "presto" && c.Driver != "mongodb" && !dbclient.IsHTTPEngine(c.Driver) {
 			err = fmt.Errorf("this connection type is not available yet")
 		}
 		var sess dbclient.Session

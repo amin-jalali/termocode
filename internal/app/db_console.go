@@ -355,6 +355,10 @@ func dbConsoleFile(driver, id string) (ext, header, filetype string) {
 		return ".redis", "# @conn " + id + "\n# One command per line; the send key runs the line at the cursor.\n\n", "redis"
 	case "cassandra":
 		return ".cql", "-- @conn " + id + "\n-- CQL: the send key runs the statement at the cursor; results come a page at a time.\n\n", "sql"
+	case "mongodb":
+		// Shell lines in the SQL console file (DBX-68): one command per
+		// statement, ";" between them.
+		return ".sql", "-- @conn " + id + "\n-- One shell command per statement, for example: db.users.find({age: {$gt: 30}}).limit(20);\n\n", "sql"
 	}
 	return ".sql", "-- @conn " + id + "\n\n", "sql"
 }

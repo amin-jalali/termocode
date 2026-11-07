@@ -108,7 +108,7 @@ With no connections yet, the view lists the suggestions and offers **a add** and
 
 ## Add a connection
 
-Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, SQL Server / Azure SQL, Oracle Database, Trino, Presto, DuckDB, Cassandra / ScyllaDB, ClickHouse, libSQL / Turso, or **From a URL**.
+Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, SQL Server / Azure SQL, Oracle Database, Trino, Presto, DuckDB, Cassandra / ScyllaDB, ClickHouse, libSQL / Turso, MongoDB, or **From a URL**.
 
 The MySQL family has presets on the MySQL driver: MariaDB, TiDB (port 4000), PlanetScale / Vitess and Amazon Aurora (MySQL) (both with TLS), and SingleStore. A preset fills the port, user and SSL mode, shows a short note on what differs from MySQL, and is saved as `"preset"` in the connection; the tree shows its name next to the host.
 
@@ -134,7 +134,7 @@ For Oracle (port 1521; `ora` works too) the database is the service name. `"para
 - **libSQL / Turso** asks for a `libsql://` server URL (for Turso: `libsql://<db>-<org>.turso.io`), then a masked auth token kept in the secret store. A token in the URL (`?authToken=`) is taken out the same way. Add `?tls=0` for a local server without TLS.
 - **DuckDB** asks for a database file, like SQLite. It runs the `duckdb` command line client (install it and put it on `PATH`); each run stands alone, so there are no transactions and `:memory:` keeps nothing between runs. Read-only runs use `-readonly`. The tree shows the schemas of the file.
 - **Trino** and **Presto** use the coordinator's REST protocol (port 8080). The database step asks for the **catalog** (for example `hive`); the tree shows its schemas. A password is sent only over TLS. `USE` changes the catalog and schema for the next runs, transactions use `START TRANSACTION`, and read-only runs use `START TRANSACTION READ ONLY`.
-- **From a URL** asks you to paste one, for example `postgres://app@localhost:5432/app`. Schemes `postgres`, `postgresql`, `mysql`, `mariadb`, `redis`, `rediss`, `sqlite`, `sqlcipher` and `file` work. A password in the URL is taken out and stored as a secret. If the URL has none, you are asked for it.
+- **From a URL** asks you to paste one, for example `postgres://app@localhost:5432/app`. Schemes `postgres`, `postgresql`, `mysql`, `mariadb`, `redis`, `rediss`, `mongodb`, `mongodb+srv`, `sqlite`, `sqlcipher` and `file` work. A password in the URL is taken out and stored as a secret. If the URL has none, you are asked for it.
 
 Termocode tests the connection first. If the test works, choose **Save to project** (no password in the file) or **Save for me only**. If it fails, a list offers **Set password…**, **Use an SSH tunnel…**, **SSL settings…**, **Test again** or **Cancel**.
 
@@ -606,6 +606,22 @@ More Redis commands in the palette (they work on the selected connection, or on 
 - **Databases: Export Redis Keys…** asks for a key pattern and a file (`redis-export-<connection>.json` in the workspace). It finds the keys with `SCAN` (at most `db_redis_max_keys`), shows a card with the count and the file first (Cancel is the default; **Replace** when the file exists), and writes one JSON entry per key with its type, TTL in milliseconds and value. The file is private to you (0600) and holds the values in plain text. Module types other than JSON are listed without a value.
 
 `XINFO GROUPS`, `XINFO CONSUMERS`, `XINFO STREAM`, `MODULE LIST`, `MEMORY STATS`, `PUBSUB NUMSUB`, `CLUSTER NODES` and the module `INFO` commands give readable grids in the console too.
+
+## MongoDB
+
+A MongoDB connection (`"driver": "mongodb"`) takes a host and port (27017 by default), an optional user, a database and a password from the secret store. A user signs in against `admin` unless `"params": {"authSource": "…"}` says otherwise. For a replica set, Atlas or other options, paste a `mongodb://` or `mongodb+srv://` URL: it is saved as it is, but the password moves to the secret store. `"tls": true` or `"ssl"` turn on TLS. An SSH tunnel works with one server's host and port (not with `mongodb+srv://`).
+
+Expanding a connection lists its databases, then their collections and views. A collection shows the fields of its first 20 documents with the type seen first (`objectId`, `string`, `int`, `object`, …), its indexes, and, as its definition, the `createIndex` lines that build them.
+
+Press `n` to open the console. It is a SQL console file that holds shell commands, one per statement, `;` between them:
+
+- Reads: `db.users.find({age: {$gt: 30}}, {name: 1}).sort({name: -1}).skip(10).limit(20)`, `findOne`, `aggregate([...])`, `countDocuments`, `estimatedDocumentCount`, `distinct("city")`, `getIndexes()`, `stats()`, `show collections`. `use logs` switches the database for the next commands.
+- Writes: `insertOne`, `insertMany`, `updateOne`, `updateMany`, `replaceOne`, `deleteOne`, `deleteMany`, `findOneAndUpdate`, `findOneAndReplace`, `findOneAndDelete`. Index and collection changes: `createIndex`, `createIndexes`, `dropIndex`, `dropIndexes`, `drop`.
+- Values: relaxed JSON (bare keys, single quotes), plus `ObjectId("…")` and `ISODate("…")`.
+
+Reads run at once. A write, an index change or an `aggregate` with `$out` or `$merge` shows a card first, like SQL. A read-only connection and the AI tools send reads only. Add `.explain()` (or `.explain("executionStats")`) to see the plan as JSON; the server plans an explained write but never applies it.
+
+Documents show as rows: `_id` first, then every top-level field in the order first seen; nested objects and arrays as compact JSON, an ObjectId as `ObjectId("…")` so you can paste it into a filter. One batch is read (up to `db_max_rows` documents, or your `limit`); when the server has more, the page says so and the cursor is closed. `bulkWrite` and `renameCollection` are not supported in the console. There are no SQL transactions: each command commits on its own.
 
 ## AI tools and their rules
 

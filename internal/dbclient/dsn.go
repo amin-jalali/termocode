@@ -70,6 +70,36 @@ func ParseURL(raw string) (Conn, error) {
 			c.Port, _ = strconv.Atoi(u.Port())
 		}
 		return c, nil
+	case "mongodb", "mongodb+srv":
+		// MongoDB (DBX-68). The URL is kept (hosts, replica set and
+		// options stay in it) but without the password, which moves
+		// into the secret store. A +srv address has no port.
+		c.Driver = "mongodb"
+		if u.User != nil {
+			c.User = u.User.Username()
+			c.Password, _ = u.User.Password()
+			u.User = url.User(c.User)
+			if c.User == "" {
+				u.User = nil
+			}
+		}
+		c.URL = u.String()
+		c.Host = u.Hostname()
+		if u.Scheme == "mongodb" {
+			c.Port = 27017
+			if p := u.Port(); p != "" {
+				if c.Port, e = strconv.Atoi(p); e != nil {
+					return Conn{}, fmt.Errorf("invalid port")
+				}
+			}
+		}
+		c.Database = strings.TrimPrefix(u.Path, "/")
+		for k, v := range u.Query() {
+			if len(v) > 0 {
+				c.Params[k] = v[len(v)-1]
+			}
+		}
+		return c, nil
 	default:
 		if e, tls, ok := engineForScheme(u.Scheme); ok {
 			// An HTTP engine (DBX-68..71): the address, user and

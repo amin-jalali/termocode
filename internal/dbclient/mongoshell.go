@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // MongoField is one key/value pair of a MongoDB document. Documents keep
@@ -15,7 +16,8 @@ type MongoField struct {
 }
 
 // MongoDoc is an ordered document. Values are MongoDoc, []any, string,
-// float64, bool or nil.
+// float64, bool, nil, MongoObjectID or time.Time (and, from the server,
+// int32 and int64).
 type MongoDoc []MongoField
 
 // MongoCommand is one MongoDB shell console line:
@@ -368,9 +370,42 @@ func (p *mongoParser) value() (any, error) {
 		return nil, nil
 	case "":
 		return nil, p.errf("value expected")
+	case "ObjectId", "ISODate":
+		return p.shellValue(w)
 	default:
 		return nil, p.errf("unsupported value %q", w)
 	}
+}
+
+// MongoObjectID is an ObjectId("…") of the shell: 24 hex digits.
+type MongoObjectID string
+
+// shellValue reads the argument of ObjectId("hex") or ISODate("time").
+func (p *mongoParser) shellValue(name string) (any, error) {
+	if err := p.enter(); err != nil {
+		return nil, err
+	}
+	defer func() { p.depth-- }()
+	args, err := p.args()
+	if err != nil {
+		return nil, err
+	}
+	s, ok := firstString(args)
+	if !ok || len(args) != 1 {
+		return nil, p.errf("%s needs one string", name)
+	}
+	if name == "ObjectId" {
+		if len(s) != 24 || strings.Trim(strings.ToLower(s), "0123456789abcdef") != "" {
+			return nil, p.errf("ObjectId needs 24 hex digits")
+		}
+		return MongoObjectID(strings.ToLower(s)), nil
+	}
+	for _, layout := range []string{time.RFC3339Nano, "2006-01-02T15:04:05", "2006-01-02"} {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t.UTC(), nil
+		}
+	}
+	return nil, p.errf("ISODate needs a time like 2026-01-02T03:04:05Z")
 }
 
 func (p *mongoParser) enter() error {

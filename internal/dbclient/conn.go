@@ -171,6 +171,8 @@ func defaultPort(d string) int {
 		return 1521
 	case "trino", "presto":
 		return 8080
+	case "mongodb":
+		return 27017
 	}
 	return httpEngineDefaultPort(d, false)
 }
@@ -184,6 +186,8 @@ func normDriver(d string) string {
 		return "sqlserver"
 	case "ora":
 		return "oracle"
+	case "mongo":
+		return "mongodb"
 	}
 	return d
 }
