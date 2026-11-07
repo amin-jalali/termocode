@@ -214,6 +214,20 @@ func init() {
 		}
 		return out
 	})
+	// races (MOB-61): the races and how many lanes each has; a lane's
+	// own rows are the race screen's business.
+	registerViews(ViewDef{ID: "races", Feature: "lanes", Title: "Races", Source: ViewSource{Topic: "races"},
+		Fields: []ViewField{vf("name", "Race", FieldText, "sfd"), vf("state", "State", FieldState, "sfd"),
+			vf("lanes", "Lanes", FieldNum, "sfd"), vf("winner", "Winner", FieldText, "sf")},
+		Layouts: []string{list, table}})
+	viewRows["races"] = rowsOf(func(s RacesSnap, _ map[string]string) []ViewRow {
+		out := make([]ViewRow, 0, len(s.Races))
+		for _, r := range s.Races {
+			out = append(out, ViewRow{ID: "r" + strconv.Itoa(len(out)), Cells: vcells("name", vtxt(r.Name), "state", vtxt(r.State),
+				"lanes", vnum(len(r.Lanes)), "winner", vtxt(r.Winner)), Tone: stateTone(r.State)})
+		}
+		return out
+	})
 	viewRows["lanes.agent"] = rowsOf(func(s AIWorktrees, _ map[string]string) []ViewRow {
 		out := make([]ViewRow, 0, len(s.Items))
 		for _, w := range s.Items {
