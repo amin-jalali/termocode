@@ -124,6 +124,28 @@ func TestWebStartScriptYesNeedsOn(t *testing.T) {
 	}
 }
 
+// Spec (WEBP-10): from a script, when the web panel already runs, the
+// CLI does not tell anyone to answer on the laptop (no card comes): it
+// says the panel runs and where, and exits 0, as status does.
+func TestWebStartScriptPanelRunsSaysSoAtOnce(t *testing.T) {
+	webCLIEnv(t, `{}`, false)
+	ws := shortTemp(t)
+	p, _ := session.PathsFor(ws)
+	st := `{"pid":` + itoa(os.Getpid()) + `,"port":41237,"url":"http://127.0.0.1:41237/","started":"2026-10-30T10:00:00Z","idle_s":900,"max_s":43200}`
+	if err := os.WriteFile(p.WebStatus, []byte(st), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	fakeWebHub(t, ws, `{"t":"res","id":1,"data":{"port":41237,"already":true}}`)
+	code, out, errs := runWebT(t, "--dir", ws)
+	if code != 0 || strings.Contains(out, "Answer on the laptop") ||
+		!strings.Contains(out, "already runs at http://127.0.0.1:41237/") || !strings.Contains(out, "No new link") {
+		t.Fatalf("exit %d out %q err %q", code, out, errs)
+	}
+	if code, out, _ := runWebT(t, "--help"); code != 0 || !strings.Contains(out, "Exit codes") {
+		t.Fatalf("usage does not list the exit codes: %q", out)
+	}
+}
+
 // Spec (T52, WEB-9): `termocode web start` only asks the UI over the hub
 // socket (web.open on a control connection); a script's --yes is passed
 // on when config.json says "web_panel": "on".
