@@ -65,6 +65,8 @@ type Response struct {
 	IsBinary    bool
 	Err         string
 	ErrKind     ErrKind
+	// Attempts counts the tries (`# @retry`); 1 without retries.
+	Attempts int `json:",omitempty"`
 }
 
 // Header returns the value of the response header name (any case).
