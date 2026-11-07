@@ -75,7 +75,7 @@ func ListAll(ctx context.Context, sources []Source) MultiResult {
 			continue
 		}
 		rows := append([]Container(nil), g.rows...)
-		sort.SliceStable(rows, func(a, b int) bool { return containerName(rows[a]) < containerName(rows[b]) })
+		sort.SliceStable(rows, func(a, b int) bool { return multiSortName(rows[a]) < multiSortName(rows[b]) })
 		for _, c := range rows {
 			res.Containers = append(res.Containers, SourceContainer{Source: label, Container: c})
 		}
@@ -83,7 +83,7 @@ func ListAll(ctx context.Context, sources []Source) MultiResult {
 	return res
 }
 
-func containerName(c Container) string {
+func multiSortName(c Container) string {
 	if len(c.Names) > 0 {
 		return c.Names[0]
 	}
