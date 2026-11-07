@@ -1080,6 +1080,20 @@
       "phase": "v2"
     },
     {
+      "op": "board.projects",
+      "args": "EmptyArgs",
+      "result": "BoardProjects",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "debug.expand",
       "args": "DebugExpandArgs",
       "role": "viewer",
@@ -4855,6 +4869,96 @@
       },
       "required": [
         "title"
+      ],
+      "additionalProperties": true
+    },
+    "BoardAgent": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "working",
+            "waiting"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "BoardProject": {
+      "type": "object",
+      "properties": {
+        "agents": {
+          "items": {
+            "$ref": "#/defs/BoardAgent"
+          },
+          "type": "array"
+        },
+        "home": {
+          "type": "boolean"
+        },
+        "more": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "seen": {
+          "type": "integer"
+        },
+        "state": {
+          "enum": [
+            "needs",
+            "working",
+            "idle"
+          ]
+        },
+        "waiting": {
+          "type": "integer"
+        },
+        "where": {
+          "type": "string"
+        },
+        "working": {
+          "type": "integer"
+        },
+        "ws": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ws",
+        "name",
+        "where",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "BoardProjects": {
+      "type": "object",
+      "properties": {
+        "home": {
+          "type": "string"
+        },
+        "more": {
+          "type": "integer"
+        },
+        "projects": {
+          "items": {
+            "$ref": "#/defs/BoardProject"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "home",
+        "projects"
       ],
       "additionalProperties": true
     },

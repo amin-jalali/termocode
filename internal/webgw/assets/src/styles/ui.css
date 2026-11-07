@@ -169,3 +169,25 @@
 .remember-text { display: flex; flex-direction: column; gap: 2px; }
 .remember-label { color: var(--text); }
 .remember-hint { color: var(--muted); font-size: 0.875rem; }
+
+/* The live board of every project (MOB-54, phone Home): tone = colour + shape */
+.board { display: flex; flex-direction: column; gap: var(--s2); }
+.board-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2); }
+.board-title { font-size: 1rem; margin: 0; }
+.board-live, .board-cost, .board-sub, .board-row-detail { color: var(--muted); font-size: 0.875rem; }
+.board-note { color: var(--muted); margin: 0; }
+.board-proj, .board-row, .board-retry { min-height: var(--tap); width: 100%; display: flex; align-items: center; gap: var(--s2); background: none; border: 0; color: var(--text); text-align: left; padding: 0 var(--s2); }
+.board-retry { width: auto; display: inline-flex; color: var(--blue); }
+.board-proj { justify-content: space-between; font-weight: 600; }
+.board-rows { list-style: none; margin: 0; padding: 0; }
+.board-row { flex-wrap: wrap; }
+.board-row:disabled { cursor: default; }
+.board-row-title { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.board-shape { flex: none; width: 1.2em; }
+.tone-needs > .board-shape, .board-sec.tone-needs .board-proj-line { color: var(--amber); }
+.tone-working > .board-shape { color: var(--blue); }
+.tone-done > .board-shape { color: var(--green); }
+.tone-failed > .board-shape { color: var(--red); }
+.board-chips { display: flex; gap: var(--s2); overflow-x: auto; }
+.board-chip.is-on { border-color: var(--focus); }
+@media (prefers-reduced-motion: reduce) { .board * { transition: none; } }
