@@ -717,5 +717,6 @@ missing	worktree-notes	Worktrees|M
 missing	worktree-open	Worktrees|M
 missing	worktree-pin	Worktrees|M
 missing	worktree-setup-log	Worktrees|M
+missing	worktree-ship	Worktrees|M
 missing	worktree-sleep	Worktrees|M
 missing	worktree-view	Worktrees|M
