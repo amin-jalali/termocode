@@ -1817,6 +1817,9 @@ export interface WorktreeItem {
   parent?: string;
   depth?: number;
   last_seen?: number;
+  port?: number;
+  running?: boolean;
+  url?: string;
 }
 
 export interface InboxSnap {

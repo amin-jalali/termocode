@@ -132,6 +132,10 @@ The setting is read when termocode starts.
 Chats are saved. Run **AI: Chat History…** to open an old one, and
 **AI: New Chat** to start fresh. The last 50 chats are kept.
 
+Run **AI: Search Chat History…** to find words in your saved chats. It
+looks in every title and message, on this computer only. Each row shows
+the matching line, with secrets hidden. `Enter` opens the chat.
+
 ### Reasoning level
 
 Some models can think longer before they answer. More thinking gives
@@ -293,9 +297,26 @@ Add files to your next message in three ways:
 - **`@path`.** Write `@src/main.go` (or `@file src/main.go`) in your
   message. The file is attached when you send.
 
+You can also name other context with an `@` word. termocode reads it when
+you send, shows each read as a tool line, and gives the text to the model
+as data (secrets hidden, up to 60 KB each, at most 8 per message):
+
+| Word | What the model gets |
+|---|---|
+| `@chat:<id>` or `@chat:<words>` | an old chat by its id, or the chats that match the words |
+| `@symbol:<name>` | the workspace symbols with that name (language server) |
+| `@diagnostics` or `@diagnostics:<path>` | the errors and warnings of the open files, or of one file |
+| `@changes` or `@changes:<path>` | your uncommitted changes |
+| `@diff` or `@diff:<base>` | this branch's change since it left its base (`main`, or the base you name) |
+| `@url:<url>` or `@https://…` | the text of one web page (private and local addresses are refused) |
+
+Each word uses the chat's own read-only tool, so a word whose tool is off
+(for example web reading) only adds a short note.
+
 Text files are sent as text (up to 60 KB). Images (PNG, JPEG, GIF, WebP)
 are sent as images to Anthropic, OpenAI and OpenRouter. Other providers
-get a short note instead. Other binary files are refused.
+get a short note instead. PDFs are sent as their text (best effort; a
+scan with no text is refused). Other binary files are refused.
 Click `×` on a chip to remove it, or press `Backspace` in the empty input.
 
 To get files out:
@@ -306,6 +327,27 @@ To get files out:
   the new file.
 - **AI: Export Chat as Markdown** writes the chat to
   `ai-chat-<date>.md` in the workspace and opens it.
+
+## Bugfix specs
+
+A bugfix spec says what a fix must do and what it must not break.
+
+1. **AI: New Bugfix Spec…** asks for the bug in a few words. termocode
+   writes `.termocode/specs/<name>/bugfix.md` and opens it. Nothing goes
+   to a model.
+2. Fill in three sections, one line per item:
+   - **Current behavior**: what happens now.
+   - **Expected behavior**: what should happen. Each line becomes a test
+     that fails before the fix.
+   - **Unchanged behavior**: what must keep working. Each line gets a guard
+     test that passes before and after the fix.
+3. **AI: Fix Bug from Spec…** lists your specs. A spec with an empty
+   section opens at that section. A ready one puts a test-first fix prompt
+   in the chat, with the spec attached. Read it, then press `Enter` to send
+   it.
+
+The AI cannot run these two commands. The spec is a normal file: commit
+it with the fix if you like.
 
 ## AI code actions (review, then apply)
 
@@ -355,6 +397,27 @@ over the editor, like in mobocode.
   ✗ rejected.
 - `Esc` hides the card. The chat shows "**N files to review**" with a
   **Review** button; **AI: Review Pending Changes** opens it again.
+
+### Comment on changes and send them to an agent
+
+This works in the review card and in every read-only changes card (an
+agent worktree's changes, a file diff, a compare).
+
+- Press `c` on a change to write a comment. It shows under the change
+  header. Press `c` again (or click the comment) to change it. Save an
+  empty comment to remove it.
+- The hint bar counts your comments: **S send 3 comments to an agent**.
+- `S` opens a card with the whole message: each comment with its file,
+  lines and the changed code. **Cancel** is first. Then:
+  - **AI chat** sends it to the built-in chat as one message. While the
+    AI still answers, it waits in the chat input.
+  - an **agent tab** button (Claude Code, Codex, … in a terminal tab)
+    pastes it into that agent's input. You press Enter there to send it.
+  - **Copy** puts it on the clipboard.
+- Sent comments leave the card. `Esc` on a read-only card keeps them:
+  **Agent: Send Diff Comments…** sends them later.
+- Known secrets are masked in the message. The AI cannot send your
+  comments on its own.
 
 ### The agent waits for you
 
@@ -642,6 +705,32 @@ These rules are not in the system prompt. When the AI reads a matching file
 with `read_file`, the rules are added to the result, once per chat (at most
 4 KB per file and 16 KB per chat).
 
+### Rules you name, rules the AI picks
+
+A `.claude/rules` file can also say *when* it is used, with `inclusion:` in
+its front matter:
+
+```markdown
+---
+inclusion: manual
+---
+Tag the release by hand, then write the notes.
+```
+
+- `inclusion: manual`: used only when you name it in a message, as
+  `#release` (the file name without `.md`, or `name:` in the front matter).
+  The rule's text is added to that message, once per chat.
+- `inclusion: auto` with a `description:`: the AI sees only the name and the
+  description. When the task matches, it loads the text with the
+  `rule_load` tool. An auto rule without a description works like a manual
+  one.
+- Neither goes into the system prompt or into `read_file` results. The AI
+  cannot load a manual rule.
+- `fileMatchPattern:` works like `globs:`.
+
+These rules are in the same trust card and the same 16 KB per chat. They
+work in plain chat turns; pipeline runs get only the other rules.
+
 The text steers the AI, so it is used only when you say so:
 
 - The first message in a workspace with a rules file opens a card **Use this
@@ -825,6 +914,49 @@ The same screen can add servers (MCP) for this work. Each shows the exact
 
 The `visual-qa` skill tells the AI how to check a page in the browser:
 phone and desktop widths, console errors, the main buttons.
+
+## Use termocode as the agent of another editor (ACP)
+
+`termocode acp` runs termocode's AI as an agent for any editor that
+speaks the Agent Client Protocol. It talks JSON-RPC on stdin and stdout.
+
+1. Set up AI in termocode first: **AI: Configure Provider…**.
+2. In the other editor, add a custom agent. Use the command
+   `termocode acp`.
+3. Open the agent's chat there and ask. The answer streams in as it is
+   written. Stop cancels the turn.
+
+Files the editor attaches to the message go in with the question. Each
+chat keeps its own history (the last 40 messages).
+
+This mode is chat only for now. The agent does not run tools, read or
+change files by itself, or ask for permissions.
+
+## Proof of work screenshots
+
+After a UI change the AI can show you that it works. Its tool
+`proof_screenshot` opens a page in a headless browser and saves a PNG:
+
+- It shoots the local dev server (`http://localhost:5173/…`) or an
+  `.html` / `.svg` file in the workspace at once. Any other address asks
+  you first (class `run`).
+- You choose the width and height (default 1280×800; 390 wide for a
+  phone). The AI is told to shoot desktop and phone widths.
+- Shots go to `.termocode/proof/` in the workspace, each with a small
+  `.json` file: the address, the size, the time and a note.
+- When the model takes images, it sees the shot and can fix what looks
+  wrong. Otherwise it can use `look_at` on the file.
+- The browser runs with a new empty profile each time (no cookies, none
+  of your sign-ins) and with its sandbox on. It stops after 60 seconds.
+
+It needs Chrome, Chromium, Edge or Brave on this machine. termocode finds
+it on `PATH` (and in `/Applications` on macOS); set `TERMOCODE_BROWSER`
+to the program path to pick another one. Nothing else is installed.
+
+Run **AI: Proof of Work…** to see the shots, newest first, with the
+address, size and note. Enter opens a shot in the picture preview.
+**Delete all proof screenshots…** asks first (Cancel is the default) and
+removes only the shots and their notes.
 
 ## Keys at a glance
 

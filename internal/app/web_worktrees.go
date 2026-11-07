@@ -150,6 +150,10 @@ func (m *Model) webWorktreesBuild() webproto.WorktreesSnap {
 		if n, ok := it.e.Meta.LastNote(); ok {
 			w.Note = webName(n.Text)
 		}
+		w.Port = it.e.Meta.Port
+		if r := st.runs[it.e.Path]; r != nil {
+			w.Port, w.Running, w.URL = r.port, true, webName(r.url)
+		}
 		if p := it.e.Meta.Parent; p != "" && r.depth > 0 {
 			w.Parent = webWorktreeID(p)
 		}
@@ -204,7 +208,11 @@ func (m *Model) webWorktreesPin(call *webCall) tea.Cmd {
 	if !ok {
 		return nil
 	}
-	if err := m.wtTouchMeta(it.e.Path, func(md *worktrees.Meta) { md.Pinned = a.On }); err != nil {
+	if err := m.wtTouchMeta(it.e.Path, func(md *worktrees.Meta) {
+		if md.Pinned != a.On {
+			md.Pinned, md.Order = a.On, 0 // it joins the other group in the automatic sort
+		}
+	}); err != nil {
 		call.fail(webproto.CodeConflict, "The pin could not be saved: "+err.Error())
 		return nil
 	}

@@ -15781,6 +15781,12 @@
         "pinned": {
           "type": "boolean"
         },
+        "port": {
+          "type": "integer"
+        },
+        "running": {
+          "type": "boolean"
+        },
         "state": {
           "enum": [
             "working",
@@ -15796,6 +15802,9 @@
           "type": "boolean"
         },
         "title": {
+          "type": "string"
+        },
+        "url": {
           "type": "string"
         },
         "where": {

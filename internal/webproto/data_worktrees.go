@@ -64,7 +64,8 @@ type WorktreesSnap struct {
 // WorktreeItem is one worktree card. Where is its folder for people
 // (~ for home); Parent is the id of the worktree it was made from and
 // Depth how deep it is drawn under it. Status: Ahead, Behind and Dirty
-// are known. LastSeen is Unix ms.
+// are known. LastSeen is Unix ms. Port is the worktree's dev server
+// port; Running and URL say it runs now and where.
 type WorktreeItem struct {
 	ID         string `json:"id"`
 	Title      string `json:"title"`
@@ -89,6 +90,9 @@ type WorktreeItem struct {
 	Parent     string `json:"parent,omitempty"`
 	Depth      int    `json:"depth,omitempty"`
 	LastSeen   int64  `json:"last_seen,omitempty"`
+	Port       int    `json:"port,omitempty"`    // the worktree's dev server port (CMP-5)
+	Running    bool   `json:"running,omitempty"` // its dev server runs now
+	URL        string `json:"url,omitempty"`     // the dev server's address while it runs
 }
 
 // WorktreeDone answers pin, sleep and note. Asked: the laptop asks first

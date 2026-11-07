@@ -15,6 +15,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/lazyre"
+	"github.com/amin-jalali/termocode/internal/pdftext"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/termimg"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -34,7 +35,8 @@ import (
 //
 // Text files are attached as text (cut at aiMaxAttach). Images are sent
 // as images when the provider takes image input, else as a short note.
-// Other binary files are refused with a toast.
+// PDFs are attached as their text. Other binary files are refused with a
+// toast.
 
 const (
 	aiMaxAttach = 60 * 1024       // text attachment cap (bytes)
@@ -237,6 +239,9 @@ func aiLoadAttachment(abs, root string, images bool) (aiAttachment, error) {
 		}
 		return aiAttachment{Label: label, Image: abs, MediaType: mt}, nil
 	}
+	if isPDFPath(abs) {
+		return aiLoadPDF(abs, label)
+	}
 	f, err := os.Open(abs)
 	if err != nil {
 		return aiAttachment{}, err
@@ -247,13 +252,44 @@ func aiLoadAttachment(abs, root string, images bool) (aiAttachment, error) {
 		return aiAttachment{}, err
 	}
 	if aiLooksBinary(data) {
-		return aiAttachment{}, errors.New("binary file (only text and images can be attached)")
+		return aiAttachment{}, errors.New("binary file (only text, images and PDFs can be attached)")
 	}
 	text := string(data)
 	if len(data) > aiMaxAttach {
 		text = strings.ToValidUTF8(text[:aiMaxAttach], "") + "\n… [truncated]"
 	}
 	return aiAttachment{Label: label, Text: text}, nil
+}
+
+// aiMaxPDF caps the PDF file read for its text.
+const aiMaxPDF = 32 << 20
+
+// aiLoadPDF attaches a PDF as its text (CMP-54; internal/pdftext, best
+// effort, cut at aiMaxAttach). A PDF without text (a scan) is refused.
+func aiLoadPDF(abs, label string) (aiAttachment, error) {
+	fi, err := os.Stat(abs)
+	if err != nil {
+		return aiAttachment{}, err
+	}
+	if fi.Size() > aiMaxPDF {
+		return aiAttachment{}, fmt.Errorf("PDF is over %d MB", aiMaxPDF>>20)
+	}
+	data, err := os.ReadFile(abs)
+	if err != nil {
+		return aiAttachment{}, err
+	}
+	text, err := pdftext.Extract(data)
+	if err != nil {
+		return aiAttachment{}, err
+	}
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return aiAttachment{}, errors.New("this PDF has no text to read (a scan or only images)")
+	}
+	if len(text) > aiMaxAttach {
+		text = strings.ToValidUTF8(text[:aiMaxAttach], "") + "\n… [truncated]"
+	}
+	return aiAttachment{Label: label, Text: "PDF text (best effort, layout and images are lost):\n" + text}, nil
 }
 
 // aiAttachPaths adds files as chips; refused ones get a warning toast.

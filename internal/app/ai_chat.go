@@ -187,7 +187,7 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 	tools = append(tools, m.aiLSPTools(root, call)...)      // Group K5: LSP hover, symbols, rename, code actions
 	tools = append(tools, aiGitTools(root, call)...)        // Group K4
 	tools = append(tools, aiTasksTools(root, call)...)      // Group K6: tasks and tests
-	tools = append(tools, aiWorktreeTools(root)...)         // WTX-12: worktrees_list, worktree_note
+	tools = append(tools, aiWorktreeTools(root)...)         // WTX-12: worktrees_list, worktree_note; CMP-80: worktree_block
 	tools = append(tools, aiAdminTools(root, call)...)      // Group K8: installers, extensions, workspace folders
 	tools = append(tools, aiDebugTools(root, call)...)      // Group K7
 	tools = append(tools, m.aiServicesTools(call)...)       // the Services view (ai_services_tools.go)
@@ -197,6 +197,7 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 	tools = append(tools, aiItermocTools(call)...)          // AH-7: profiles, models, MCP services, outside agents (ai_itermoc_tools.go)
 	tools = append(tools, m.aiItermocWriteTools(call)...)   // AH-8: switch, drafts, connect, access, start (ai_itermoc_write_tools.go)
 	tools = append(tools, m.aiRaceTools(call)...)           // AGX-4: agent_race_start (agent_race_tool.go)
+	tools = append(tools, m.aiSplitTools(call)...)          // CMP-4: the coordinator splits a goal between agents (agent_split.go)
 	tools = append(tools, aiMCPAddTools()...)               // MCPX-37: propose an MCP server (ai_mcp_add_tool.go)
 	tools = append(tools, m.aiAgentRunTools(call, c)...)    // G-API: agents start agent runs (ai_agent_run_tools.go)
 	tools = append(tools, m.aiWorkflowTools(root, call)...) // WFX-9: workflows by chat (ai_workflow_tools.go)
@@ -208,6 +209,7 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 	tools = append(tools, m.aiAstGrepTool(root, call))         // OMX-28: structural search / rewrite
 	tools = append(tools, aiSkillTools(root)...)               // OM-4: only when a skill is offered
 	tools = append(tools, m.aiLookTool(root))                  // OMX-32: images (one extra request) and PDFs
+	tools = append(tools, aiProofTool(root))                   // CMP-52: headless-browser screenshots as proof of work
 	tools = append(tools, aiWebTools()...)                     // OMX-13: only when turned on
 	return aiRedactResults(tools)                              // known secrets (.env passwords, API keys) never reach the model
 }
@@ -217,8 +219,10 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 // (the default profile is exactly today's chat); more steps run as a
 // pipeline (ai_runs.go).
 func (m *Model) sendAIChat(text string) tea.Cmd {
-	if c, ok := m.aiReady(); !ok {
-		return c
+	if m.aiS().acp == nil { // an ACP agent thread needs no provider (CMP-83)
+		if c, ok := m.aiReady(); !ok {
+			return c
+		}
 	}
 	s := m.aiS()
 	if s.streaming {
@@ -275,13 +279,16 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 			prof = p
 		}
 	}
-	if s.turnRoot == "" && (len(prof.Steps) > 1 || prof.Planned() || prof.HasCLI()) { // a CLI step always runs as a run (CS-1)
+	if s.acp == nil && s.turnRoot == "" && (len(prof.Steps) > 1 || prof.Planned() || prof.HasCLI()) { // a CLI step always runs as a run (CS-1)
 		return m.startAIRun(text, prof, rules)
 	}
 	step := prof.Run("").Nodes[0]
-	slot, err := s.resolveSlot(step.Slot)
-	if err != nil {
-		return m.aiProfileProblem(prof.Name, err)
+	slot, isACP := s.acpChatSlot() // CMP-83: the turn goes to the agent thread
+	if !isACP {
+		var err error
+		if slot, err = s.resolveSlot(step.Slot); err != nil {
+			return m.aiProfileProblem(prof.Name, err)
+		}
 	}
 	root := aiWorkspaceRoot()
 	if s.turnRoot != "" {
@@ -290,6 +297,9 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	memBlock, lessons := m.aiMemoryTurn(root, text) // OM-2: before the attachments are taken
 	chips := s.attachChips()
 	ctxText, images := s.takeAttachments()
+	if blk := aiRulesMentionBlock(rules, text, s.rulesInjector()); blk != "" { // CMP-82: #name rules
+		ctxText = strings.TrimLeft(ctxText+"\n\n"+blk, "\n")
+	}
 	s.turnMsg = len(s.conv.Messages) // restore points key on the turn's user message
 	model := slot.cfg.Model
 	if model == s.cfg.Model {
@@ -310,12 +320,19 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	if len(rules.Scoped) > 0 && aiRulesTrust(rules) == aiTrustUse {
 		tools = aiRulesOnRead(tools, root, rules, s.rulesInjector())
 	}
+	autoRules := ""
+	if rt := aiRuleTools(rules, s.rulesInjector()); len(rt) > 0 { // CMP-82: auto rules by description
+		tools, autoRules = append(tools, rt...), aiRulesAutoPrompt(rules)
+	}
 	native := slot.p.SupportsTools()
-	base := m.aiChatBasePrompt(root, rules, memBlock) + aiStepSystem(step.System)
+	base := m.aiChatBasePrompt(root, rules, memBlock) + autoRules + aiStepSystem(step.System)
 	history := m.aiChatHistory(ai.SystemPrompt(base, tools, native))
 	mcpTools := m.aiMCPTurn(gen, ch) // MCP servers' tools, built on the goroutine
 	// "@server:uri" words: MCP resources read on the goroutine (MCPX-12).
 	mentions := m.aiMCPMentions(gen, ch, text, ai.SupportsImages(slot.p))
+	// "@chat:", "@symbol:", "@diagnostics", "@diff", "@changes", "@url:"
+	// words: read with the turn's own read-only tools (CMP-77).
+	mentions = aiJoinMentions(mentions, aiContextMentions(text, root, tools))
 	mcpLines := ""
 	if mcpTools != nil {
 		mcpLines = m.mcpPromptLines() // "GitHub is connected as … (read only)."

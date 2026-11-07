@@ -16,6 +16,7 @@ func TestInstallToolsAreSafe(t *testing.T) {
 		"claude": "claude-code", "codex": "codex", "gemini": "gemini-cli", "opencode": "opencode",
 		"aider": "aider", "amp": "amp", "qwen": "qwen-code", "crush": "crush", "copilot": "copilot-cli",
 		"kimi": "kimi-cli", "pi": "pi",
+		"auggie": "auggie", "grok": "grok-cli", "cline": "cline", "continue": "continue-cli", "vibe": "mistral-vibe",
 	}
 	for _, a := range Registry {
 		if a.Tool != want[a.ID] {

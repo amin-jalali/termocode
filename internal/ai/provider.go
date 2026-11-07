@@ -253,7 +253,7 @@ const (
 )
 
 // Kinds lists every provider kind in picker order.
-var Kinds = []string{KindAnthropic, KindOpenAI, KindOpenRouter, KindOllama, KindLMStudio, KindCompatible, KindClaudeOAuth}
+var Kinds = []string{KindAnthropic, KindOpenAI, KindOpenRouter, KindOllama, KindLMStudio, KindCompatible, KindClaudeOAuth, KindVertex, KindBedrock}
 
 // KindLabel is the human label for a provider kind.
 func KindLabel(kind string) string {
@@ -272,6 +272,10 @@ func KindLabel(kind string) string {
 		return "LM Studio (local)"
 	case KindCompatible:
 		return "OpenAI-compatible (custom URL)"
+	case KindVertex:
+		return "Claude on Google Vertex AI"
+	case KindBedrock:
+		return "Claude on Amazon Bedrock"
 	}
 	return "None"
 }
@@ -289,6 +293,8 @@ func DefaultBaseURL(kind string) string {
 		return "http://localhost:11434/v1"
 	case KindLMStudio:
 		return "http://localhost:1234/v1"
+	case KindBedrock:
+		return bedrockBaseURL("")
 	}
 	return ""
 }
@@ -303,7 +309,7 @@ const (
 // SuggestedModels returns model ids offered by "AI: Pick Model".
 func SuggestedModels(kind string) []string {
 	switch kind {
-	case KindAnthropic, KindClaudeOAuth:
+	case KindAnthropic, KindClaudeOAuth, KindVertex:
 		return []string{ModelClaudeOpus, ModelClaudeSonnet, ModelClaudeHaiku}
 	case KindOpenAI:
 		return []string{"gpt-4.1", "gpt-4.1-mini", "gpt-4o-mini"}
@@ -318,7 +324,7 @@ func SuggestedModels(kind string) []string {
 // DefaultModel is the chat model used when the user picked none.
 func DefaultModel(kind string) string {
 	switch kind {
-	case KindAnthropic, KindClaudeOAuth:
+	case KindAnthropic, KindClaudeOAuth, KindVertex:
 		return ModelClaudeOpus
 	case KindOpenAI:
 		return "gpt-4.1-mini"
@@ -333,7 +339,7 @@ func DefaultModel(kind string) string {
 // DefaultInlineModel is the fast model used for ghost-text completion.
 func DefaultInlineModel(kind, chatModel string) string {
 	switch kind {
-	case KindAnthropic, KindClaudeOAuth:
+	case KindAnthropic, KindClaudeOAuth, KindVertex:
 		return ModelClaudeHaiku
 	case KindOpenAI:
 		return "gpt-4.1-mini"
@@ -348,7 +354,8 @@ type Config struct {
 	APIKey      string
 	Model       string
 	InlineModel string
-	// Token returns a fresh OAuth access token (claude-oauth only).
+	// Token returns a fresh OAuth access token (claude-oauth; vertex
+	// sets its own from the key, cloud.go).
 	Token func(ctx context.Context) (string, error)
 	// HTTPClient overrides the client (tests). nil → a sane default.
 	HTTPClient *http.Client
@@ -371,6 +378,8 @@ func (c Config) Configured() bool {
 		return c.BaseURL != ""
 	case KindClaudeOAuth:
 		return c.Token != nil
+	case KindVertex:
+		return c.BaseURL != "" && c.APIKey != ""
 	}
 	return c.APIKey != ""
 }
@@ -394,9 +403,12 @@ func NewProvider(cfg Config) Provider {
 	}
 	client.Transport = firstByteTransport{base: transport, limit: firstByteLimit(cfg.Kind, cfg.BaseURL)}
 	cfg.HTTPClient = &client
+	if cfg.Kind == KindVertex && cfg.Token == nil && cfg.APIKey != "" {
+		cfg.Token = newVertexTokens(cfg.APIKey, cfg.HTTPClient).get
+	}
 
 	switch cfg.Kind {
-	case KindAnthropic, KindClaudeOAuth:
+	case KindAnthropic, KindClaudeOAuth, KindVertex, KindBedrock:
 		return &anthropicProvider{cfg: cfg}
 	case KindNone:
 		return noneProvider{}

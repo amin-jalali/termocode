@@ -38,8 +38,11 @@ func (m Model) aiWorktreeButtons(msg ai.StoredMessage, st ai.StoredStep, width i
 		return nil
 	}
 	key := msg.Run.ID + ":" + st.ID
-	return []aiLine{aiChips(width, []aiChipSpec{
-		{"Review", "wt-review:" + key}, {"Merge", "wt-merge:" + key}, {"Discard", "wt-discard:" + key}})}
+	chips := []aiChipSpec{{"Review", "wt-review:" + key}, {"Merge", "wt-merge:" + key}, {"Discard", "wt-discard:" + key}}
+	if m.aiCriticChip(wt) { // CMP-53 (ai_critic.go)
+		chips = append(chips, aiChipSpec{"Critic", "wt-critic:" + key})
+	}
+	return []aiLine{aiChips(width, chips)}
 }
 
 // aiChipSpec is one chip of aiChips.
@@ -138,7 +141,12 @@ func (m *Model) onAIWorktreeButton(id string) tea.Cmd {
 	case "wt-review":
 		return aiWorktreeReviewCmd(aiWorkspaceRoot(), r.title, *r.wt)
 	case "wt-merge":
+		if c := r.wt.Critic; c != nil && c.State == ai.CriticIssues { // CMP-53: ask first
+			return m.askAICriticMerge(r)
+		}
 		return aiWorktreeMergeCmd(aiWorkspaceRoot(), key, *r.wt, false)
+	case "wt-critic":
+		return m.onAICriticButton(r)
 	case "wt-discard":
 		return m.askAIWorktreeDiscard(r)
 	}

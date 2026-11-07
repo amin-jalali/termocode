@@ -32,6 +32,9 @@ type StoredWorktree struct {
 	Files int `json:"files,omitempty"`
 	// Conflicts are the files a merge found changed on both sides.
 	Conflicts []string `json:"conflicts,omitempty"`
+	// Critic is the second model's review of the lane (CMP-53; nil: none
+	// yet or ai_critic off).
+	Critic *StoredCritic `json:"critic,omitempty"`
 }
 
 // Open reports whether the worktree still waits for Merge or Discard.

@@ -115,7 +115,9 @@ type aiState struct {
 	webPreset   string               // the server the open add card is for (ai_web_presets.go)
 	recall      *aiRecallState       // lesson recall per chat (ai_recall.go)
 	ship        *aiShip              // the running ship loop (ai_ship.go)
+	acp         *acpThread           // CMP-83: the chat's ACP agent thread (acp_thread.go)
 	ctl         *agentCtlState       // the agent control socket's UI side (agent_ctl.go)
+	diffNotes   *diffNotesState      // diff comments → agent (diff_comments.go, CMP-51)
 	// agentHooksPlan is the change the open state-hooks card shows (agent_hooks_ui.go).
 	agentHooksPlan *agenthooks.Plan
 	// packs is the open agent-pack flow (agent_packs_ui.go).
@@ -130,6 +132,8 @@ type aiState struct {
 	// skillsFake replaces the skill files in AI: Skills… for the
 	// screenshot demo (ai_skills_demo.go).
 	skillsFake *ai.Skills
+	// powerSel is the power an AI: Powers Catalog… card is about (ai_powers.go).
+	powerSel string
 	// memSlotWarned: the "no quick model" toast was shown this session.
 	memSlotWarned bool
 	// memAsk is the turn the open ask-once memory card is for.
@@ -181,6 +185,9 @@ type aiState struct {
 	runQueue      []aiQueuedRun
 	runInline     map[string]ai.Profile
 	runNotStarted map[string]string
+	// taskList is the open card of AI: Run Task List in Waves… (CMP-76,
+	// ai_task_list.go).
+	taskList *aiTaskListPending
 	// bgRuns are the AI-started runs that run beside the chat (OMX-6,
 	// ai_bg_runs.go).
 	bgRuns []*aiBgRun
@@ -532,6 +539,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-open-chat", "AI: Open Chat", "Alt+A"},
 		{"ai-new-chat", "AI: New Chat", ""},
 		{"ai-history", "AI: Chat History…", ""},
+		{aiHistorySearchID, "AI: Search Chat History…", "words in your saved AI chats"},
 		{"ai-history-rename", "AI: Rename Chat…", ""},
 		{"ai-fork-chat", "AI: Fork Chat from Message…", ""},
 		{"ai-history-delete", "AI: Delete Chat…", ""},
@@ -567,8 +575,11 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-agents", "AI: Toggle Agents Panel", "Alt+Shift+A"},
 		{"ai-worktrees", "AI: Agent Worktrees…", ""},
 		{"ai-worktrees-toggle", "AI: Toggle Agent Worktrees", ""},
+		{"ai-critic-toggle", "AI: Toggle Critic Review", ""},
+		{aiTaskListPaletteID, "AI: Run Task List in Waves…", ""},
 		{"ai-usage", "AI: Usage", ""},
 		{"ai-runs", "AI: Runs", ""},
+		{agentBoardPaletteID, "AI: Agent Board…", ""},
 		{"ai-profile-edit", "AI: Edit Profiles", ""},
 		{"ai-profile-new", "AI: New Profile from Current…", ""},
 		{"ai-profile-form", "AI: Edit Profile…", ""},
@@ -578,8 +589,10 @@ func aiPaletteItems() []paletteEntry {
 		{"help-bug-report", "Help: Build Bug Report…", ""},
 		{"ai-doctor", "AI: Doctor", ""},
 		{"ai-skills", "AI: Skills…", ""},
+		{"ai-powers", "AI: Powers Catalog…", ""},
 		{"ai-hooks", "AI: Hooks…", ""},
 		{"ai-web-tools", "AI: Web Tools… (fetch, search, docs, browser)", ""},
+		{"ai-proofs", "AI: Proof of Work… (screenshots the AI took)", ""},
 		{"ai-ship", "AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop", ""},
 		{"ai-plan-worktree", "AI: Run Next Plan in a Worktree, Then Ship… / Off", ""},
 		{"ai-agent-hooks", "Agent: State Hooks… (exact working / waiting / done)", ""},
@@ -618,7 +631,7 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 	switch id {
 	case "ai-configure", "ai-sign-in-claude", "ai-sign-out-claude", "ai-credentials",
 		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
-		"ai-history-rename", "ai-history-delete", "ai-history-clear", "ai-fork-chat",
+		"ai-history-rename", "ai-history-delete", "ai-history-clear", "ai-fork-chat", aiHistorySearchID,
 		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reconnect-all", "ai-mcp-profile", "ai-mcp-catalog", "ai-mcp-bundle", "ai-mcp-updates", "ai-mcp-reset-cache",
 		"ai-agent-hooks", "ai-agent-packs": // agent CLI files need no provider
 	default:
@@ -634,10 +647,16 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.newAIChat(), true
 	case "ai-history":
 		return m.openAIHistory(), true
+	case aiHistorySearchID: // CMP-30 (ai_chat_search.go)
+		return m.openAIChatSearch(), true
 	case "ai-worktrees": // G-WT (ai_worktree_list.go)
 		return m.openAIWorktrees(), true
+	case aiTaskListPaletteID: // CMP-76 (ai_task_list.go)
+		return m.aiRunTaskList(), true
 	case "ai-worktrees-toggle":
 		return m.toggleAIWorktrees(), true
+	case "ai-critic-toggle": // CMP-53 (ai_critic.go)
+		return m.toggleAICritic(), true
 	case "ai-history-rename":
 		return m.openAIHistoryFor(pickerKindAIHistoryRename, " Rename Chat "), true
 	case "ai-fork-chat":
@@ -743,6 +762,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.showAIUsage(""), true
 	case "ai-runs": // runs_state.go
 		return m.revealRuns(true), true
+	case agentBoardPaletteID: // CMP-2 (agent_board.go)
+		return m.openAgentBoardLoad(), true
 	case "ai-profile-edit":
 		return m.editAIProfiles(), true
 	case "ai-profile-new":
@@ -761,10 +782,14 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIDoctor(), true
 	case "ai-skills":
 		return m.openAISkills(), true
+	case aiPowersPaletteID: // ai_powers.go
+		return m.openAIPowers(), true
 	case "ai-hooks":
 		return m.openAIHooks(), true
 	case "ai-web-tools":
 		return m.openAIWebTools(), true
+	case "ai-proofs":
+		return m.openAIProofs(), true
 	case "ai-ship":
 		return m.toggleAIShip(), true
 	case "ai-plan-worktree":

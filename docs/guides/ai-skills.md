@@ -141,6 +141,25 @@ descriptions.
 
 The AI can not run this command.
 
+## Powers catalog
+
+A **power** is a ready skill that ships with termocode. Some powers also
+need a service, such as GitHub, GitLab, Sentry or Linear. Open
+**AI: Powers Catalog…** (or **Powers catalog…** in **AI: Skills…**).
+
+- Each row says `installed`, and `needs GitHub` or `GitHub connected`.
+- **Enter** shows a card with the full text and the file it adds.
+  **Cancel** is first.
+- **Install** writes the skill to `<config>/skills/power-<name>/SKILL.md`.
+  The AI sees only its name and description until a task needs it. When
+  the service is not connected yet, **Connect a Service** opens next and
+  asks again.
+- On an installed power, **Remove** deletes the file. A file you changed
+  stays.
+
+The catalog is part of termocode: nothing is downloaded. The AI can not
+open it or install a power.
+
 ## Safety
 
 - Known secrets and key-looking strings are replaced by `[REDACTED]`, in
