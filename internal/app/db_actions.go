@@ -965,6 +965,7 @@ func dbPageKeyRows() []confirm.KeyRow {
 		[]string{"v", "open the cell (hex for binary, XML and JSON pretty)"},
 		[]string{"=", "count, sum, avg, min, max of the column (visual: the selected rows)"},
 		[]string{"y", "copy the cell"},
+		[]string{"Y", "copy the column, one value per line"},
 		[]string{"c / C", "copy the rows as CSV / JSON"},
 		[]string{"S", "export the rows to a file"},
 		[]string{"Columns"},

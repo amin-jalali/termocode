@@ -149,6 +149,11 @@ func (s *dbConsoleState) tabStrip() string {
 	parts := make([]string, len(s.tabs))
 	for i, t := range s.tabs {
 		label := fmt.Sprint(i + 1)
+		if t.run != nil {
+			if title := dbTabTitle(t.run.sql); title != "" {
+				label += " " + title
+			}
+		}
 		switch {
 		case t.pinned && t.dirty():
 			label += " pinned, edited"

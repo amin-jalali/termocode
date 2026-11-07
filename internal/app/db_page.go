@@ -1052,6 +1052,18 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 		return m.copyWithToast(dbRedact(dbclient.ToCSV(s.displayedResult())), "Copied rows as CSV")
 	case "C":
 		return m.copyWithToast(dbRedact(dbclient.ToJSON(s.displayedResult())), "Copied rows as JSON")
+	case "Y":
+		if !canGrid || s.view != dbViewGrid {
+			return nil
+		}
+		if s.trans {
+			col = row // the cursor line is the column
+		}
+		text := dbColumnValues(s.displayedResult(), col)
+		if col < 0 || col >= len(s.shown.result.Columns) {
+			return nil
+		}
+		return m.copyWithToast(dbRedact(text), "Copied column "+dbOneLine(s.shown.result.Columns[col].Name))
 	case "v", "y":
 		if s.shown.plan != nil {
 			if key == "y" && canPlan(s.shown) {
