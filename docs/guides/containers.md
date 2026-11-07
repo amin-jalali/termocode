@@ -144,6 +144,27 @@ to detach without stopping the container.
 Logs, shell, attach, stats and pulls run in terminal tabs, so you see
 progress and can type.
 
+## Compose extras
+
+The palette has more compose commands for this folder's project:
+
+- **Containers: Show Resolved Compose Config** opens `compose config` (the
+  project with variables, extends and profiles applied) in a read-only page.
+- **Containers: Run One-Off Command in Service…** asks for
+  `service command args…` and runs `compose run --rm` in a terminal tab.
+- **Containers: Watch Project (Rebuild on Change)** runs `compose watch` in
+  a tab (the `develop.watch` rules of the compose file).
+- **Containers: Choose Compose Env File…** picks `.env`, `.env.*` or
+  `*.env` for `--env-file`, for this session only.
+- **Containers: Deploy Stack from Git…** asks for a repository URL
+  (`https://`, `ssh://` or `user@host:path`; add `#branch` or `#tag`). A
+  card with **Cancel** first shows the exact commands: a shallow
+  `git clone` into `~/.local/share/termocode/stacks/<name>` (or a
+  fast-forward `git pull` when it is already there), then
+  `compose up -d` in it. **Deploy** runs them in a terminal tab. The compose
+  file of that repository decides what runs, so deploy only repositories you
+  trust. The AI cannot start it.
+
 ## Live CPU and memory
 
 While the Containers view is on screen and the CONTAINERS section is open,
