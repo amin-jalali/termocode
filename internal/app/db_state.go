@@ -85,6 +85,7 @@ type dbState struct {
 	pendingPassword     string
 	pendingPasswordRef  dbTypedRef // what was typed when pendingPassword came from a reference
 	addFromURL          bool
+	addLibSQL           bool // the add flow started from the libSQL row: only libsql:// URLs
 	menuRow             dbTreeRow
 	pendingDisconnectID string
 	closeSessionKey     string // the session Databases: Sessions… asks to close

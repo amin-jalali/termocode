@@ -794,6 +794,7 @@ func dbTypePickerItems(remote bool) []picker.Item {
 		{ID: "mysql", Title: "MySQL / MariaDB", Hint: "default port 3306"},
 		{ID: "sqlite", Title: "SQLite", Hint: "a file on this computer"},
 		{ID: "redis", Title: "Redis / Valkey", Hint: "default port 6379"},
+		{ID: "libsql", Title: "libSQL / Turso", Hint: "a remote libsql:// server"},
 		{ID: "url", Title: "From a URL", Hint: "paste a connection URL"},
 	}
 	if remote {
@@ -836,8 +837,9 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 	}
 	s.pendingConn = dbclient.Conn{Source: dbclient.SourceUser}
 	s.pendingPassword = ""
-	s.addFromURL = kind == "url"
-	s.remoteAdd, s.remoteNext = s.remoteNext && kind != "sqlite" && kind != "url", false
+	s.addFromURL = kind == "url" || kind == "libsql"
+	s.addLibSQL = kind == "libsql"
+	s.remoteAdd, s.remoteNext = s.remoteNext && kind != "sqlite" && kind != "url" && kind != "libsql", false
 	switch kind {
 	case "postgres":
 		s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.User, s.pendingConn.Database = "postgres", 5432, "postgres", "postgres"
@@ -861,6 +863,10 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 	case "redis":
 		s.pendingConn.Driver, s.pendingConn.Port = "redis", 6379
 		return m.databaseAddPrompt(promptKindDBHost, "Server address", "Host name or address:", "localhost", false)
+	case "libsql":
+		cmd := m.databaseAddPrompt(promptKindDBAdd, "libSQL / Turso server", "Server URL:", "libsql://my-db.turso.io", false)
+		m.prompt.SetNote("The auth token is asked next and kept in the secret store.")
+		return cmd
 	case "url":
 		return m.databaseAddPrompt(promptKindDBAdd, "Connection URL", "Paste a database URL:", "postgres://user@localhost:5432/database", false)
 	}
@@ -880,6 +886,9 @@ func (m *Model) databaseAddPrompt(kind promptKindEnum, title, label, value strin
 }
 
 func (m *Model) databasePromptPasswordForPending() tea.Cmd {
+	if m.databases != nil && m.databases.pendingConn.Driver == "libsql" {
+		return m.databaseAddPrompt(promptKindDBPassword, "libSQL auth token", "Auth token (leave blank if none):", "", true)
+	}
 	return m.databaseAddPrompt(promptKindDBPassword, "Database password", "Password (leave blank if none):", "", true)
 }
 
@@ -1367,6 +1376,9 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 		c, err := dbclient.ParseURL(value)
 		if err != nil {
 			return m.pushToastDetail(toast.Errr, "That connection URL could not be read", sanitizeDBText(err.Error()))
+		}
+		if s.addLibSQL && c.Driver != "libsql" {
+			return m.pushToastDetail(toast.Warn, "That is not a libSQL URL", "Enter a libsql://host URL (for Turso: libsql://<db>-<org>.turso.io).")
 		}
 		if c.Driver == "sqlite" && !filepath.IsAbs(c.Path) {
 			c.Path = filepath.Clean(filepath.Join(s.root, c.Path))
