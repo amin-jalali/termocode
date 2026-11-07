@@ -635,6 +635,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-trigger-inline":   aiNever("inline completion is for the user's typing"),
 	"ai-toggle-inline":    aiConfirm(ai.ClassIDE),
 	"ai-toggle-next-edit": aiConfirm(ai.ClassIDE),
+	"ai-follow-agent":     aiConfirm(ai.ClassIDE),
 	"ai-cancel":           aiNever("stops the model's own turn"),
 	"ai-configure":        aiNever(aiNoAIConfig),
 	"ai-pick-model":       aiNever(aiNoAIConfig),

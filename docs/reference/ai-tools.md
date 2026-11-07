@@ -2139,6 +2139,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai-explain` | AI: Explain Selection / Line | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-export-chat` | AI: Export Chat as Markdown | confirm (fileWrite) |   |
 | `ai-fix` | AI: Fix Diagnostic at Cursor | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `ai-follow-agent` | AI: Toggle Follow Agent | confirm (ide) |   |
 | `ai-fork-chat` | AI: Fork Chat from Message… | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-handoff` | AI: Handoff to a New Chat | never | it ends the AI's own chat; the user starts a handoff |
 | `ai-history` | AI: Chat History… | never | starts or changes an AI chat or edit; answer in this chat instead |

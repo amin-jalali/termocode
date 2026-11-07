@@ -590,6 +590,24 @@ until you save or discard them. The last 50 checkpoints per working tree
 are kept. Checkpoints need git; a folder in a container is not covered
 yet.
 
+### Follow the agent
+
+Run **AI: Toggle Follow Agent** to watch the agent work. While it is on,
+each file the agent writes (`write_file`, `edit_file`) opens in the editor
+at the first changed line, and the explorer shows the file. The keyboard
+stays in the chat, so you can keep typing.
+
+- The status bar shows **◎ Following AI** while it is on.
+- It never pulls the cursor away from you: while you type in the editor
+  or the terminal, it pauses. The next edit after you go back to the chat
+  (or another panel) moves the editor again.
+- It is off by default and lasts until you quit. Run the command again to
+  turn it off.
+- With `ai_edit_review` = `review`, changes open in the review card
+  anyway; Follow Agent moves the editor when a change is written.
+
+The web panel does not follow the agent yet.
+
 ### Audit log
 
 Every tool call of the agent is one line in the **Output** panel, channel

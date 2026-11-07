@@ -482,6 +482,7 @@ missing	ai-rewind-turn	AI|S
 missing	canvas-add	AI|S
 missing	canvas-copy	AI|S
 missing	canvas-open	AI|M
+missing	ai-follow-agent	AI|M
 missing	containers-all-contexts	Containers|M
 missing	containers-build-cache-prune	Containers|S
 missing	containers-build-check	Containers|S
