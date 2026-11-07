@@ -1,8 +1,11 @@
 // Review in chat on the phone (MOB-14): #/more/review lists the agent
 // worktrees; #/more/review?wt=<id>&f=<path> shows one changed file as a
 // line diff (− removed, + added, each with its colour and its mark).
-// Tap a line to add a note; the notes of a worktree are kept on this
-// page until they are sent. "Send N notes to agent" sends them in one
+// Swipe sideways (or ‹ ›) for the other files. Long-press a line to add
+// a note (Enter or Space on a focused line does it too; a plain tap only
+// scrolls); a note shows under its line and a tap opens it again to
+// change or remove it (MOBUX-11). The notes of a worktree are kept on
+// this page until they are sent from the bottom bar. "Send N notes to agent" sends them in one
 // chat message (ai.worktree_notes: the laptop quotes the lines, never
 // from a file that may hold secrets). Merge and Discard stay laptop
 // cards (Cancel first). Phone layout only; the desktop keeps its agent
@@ -11,6 +14,7 @@ import { Fragment, h } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { AIWorktree, AIWorktrees, AIWorktreeText, ReviewNote } from "../../../../../webproto/proto";
 import { hubSays } from "../../lib/ai";
+import { useLongPress } from "../../lib/longpress";
 import { go, route } from "../../lib/router";
 import { toast } from "../../lib/toasts";
 import { link, live } from "../../session";
@@ -19,7 +23,8 @@ import { AskLaptop } from "../../ui/AskLaptop";
 import { Sheet } from "../../ui/Sheet";
 import { SubView } from "../more/SubView";
 import { diffRows, hunks, noteSide, type Row } from "./linediff";
-import { addNote, clearNotes, notes, notesOf, removeNote } from "./notes";
+import { addNote, clearNotes, dropNote, noteAt, notes, notesOf, removeNote } from "./notes";
+import { useSwipe } from "./swipe";
 
 function here(q: Record<string, string>): void {
   go({ tab: "more", rest: "review", query: q });
@@ -65,18 +70,29 @@ function lineLabel(r: Row): string {
 
 function Diff({ text, wt, onLine }: { text: AIWorktreeText; wt: string; onLine: (r: Row) => void }) {
   const hs = hunks(diffRows(text.before, text.after));
-  const mine = notesOf(wt).filter((n) => n.path === text.path);
-  const noted = (r: Row) => {
+  const box = useRef<HTMLDivElement | null>(null);
+  const noteOn = (r: Row) => noteAt(wt, { path: text.path, ...noteSide(r) });
+  const key = (r: Row) => {
     const at = noteSide(r);
-    return mine.some((n) => n.side === at.side && n.line === at.line);
+    return `${at.side}:${at.line}`;
   };
+  const rows = new Map<string, Row>();
+  for (const hk of hs) for (const r of hk.rows) rows.set(key(r), r);
+  // A long press on a line asks for its note; a tap is a scroll.
+  useLongPress(box, (el) => {
+    const r = rows.get(el.closest<HTMLElement>("[data-line]")?.dataset.line ?? "");
+    if (r) onLine(r);
+  });
   if (hs.length === 0) return <p class="empty">{t("rv.same")}</p>;
   return (
-    <div class="rv-diff" dir="ltr">
+    <div class="rv-diff" dir="ltr" ref={box}>
       {hs.map((hk, i) => (
         <div class="rv-hunk" key={i}>
-          {hk.rows.map((r) => (
-            <button type="button" key={`${r.kind}${r.old ?? ""}:${r.new ?? ""}`} class={`rv-line rv-${r.kind}${noted(r) ? " has-note" : ""}`} aria-label={lineLabel(r)} onClick={() => onLine(r)}>
+          {hk.rows.map((r) => {
+            const note = noteOn(r);
+            return (
+            <Fragment key={`${r.kind}${r.old ?? ""}:${r.new ?? ""}`}>
+            <button type="button" class={`rv-line rv-${r.kind}${note ? " has-note" : ""}`} data-line={key(r)} aria-label={lineLabel(r)} onClick={(e) => e.detail === 0 && onLine(r)}>
               <span class="rv-no" aria-hidden="true">
                 {r.kind === "add" ? "" : r.old}
               </span>
@@ -87,22 +103,30 @@ function Diff({ text, wt, onLine }: { text: AIWorktreeText; wt: string; onLine: 
                 {r.kind === "add" ? "+" : r.kind === "del" ? "−" : " "}
               </span>
               <span class="rv-text">{r.text}</span>
-              {noted(r) && (
+              {note && (
                 <span class="rv-noted" aria-hidden="true">
                   ✎
                 </span>
               )}
             </button>
-          ))}
+            {note && (
+              <button type="button" class="rv-inline-note" aria-label={t("rv.note_open", { line: noteSide(r).line, text: note.text })} onClick={() => onLine(r)}>
+                <span aria-hidden="true">✎</span>
+                <bdi dir="auto">{note.text}</bdi>
+              </button>
+            )}
+            </Fragment>
+            );
+          })}
         </div>
       ))}
     </div>
   );
 }
 
-function NoteSheet({ path, row, onDone }: { path: string; row: Row; onDone: (text: string | null) => void }) {
+function NoteSheet({ path, row, start, onDone }: { path: string; row: Row; start: string; onDone: (text: string | null, remove?: boolean) => void }) {
   const at = noteSide(row);
-  const [text, setText] = useState("");
+  const [text, setText] = useState(start);
   const label = at.side === "old" ? t("rv.note_side_old", { path, line: at.line }) : t("rv.note_on", { path, line: at.line });
   const ok = text.trim() !== "" && new TextEncoder().encode(text).length <= 500;
   return (
@@ -121,6 +145,11 @@ function NoteSheet({ path, row, onDone }: { path: string; row: Row; onDone: (tex
             {t("rv.note_keep")}
           </button>
         </div>
+        {start !== "" && (
+          <button type="button" class="btn btn-neutral rv-note-drop" onClick={() => onDone(null, true)}>
+            {t("rv.note_remove")}
+          </button>
+        )}
       </div>
     </Sheet>
   );
@@ -178,6 +207,7 @@ function SendBar({ wt }: { wt: string }) {
   return (
     <div class="rv-send">
       {!controller && <p class="view-note">{t("rv.viewer")}</p>}
+      {controller && !live.value && <p class="view-note">{t("rv.offline")}</p>}
       <button type="button" class="btn btn-primary rv-send-btn" data-act="send-notes" disabled={busy || !live.value || !controller} onClick={send}>
         {busy ? t("rv.sending") : mine.length === 1 ? t("rv.send_one") : t("rv.send_n", { n: mine.length })}
       </button>
@@ -194,6 +224,7 @@ function Worktree({ wt, path }: { wt: AIWorktree; path: string }) {
   const [line, setLine] = useState<Row | null>(null);
   const [ask, setAsk] = useState<"merge" | "discard" | null>(null);
   const top = useRef<HTMLDivElement | null>(null);
+  const body = useRef<HTMLDivElement | null>(null);
   const on = live.value;
   const controller = link.meta.value?.role === "controller";
   useEffect(() => {
@@ -214,11 +245,18 @@ function Worktree({ wt, path }: { wt: AIWorktree; path: string }) {
     const next = files[at + d];
     if (next) here({ wt: wt.id, f: next.path });
   };
-  const keep = (note: string | null) => {
+  // A swipe to the left is the next file, to the right the one before.
+  useSwipe(body, (dir) => move(dir === -1 ? 1 : -1));
+  const keep = (note: string | null, remove?: boolean) => {
     const r = line;
     setLine(null);
-    if (note === null || !r || !file) return;
+    if (!r || !file) return;
     const s = noteSide(r);
+    if (remove) {
+      dropNote(wt.id, { path: file.path, ...s });
+      return;
+    }
+    if (note === null) return;
     if (!addNote(wt.id, { path: file.path, line: s.line, side: s.side, text: note })) toast("info", t("rv.notes_max"));
   };
   if (wt.running) return <p class="empty">{t("rv.running")}</p>;
@@ -242,6 +280,7 @@ function Worktree({ wt, path }: { wt: AIWorktree; path: string }) {
           {file.status} {file.path}
         </bdi>
       </div>
+      <div class="rv-body" ref={body}>
       {text?.truncated && <p class="view-note">{t("rv.cut")}</p>}
       {err ? (
         <p class="empty refused">{err}</p>
@@ -254,8 +293,9 @@ function Worktree({ wt, path }: { wt: AIWorktree; path: string }) {
       ) : (
         <Diff text={text} wt={wt.id} onLine={setLine} />
       )}
+      {files.length > 1 && <p class="view-note rv-hint">{t("rv.swipe")}</p>}
       <Notes wt={wt.id} />
-      <SendBar wt={wt.id} />
+      </div>
       {controller && (
         <div class="choices rv-acts">
           <button type="button" class="btn btn-neutral" data-act="discard" onClick={() => setAsk("discard")}>
@@ -266,7 +306,8 @@ function Worktree({ wt, path }: { wt: AIWorktree; path: string }) {
           </button>
         </div>
       )}
-      {line && <NoteSheet path={file.path} row={line} onDone={keep} />}
+      <SendBar wt={wt.id} />
+      {line && <NoteSheet path={file.path} row={line} start={noteAt(wt.id, { path: file.path, ...noteSide(line) })?.text ?? ""} onDone={keep} />}
       {ask && (
         <AskLaptop
           label={ask === "merge" ? t("ai.wt_merge") : t("ai.wt_discard")}
