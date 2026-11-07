@@ -84,7 +84,7 @@ func TestGQLCompleteFollowsTheCursor(t *testing.T) {
 		{"{ ", "user users"},
 		{"query { us", "user users"},
 		{"query { user(id: 1) { ", "friends id name"},
-		{"{ user(id: \"a{b\") { friends { na", "friends id name"},
+		{"{ user(id: \"a{b\") { friends { na", "name"},
 		{"mutation { ", "rename"},
 		{"{ users { id } ", "user users"},
 		{"{ nope { ", ""},
