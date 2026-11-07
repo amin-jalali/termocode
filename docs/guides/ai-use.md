@@ -568,6 +568,49 @@ Shell commands (`run_command`, the terminal) and LSP edits made with
 `ai_edit_review` = `auto` are not part of a restore point: use git for
 those.
 
+### Rewind to any turn
+
+**AI: Rewind Chat to Turn…** lists your questions, newest first. Each row
+says how many files a rewind puts back. Pick one and a card asks first
+(Cancel has the focus):
+
+- **Code only** puts back the files of every AI turn from that question
+  on, newest first. Files those turns created are deleted. The chat stays
+  and gets a line saying what was restored.
+- **Code + chat** does the same, then removes the messages from that
+  question on and puts the question back in the input. Edit it and press
+  Enter to try again.
+
+Like Undo, the card lists files that changed after the AI turn (those
+later changes are lost) and files with unsaved edits (left as they are).
+
+### Code checkpoints (any agent)
+
+Restore points only see the built-in AI's own file tools. Code
+checkpoints cover everything else, also outside CLI agents in a terminal
+tab:
+
+- With the agent hooks installed (**Agent: State Hooks…**), each time
+  an outside agent starts a turn, termocode saves a checkpoint of the
+  folder it works in (its agent worktree, else the tab's folder), named
+  *before &lt;agent&gt; turn*.
+- **AI: Save Code Checkpoint** saves the workspace by hand.
+- **AI: Restore Code Checkpoint…** lists the checkpoints of the workspace
+  and of every agent tab's folder. Picking one shows what a restore
+  changes; Cancel has the focus. Restore puts changed and deleted files
+  back and deletes files made after the checkpoint.
+
+A checkpoint is the whole working tree: tracked files with their staged
+and unstaged edits, and new files that git does not ignore. It is kept as
+a private git ref (`refs/termocode/checkpoints/`), so your index, branch,
+HEAD and stash never change. Restore first saves the files as they are
+now as a new checkpoint, so a restore can be undone the same way. Ignored
+files (build output, `node_modules`, `.env`) are not part of it and stay
+as they are. A file with unsaved edits in an open tab blocks the restore
+until you save or discard them. The last 50 checkpoints per working tree
+are kept. Checkpoints need git; a folder in a container is not covered
+yet.
+
 ### Audit log
 
 Every tool call of the agent is one line in the **Output** panel, channel
@@ -771,6 +814,41 @@ arguments and its rule.
 
 To skip the question for one kind, run **AI: Agent Auto-Approve…** and turn
 on *fileWrite*, *git*, *run*, *ide* or *settings*. Turn on only what you trust.
+
+### Autopilot and approval rules
+
+termocode rates every change the agent wants to make as **low**, **medium**
+or **high** risk. Low: read-only commands (`ls`, `cat`, `grep`, `git status`,
+`git diff`, `git log`). Medium: file edits in the project, builds, tests and
+other local commands. High: deletes, `git push` / `git pull`, `rm`, `sudo`,
+network commands (`curl`, `ssh`, …), writes outside the project or to `.env`,
+`.git` and key files.
+
+**AI: Autopilot Level…** steps the level: *off* → *low* → *medium*. At *low*,
+low-risk actions run without a card; at *medium*, medium-risk ones too.
+Raising the level first shows a card with **Cancel** focused, so Enter alone
+changes nothing. A high-risk action **always** shows the card, even when its
+kind is set to Always allow. The card then names the risk and why it asks.
+
+Your own rules come first. Put them in `ai_approval_rules` in `config.json`:
+
+```json
+"ai_approval_rules": [
+  {"tool": "run_command", "match": "Run: go test *", "action": "allow"},
+  {"tool": "run_command", "match": "*docker*", "action": "deny"},
+  {"tool": "git_*", "action": "ask"}
+]
+```
+
+The first rule that fits wins. `deny` refuses without a card (the agent is
+told so); `allow` skips the card (never for a high-risk action); `ask` always
+shows it. `match` is a pattern over the card text (`*` is any text).
+
+**Guardian.** Set `ai_guardian` to a model slot (for example `"quick"`) and a
+second model checks each medium-risk action autopilot would run. It answers
+allow, or sends the action back to you with its reason on the card. It costs
+one small request per checked action and never allows what a rule denies.
+The AI can never change autopilot, the rules or the guardian.
 
 The IDE follows what the agent does: a new file shows in the explorer at once,
 a renamed open file keeps its tab under the new name, a deleted one closes its

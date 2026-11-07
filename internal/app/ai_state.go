@@ -16,6 +16,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/agentrun"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/aimemory"
+	"github.com/amin-jalali/termocode/internal/checkpoint"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/profileform"
 	"github.com/amin-jalali/termocode/internal/statusbar"
@@ -110,14 +111,16 @@ type aiState struct {
 	// (OMX-28), so a missing ast-grep does not open it again.
 	astGrepAsked bool
 	// skillsTrust is the open project-skills card (ai_skills.go).
-	skillsTrust *aiSkillsTrustPending
-	hooksTrust  *aiHooksTrustPending // the open project-hooks card (ai_hooks.go)
+	skillsTrust  *aiSkillsTrustPending
+	hooksTrust   *aiHooksTrustPending // the open project-hooks card (ai_hooks.go)
+	agentEnvHash string               // the agent environment the open trust card shows (ai_agent_env.go)
 	// stopHookPushes counts the turns in a row a stop hook sent the
 	// agent on (CMP-59, ai_hooks.go).
 	stopHookPushes int
 	webPreset      string          // the server the open add card is for (ai_web_presets.go)
 	recall         *aiRecallState  // lesson recall per chat (ai_recall.go)
 	ship           *aiShip         // the running ship loop (ai_ship.go)
+	shipCommit     *wtShipPending  // the open ship commit card or prompt (ai_ship_full.go)
 	acp            *acpThread      // CMP-83: the chat's ACP agent thread (acp_thread.go)
 	ctl            *agentCtlState  // the agent control socket's UI side (agent_ctl.go)
 	diffNotes      *diffNotesState // diff comments → agent (diff_comments.go, CMP-51)
@@ -182,7 +185,10 @@ type aiState struct {
 	// planWait is the plan the running run waits on and runActs what
 	// its steps may do (G-PLAN, ai_plan_approval.go).
 	planWait *aiPlanWait
-	runActs  func(agentdag.Node) (writes, exec bool)
+	// autopilotNext is the level the open autopilot card would set
+	// (CMP-61, ai_autopilot.go).
+	autopilotNext string
+	runActs       func(agentdag.Node) (writes, exec bool)
 	// runQueue are the runs the AI started (agent_run_start) that wait
 	// for the chat; runInline the AI's own steps of such a run by run id;
 	// runNotStarted why a queued run never started (G-API,
@@ -270,6 +276,15 @@ type aiState struct {
 	restoreGen int
 	turnMsg    int
 	undoTurn   int
+	// rewindAt is the question the rewind card is about (ai_rewind.go,
+	// CMP-62); rewindSet: the card is open.
+	rewindAt  int
+	rewindSet bool
+	// Code checkpoints (checkpoints_ui.go): the picker's folders and the
+	// checkpoint the restore card is about.
+	cpDirs    []string
+	cpPending *checkpoint.Point
+	cpDir     string
 	// auditPending is the started tool call the audit log waits for
 	// (ai_audit.go).
 	auditPending *aiAuditPending
@@ -568,6 +583,9 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-discard-proposal", "AI: Discard Proposed Edit", ""},
 		{"ai-review", "AI: Review Pending Changes", ""},
 		{"ai-undo-turn", "AI: Undo Last Turn", ""},
+		{"ai-rewind-turn", "AI: Rewind Chat to Turn…", ""},
+		{"ai-checkpoint-save", "AI: Save Code Checkpoint", ""},
+		{"ai-checkpoint-restore", "AI: Restore Code Checkpoint…", ""},
 		{"ai-edit-review", "AI: Toggle Edit Review (diff / auto)", ""},
 		{"ai-review-order", "AI: Toggle Review Order (explain first / as proposed)", ""},
 		{"ai-trigger-inline", "AI: Trigger Inline Completion", "Alt+\\"},
@@ -581,6 +599,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-profile-show", "AI: Show Profile", ""},
 		{"ai-until-done", "AI: Work Until Done (toggle)", ""},
 		{"ai-plan-approval", "AI: Toggle Plan Approval", ""},
+		{"ai-autopilot", "AI: Autopilot Level… (off / low / medium risk)", ""},
 		{"ai-reasoning-next", "AI: Next Reasoning Level", ""},
 		{"ai-keep-going", "AI: Toggle Keep Going While Todos Are Open", ""},
 		{"ai-handoff", "AI: Handoff to a New Chat", ""},
@@ -607,10 +626,12 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-skills", "AI: Skills…", ""},
 		{"ai-powers", "AI: Powers Catalog…", ""},
 		{"ai-hooks", "AI: Hooks…", ""},
+		{"ai-agent-env", "AI: Agent Environment… (setup, secrets, network rule for workflow agents)", ""},
 		{"ai-web-tools", "AI: Web Tools… (fetch, search, docs, browser)", ""},
 		{"ai-proofs", "AI: Proof of Work… (screenshots the AI took)", ""},
 		{"ai-image-gen", "AI: Toggle Image Generation", ""},
 		{"ai-ship", "AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop", ""},
+		{"ai-ship-merge", "AI: Ship and Merge When Green (CI fixes, conflicts, merge card) / Stop", ""},
 		{"ai-plan-worktree", "AI: Run Next Plan in a Worktree, Then Ship… / Off", ""},
 		{"ai-agent-hooks", "Agent: State Hooks… (exact working / waiting / done)", ""},
 		{"ai-agent-packs", "Agent: Agent Packs… (install agents, skills and rules for Claude Code / Codex)", ""},
@@ -651,7 +672,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-review-order", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
 		"ai-history-rename", "ai-history-delete", "ai-history-clear", "ai-fork-chat", aiHistorySearchID, aiShareChatID, aiChatCommentsID,
 		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reconnect-all", "ai-mcp-profile", "ai-mcp-accounts", "ai-mcp-catalog", "ai-mcp-bundle", "ai-mcp-updates", "ai-mcp-reset-cache",
-		"ai-agent-hooks", "ai-agent-packs": // agent CLI files need no provider
+		"ai-agent-hooks", "ai-agent-packs", // agent CLI files need no provider
+		"ai-rewind-turn", "ai-checkpoint-save", "ai-checkpoint-restore": // CMP-62: files and chats only
 	default:
 		if c, ok := m.aiReady(); !ok {
 			return c, true
@@ -705,6 +727,12 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.showAIReview(), true
 	case "ai-undo-turn":
 		return m.aiUndoTurn(-1), true
+	case "ai-rewind-turn": // CMP-62 (ai_rewind.go)
+		return m.openAIRewindPicker(), true
+	case "ai-checkpoint-save": // CMP-62 (checkpoints_ui.go)
+		return m.checkpointSaveNow(), true
+	case "ai-checkpoint-restore":
+		return m.openCheckpointPicker(), true
 	case "ai-edit-review":
 		return m.toggleAIEditReview(), true
 	case "ai-review-order": // ai_review_order.go
@@ -784,6 +812,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.toggleAIKeepGoing(), true
 	case "ai-plan-approval": // G-PLAN (ai_plan_approval.go)
 		return m.toggleAIPlanApproval(), true
+	case "ai-autopilot": // CMP-61 (ai_autopilot.go)
+		return m.cycleAIAutopilot(), true
 	case "ai-plan-review":
 		return m.openAIPlanCard(), true
 	case "ai-agents":
@@ -818,12 +848,16 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIHooks(), true
 	case "ai-image-gen": // ai_image_tool.go
 		return m.aiToggleImageGen(), true
+	case "ai-agent-env":
+		return m.openAgentEnv(), true
 	case "ai-web-tools":
 		return m.openAIWebTools(), true
 	case "ai-proofs":
 		return m.openAIProofs(), true
 	case "ai-ship":
 		return m.toggleAIShip(), true
+	case "ai-ship-merge":
+		return m.toggleAIShipMerge(), true
 	case "ai-plan-worktree":
 		return m.toggleAIPlanWorktree(), true
 	case "ai-agent-hooks":

@@ -315,37 +315,8 @@ func (m *Model) aiDoUndoTurn(msg int) tea.Cmd {
 	if t == nil {
 		return nil
 	}
-	rel := aiRel(aiWorkspaceRoot())
-	var restored, skipped []string
-	var cmds []tea.Cmd
 	end := m.aiBeginBatch() // the IDE is refreshed once, after all files
-	// Newest first: a file created, then written, is deleted once.
-	for i := len(t.Files) - 1; i >= 0; i-- {
-		f := t.Files[i]
-		if f.TooBig {
-			skipped = append(skipped, rel(f.Path))
-			continue
-		}
-		var cmd tea.Cmd
-		var err error
-		if f.Existed {
-			cur, rerr := os.ReadFile(f.Path)
-			if rerr == nil && string(cur) == f.Before {
-				continue
-			}
-			_, cmd, err = m.aiWriteFile(f.Path, rel(f.Path), f.Before)
-		} else if _, serr := os.Lstat(f.Path); serr == nil {
-			_, cmd, err = m.aiDeletePath(f.Path, rel)
-		} else {
-			continue
-		}
-		if err != nil {
-			skipped = append(skipped, rel(f.Path))
-			continue
-		}
-		restored = append(restored, rel(f.Path))
-		cmds = append(cmds, cmd)
-	}
+	restored, skipped, cmds := m.aiRestoreTurnFiles(t)
 	cmds = append(cmds, end())
 	// Drop the point (and newer ones: they were made on top of it).
 	for i := range p.Turns {
@@ -375,6 +346,40 @@ func (m *Model) aiDoUndoTurn(msg int) tea.Cmd {
 		msgText += fmt.Sprintf(" (%d not restored)", len(skipped))
 	}
 	return tea.Batch(append(cmds, m.aiInfo(msgText))...)
+}
+
+// aiRestoreTurnFiles puts the files of t back (inside a batch): changed
+// files get their old text, files the turn created are deleted.
+func (m *Model) aiRestoreTurnFiles(t *aiRestoreTurn) (restored, skipped []string, cmds []tea.Cmd) {
+	rel := aiRel(aiWorkspaceRoot())
+	// Newest first: a file created, then written, is deleted once.
+	for i := len(t.Files) - 1; i >= 0; i-- {
+		f := t.Files[i]
+		if f.TooBig {
+			skipped = append(skipped, rel(f.Path))
+			continue
+		}
+		var cmd tea.Cmd
+		var err error
+		if f.Existed {
+			cur, rerr := os.ReadFile(f.Path)
+			if rerr == nil && string(cur) == f.Before {
+				continue
+			}
+			_, cmd, err = m.aiWriteFile(f.Path, rel(f.Path), f.Before)
+		} else if _, serr := os.Lstat(f.Path); serr == nil {
+			_, cmd, err = m.aiDeletePath(f.Path, rel)
+		} else {
+			continue
+		}
+		if err != nil {
+			skipped = append(skipped, rel(f.Path))
+			continue
+		}
+		restored = append(restored, rel(f.Path))
+		cmds = append(cmds, cmd)
+	}
+	return restored, skipped, cmds
 }
 
 // onAIUndoTurnConfirm answers the "Undo AI changes?" dialog.

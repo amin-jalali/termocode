@@ -92,6 +92,10 @@ func (m *Model) onAgentOutput(buf int) tea.Cmd {
 		t.FirstTask = "" // at most once
 		m.agentType(t.BufID, task)
 	}
+	acc, answered := m.agentAutoAcceptSee(t, st, lines) // CMP-64 (agent_autoaccept.go)
+	if limit = tea.Batch(limit, acc); answered {
+		return limit
+	}
 	if st == agents.Unknown || st == t.AgentState {
 		return limit
 	}
@@ -130,7 +134,8 @@ func (t terminalTab) agentTitle() string {
 }
 
 // agentTabName is the tab bar name of an agent tab: "limit ↻14:30"
-// while its usage limit is on (AGX-11), else its title.
+// while its usage limit is on (AGX-11), else its title (with
+// " · auto-yes" while auto-accept is on, CMP-64).
 func (t terminalTab) agentTabName() string {
 	if l := t.agentHibernatedLabel(); l != "" { // AGX-15
 		return l
@@ -138,10 +143,14 @@ func (t terminalTab) agentTabName() string {
 	if l := t.agentLimitLabel(); l != "" {
 		return l
 	}
+	name := t.agentSessionTitle()
 	if t.Account != "" { // AGX-13
-		return t.agentSessionTitle() + " " + t.Account
+		name += " " + t.Account
 	}
-	return t.agentSessionTitle()
+	if t.AutoAccept { // CMP-64 (agent_autoaccept.go)
+		name += " · auto-yes"
+	}
+	return name
 }
 
 // agentSessionTitle is the agent's title with its session number when
@@ -250,6 +259,9 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 	}
 	if id == diffCommentsPaletteID { // Agent: Send Diff Comments… (diff_comments.go)
 		return m.openDiffCommentsSend(m.reviewOpen), true
+	}
+	if id == agentAutoAcceptPaletteID { // Agent: Toggle Auto-Accept (agent_autoaccept.go)
+		return m.toggleAgentAutoAccept(), true
 	}
 	aid, ok := strings.CutPrefix(id, agentPaletteIDPfx)
 	if !ok {

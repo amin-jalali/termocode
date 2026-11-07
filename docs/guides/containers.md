@@ -206,6 +206,40 @@ Downloads folder and never replaces a file there (`name (1)`, `name (2)`…).
 first; a file that is already in the container is replaced only after a
 second **Replace** card. Nothing is written in the container without a card.
 
+### Pair sync with the workspace
+
+**Containers: Pair Sync with Workspace…** keeps a folder in a running
+container and your open local folder in step, both ways. Select the
+container row, run the command, and type the folder in the container
+(it is filled with the container's working folder, or the folder you
+used last time).
+
+termocode first lists both sides. It reads only names, sizes and change
+times, with one `find` call in the container. Then **one card** shows
+every change, with **Cancel** first:
+
+- `→` files new or changed in the workspace are copied to the container.
+- `←` files new or changed in the container are copied to the workspace.
+- `✕` a file you deleted on one side is deleted on the other. This
+  happens only for a file that an earlier sync copied; the card turns red
+  when it deletes anything.
+- `!` a conflict: the file changed on both sides. Both copies stay as
+  they are. Fix it by hand and sync again.
+
+The first sync of two copies of the same repo copies nothing. Files that
+are new on both sides with the same bytes are only recorded. If one side
+has no files at all while an earlier sync knew files (a wrong folder, a
+volume that is not mounted), nothing is changed.
+
+These are never synced: `.git`, `node_modules`, `.termocode`,
+`__pycache__`, `.venv`, `.DS_Store`, and the simple lines of the root
+`.gitignore` (`!` lines are skipped, so a sync can skip more than git
+does). Symlinks are skipped. A file over 64 MB is not copied.
+
+The last sync is recorded in `~/.config/termocode/pairsync/`, one file
+for each workspace, container and folder. Delete that file to start over.
+The AI cannot run a pair sync.
+
 Logs, shell, attach, stats and pulls run in terminal tabs, so you see
 progress and can type.
 

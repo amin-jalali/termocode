@@ -2134,6 +2134,7 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `acp-thread` | Agent: Chat with an ACP Agent… / End | never | it starts an outside agent program: the user starts and ends it |
 | `agent-account-switch` | Agent: Switch Account… | never | AI provider, credentials and approvals stay with the user; it starts an outside agent as another of the user's accounts |
 | `agent-account-use` | Agent: Accounts… | never | AI provider, credentials and approvals stay with the user; opens a picker or prompt that only the user can answer; use a typed tool |
+| `agent-auto-accept-toggle` | Agent: Toggle Auto-Accept | never | AI provider, credentials and approvals stay with the user; it lets termocode answer an outside agent's permission prompts |
 | `agent-auto-continue-toggle` | Agent: Toggle Auto-Continue | never | AI provider, credentials and approvals stay with the user; it lets termocode type into an outside agent's tab |
 | `agent-chat-view` | Agent: Chat View | never | shows an outside agent's own session file; only the user opens it (owner decision D1) |
 | `agent-diff-comments` | Agent: Send Diff Comments… | never | it sends the user's own review comments to an agent: only the user sends them, after the preview |
@@ -2151,6 +2152,7 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `agent-start-opencode` | Agent: Start OpenCode | confirm (run) |   |
 | `agent-usage-plans` | Agent: Usage Plans | never | a read-only screen for the user; the AI reads the numbers through usage_summary |
 | `ai-add` | AI: Add AI… | never | a card for the user; keys and connected AIs stay with the user (the AI shows them with ai_view_open) |
+| `ai-agent-env` | AI: Agent Environment… (setup, secrets, network rule for workflow agents) | never | opens a trust card that only the user can answer; setup commands run on the user's computer |
 | `ai-agent-hooks` | Agent: State Hooks… (exact working / waiting / done) | never | it changes other apps' config files: the user decides after the preview |
 | `ai-agent-packs` | Agent: Agent Packs… (install agents, skills and rules for Claude Code / Codex) | never | it writes many files into other apps' config folders: the user decides after the preview |
 | `ai-agents` | AI: Toggle Agents Panel | auto |   |
@@ -2159,7 +2161,10 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `ai-attach` | AI: Add File / Selection to Chat | never | adds to the chat input; read the file with read_file |
 | `ai-auto-approve` | AI: Agent Auto-Approve… | never | AI provider, credentials and approvals stay with the user |
 | `ai-board` | AI: Agent Board… | never | the user's board of agent work; it opens a picker and holds Resume |
+| `ai-autopilot` | AI: Autopilot Level… (off / low / medium risk) | never | AI provider, credentials and approvals stay with the user; the AI never lowers its own approval cards |
 | `ai-cancel` | AI: Stop Generating | never | stops the model's own turn |
+| `ai-checkpoint-restore` | AI: Restore Code Checkpoint… | never | the user rolls code back to a checkpoint |
+| `ai-checkpoint-save` | AI: Save Code Checkpoint | auto |   |
 | `ai-chat-comments` | AI: Chat Comments… | never | opens a picker or prompt that only the user can answer; use a typed tool; a comment reaches the AI only when the user adds it to a message |
 | `ai-chat-doc-revisions` | AI: Chat Doc Revisions… | never | opens a picker or prompt that only the user can answer; use a typed tool; only the user restores a revision |
 | `ai-chat-docs` | AI: Chat Docs… | never | opens a picker or prompt that only the user can answer; use a typed tool (chat_doc_list, chat_doc_read, chat_doc_write) |
@@ -2219,10 +2224,12 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `ai-reasoning-next` | AI: Next Reasoning Level | never | AI provider, credentials and approvals stay with the user; more thinking costs the user more |
 | `ai-review` | AI: Review Pending Changes | never | the user reviews proposed edits |
 | `ai-review-order` | AI: Toggle Review Order (explain first / as proposed) | never | AI provider, credentials and approvals stay with the user |
+| `ai-rewind-turn` | AI: Rewind Chat to Turn… | never | the user rewinds the chat and the AI's changes |
 | `ai-rules` | AI: Project Rules… | never | trusting a project's rules is the user's decision |
 | `ai-runs` | AI: Runs | never | the user's monitoring page; it holds Stop, Pause and Resume |
 | `ai-share-chat` | AI: Share Chat by Link… | never | it makes a link that lets another person watch this computer; only the user shares |
 | `ai-ship` | AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop | never | it pushes and opens a pull request: the user starts it |
+| `ai-ship-merge` | AI: Ship and Merge When Green (CI fixes, conflicts, merge card) / Stop | never | it pushes, opens and merges a pull request: the user starts it and answers the merge card |
 | `ai-side` | AI: Side Question… | never | the side chat is the user's own question beside the AI's turn |
 | `ai-sign-in-claude` | AI: Sign in with Claude (OAuth, opt-in)… | never | AI provider, credentials and approvals stay with the user |
 | `ai-sign-out-claude` | AI: Sign out of Claude | never | AI provider, credentials and approvals stay with the user |
@@ -2289,6 +2296,7 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `containers-network-remove` | Containers: Remove Selected Network… | never | removing is the user's; nothing is offered to the model |
 | `containers-open-databases` | Containers: Open in Databases | never | opens a picker or prompt that only the user can answer; use a typed tool (db_connections) |
 | `containers-open-port` | Containers: Open Published Port | auto |   |
+| `containers-pair-sync` | Containers: Pair Sync with Workspace… | never | copies and deletes files between the user's container and workspace; the user reads the card |
 | `containers-pause` | Containers: Pause or Unpause Selected | confirm (always asks) |   |
 | `containers-prune` | Containers: Prune Stopped Containers… | never | pruning containers is the user's; nothing is offered to the model |
 | `containers-refresh` | Containers: Refresh | auto |   |
@@ -2802,10 +2810,13 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `worktree-bg-tasks` | Worktree: Background Tasks… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `worktree-cleanup` | Worktree: Clean Up… | confirm (always asks) |   |
 | `worktree-delete` | Worktree: Delete Selected… | confirm (always asks) |   |
+| `worktree-feedback` | Worktree: Send PR Feedback to Agent… | never | types into the user's agent tab; the user sends PR feedback with W in WORKTREES |
 | `worktree-diff` | Worktree: Review Changes vs Base of Selected | auto |   |
 | `worktree-deps` | Worktree: Show Dependency Graph | auto |   |
 | `worktree-filter` | Worktree: Next Filter | auto |   |
+| `worktree-follow` | Worktree: Follow PR Feedback (On or Off) | never | the follow loop is the user's choice per worktree |
 | `worktree-forget` | Worktree: Forget Gone Selected | never | acts on the worktree the user selected in the WORKTREES view |
+| `worktree-from-issue` | Worktree: Start from Issue… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `worktree-handoff` | Worktree: Hand Off Selected… | never | a handoff starts a new agent; the user picks it and checks the note |
 | `worktree-jump` | Worktree: Jump… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `worktree-link` | Worktree: Link Issue or PR… | never | links are the user's choice; the AI reads them with worktrees_list |
@@ -2821,9 +2832,11 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `worktree-run-open` | Worktree: Open Dev Server of Selected | never | acts on the worktree the user selected in the WORKTREES view |
 | `worktree-reset-order` | Worktree: Reset Order | auto |   |
 | `worktree-sessions` | Worktree: Agent Sessions of Selected… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `worktree-pr` | Worktree: Show Pull Request of Selected | auto |   |
 | `worktree-preview` | Worktree: Preview Agent Screen | auto |   |
 | `worktree-preview-grid` | Worktree: Preview Agent Grid | auto |   |
 | `worktree-setup-log` | Worktree: Show Setup Log | auto |   |
+| `worktree-ship` | Worktree: Ship Selected (commit, push, PR, merge, archive)… | never | it commits, pushes, opens and merges a pull request: the user starts it |
 | `worktree-sleep` | Worktree: Sleep or Wake Selected | confirm (always asks) |   |
 | `worktree-suggest-name` | Worktree: Suggest a Name… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks the name |
 | `worktree-view` | Worktree: Show | auto |   |
@@ -2840,7 +2853,9 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `agent_hibernate_minutes` | never | AI provider, credentials and approvals stay with the user; it lets termocode stop idle outside agents |
 | `agent_os_sandbox` | never | the OS sandbox around outside agents; only the user changes it |
 | `agent_transcripts` | never | lets termocode read the outside agents' own session files; the user turns it on in config.json (owner decision D1) |
+| `ai_approval_rules` | never | AI provider, credentials and approvals stay with the user; the AI never writes its own approval rules |
 | `ai_auto_approve` | never | AI provider, credentials and approvals stay with the user |
+| `ai_autopilot` | never | AI provider, credentials and approvals stay with the user; the AI never lowers its own approval cards |
 | `ai_base_url` | never | AI provider, credentials and approvals stay with the user |
 | `ai_categories` | never | AI provider, credentials and approvals stay with the user |
 | `ai_compact` | never | AI provider, credentials and approvals stay with the user |
@@ -2850,6 +2865,7 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `ai_critic_slot` | never | AI provider, credentials and approvals stay with the user |
 | `ai_edit_review` | never | AI provider, credentials and approvals stay with the user |
 | `ai_fallback` | never | AI provider, credentials and approvals stay with the user |
+| `ai_guardian` | never | AI provider, credentials and approvals stay with the user; the AI never picks its own reviewer |
 | `ai_image_gen` | never | AI provider, credentials and approvals stay with the user; image generation is paid |
 | `ai_image_model` | never | AI provider, credentials and approvals stay with the user |
 | `ai_inline` | confirm (settings) |   |

@@ -12,7 +12,9 @@ web	ai-apply-code	palette
 web	ai-apply-proposal	op:cards.answer
 web	ai-attach	cmd:aiAttach
 web	ai-auto-approve	op:ai.set_auto_approve
+web	ai-autopilot	palette
 web	ai-cancel	op:chat.stop
+web	ai-checkpoint-save	palette
 web	ai-configure	op:ai.info
 web	ai-critic-toggle	palette
 web	ai-discard-proposal	op:cards.answer
@@ -63,6 +65,7 @@ web	ai-review-order	palette
 web	ai-rules	op:ai.info
 web	ai-runs	cmd:runs
 web	ai-ship	palette
+web	ai-ship-merge	palette
 web	ai-side	op:chat.side
 web	ai-skills	op:ai.info
 web	ai-toggle-inline	op:ai.complete
@@ -379,6 +382,7 @@ web	workspace-add-folder	cmd:addFolder
 web	workspace-remove-folder	cmd:removeFolder
 web	zen-mode	cmd:zen
 excluded	acp-agents-edit	laptop only: the list names programs the laptop starts
+excluded	ai-agent-env	security: trust decisions are made on the laptop
 excluded	ai-agent-hooks	laptop only: installs hooks into outside agents on the laptop
 excluded	ai-agent-packs	laptop only: installs files into outside agents on the laptop
 excluded	ai-credentials	security: credentials file is laptop only
@@ -476,6 +480,8 @@ missing	ai-proofs	AI|S
 missing	ai-run-task-list	AI|M
 missing	bugfix-spec-fix	AI|S
 missing	bugfix-spec-new	AI|S
+missing	ai-checkpoint-restore	AI|S
+missing	ai-rewind-turn	AI|S
 missing	canvas-add	AI|S
 missing	canvas-copy	AI|S
 missing	canvas-open	AI|M
@@ -510,6 +516,7 @@ missing	containers-logs-options	Containers|S
 missing	containers-network-connect	Containers|S
 missing	containers-network-create-options	Containers|S
 missing	containers-network-disconnect	Containers|S
+missing	containers-pair-sync	Containers|M
 missing	containers-registry-catalog	Containers|S
 missing	containers-rename	Containers|S
 missing	containers-resources	Containers|S
@@ -744,10 +751,13 @@ missing	worktree-bg-task	Worktrees|M
 missing	worktree-bg-tasks	Worktrees|M
 missing	worktree-cleanup	Worktrees|M
 missing	worktree-delete	Worktrees|M
+missing	worktree-feedback	Worktrees|M
 missing	worktree-diff	Worktrees|M
 missing	worktree-deps	Worktrees|S
 missing	worktree-filter	Worktrees|M
+missing	worktree-follow	Worktrees|M
 missing	worktree-forget	Worktrees|M
+missing	worktree-from-issue	Worktrees|M
 missing	worktree-handoff	Worktrees|M
 missing	worktree-jump	Worktrees|M
 missing	worktree-link	Worktrees|M
@@ -765,9 +775,11 @@ missing	worktree-run-open	Worktrees|M
 missing	worktree-pull	Worktrees|M
 missing	worktree-reset-order	Worktrees|M
 missing	worktree-sessions	Worktrees|M
+missing	worktree-pr	Worktrees|M
 missing	worktree-preview	Worktrees|M
 missing	worktree-preview-grid	Worktrees|M
 missing	worktree-setup-log	Worktrees|M
+missing	worktree-ship	Worktrees|M
 missing	worktree-sleep	Worktrees|M
 missing	worktree-unpack	Worktrees|M
 missing	worktree-view	Worktrees|M
