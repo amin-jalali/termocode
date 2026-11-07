@@ -219,6 +219,24 @@ is on, the phone still types it.
   **Forget bookmark**. **Remove device** ends it too.
 - A guest from **Share as Viewer** is never remembered.
 
+### On your phone: one box
+
+On a phone the page opens on the **Home**: one chat box at the bottom,
+with a row of chips above it. Type a question or tap a chip; the answer
+comes back in the same stream. The tabs (Files, Term,
+Git, More) are still one tap away. A wider screen opens the chat as
+before.
+
+- **Add it to your Home Screen**: in the phone's browser menu pick
+  **Add to Home Screen** (or **Install app**). It then opens full screen,
+  straight on the Home. This needs tailnet mode: the address must stay
+  the same.
+- It is still the same page from your laptop. Nothing is installed in
+  the background: there is no service worker, so nothing runs when the
+  page is closed, and no file of the page is kept on the phone.
+- Your files, chats and keys stay on the laptop. The phone only shows
+  them.
+
 ### A sign-in code as well (optional)
 
 For a second step after the passkey, run **Web: Set Up Sign-in Code…**.

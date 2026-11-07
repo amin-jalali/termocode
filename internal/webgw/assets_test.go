@@ -119,7 +119,8 @@ func TestKitIsServedOnlyByDevBuilds(t *testing.T) {
 
 // The app manifest (WEB-35) is served only by Manifest(), which the
 // gateway mounts on an installable site; Assets() never serves it. It
-// opens the page standalone at "/", and every icon it names is served.
+// opens the page standalone on the phone Home ("/#/home", MOB-7) inside
+// the scope "/", and every icon it names is served.
 func TestManifestServedOnlyByManifest(t *testing.T) {
 	for _, path := range []string{ManifestPath, "/assets/manifest.webmanifest"} {
 		if res := getAsset(t, Assets(), http.MethodGet, path); res.StatusCode != http.StatusNotFound {
@@ -143,8 +144,8 @@ func TestManifestServedOnlyByManifest(t *testing.T) {
 	}
 	var raw map[string]any
 	_ = json.Unmarshal(body, &raw)
-	if raw["start_url"] != "/" || raw["scope"] != "/" {
-		t.Errorf("start_url %v scope %v, want /", raw["start_url"], raw["scope"])
+	if raw["start_url"] != "/#/home" || raw["scope"] != "/" || raw["id"] != "/" {
+		t.Errorf("start_url %v scope %v id %v, want /#/home, / and /", raw["start_url"], raw["scope"], raw["id"])
 	}
 	purposes := map[string]bool{}
 	for _, ic := range m.Icons {
