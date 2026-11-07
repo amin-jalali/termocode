@@ -100,6 +100,10 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onBugspecPicked(id), true
 	case pickerKindAgentAccounts: // agent_accounts.go
 		return m.onAgentAccountPicked(id), true
+	case pickerKindAgentProfiles: // agent_profiles.go
+		return m.onAgentProfilePicked(id), true
+	case pickerKindAgentProfileMode:
+		return m.onAgentProfileModePicked(id), true
 	case pickerKindAgentSessionsHits: // agent_sessions_search.go
 		return m.onAgentSearchPicked(id), true
 	case pickerKindRunsMore: // runs_state.go
@@ -142,6 +146,12 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onRaceRunText(value), true
 	case promptKindAgentAccountNew: // agent_accounts.go
 		return m.onAgentAccountLabel(value), true
+	case promptKindAgentProfileName: // agent_profiles.go
+		return m.onAgentProfileName(value), true
+	case promptKindAgentProfileModel:
+		return m.onAgentProfileModel(value), true
+	case promptKindAgentProfileEnv:
+		return m.onAgentProfileEnv(value), true
 	case promptKindAgentSessionsSearch: // agent_sessions_search.go
 		return m.onAgentSessionsSearch(value), true
 	case promptKindWTPull: // worktrees_move.go
@@ -322,6 +332,10 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAgentAccountCard(id), true
 	case confirmKindAgentAccountSwitch: // agent_switch.go (CMP-13)
 		return m.answerAgentSwitch(id), true
+	case confirmKindAgentProfileSave: // agent_profiles.go
+		return m.answerAgentProfileSave(id), true
+	case confirmKindAgentProfileUse:
+		return m.answerAgentProfileCard(id), true
 	case confirmKindAgentInstall, confirmKindAgentSignIn, confirmKindAgentInstallPage: // agent_install.go
 		return m.answerAgentPickCard(m.confirmKind, id), true
 	case confirmKindAIMemoryLesson, confirmKindAIMemoryForget, confirmKindAIMemoryForgetAll: // ai_memory_picker.go

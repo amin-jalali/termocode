@@ -131,7 +131,11 @@ type aiState struct {
 	agentAccountPending string
 	// agentSwitchBuf is the agent tab of the open Switch Account card (agent_switch.go).
 	agentSwitchBuf int
-	shipGen        int
+	// agentProfileDraft is the profile being added, agentProfileOpen the
+	// one whose card is open (agent_profiles.go, CMP-21).
+	agentProfileDraft *agentProfileRef
+	agentProfileOpen  *agentProfileRef
+	shipGen           int
 	// memFake replaces lessons.md for the screenshot demo (ai_memory.go).
 	memFake *[]aimemory.Lesson
 	// skillsFake replaces the skill files in AI: Skills… for the

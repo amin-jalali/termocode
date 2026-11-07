@@ -861,6 +861,7 @@ func tasksPaletteItems() []picker.Item {
 		{ID: agentNamesPaletteID, Title: "Worktree: Suggest a Name…", Hint: "quick model drafts branch names"},              // AGX-16
 		{ID: agentHibernatePaletteID, Title: "Agent: Hibernate or Wake", Hint: "stop an idle agent tab, keep its session"},  // AGX-15
 		{ID: agentAccountsPaletteID, Title: "Agent: Accounts…", Hint: "Claude Code / Codex accounts, own folders"},          // AGX-13
+		{ID: agentProfilesPaletteID, Title: "Agent: Profiles…", Hint: "model, plan mode, permissions, env"},                 // CMP-21
 		{ID: agentUsagePlansPaletteID, Title: "Agent: Usage Plans", Hint: "plan share, reset, last limit"},                  // AGX-12
 		{ID: agentAutoContinuePaletteID, Title: "Agent: Toggle Auto-Continue", Hint: "type continue when the limit resets"}, // AGX-11
 		{ID: diffCommentsPaletteID, Title: "Agent: Send Diff Comments…", Hint: "c on a change, S sends them all"},           // CMP-51

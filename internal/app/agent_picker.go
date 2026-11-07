@@ -48,6 +48,8 @@ type agentPickInput struct {
 	installing map[string]bool
 	// accounts are the saved account labels per agent (AGX-13).
 	accounts map[string][]string
+	// launchProfiles are the saved launch profiles per agent (CMP-21).
+	launchProfiles map[string][]agents.LaunchProfile
 }
 
 // agentPickStart starts an installed agent (a var for tests).
@@ -87,6 +89,9 @@ func agentPickerItems(in agentPickInput) []picker.Item {
 			for _, l := range in.accounts[a.ID] { // AGX-13 (agent_accounts.go)
 				have = append(have, picker.Item{ID: id + "@" + l, Title: "    as " + l, Hint: a.ConfigEnv + " · own folder", Group: gIn})
 			}
+			for _, p := range in.launchProfiles[a.ID] { // CMP-21 (agent_profiles.go)
+				have = append(have, picker.Item{ID: id + "#" + p.Name, Title: "    profile " + p.Name, Hint: agents.ProfileSummary(a.ID, p), Group: gIn})
+			}
 			continue
 		}
 		hint := a.Bin + " · manual install"
@@ -124,7 +129,8 @@ func agentPickerItems(in agentPickInput) []picker.Item {
 func (m *Model) agentPickInputNow() agentPickInput {
 	s := m.aiS()
 	s.reloadProfiles()
-	in := agentPickInput{agents: agents.Registry, installed: agentInstalled, cli: s.cliStates, accounts: loadSettings().AgentAccounts}
+	st := loadSettings()
+	in := agentPickInput{agents: agents.Registry, installed: agentInstalled, cli: s.cliStates, accounts: st.AgentAccounts, launchProfiles: st.AgentProfiles}
 	for _, n := range s.profiles.Names() {
 		p, _ := s.profiles.Get(n)
 		in.profiles = append(in.profiles, agentPickProfile{name: n, steps: len(p.Steps)})
@@ -179,6 +185,13 @@ func (m *Model) onAgentPicked(id string) tea.Cmd {
 	}
 	if cli, label, as := strings.Cut(aid, "@"); as { // an account row (agent_accounts.go)
 		return m.onAgentAccountPicked(agentAccountPfx + cli + "@" + label)
+	}
+	if cli, name, prof := strings.Cut(aid, "#"); prof { // a profile row (agent_profiles.go)
+		a, ok := agents.ByID(cli)
+		if !ok {
+			return nil
+		}
+		return m.onAgentPickedProfile(a, name)
 	}
 	a, ok := agents.ByID(aid)
 	if !ok {

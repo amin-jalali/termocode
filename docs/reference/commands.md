@@ -108,6 +108,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: Chat with an ACP Agent… / End | `acp-thread` |   |   |
 | Agent: Hibernate or Wake | `agent-hibernate-toggle` |   | `stop an idle agent tab, keep its session` |
 | Agent: Loop Until Check Passes… | `agent-goal-loop` |   | `run a check after each turn, retry` |
+| Agent: Profiles… | `agent-profiles` |   | `model, plan mode, permissions, env` |
 | Agent: Race Compare | `agent-race-compare` |   |   |
 | Agent: Race… | `agent-race` |   |   |
 | Agent: Search All Sessions… | `agent-sessions-search-all` |   | `words in every project's agent sessions` |

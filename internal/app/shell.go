@@ -129,6 +129,9 @@ type terminalTab struct {
 	// in the same folder: the tab bar shows "Claude Code 2" (CMP-28;
 	// 0 = the only one).
 	SessionNo int
+	// Profile is the launch profile the tab was started with ("" = none;
+	// agent_profiles.go, CMP-21).
+	Profile string
 
 	// Splits are the panes after the first (terminal_pane.go); BufID is
 	// pane 0. PaneFocus is the focused pane (0 = BufID).
