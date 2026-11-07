@@ -481,6 +481,9 @@ func (m *Model) databaseTransferConfirm(id string) (tea.Cmd, bool) {
 }
 
 func (m *Model) databaseTransferPrompt(kind promptKindEnum, value string) (tea.Cmd, bool) {
+	if cmd, ok := m.databaseObjActionPrompt(kind, value); ok { // db_objactions.go
+		return cmd, true
+	}
 	switch kind {
 	case promptKindDBExportPath:
 		return m.databaseExportPathTyped(value), true

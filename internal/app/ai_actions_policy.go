@@ -486,6 +486,13 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"containers-volume-remove":      aiNever("removing is the user's; nothing is offered to the model"),
 	"containers-volume-prune":       aiNever("pruning volumes is the user's; nothing is offered to the model"),
 	"containers-volume-disk-usage":  aiNever("disk usage is the user's; nothing is offered to the model"),
+	"db-quick-doc":                 aiAuto(),
+	"db-insert-hints":              aiAuto(),
+	"db-edit-source":               aiAuto(),
+	"db-object-actions":            aiNever("drops, empties or creates database objects; only the user can confirm the card"),
+	"db-submit-source":             aiNever("changes a database object; only the user can confirm the card"),
+	"db-pending-sources":           aiNever(aiNoPicker),
+	"db-virtual-objects":           aiNever("opens the user's virtual objects file for the user to edit"),
 
 	// ── Tasks ──
 	"tasks-run":            aiNever(aiNoPicker),

@@ -58,6 +58,8 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-ddl", Title: "Databases: Show DDL"},
 		{ID: "db-goto-definition", Title: "Databases: Go to Definition"},
 		{ID: "db-find-usages", Title: "Databases: Find Usages"},
+		{ID: "db-quick-doc", Title: "Databases: Quick Documentation"},
+		{ID: "db-insert-hints", Title: "Databases: Show INSERT Column Hints"},
 		{ID: "db-count-rows", Title: "Databases: Count Rows"},
 		{ID: "db-transaction-mode", Title: "Databases: Transaction Mode…"},
 		{ID: "db-commit", Title: "Databases: Commit"},
@@ -75,6 +77,11 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-cancel-session", Title: "Databases: Cancel Session Query…"},
 		{ID: "db-end-session", Title: "Databases: End Session…"},
 		{ID: "db-er-diagram", Title: "Databases: Export ER Diagram…"},
+		{ID: "db-virtual-objects", Title: "Databases: Edit Virtual Objects…"},
+		{ID: "db-edit-source", Title: "Databases: Edit Object Source"},
+		{ID: "db-object-actions", Title: "Databases: Object Actions…"},
+		{ID: "db-submit-source", Title: "Databases: Submit Object Source…"},
+		{ID: "db-pending-sources", Title: "Databases: Pending Source Changes…"},
 		{ID: "db-guide", Title: "Databases: Open Guide"},
 		{ID: "redis-set-ttl", Title: "Databases: Set Redis Key TTL…"},
 		{ID: "redis-delete-key", Title: "Databases: Delete Redis Key…"},
@@ -145,12 +152,26 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseCompareStart(), true
 	case "db-er-diagram":
 		return m.databaseERStart(), true
+	case "db-edit-source":
+		return tea.Batch(m.revealDatabasesView(false), m.databaseEditSourceStart()), true
+	case "db-object-actions":
+		return tea.Batch(m.revealDatabasesView(false), m.databaseObjectActions()), true
+	case "db-submit-source":
+		return m.databaseSubmitSourceStart(), true
+	case "db-pending-sources":
+		return m.databasePendingSources(), true
+	case "db-virtual-objects":
+		return tea.Batch(m.revealDatabasesView(false), m.databaseEditVirtual()), true
 	case "db-guide":
 		return m.openHelp(help.Loc{Page: databasesGuidePage}), true
 	case "db-goto-definition":
 		return m.databaseGotoDefinition(), true
 	case "db-find-usages":
 		return m.databaseFindUsages(), true
+	case "db-quick-doc":
+		return m.databaseQuickDoc(), true
+	case "db-insert-hints":
+		return m.databaseInsertHints(), true
 	case "db-sessions":
 		return m.databaseShowActivity(false), true
 	case "db-server-info":
@@ -241,6 +262,12 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	if have {
 		if cmd, ok := m.databaseRedisSidebarKey(k.String(), row); ok {
 			return m, cmd
+		}
+	}
+	if have && row.kind == dbNodeVirtualView {
+		switch k.String() {
+		case "right", "l", "enter", " ", "o", "s":
+			return m, m.databaseOpenVirtualView(row)
 		}
 	}
 	switch k.String() {
@@ -355,6 +382,12 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.databaseCodeGenStart()
 	case "#":
 		return m, m.databaseCountFromTree()
+	case "K":
+		return m, m.databaseQuickDocTree()
+	case "E":
+		return m, m.databaseEditSourceStart()
+	case "A":
+		return m, m.databaseObjectActions()
 	case "i":
 		return m, m.databaseImportStart()
 	case "?":
@@ -994,6 +1027,12 @@ func dbTreeKeyRows() []confirm.KeyRow {
 		[]string{"#", "count the rows"},
 		[]string{"i", "import a CSV file"},
 		[]string{"y", "copy the name"},
+		[]string{"K", "quick documentation (columns, keys; also on a column or routine)"},
+		[]string{"A", "object actions: drop (shows dependents), truncate, copy table, create schema or database, make PK from a column"},
+		[]string{"On a view, routine or trigger"},
+		[]string{"E", "edit its source in a buffer (submit with Databases: Submit Object Source…)"},
+		[]string{"On a virtual view"},
+		[]string{"Enter", "run its saved SELECT in the console"},
 	)
 }
 
@@ -1335,9 +1374,11 @@ func (m *Model) onDBIntrospect(msg dbIntrospectMsg) tea.Cmd {
 		return m.pushToastDetail(toast.Errr, "Could not load database schema", dbErrorText(msg.err))
 	}
 	msg.result = sanitizeDBIntrospection(msg.result)
+	msg.result = m.databaseWithVirtual(msg.path, msg.result) // db_virtual.go
 	s.addIntrospection(msg.path, msg.result)
+	cmd := m.databaseVirtualOnConnection(msg.path)
 	m.databaseSchemaChanged()
-	return m.databaseCacheSchema(msg.path, msg.result) // DBX-29
+	return tea.Batch(cmd, m.databaseCacheSchema(msg.path, msg.result)) // DBX-29
 }
 
 func sanitizeDBIntrospection(in dbclient.IntrospectionResult) dbclient.IntrospectionResult {

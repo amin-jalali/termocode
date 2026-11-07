@@ -2068,6 +2068,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-ddl` | Databases: Show DDL | auto |   |
 | `db-describe` | Databases: Describe Table | auto |   |
 | `db-disconnect` | Databases: Disconnect Selected… | confirm (always asks) |   |
+| `db-edit-source` | Databases: Edit Object Source | auto |   |
 | `db-end-session` | Databases: End Session… | never | ends another session and rolls back its transaction; only the user can choose it |
 | `db-er-diagram` | Databases: Export ER Diagram… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-exec-mode` | Databases: Choose Execution Mode… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -2084,8 +2085,12 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-guide` | Databases: Open Guide | auto |   |
 | `db-history` | Databases: History… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-import-csv` | Databases: Import CSV into Table… | never | importing rows is a write the user confirms (db_query) |
+| `db-insert-hints` | Databases: Show INSERT Column Hints | auto |   |
 | `db-new-console` | Databases: New Console | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `db-object-actions` | Databases: Object Actions… | never | drops, empties or creates database objects; only the user can confirm the card |
 | `db-open-sessions` | Databases: Sessions… | never | the user's sessions and transactions |
+| `db-pending-sources` | Databases: Pending Source Changes… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `db-quick-doc` | Databases: Quick Documentation | auto |   |
 | `db-refresh` | Databases: Refresh | auto |   |
 | `db-refresh-object` | Databases: Refresh Selected Object | auto |   |
 | `db-result-goto-row` | Databases: Go to Result Row… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -2105,8 +2110,10 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-sessions` | Databases: Show Sessions and Locks | never | SQL runs require the database query tool and its guard |
 | `db-ssl` | Databases: SSL Settings… | never | AI provider, credentials and approvals stay with the user |
 | `db-submit-changes` | Databases: Submit Pending Changes… | never | the user's pending edits; use the database query tool |
+| `db-submit-source` | Databases: Submit Object Source… | never | changes a database object; only the user can confirm the card |
 | `db-test-connection` | Databases: Test Connection | auto |   |
 | `db-transaction-mode` | Databases: Transaction Mode… | never | AI provider, credentials and approvals stay with the user |
+| `db-virtual-objects` | Databases: Edit Virtual Objects… | never | opens the user's virtual objects file for the user to edit |
 | `debug-add-watch` | Debug: Add Watch Expression... | never | opens a picker or prompt that only the user can answer; use a typed tool (debug_evaluate; debug_state shows the watches) |
 | `debug-clear-bps` | Debug: Remove All Breakpoints | confirm (ide) |   |
 | `debug-conditional-bp` | Debug: Add Conditional Breakpoint... | never | opens a picker or prompt that only the user can answer; use a typed tool (debug_breakpoint with condition) |
