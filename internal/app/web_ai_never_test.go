@@ -67,7 +67,7 @@ func TestAICannotAnswerWebCards(t *testing.T) {
 		"onAIConfirmClosed":   {"update.go"}, // confirm.CloseMsg (Esc) only
 		"webAskDone":          {"web_ask.go", "web_cards_answer.go"},
 		"webAskOpen":          {"web_ask.go", "web_call.go"},
-		"startWebPanel":       {"web_panel.go", "web_tui.go"},
+		"startWebPanel":       {"web_panel.go", "web_tui.go", "web_pair_lan.go"}, // Pair a Device: the owner's palette pick or Use this Wi-Fi
 		"webNewLink":          {"web_panel.go", "web_tui.go"},
 		"openWebStartCard":    {"web_panel.go", "web_tui.go"},
 		"webCtlOpen":          {"web_panel.go", "web_tui.go"},
@@ -77,6 +77,8 @@ func TestAICannotAnswerWebCards(t *testing.T) {
 		"handleWebAccessPicker":    {"ai_config_ui.go"},
 		"answerWebPairAsk":         {"web_access.go"},
 		"answerWebPairQR":          {"web_access.go"},
+		"answerWebUseLAN":          {"web_access.go"}, // Use this Wi-Fi: the owner's button only
+		"webSwitchToLAN":           {"web_pair_lan.go"},
 		"answerWebDeviceRemove":    {"web_access.go"},
 		"openWebPair":              {"web_access.go", "ai_chat_comments.go"}, // CMP-88 Share this chat: the owner's Make link button (ai-share-chat is aiNever)
 		"webRevokeDevice":          {"web_access.go"},

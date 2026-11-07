@@ -56,11 +56,7 @@ func TestWebPairNeedsTailnetPanel(t *testing.T) {
 	if r.m.confirmOpen || !strings.Contains(webTestToasts(*r.m), "tailnet") {
 		t.Fatalf("loopback: card %v toast %q", r.m.confirmOpen, webTestToasts(*r.m))
 	}
-	r.m.webPanel = nil
-	r.m.openWebPair(false)
-	if r.m.confirmOpen || !strings.Contains(webTestToasts(*r.m), "Web: Open in Browser") {
-		t.Fatalf("no panel: card %v toast %q", r.m.confirmOpen, webTestToasts(*r.m))
-	}
+	// No panel: Pair a Device starts it (TestWebPairStartsLANPanel).
 }
 
 // Spec (WEB-32): Web: Pair a Device… sends the gateway only the digest

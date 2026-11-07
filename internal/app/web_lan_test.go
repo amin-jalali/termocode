@@ -77,7 +77,8 @@ func TestWebPairLANLinkHasFingerprint(t *testing.T) {
 }
 
 // Spec (LAN mode): a share link (sent to another person) is not made in
-// LAN mode, and loopback mode still refuses pairing and names both modes.
+// LAN mode, and a panel that still runs on 127.0.0.1 in tailnet mode (started
+// before the setting) refuses pairing and names both modes.
 func TestWebPairLANRefusals(t *testing.T) {
 	r := newAccessRig(t)
 	r.m.webPanel.url = ""
