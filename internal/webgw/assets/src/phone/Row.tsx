@@ -24,16 +24,6 @@ export function Row({
    * press on a phone and a right click both work). */
   onLongPress?: () => void;
 }) {
-  const inner = (
-    <>
-      {status && <StatusMark s={status} live={live} />}
-      <span class="ph-row-main">
-        <span class="ph-row-title">{title}</span>
-        {meta && <span class="ph-row-meta">{meta}</span>}
-      </span>
-      {end && <span class="ph-row-end">{end}</span>}
-    </>
-  );
   const menu = onLongPress
     ? (e: Event) => {
         e.preventDefault();
@@ -42,11 +32,21 @@ export function Row({
     : undefined;
   return onClick ? (
     <button type="button" class="ph-row" onClick={onClick} onContextMenu={menu}>
-      {inner}
+      {status && <StatusMark s={status} live={live} />}
+      <span class="ph-row-main">
+        <span class="ph-row-title">{title}</span>
+        {meta && <span class="ph-row-meta">{meta}</span>}
+      </span>
+      {end && <span class="ph-row-end">{end}</span>}
     </button>
   ) : (
     <div class="ph-row" onContextMenu={menu}>
-      {inner}
+      {status && <StatusMark s={status} live={live} />}
+      <span class="ph-row-main">
+        <span class="ph-row-title">{title}</span>
+        {meta && <span class="ph-row-meta">{meta}</span>}
+      </span>
+      {end && <span class="ph-row-end">{end}</span>}
     </div>
   );
 }

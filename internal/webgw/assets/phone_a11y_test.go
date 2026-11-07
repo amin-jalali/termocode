@@ -144,7 +144,7 @@ var (
 	a11yLabelled   = regexp.MustCompile(`\baria-(label|labelledby)\s*=`)
 	a11yJSXExpr    = regexp.MustCompile(`\{[^{}]*\}`)
 	a11yInnerTag   = regexp.MustCompile(`<[^<>]*>`)
-	a11yTextInExpr = regexp.MustCompile(`\bt\(|\blabel\b|\btitle\b|\bname\b|\btext\b|\bchildren\b`)
+	a11yTextInExpr = regexp.MustCompile(`\bt\(|\btp\(|\bTXT\.|\blabel\b|\btitle\b|\bname\b|\btext\b|\bchildren\b`)
 )
 
 // a11yIconOnly says whether a button's children give a screen reader no
@@ -171,7 +171,7 @@ func TestA11yIconOnlyCatches(t *testing.T) {
 			t.Errorf("%q has no name, yet passed as text", icon)
 		}
 	}
-	for _, text := range []string{`{t("home.send")}`, `<span>{label}</span>`, `Send`, `{p.title}`, `{children}`} {
+	for _, text := range []string{`{t("home.send")}`, `<span>{label}</span>`, `Send`, `{p.title}`, `{children}`, `{tp("ph.forget_yes")}`, `{TXT.retry}`} {
 		if a11yIconOnly(text) {
 			t.Errorf("%q names the button, yet was taken as icon only", text)
 		}
