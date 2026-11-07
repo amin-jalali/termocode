@@ -475,6 +475,8 @@ func (m *Model) databaseTransferPicker(id string) (tea.Cmd, bool) {
 		return m.databaseExportFormatPicked(id), true
 	case pickerKindDBImportFile, pickerKindDBImportMapCol, pickerKindDBImportMapSrc:
 		return m.databaseImportPicker(id), true
+	case pickerKindDBCopyTarget:
+		return m.databaseCopyTargetPicked(id), true
 	case pickerKindDBSearchHits:
 		return m.databaseSearchOpenHit(id), true
 	case pickerKindDBChart:
@@ -515,6 +517,8 @@ func (m *Model) databaseTransferPrompt(kind promptKindEnum, value string) (tea.C
 		return m.databaseExportPathTyped(value), true
 	case promptKindDBImportPath:
 		return m.databaseImportLoad(value), true
+	case promptKindDBCopyTable:
+		return m.databaseCopyTableTyped(value), true
 	case promptKindDBGenRows:
 		return m.databaseGenerateRows(value), true
 	case promptKindDBSearchValue:
@@ -548,8 +552,7 @@ func (m *Model) databaseTransferClosed() {
 	case confirmKindDBExportScope, confirmKindDBExportOverwrite:
 		s.exp = nil
 	case confirmKindDBImport:
-		dbImportDropTmp(s.imp)
-		s.imp = nil
+		s.dbImportEnd()
 	case confirmKindDBExportFolder:
 		s.folder = nil
 	case confirmKindDBDump:
@@ -572,7 +575,10 @@ func (m *Model) databaseTransferPickerClosed() (tea.Cmd, bool) {
 	case pickerKindDBImportMapCol, pickerKindDBImportMapSrc:
 		return m.databaseImportCard(), true
 	case pickerKindDBImportFile:
-		s.imp = nil
+		s.dbImportEnd()
+		return nil, true
+	case pickerKindDBCopyTarget:
+		s.copyTbl = nil
 		return nil, true
 	case pickerKindDBExportFormat:
 		s.exp = nil

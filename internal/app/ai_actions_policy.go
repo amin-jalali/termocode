@@ -556,6 +556,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-submit-source":                  aiNever("changes a database object; only the user can confirm the card"),
 	"db-pending-sources":                aiNever(aiNoPicker),
 	"db-virtual-objects":                aiNever("opens the user's virtual objects file for the user to edit"),
+	"db-copy-table-data":                aiNever("copying rows into another table is a write the user confirms (db_query)"),
 	"db-import-new-table":               aiNever("creating a table and importing rows is a write the user confirms (db_query)"),
 	"db-run-dump":                       aiNever("a whole SQL file of writes runs only after the user's card (db_query, one statement each)"),
 	"db-search-data":                    aiNever(aiNoPicker + " (db_search_data)"),
