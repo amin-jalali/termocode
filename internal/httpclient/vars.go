@@ -68,6 +68,9 @@ type Resolved struct {
 	Secrets []string
 	// Dir is the folder `< ./file` bodies are read from ("" = none).
 	Dir string
+	// Digest is set by `# @auth digest` (or $auth): Send answers the
+	// server's Digest challenge with it. Never written to JSON.
+	Digest *DigestAuth `json:"-"`
 }
 
 // sendScope keeps the values of the dynamic functions for one send, so
@@ -112,6 +115,7 @@ func (rv *Resolver) Resolve(req Request) (Resolved, []Unresolved) {
 		un = appendUnresolved(un, d[SigV4Directive], "directive:"+SigV4Directive)
 		out.Directives = d
 	}
+	un = sc.applyAuth(req, &out, un)
 	out.Secrets = sc.secrets
 	return out, un
 }

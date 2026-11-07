@@ -289,6 +289,9 @@ func (c *Client) Send(ctx context.Context, rr Resolved, h Hooks) *Response {
 	_, noRedirect := r.Directives["no-redirect"]
 	_, noJar := r.Directives["no-cookie-jar"]
 	hc := &http.Client{Transport: tr}
+	if rr.Digest != nil {
+		hc.Transport = &digestTransport{base: tr, cred: *rr.Digest}
+	}
 	if c.jar != nil && !noJar {
 		hc.Jar = c.jar
 	}
