@@ -145,6 +145,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`db_ddl`](#db_ddl) | auto | yes | Show the DDL (CREATE statement) of a table, with its indexes and foreign keys. |
 | [`ast_grep`](#ast_grep) | search: auto<br>with rewrite: confirm (review), or confirm (fileWrite) when AI file changes are not reviewed | no | Structural code search with ast-grep: pattern is code with $VAR wildcards ("fmt.Println($A)"). |
 | [`look_at`](#look_at) | auto<br>an image is sent to the main model in one extra request (a PDF is read locally) | no | Look at an image file (png, jpg, gif, webp) and answer a question about it, or read the text of a PDF file. |
+| [`proof_screenshot`](#proof_screenshot) | a localhost page or an HTML file in the workspace: auto<br>any other address: confirm (run)<br>the shot is sent to the main model when it takes images | no | Take a screenshot of a web page in a headless browser as proof of a UI change: the local dev server (http://localhost:<port>/…) or an HTML file in the workspace. |
 | [`todo_write`](#todo_write) | auto | no | Write the todo list of this chat (the whole list each time; it replaces the old one). |
 | [`todo_read`](#todo_read) | auto | no | Read the todo list of this chat: [x] done, [~] in progress, [ ] pending. |
 | [`chats_search`](#chats_search) | auto | no | Search the user's saved AI chats of this machine (newest first) by words in their title or messages. |
@@ -1765,6 +1766,22 @@ Look at an image file (png, jpg, gif, webp) and answer a question about it, or r
 | `path` | string | yes | image or PDF file, relative to the workspace |
 | `question` | string |   | what you want to know (optional; default: describe it and copy its text) |
 
+### proof_screenshot
+
+Take a screenshot of a web page in a headless browser as proof of a UI change: the local dev server (http://localhost:<port>/…) or an HTML file in the workspace. The PNG is saved under .termocode/proof/ (the user sees every shot in AI: Proof of Work…) and you see the picture when your model takes images. After a UI change, shoot the changed page at desktop width (1280) and at phone width (390) and say what the shots show. Start the dev server first (terminal_send). A localhost page or a workspace file runs at once; any other address asks the user.
+
+**Gate:** a localhost page or an HTML file in the workspace: auto · any other address: confirm (run) · the shot is sent to the main model when it takes images
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `url` | string | yes | page address (http://localhost:5173/settings) or an HTML file relative to the workspace |
+| `height` | integer |   | window height in px (default 800) |
+| `label` | string |   | short name for the file (optional, e.g. settings-phone) |
+| `note` | string |   | what this shot proves, shown to the user (optional) |
+| `width` | integer |   | window width in px (default 1280; 390 for a phone) |
+
 ### todo_write
 
 Write the todo list of this chat (the whole list each time; it replaces the old one). Use it for work with three or more steps: one item per step, mark the one you work on in_progress and mark items done as soon as they are done. The user sees the list. An empty list clears it.
@@ -1968,6 +1985,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai-profile-show` | AI: Show Profile | never | a read-only screen for the user; the AI already knows its own profile |
 | `ai-profile-switch` | AI: Switch Profile… | confirm (settings) |   |
 | `ai-profile-trust` | AI: Project Profiles Trust… | never | trusting a project's prompts is the user's decision |
+| `ai-proofs` | AI: Proof of Work… (screenshots the AI took) | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-reasoning-next` | AI: Next Reasoning Level | never | AI provider, credentials and approvals stay with the user; more thinking costs the user more |
 | `ai-review` | AI: Review Pending Changes | never | the user reviews proposed edits |
 | `ai-rules` | AI: Project Rules… | never | trusting a project's rules is the user's decision |
