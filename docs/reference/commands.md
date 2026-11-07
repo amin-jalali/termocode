@@ -122,6 +122,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | Containers: Attach | `containers-attach` |   |   |
+| Containers: Browse Files | `containers-files` |   |   |
 | Containers: Browse Remote Tags… | `containers-browse-tags` |   |   |
 | Containers: Build Image from Dockerfile… | `containers-image-build` |   |   |
 | Containers: Choose Compose Env File… | `services-env-file` |   |   |
@@ -130,6 +131,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Copy ID | `containers-copy-id` |   |   |
 | Containers: Create Network… | `containers-network-create` |   |   |
 | Containers: Create Volume… | `containers-volume-create` |   |   |
+| Containers: Exec with Options… | `containers-exec-options` |   |   |
 | Containers: Filter Rows… | `containers-filter` |   |   |
 | Containers: Focus | `containers-focus` |   |   |
 | Containers: Focus Project Services | `services-focus` |   |   |
@@ -137,6 +139,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Follow Stats | `containers-stats` |   |   |
 | Containers: Inspect | `containers-inspect` |   |   |
 | Containers: Inspect Image | `containers-image-inspect` |   |   |
+| Containers: Logs with Options… | `containers-logs-options` |   |   |
 | Containers: Make Context Default… | `containers-context-default` |   |   |
 | Containers: Open Compose File | `services-open-compose` |   |   |
 | Containers: Open Engine Config | `containers-engine-config` |   |   |
@@ -166,6 +169,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Run One-Off Command in Service… | `services-compose-run` |   |   |
 | Containers: Run Selected Image… | `containers-image-run` |   |   |
 | Containers: Search Docker Hub… | `containers-search` |   |   |
+| Containers: Show Details | `containers-detail` |   |   |
 | Containers: Show Image History | `containers-image-history` |   |   |
 | Containers: Show Resolved Compose Config | `services-compose-config` |   |   |
 | Containers: Show Service Logs… | `services-logs` |   |   |

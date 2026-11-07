@@ -68,9 +68,13 @@ when something changed. When you hide the view (another activity item,
 | `a` / `A` | start all / stop all of the project's services (the **Start all** and **Stop all** buttons); off while the engine is down |
 | `p` | pause or unpause the selected container |
 | `e` | shell in the selected container (terminal tab) |
+| `E` | exec with options: shell or command, user, start folder |
 | `t` | attach to a container; on an image, tag it |
 | `S` | follow live stats |
 | `i` | inspect: a read-only JSON page in the editor |
+| `L` | logs with options: tail, since, timestamps; save to a file; search |
+| `I` | details: status, exit code, restarts, health log, processes, mounts, labels, env names (no values) |
+| `F` | browse the files of a running container: view read-only, download, upload (asks first) |
 | `o` | open the first published port in the browser |
 | `y` | copy the ID, name, host or endpoint of the row |
 | `u` | pull an image |
@@ -140,6 +144,44 @@ remove it. On a compose project group, `s`, `x`, and `r` run compose up,
 stop, and restart. `D` asks before compose down and names its command.
 Attach uses `--sig-proxy=false`; press `Ctrl+P Ctrl+Q` in its terminal tab
 to detach without stopping the container.
+
+### Exec with options
+
+`E` on a running container (or **Containers: Exec with Options…**) asks
+three short questions; each may stay empty. **Shell or command**: empty
+keeps the bash-or-sh default, one word is a shell (`zsh`, `ash`), more
+words run as a command without a shell (`ps aux`). **User**: a name or
+uid (`root`, `1000:1000`). **Folder**: an absolute path (`/app`). The exec
+opens in a terminal tab. Values that start with `-` are refused.
+
+### Logs with options
+
+`L` on a container (or **Containers: Logs with Options…**) opens a picker:
+follow the last 200 or 1000 lines, all lines, the last 10 minutes or hour,
+since a duration or date you type, or the last N lines you type.
+**Timestamps** switches the engine timestamps on or off for the next
+follow. **Save logs to a file** writes the last 10000 lines to a new file
+in your Downloads folder. **Search the logs…** opens the matching lines of
+the last 10000 in a read-only page (any case).
+
+### Container details
+
+`I` on a container (or **Containers: Show Details**) opens a read-only
+page with its status, exit code and restart count, the health check
+state and its last results, the processes (`top`, only while it runs),
+mounts, labels and the names of its env variables. Env values are never
+read into the page; use `i` (inspect) when you need the raw JSON.
+
+### Container files
+
+`F` on a running container (or **Containers: Browse Files**) lists its
+folders in a picker, starting at `/`. Enter opens a folder; `..` goes up.
+A file opens a card: **View** shows it read-only in the editor (the first
+1 MB of text; a binary file is not shown), **Download** saves a copy in your
+Downloads folder and never replaces a file there (`name (1)`, `name (2)`…).
+**Upload a file here…** asks for a local path, then a card with **Cancel**
+first; a file that is already in the container is replaced only after a
+second **Replace** card. Nothing is written in the container without a card.
 
 Logs, shell, attach, stats and pulls run in terminal tabs, so you see
 progress and can type.

@@ -2008,7 +2008,10 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-context-default` | Containers: Make Context Default… | never | changes the machine-wide Docker default |
 | `containers-context-use` | Containers: Switch Context… | never | a context switch is the user's choice; it moves every container action to another host |
 | `containers-copy-id` | Containers: Copy ID | auto |   |
+| `containers-detail` | Containers: Show Details | auto |   |
 | `containers-engine-config` | Containers: Open Engine Config | auto |   |
+| `containers-exec-options` | Containers: Exec with Options… | never | opens a picker or prompt that only the user can answer; use a typed tool (container exec) |
+| `containers-files` | Containers: Browse Files | never | opens a picker or prompt that only the user can answer; use a typed tool (container files) |
 | `containers-filter` | Containers: Filter Rows… | never | the filter is typed by the user; the AI uses containers_list / images_list |
 | `containers-focus` | Containers: Focus | auto |   |
 | `containers-help` | Containers: Open Guide | auto |   |
@@ -2023,6 +2026,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-image-tag` | Containers: Tag Selected Image… | never | tagging an image is the user's; nothing is offered to the model |
 | `containers-inspect` | Containers: Inspect | auto |   |
 | `containers-logs` | Containers: Follow Logs | auto |   |
+| `containers-logs-options` | Containers: Logs with Options… | never | opens a picker or prompt that only the user can answer; use a typed tool (container logs options; containers-logs follows logs) |
 | `containers-network-create` | Containers: Create Network… | confirm (always asks) |   |
 | `containers-network-prune` | Containers: Prune Networks… | never | pruning networks is the user's; nothing is offered to the model |
 | `containers-network-remove` | Containers: Remove Selected Network… | never | removing is the user's; nothing is offered to the model |
