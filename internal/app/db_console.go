@@ -118,6 +118,8 @@ type dbConsoleState struct {
 	params   map[string]map[string]string // console file → name → last value
 	// the grid's column layouts (db_columns.go)
 	colStore *dbColStore
+	// foreign key navigation (db_fknav.go)
+	fk dbFKState
 }
 
 func (m *Model) dbConsole() *dbConsoleState {
@@ -938,6 +940,9 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseColumnsPicker(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseFKPicker(id); ok { // db_fknav.go
 		return cmd, true
 	}
 	if cmd, ok := m.databaseERPicker(id); ok { // db_er.go

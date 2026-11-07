@@ -215,6 +215,8 @@ The data page asks the server for one page at a time (`db_page_rows`, default 10
 
 `t` flips the page to the Transposed view: one row as `column | value` lines, which suits narrow windows and wide tables. `]` and `[` step through the rows (and the pages), `v` opens the value under the cursor, `t` goes back to the grid.
 
+**Foreign keys.** On a table's data page, `gf` on a foreign key cell opens the row it points to (the other table's data page, filtered to that key). `gb` goes back to the page the jump started from; the trail keeps the last 64 jumps. `gr` lists the tables whose foreign keys point at the row under the cursor; pick one to open its rows. `gl` on a foreign key cell lists the values of the referenced column (the first 500, sorted); the one you pick becomes a pending change, like `e`, so `w` shows the SQL and `u` undoes it. A NULL key points to no row, and a new row must be saved before you can follow it.
+
 PostgreSQL has no `CREATE TABLE` text to ask for, so its DDL is rebuilt from the catalogs (columns, primary key, indexes, foreign keys) and the buffer says so; it is a reconstruction, not a dump. MySQL / MariaDB and SQLite show the server's own statement.
 
 **From SQL.** In a console or a project `.sql` file, put the cursor on a table or view name (`users`, `public.users`, `"Order Items"`). **Databases: Go to Definition** opens its DDL; the name must be loaded in the tree, so expand its schema first. **Databases: Find Usages** lists every line of the project's `.sql` files that names it (whole word, any case); Enter opens the line.

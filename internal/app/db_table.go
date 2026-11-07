@@ -52,13 +52,14 @@ type dbTableView struct {
 	offset   int
 	good     int // the offset of the last page that loaded (a cancelled or failed page goes back to it)
 	more     bool
-	total    int        // -1 until # counts the rows
-	keys     []string   // primary key columns (stable default order)
-	unique   [][]string // unique indexes (a key for editing when there is no primary key)
-	cols     []string   // column names (the only valid ORDER BY targets)
-	size     int        // rows on a page, set when the view runs
-	rowid    string     // SQLite table without a key: the rowid name used as the hidden row key ("" none)
-	rowids   []string   // the rowid of each row of the page that loaded
+	total    int                         // -1 until # counts the rows
+	keys     []string                    // primary key columns (stable default order)
+	unique   [][]string                  // unique indexes (a key for editing when there is no primary key)
+	cols     []string                    // column names (the only valid ORDER BY targets)
+	size     int                         // rows on a page, set when the view runs
+	rowid    string                      // SQLite table without a key: the rowid name used as the hidden row key ("" none)
+	rowids   []string                    // the rowid of each row of the page that loaded
+	fks      []dbclient.SchemaForeignKey // the table's foreign keys (gf, gl)
 }
 
 // dbRowidAlias names the hidden rowid column of a data view's query.

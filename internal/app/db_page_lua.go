@@ -36,6 +36,16 @@ local function notify(k)
  for i,b in ipairs(D.bounds) do if x>=b-1 then col=i-1 end end
  if _G.termocode_notify then _G.termocode_notify('termocode_db_key',k,row,col) end
 end
+-- gf, gb, gr, gl: foreign key navigation (db_fknav.go).
+local function notify_fk(k)
+ local pos=api.nvim_win_get_cursor(0)
+ local row=-1
+ if D.first>0 and pos[1]>=D.first then row=pos[1]-D.first end
+ local x=vim.fn.virtcol('.')-1
+ local col=-1
+ for i,b in ipairs(D.bounds) do if x>=b-1 then col=i-1 end end
+ if _G.termocode_notify then _G.termocode_notify('termocode_db_fk',k,row,col) end
+end
 -- = in visual mode: the selected rows (row of the first and last line).
 local function notify_range(k)
  local a,b=vim.fn.line('v'),vim.fn.line('.')
@@ -108,6 +118,7 @@ function _G._termocode_db_open(split,lines,hls,first,bounds,cursor,wrap,fold,nam
   for _,k in ipairs({']','[','r','h','f','o','c','C','S','v','y','q','#','t','e','E','+','-','u','w','p','P','K','Z','x','X','D','1','2','3','4','5','6','7','8','9','?','=','H','O','<','>','F','(',')','{','}','Y'}) do vim.keymap.set('n',k,function() notify(k) end,{buffer=b,silent=true,nowait=true}) end
   for _,k in ipairs({'e','+','-'}) do vim.keymap.set('x',k,function() notify_range_edit(k) end,{buffer=b,silent=true,nowait=true}) end
   vim.keymap.set('n','gd',function() notify('gd') end,{buffer=b,silent=true})
+  for _,k in ipairs({'gf','gb','gr','gl'}) do vim.keymap.set('n',k,function() notify_fk(k) end,{buffer=b,silent=true,nowait=true}) end
   vim.keymap.set('x','=',function() notify_range('=') end,{buffer=b,silent=true,nowait=true})
   vim.keymap.set('n','<Tab>',function() notify('tab') end,{buffer=b,silent=true})
   vim.keymap.set('n','<Esc>',function() notify('esc') end,{buffer=b,silent=true})
