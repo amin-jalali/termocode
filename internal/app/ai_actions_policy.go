@@ -656,6 +656,10 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"web-devices":     aiNever(aiNoWeb + " (who may come in)"),
 	"web-totp":        aiNever(aiNoWeb + " (a second factor of the web sign-in)"),
 	"web-share":       aiNever(aiNoWeb + " (lets another person watch)"),
+	// Port preview (web_forward.go): opens a port of this computer to the
+	// browser; only the user asks, never an agent, MCP or a project file.
+	"web-forward-port":    aiNever(aiNoWeb + " (opens a port of this computer to the browser)"),
+	"web-forwarded-ports": aiNever(aiNoWeb + " (the open port forwards)"),
 	// Itermoc (itermoc_actions.go): the user's screen for profiles, models,
 	// services and outside agents. The AI opens it with the typed tool
 	// ai_view_open (ai_itermoc_tools.go); as palette commands they are the user's.

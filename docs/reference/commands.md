@@ -796,6 +796,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | Web: Copy Link | `web-copy-link` |   |   |
 | Web: Devices… | `web-devices` |   |   |
+| Web: Forward Port… | `web-forward-port` |   |   |
+| Web: Forwarded Ports… | `web-forwarded-ports` |   |   |
 | Web: Open in Browser | `web-start` |   |   |
 | Web: Pair a Device… | `web-pair` |   |   |
 | Web: Set Up Sign-in Code… | `web-totp` |   |   |
