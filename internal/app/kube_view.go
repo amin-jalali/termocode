@@ -325,7 +325,7 @@ func (st *kubeState) footer(now time.Time) []string {
 		if fw := st.forward(p.Name); fw != nil {
 			line = fmt.Sprintf("127.0.0.1:%d %s %d · %s", fw.Local, kubeArrow(), fw.Remote, line)
 		}
-		return []string{line, "l logs · e shell · f forward · ? keys"}
+		return []string{line, "l logs · e shell · f forward · F files · ? keys"}
 	case "deployments":
 		d := st.deploys[r.idx]
 		line := fmt.Sprintf("ready %s · updated %d · available %d", d.Ready(), d.Updated, d.Available)

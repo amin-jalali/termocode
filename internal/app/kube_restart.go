@@ -56,6 +56,11 @@ func (m *Model) askKubeRestart(d kube.Deployment) {
 
 // handleKubeConfirm runs the restart (and scale) card's answer.
 func (m *Model) handleKubeConfirm(id string) (tea.Cmd, bool) {
+	if m.kube != nil {
+		if cmd, ok := m.handleKubeFileConfirm(id); ok { // kube_podfiles.go
+			return cmd, true
+		}
+	}
 	if m.confirmKind == confirmKindKubeScale && m.kube != nil { // kube_scale.go
 		return m.answerKubeScale(id), true
 	}

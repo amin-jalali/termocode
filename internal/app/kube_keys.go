@@ -76,6 +76,20 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if p, ok := st.selectedPod(); ok {
 			return m, m.kubePodTerminal("shell", p, "")
 		}
+	case "F":
+		if p, ok := st.selectedPod(); ok {
+			return m, m.kubeListPodDir(p.Name, "/") // kube_podfiles.go
+		}
+	case "U":
+		if p, ok := st.selectedPod(); ok {
+			m.askKubeUpload(p)
+			return m, nil
+		}
+	case "D":
+		if p, ok := st.selectedPod(); ok {
+			m.askKubeDebug(p)
+			return m, nil
+		}
 	case "r":
 		if d, ok := st.selectedDeployment(); ok {
 			m.askKubeRestart(d)
@@ -140,6 +154,8 @@ func kubeKeyRows() []confirm.KeyRow {
 		[]string{"Enter l", "follow logs"},
 		[]string{"e", "open a shell"},
 		[]string{"f", "start or stop a port-forward"},
+		[]string{"F U", "browse and download files, upload (asks first)"},
+		[]string{"D", "debug container shell (asks first)"},
 		[]string{"Every row"},
 		[]string{"i", "describe (read only)"},
 		[]string{"v", "YAML (read only, secrets masked)"},

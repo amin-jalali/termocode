@@ -63,6 +63,9 @@ kubeconfig, so other terminals keep their context.
 | `E` | Events of the row, newest first (a read-only page). On a section header: all events of the namespace. |
 | `e` | Pod: open a shell in it. |
 | `f` | Pod, service or deployment: start or stop a port-forward. On a **FORWARDS** row: stop it. |
+| `F` | Pod: browse its files; pick a file to download it (asks for a local path). |
+| `U` | Pod: upload a local file into it (asks the paths, then asks first). |
+| `D` | Pod: open a shell in a new debug container (asks first). |
 | `y` | Copy the name. On a **FORWARDS** row: copy the local address. |
 | `r` | Deployment: restart it (asks first). |
 | `s` | Deployment: scale it (asks the number, then asks first). |
@@ -80,6 +83,27 @@ kubeconfig, so other terminals keep their context.
 last 200 lines. `e` opens a shell in the pod (`bash`, or `sh` when there
 is no bash). A pod with more than one container asks which container
 first.
+
+## Pod files and debug
+
+`F` on a pod lists its root folder (`kubectl exec … ls -la`; read only).
+Pick a folder to open it, or `..` to go up. Pick a file to download it:
+termocode asks for a local path (the workspace folder first) and runs
+`kubectl cp`. It never overwrites a file that is there.
+
+`U` on a pod uploads a file: it asks for the local file (the current
+file first), then for the path in the pod (`/tmp/<name>` first). A card
+shows both paths, the context, the namespace and the command.
+**Cancel** is the first button and has the focus. A file at that pod
+path is replaced.
+
+`D` on a pod adds an ephemeral debug container (`busybox`) and opens a
+shell in it, in a terminal tab (`kubectl debug -it`). It shares the
+processes of the pod's first container. This changes the pod spec, so a
+card asks first (**Cancel** has the focus). The debug container stays
+until the pod is gone.
+
+These use the pod's default container. The AI can not run them.
 
 ## Port-forward
 
@@ -135,8 +159,8 @@ The AI can open the view and load it again. It can also read the
 cluster, in the context the view shows: `kube_list` (the four lists),
 `kube_describe` (one object) and `kube_logs` (the last lines of a pod).
 Secrets in their answers are hidden. The AI can never restart or
-scale a deployment, delete an object, start a port-forward or switch
-the context.
+scale a deployment, delete an object, start a port-forward, copy pod
+files, debug a pod or switch the context.
 
 ## When something is wrong
 
