@@ -97,6 +97,14 @@ The overlay has more options:
     Replace in Workspace writes straight to disk. The search is literal
     and case-sensitive. Commit or stash your work first, so git can undo it.
 
+A file that is open with unsaved changes is not written. The text is
+replaced in its tab instead: your edits stay, the tab stays unsaved, and
+`Ctrl+Z` in that tab undoes the replace. The dialog says how many such
+files there are. Save them when you are happy.
+
+Binary files are skipped. With ripgrep installed, files that `.gitignore`
+lists are skipped too.
+
 ## Result limit
 
 Find in Files stops after **2000** results by default. The footer then says
