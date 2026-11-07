@@ -84,7 +84,13 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		}
 	case "s":
 		if d, ok := st.selectedDeployment(); ok {
-			m.askKubeScale(d, "", "")
+			m.askKubeScale("deployment", d.Name, d.Replicas, "", "")
+			return m, nil
+		}
+		if have && r.kind == kubeRowItem && r.section == "statefulsets" {
+			if o, ok := st.extraObj(r); ok {
+				m.askKubeScale("statefulset", o.Name, o.Replicas, "", "")
+			}
 			return m, nil
 		}
 	case "d":
@@ -156,7 +162,7 @@ func kubeKeyRows() []confirm.KeyRow {
 		[]string{"i v E", "act on the event's object"},
 		[]string{"y", "copy the name"},
 		[]string{"r", "deployment: restart (asks first)"},
-		[]string{"s", "deployment: scale (asks first)"},
+		[]string{"s", "deployment, statefulset: scale (asks first)"},
 		[]string{"L", "deployment: logs of all its pods"},
 		[]string{"d", "delete (asks first)"},
 		[]string{"Cluster"},

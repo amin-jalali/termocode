@@ -360,6 +360,9 @@ func (st *kubeState) footer(now time.Time) []string {
 		return []string{fmt.Sprintf("%s · %s done · %d failed", j.Status(), j.Completions(), j.Failed), "i describe · y copy name · ? keys"}
 	}
 	if o, ok := st.extraObj(r); ok {
+		if r.section == "statefulsets" {
+			return []string{o.Detail, "s scale · i describe · v YAML · ? keys"}
+		}
 		return []string{o.Detail, "i describe · v YAML · E events · ? keys"}
 	}
 	return []string{"", keys}

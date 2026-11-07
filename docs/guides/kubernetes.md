@@ -80,7 +80,7 @@ kubeconfig, so other terminals keep their context.
 | `f` | Pod, service or deployment: start or stop a port-forward. On a **FORWARDS** row: stop it. |
 | `y` | Copy the name. On a **FORWARDS** row: copy the local address. |
 | `r` | Deployment: restart it (asks first). |
-| `s` | Deployment: scale it (asks the number, then asks first). |
+| `s` | Deployment or statefulset: scale it (asks the number, then asks first). |
 | `d` | Delete the row's object (asks first). Not on a node or an event. |
 | `c` / `n` | Pick the context / the namespace. |
 | `[` / `]` | Back / forward to the context and namespace you had before. |
@@ -131,9 +131,9 @@ context, the namespace and the command (`kubectl rollout restart`).
 **Cancel** is the first button and has the focus, so `Enter` or `Esc`
 alone never restarts anything. **Restart** replaces the pods one by one.
 
-## Scale a deployment
+## Scale a deployment or a statefulset
 
-`s` on a deployment asks for the number of replicas; it starts at the
+`s` on a deployment or a statefulset asks for the number of replicas; it starts at the
 current number. A number from 0 to 1000 opens a card with the change
 (`2 → 5`), the context, the namespace and the command (`kubectl
 scale`). 0 stops every pod, and the card says so. **Cancel** is the

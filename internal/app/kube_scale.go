@@ -13,9 +13,9 @@ import (
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
-// ── Kubernetes view: scale a deployment (CTX-5) ──────────────────────────
+// ── Kubernetes view: scale a deployment or statefulset (CTX-5) ───────────
 //
-// s on a deployment asks the number of replicas (it starts at the current
+// s on a deployment or a statefulset asks the number of replicas (it starts at the current
 // number), then a card shows the change, the scope and the command
 // (Cancel is the first button and has the focus; Esc cancels). Only then
 // it runs `kubectl scale`. The AI can not reach it (no palette id).
@@ -25,14 +25,15 @@ const (
 	promptKindKubeScale  promptKindEnum  = 3474
 )
 
-// kubeScaleTarget is the deployment a scale prompt and card ask about,
-// in the scope they were asked in.
+// kubeScaleTarget is the deployment or statefulset a scale prompt and
+// card ask about, in the scope they were asked in.
 type kubeScaleTarget struct {
-	context, namespace, name string
-	from, to                 int
+	context, namespace, kind, name string
+	from, to                       int
 }
 
 type kubeScaleMsg struct {
+	kind     string
 	name     string
 	replicas int
 	err      error
@@ -40,13 +41,14 @@ type kubeScaleMsg struct {
 
 // askKubeScale opens the replicas prompt (value: the text to show, ""
 // = the current number; errText: why the last answer was refused).
-func (m *Model) askKubeScale(d kube.Deployment, value, errText string) {
+// kind is "deployment" or "statefulset".
+func (m *Model) askKubeScale(kind, name string, replicas int, value, errText string) {
 	st := m.kube
-	st.pendingScale = kubeScaleTarget{context: st.context, namespace: st.namespace, name: d.Name, from: d.Replicas}
+	st.pendingScale = kubeScaleTarget{context: st.context, namespace: st.namespace, kind: kind, name: name, from: replicas}
 	if value == "" && errText == "" {
-		value = strconv.Itoa(d.Replicas)
+		value = strconv.Itoa(replicas)
 	}
-	m.prompt = prompt.New(" Scale deployment ", "Replicas for "+d.Name+" (now "+strconv.Itoa(d.Replicas)+"):", value)
+	m.prompt = prompt.New(" Scale "+kind+" ", "Replicas for "+name+" (now "+strconv.Itoa(replicas)+"):", value)
 	m.prompt.SetNote("0 stops every pod. A card asks before anything changes.")
 	if errText != "" {
 		m.prompt.SetError(errText)
@@ -68,7 +70,7 @@ func (m *Model) handleKubePromptSubmit(value string) (tea.Cmd, bool) {
 	text := strings.TrimSpace(value)
 	n, err := strconv.Atoi(text)
 	if err != nil || n < 0 || n > kube.ScaleMax {
-		m.askKubeScale(kube.Deployment{Name: t.name, Replicas: t.from}, text, "Type a whole number from 0 to "+strconv.Itoa(kube.ScaleMax)+".")
+		m.askKubeScale(t.kind, t.name, t.from, text, "Type a whole number from 0 to "+strconv.Itoa(kube.ScaleMax)+".")
 		m.kube.pendingScale.context, m.kube.pendingScale.namespace = t.context, t.namespace
 		return nil, true
 	}
@@ -84,8 +86,8 @@ func (m *Model) handleKubePromptSubmit(value string) (tea.Cmd, bool) {
 	}
 	body := what + "\n\n" +
 		"Context: " + t.context + " · Namespace: " + t.namespace + "\n" +
-		"Command: kubectl scale deployment/" + t.name + " --replicas=" + strconv.Itoa(n)
-	m.confirm = confirm.Risky("Scale deployment?", body, confirm.Button{ID: "cancel", Title: "Cancel"},
+		"Command: kubectl scale " + t.kind + "/" + t.name + " --replicas=" + strconv.Itoa(n)
+	m.confirm = confirm.Risky("Scale "+t.kind+"?", body, confirm.Button{ID: "cancel", Title: "Cancel"},
 		confirm.Button{ID: "scale", Title: "Scale", Style: confirm.StyleDestructive})
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
@@ -103,7 +105,7 @@ func (m *Model) answerKubeScale(id string) tea.Cmd {
 	c := m.kube.client()
 	c.Context, c.Namespace = t.context, t.namespace // the scope the card showed
 	return func() tea.Msg {
-		return kubeScaleMsg{name: t.name, replicas: t.to, err: c.Scale(context.Background(), "deployment", t.name, t.to)}
+		return kubeScaleMsg{kind: t.kind, name: t.name, replicas: t.to, err: c.Scale(context.Background(), t.kind, t.name, t.to)}
 	}
 }
 
