@@ -57,6 +57,7 @@ type dbExport struct {
 	res       dbclient.Result
 	all       bool
 	overwrite bool
+	toFile    bool // Run Query to File: the query's rows, not the grid's (db_run_to_file.go)
 	// what Export all re-runs (sql == "": not possible)
 	sql, reason, driver, conn, sessKey string
 	partial                            string // "": the rows are everything; else why they are not
@@ -261,7 +262,11 @@ func (m *Model) databaseExportFormatPicked(id string) tea.Cmd {
 		return nil
 	}
 	e.format = info.Format
-	e.opts = m.dbExportPrepare(e.opts) // CSV settings, keys, shown columns (DBX-36)
+	if e.toFile {
+		e.opts = loadDBConsoleSettings().exportOptions(e.opts) // the grid's keys and columns are not this query's
+	} else {
+		e.opts = m.dbExportPrepare(e.opts) // CSV settings, keys, shown columns (DBX-36)
+	}
 	if e.format == dbclient.FormatSQLUpdate && len(e.opts.KeyColumns) == 0 {
 		s.exp = nil
 		return m.pushToastDetail(toast.Warn, "Cannot export SQL UPDATEs", errDBUpdateNoKey.Error())
@@ -319,6 +324,9 @@ func (m *Model) databaseExportPathTyped(value string) tea.Cmd {
 		return m.pushToastDetail(toast.Warn, "Cannot export", sanitizeDBText(display)+" is a folder.")
 	}
 	e.path, e.display = abs, display
+	if e.toFile {
+		return m.databaseRunToFileCard()
+	}
 	if e.partial == "" {
 		return m.databaseExportCheckPath()
 	}
@@ -500,6 +508,8 @@ func (m *Model) databaseTransferConfirm(id string) (tea.Cmd, bool) {
 		return nil, true
 	case confirmKindDBExportFolder:
 		return m.databaseExportFolderConfirm(id), true
+	case confirmKindDBRunToFile:
+		return m.databaseRunToFileConfirm(id), true
 	case confirmKindDBDump:
 		return m.databaseDumpConfirm(id), true
 	case confirmKindDBNewTable:
@@ -549,7 +559,7 @@ func (m *Model) databaseTransferClosed() {
 	switch m.confirmKind {
 	case confirmKindDBJob:
 		m.databaseJobCancel()
-	case confirmKindDBExportScope, confirmKindDBExportOverwrite:
+	case confirmKindDBExportScope, confirmKindDBExportOverwrite, confirmKindDBRunToFile:
 		s.exp = nil
 	case confirmKindDBImport:
 		s.dbImportEnd()

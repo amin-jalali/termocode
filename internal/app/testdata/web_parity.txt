@@ -514,6 +514,7 @@ missing	db-exec-mode	Databases|S
 missing	db-chart	Databases|S
 missing	db-copy-as	Databases|S
 missing	db-export-tables	Databases|M
+missing	db-run-to-file	Databases|S
 missing	db-er-path	Databases|S
 missing	db-inline-clear	Databases|S
 missing	db-query-log	Databases|S
