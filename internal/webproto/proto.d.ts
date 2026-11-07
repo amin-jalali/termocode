@@ -2347,6 +2347,48 @@ export interface VimMap {
   noremap?: boolean;
 }
 
+export interface ViewSaveArgs {
+  spec: ViewSpec;
+  name: string;
+  pin?: boolean;
+}
+
+export interface ViewRefArgs {
+  id: string;
+}
+
+export interface ViewRenameArgs {
+  id: string;
+  name: string;
+}
+
+export interface ViewPinArgs {
+  id: string;
+  on: boolean;
+  order?: number;
+}
+
+export interface SavedViewList {
+  items: SavedView[];
+  max: number;
+  max_pinned: number;
+}
+
+export interface SavedView {
+  id: string;
+  name: string;
+  spec: ViewSpec;
+  pinned?: boolean;
+  order?: number;
+  saved: number;
+  by?: string;
+}
+
+export interface ViewSaved {
+  id: string;
+  replaced?: boolean;
+}
+
 export interface WorkspaceList {
   folders: WorkspaceEntry[];
   recent: WorkspaceEntry[];
@@ -3285,6 +3327,11 @@ export interface OpArgs {
   "usercmds.save": UserCmdSaveArgs;
   "editor.vim_maps": EmptyArgs;
   "editor.vim_buf_maps": BufArgs;
+  "view.list": EmptyArgs;
+  "view.save": ViewSaveArgs;
+  "view.rename": ViewRenameArgs;
+  "view.delete": ViewRefArgs;
+  "view.pin": ViewPinArgs;
   "workflows.stop": WorkflowRunArgs;
   "workspace.list": EmptyArgs;
   "workspace.add_folder": WorkspacePathArgs;
@@ -3483,6 +3530,7 @@ export interface EventData {
   "answered": Answered;
   "attention": Attention;
   "search.batch": SearchBatch;
+  "views_saved": SavedViewList;
 }
 
 // The data of a res message, by op (ops not listed answer without data).
@@ -3559,6 +3607,11 @@ export interface OpResult {
   "usercmds.save": UserCmdList;
   "editor.vim_maps": VimMapList;
   "editor.vim_buf_maps": VimMapList;
+  "view.list": SavedViewList;
+  "view.save": ViewSaved;
+  "view.rename": SavedViewList;
+  "view.delete": SavedViewList;
+  "view.pin": SavedViewList;
   "workspace.list": WorkspaceList;
   "workspace.add_folder": AskRef;
   "workspace.remove_folder": AskRef;
