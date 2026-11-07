@@ -215,6 +215,10 @@ You can change the rows of a table's data page, and of a console result that is 
 | `E` | edit the value in a buffer (for long or multi-line values); `:w` keeps it, `q` leaves without a change |
 | `+` | add a new row; its cells show `<default>` until you set them with `e` |
 | `-` | mark the row for deletion (again: keep it); on a new row: remove it |
+| `V` then `e` | set one value in the column under the cursor for every selected row (one prompt) |
+| `V` then `+` | add a copy of each selected row; key columns get their default and binary values are left out |
+| `V` then `-` | mark every selected row for deletion (again: keep them); new rows in the selection are removed |
+| `P` | paste rows from the clipboard: tab-separated values go from the cursor cell to the right and down, extra lines become new rows (`\N` is NULL); values past the last column, in a binary column or on a deleted row are skipped |
 | `u` | undo the change of the cell under the cursor, else of the row; on a row without changes it asks to undo all changes |
 | `w` | submit the changes |
 

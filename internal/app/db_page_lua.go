@@ -49,6 +49,19 @@ local function notify_range(k)
  if r2<0 then return end
  if _G.termocode_notify then _G.termocode_notify('termocode_db_key',k,r1,col,r2) end
 end
+-- V then e, + or -: the first and last result row of the selection
+-- and the column under the cursor; the selection ends first.
+local function notify_range_edit(k)
+ local a,z=vim.fn.line('v'),vim.fn.line('.')
+ if a>z then a,z=z,a end
+ local x=vim.fn.virtcol('.')-1
+ local col=-1
+ for i,b in ipairs(D.bounds) do if x>=b-1 then col=i-1 end end
+ api.nvim_feedkeys(api.nvim_replace_termcodes('<Esc>',true,false,true),'nx',false)
+ local r1,r2=-1,-1
+ if D.first>0 then r1=a-D.first;r2=z-D.first end
+ if _G.termocode_notify then _G.termocode_notify('termocode_db_range',k,r1,r2,col) end
+end
 local function set_win(win)
  local o=vim.wo[win]
  o.number,o.relativenumber=false,false
@@ -92,7 +105,8 @@ function _G._termocode_db_open(split,lines,hls,first,bounds,cursor,wrap,fold,nam
   api.nvim_buf_set_name(b,'SQL Result')
   vim.b[b].termocode_no_guides=true -- right-aligned numbers are not indentation
   vim.bo[b].bufhidden='hide';vim.bo[b].swapfile=false
-  for _,k in ipairs({']','[','r','h','f','o','c','C','S','v','y','q','#','t','e','E','+','-','u','w','p','K','Z','x','X','D','1','2','3','4','5','6','7','8','9','?','='}) do vim.keymap.set('n',k,function() notify(k) end,{buffer=b,silent=true,nowait=true}) end
+  for _,k in ipairs({']','[','r','h','f','o','c','C','S','v','y','q','#','t','e','E','+','-','u','w','p','P','K','Z','x','X','D','1','2','3','4','5','6','7','8','9','?','='}) do vim.keymap.set('n',k,function() notify(k) end,{buffer=b,silent=true,nowait=true}) end
+  for _,k in ipairs({'e','+','-'}) do vim.keymap.set('x',k,function() notify_range_edit(k) end,{buffer=b,silent=true,nowait=true}) end
   vim.keymap.set('n','gd',function() notify('gd') end,{buffer=b,silent=true})
   vim.keymap.set('x','=',function() notify_range('=') end,{buffer=b,silent=true,nowait=true})
   vim.keymap.set('n','<Tab>',function() notify('tab') end,{buffer=b,silent=true})
