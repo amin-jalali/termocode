@@ -106,7 +106,7 @@ func (p *Parser) claudeLine(raw []byte) bool {
 				name := str(b, "name")
 				p.calls[str(b, "id")] = name
 				in, _ := b["input"].(map[string]any)
-				p.add(Turn{Kind: ToolCall, Time: at, Tool: name, Args: redact(claudeToolArgs(in))})
+				p.add(Turn{Kind: ToolCall, Time: at, Tool: name, Args: redact(claudeToolArgs(in)), Detail: claudeToolDetail(name, in)})
 			case "tool_result":
 				failed, _ := b["is_error"].(bool)
 				p.addResult(at, str(b, "tool_use_id"), claudeResultText(b["content"]), failed)
@@ -190,4 +190,46 @@ func claudeToolArgs(in map[string]any) string {
 
 func diffCount(add, del int) string {
 	return "+" + strconv.Itoa(add) + " -" + strconv.Itoa(del)
+}
+
+// maxDetail is the most kept of a question or a plan.
+const maxDetail = 32 << 10
+
+// claudeToolDetail is the full text of a call that asks the user
+// (redacted): AskUserQuestion's questions with their numbered options,
+// ExitPlanMode's plan. "" for every other call.
+func claudeToolDetail(name string, in map[string]any) string {
+	var out string
+	switch name {
+	case "ExitPlanMode":
+		out = strings.TrimSpace(str(in, "plan"))
+	case "AskUserQuestion":
+		qs, _ := in["questions"].([]any)
+		var b strings.Builder
+		for qi, el := range qs {
+			q, _ := el.(map[string]any)
+			if qi > 0 {
+				b.WriteString("\n\n")
+			}
+			if h := strings.TrimSpace(str(q, "header")); h != "" {
+				b.WriteString(h + ": ")
+			}
+			b.WriteString(strings.TrimSpace(str(q, "question")))
+			opts, _ := q["options"].([]any)
+			for i, o := range opts {
+				om, _ := o.(map[string]any)
+				b.WriteString("\n  " + strconv.Itoa(i+1) + ". " + strings.TrimSpace(str(om, "label")))
+				if d := strings.TrimSpace(str(om, "description")); d != "" {
+					b.WriteString(" — " + d)
+				}
+			}
+		}
+		out = b.String()
+	default:
+		return ""
+	}
+	if len(out) > maxDetail {
+		out = strings.ToValidUTF8(out[:maxDetail], "") + "\n…"
+	}
+	return redact(out)
 }

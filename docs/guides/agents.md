@@ -320,6 +320,18 @@ With `agent_transcripts` on:
 - **Agent: Chat View** (or `v` on an agent tab) shows the session as a
   chat. Tool calls are one line each. What you type goes to the tab. Press
   `v` again for the terminal.
+- When the agent asks something, the chat shows it as a panel above the
+  status line, with the numbered answers from the agent's own menu:
+  - **QUESTION**: the question and its options. A number key picks that
+    answer at once.
+  - **PLAN**: the plan to approve. `o` opens the whole plan in a read-only
+    editor tab.
+  - **NEEDS YOUR OK**: a permission prompt, with the tool call.
+
+  For a plan or a permission, a number opens a card first (Cancel is the
+  default). Send checks the screen again and sends nothing if the question
+  changed. termocode presses the agent's own keys (arrows, then Enter), so
+  the answer is the same as in the terminal. The AI never answers.
 - **Agent: Sessions…** lists this project's past sessions. `Enter` resumes
   one in a new tab with the CLI's own resume command; `→` reads it.
 - `/` in the list, or **Agent: Search Sessions…**, searches the text of
