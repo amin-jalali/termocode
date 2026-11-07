@@ -647,6 +647,8 @@ type Model struct {
 	pendingKubeHelm kubeHelmTarget
 	// wt is the WORKTREES view (worktrees_state.go).
 	wt *wtState
+	// specOpen is the spec whose card is open (specs_ui.go).
+	specOpen string
 	// databases is lazy and holds idle sessions only while the view is open.
 	databases *dbState
 	// itermoc is the Itermoc view (profiles, models, services, outside

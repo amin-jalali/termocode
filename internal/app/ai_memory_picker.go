@@ -46,7 +46,7 @@ func (m *Model) openAIMemory() tea.Cmd {
 		shared, _ = aimemory.LoadForWorktree(root)
 	}
 	if len(ls) == 0 && len(shared) == 0 {
-		if aiMemoryState() == aiMemoryOn {
+		if aiMemoryUses(aiMemoryState()) {
 			return m.aiInfo("No lessons in this workspace yet")
 		}
 		return m.aiInfo("No lessons in this workspace · memory is off (AI: Memory: Turn On/Off)")
@@ -54,7 +54,11 @@ func (m *Model) openAIMemory() tea.Cmd {
 	items := make([]picker.Item, 0, len(ls)+1)
 	for i := len(ls) - 1; i >= 0; i-- {
 		l := ls[i]
-		items = append(items, picker.Item{ID: l.ID, Title: l.Date + " · " + aimemory.CleanLine(l.Title, aimemory.MaxTitleRunes),
+		kind := ""
+		if k := aimemory.NormKind(l.Kind); k != "" {
+			kind = k + " · "
+		}
+		items = append(items, picker.Item{ID: l.ID, Title: l.Date + " · " + kind + aimemory.CleanLine(l.Title, aimemory.MaxTitleRunes),
 			Hint: strings.Join(l.Paths, ", ")})
 	}
 	if len(shared) > 0 {
@@ -64,10 +68,7 @@ func (m *Model) openAIMemory() tea.Cmd {
 		items = append(items, picker.Item{ID: aiMemoryForgetAllID, Title: "Forget all…"})
 	}
 	m.picker = picker.NewItems(" "+aiSpark()+" AI Memory ", items)
-	state := "on"
-	if aiMemoryState() != aiMemoryOn {
-		state = "off"
-	}
+	state := aiMemoryLevelText(aiMemoryState())
 	m.picker.SetNote([]string{strconv.Itoa(len(ls)) + " lesson" + plural(len(ls)) + " in " + aiMemoryRel + " · memory is " + state})
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen = true
@@ -117,6 +118,9 @@ func (m *Model) onAIMemoryPicked(id string) tea.Cmd {
 		return nil
 	}
 	body := l.Date + "\n\n" + aimemory.CleanLine(l.Text, aimemory.MaxTextRunes*2)
+	if k := aimemory.NormKind(l.Kind); k != "" {
+		body = l.Date + " · " + k + "\n\n" + aimemory.CleanLine(l.Text, aimemory.MaxTextRunes*2)
+	}
 	if len(l.Paths) > 0 {
 		body += "\n\npaths: " + strings.Join(l.Paths, ", ")
 	}

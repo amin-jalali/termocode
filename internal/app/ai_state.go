@@ -128,6 +128,7 @@ type aiState struct {
 	acp            *acpThread      // CMP-83: the chat's ACP agent thread (acp_thread.go)
 	ctl            *agentCtlState  // the agent control socket's UI side (agent_ctl.go)
 	diffNotes      *diffNotesState // diff comments → agent (diff_comments.go, CMP-51)
+	promptActs     *paState        // the open prompt-action flow (prompt_actions.go)
 	// agentHooksPlan is the change the open state-hooks card shows (agent_hooks_ui.go).
 	agentHooksPlan *agenthooks.Plan
 	// packs is the open agent-pack flow (agent_packs_ui.go).
@@ -646,6 +647,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-agent-hooks", "Agent: State Hooks… (exact working / waiting / done)", ""},
 		{"ai-agent-packs", "Agent: Agent Packs… (install agents, skills and rules for Claude Code / Codex)", ""},
 		{"ai-memory-toggle", "AI: Memory: Turn On/Off", ""},
+		{"ai-memory-learn", "AI: Memory: Learn New Lessons On/Off (use only)", ""},
 		{"ai-models-edit", "AI: Edit Model Slots", ""},
 		{"ai-sign-in-claude", "AI: Sign in with Claude (OAuth, opt-in)…", ""},
 		{"ai-sign-out-claude", "AI: Sign out of Claude", ""},
@@ -880,6 +882,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAgentPacks(), true
 	case "ai-memory-toggle":
 		return m.toggleAIMemory(), true
+	case "ai-memory-learn":
+		return m.toggleAIMemoryLearn(), true
 	case "ai-models-edit":
 		return m.editAIModelSlots(), true
 	}

@@ -15,11 +15,12 @@ import (
 
 // Spec (MS-6): the source lists one resource, termocode://editor/state.
 func TestMCPServeResourceList(t *testing.T) {
+	// CMP-73: termocode://memory/lessons is the second resource.
 	src, hub, _ := mcpServeTestSource(t.TempDir(), nil)
 	defer hub.stop()
 	var rs mcp.ResourceSource = src
 	list := rs.Resources()
-	if len(list) != 1 || list[0].URI != "termocode://editor/state" || list[0].MimeType != "application/json" {
+	if len(list) != 2 || list[1].URI != mcpServeMemoryURI || list[0].URI != "termocode://editor/state" || list[0].MimeType != "application/json" {
 		t.Fatalf("resources = %+v", list)
 	}
 }

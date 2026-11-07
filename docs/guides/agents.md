@@ -131,10 +131,14 @@ user can open. termocode checks the user of every connection. See
 
 termocode answers the MCP revisions `2025-03-26`, `2025-06-18` and
 `2025-11-25`, and the stateless revision `2026-07-28` (no `initialize`;
-`server/discover` tells what is supported). Besides tools it offers one
-read-only resource, `termocode://editor/state`: the active file, cursor,
-open buffers, git branch and the number of diagnostics. It needs no
-confirmation and is empty when termocode is not open.
+`server/discover` tells what is supported). Besides tools it offers two
+read-only resources. `termocode://editor/state` holds the active file,
+cursor, open buffers, git branch and the number of diagnostics.
+`termocode://memory/lessons` holds the workspace's AI memory (lessons,
+decisions and corrections, Markdown, redacted; only a note while memory
+is off), so the agent learns from the same notes as termocode's own AI
+(see [Memory](ai-use.md#memory)). They need no confirmation and are empty
+when termocode is not open.
 
 ## What the agent can not do
 

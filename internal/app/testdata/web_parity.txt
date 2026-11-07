@@ -44,6 +44,7 @@ web	ai-mcp-reset-cache	palette
 web	ai-mcp-servers	view:mcp
 web	ai-mcp-updates	palette
 web	ai-memory	op:ai.info
+web	ai-memory-learn	palette
 web	ai-memory-toggle	palette
 web	ai-model-slot-add	cmd:aiModelSlotAdd
 web	ai-models-edit	cmd:aiModelsEdit
@@ -735,6 +736,11 @@ missing	lsp-mirror-refresh	Workspace|S
 missing	preview-dev-servers	Preview|L
 missing	preview-open-newest	Preview|S
 missing	output-save-audit	Output|S
+missing	prompt-actions	AI|S
+missing	prompt-actions-edit	AI|S
+missing	prompt-actions-export	AI|S
+missing	prompt-actions-import	AI|S
+missing	prompt-actions-new	AI|S
 missing	redis-copy-key	Databases|S
 missing	redis-rename-key	Databases|S
 missing	redis-slowlog	Databases|S
@@ -749,6 +755,9 @@ missing	tracker-show	Workspace|S
 missing	web-forward-port	Web|M
 missing	terminal-ai-hand-back	Terminal|S
 missing	terminal-ai-take-over	Terminal|S
+missing	spec-new	Specs|M
+missing	spec-new-bugfix	Specs|M
+missing	spec-open	Specs|M
 missing	workflow-dry-run	Workflows|S
 missing	workflow-history	Workflows|S
 missing	workflow-new	Workflows|S

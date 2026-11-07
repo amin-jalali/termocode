@@ -2237,6 +2237,7 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `ai-mcp-servers` | AI: MCP Servers… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-mcp-updates` | AI: MCP: Check for Updates (catalog servers) | never | AI provider, credentials and approvals stay with the user |
 | `ai-memory` | AI: Memory… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `ai-memory-learn` | AI: Memory: Learn New Lessons On/Off (use only) | never | AI provider, credentials and approvals stay with the user |
 | `ai-memory-toggle` | AI: Memory: Turn On/Off | never | AI provider, credentials and approvals stay with the user |
 | `ai-model-slot-add` | AI: Add Model Slot… | never | a form for the user; keys and config.json stay with the user (the AI shows the AI PROVIDERS section with ai_view_open) |
 | `ai-models-edit` | AI: Edit Model Slots | never | AI provider, credentials and approvals stay with the user |
@@ -2712,6 +2713,11 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `preview-open-newest` | Preview: Open Newest Dev Server | never | acts outside the IDE (OS shell, file manager or browser) |
 | `problems` | Go to Problem... | never | opens a picker or prompt that only the user can answer; use a typed tool (diagnostics) |
 | `problems-panel` | View: Problems | auto |   |
+| `prompt-actions` | Prompt Actions: Run… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks which saved prompt runs |
+| `prompt-actions-edit` | Prompt Actions: Edit File | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks which saved prompt runs |
+| `prompt-actions-export` | Prompt Actions: Export… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks which saved prompt runs |
+| `prompt-actions-import` | Prompt Actions: Import… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks which saved prompt runs |
+| `prompt-actions-new` | Prompt Actions: New… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks which saved prompt runs |
 | `quick-open` | Go to File... | never | opens a picker or prompt that only the user can answer; use a typed tool (open_file) |
 | `quit` | File: Quit | never | quits termocode |
 | `redis-delete-key` | Databases: Delete Redis Key… | never | opens a picker or prompt that only the user can answer; use a typed tool (redis_command) |
@@ -2763,6 +2769,9 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `sort-asc` | Edit: Sort Lines Ascending | confirm (fileWrite) |   |
 | `sort-desc` | Edit: Sort Lines Descending | confirm (fileWrite) |   |
 | `spaces-to-tabs` | Edit: Convert Spaces to Tabs | confirm (fileWrite) |   |
+| `spec-new` | Spec: New… | never | opens a picker or prompt that only the user can answer; use a typed tool; write the spec files with the file tools |
+| `spec-new-bugfix` | Spec: New Bugfix… | never | opens a picker or prompt that only the user can answer; use a typed tool; write the spec files with the file tools |
+| `spec-open` | Spec: Open… | never | opens a picker or prompt that only the user can answer; use a typed tool; only the user approves a spec phase |
 | `split-horizontal` | Editor: Split Down | auto |   |
 | `split-vertical` | Editor: Split Right | auto |   |
 | `tabs-to-spaces` | Edit: Convert Tabs to Spaces | confirm (fileWrite) |   |

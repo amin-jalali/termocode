@@ -50,6 +50,25 @@ type Lesson struct {
 	Title string
 	Text  string
 	Paths []string // workspace-relative paths the lesson is about
+	// Kind is "" (a plain lesson), KindDecision or KindCorrection (CMP-73).
+	Kind string
+}
+
+// Lesson kinds (CMP-73): a decision the user made for the project, or a
+// correction (the user said the assistant was wrong and what to do
+// instead). A plain lesson has no kind.
+const (
+	KindDecision   = "decision"
+	KindCorrection = "correction"
+)
+
+// NormKind is the kind s names, or "" for a plain or unknown kind.
+func NormKind(s string) string {
+	switch k := strings.ToLower(strings.TrimSpace(s)); k {
+	case KindDecision, KindCorrection:
+		return k
+	}
+	return ""
 }
 
 // Dir is the memory folder of a workspace.
@@ -72,11 +91,19 @@ func Parse(b []byte) []Lesson {
 		for len(body) > 0 && strings.TrimSpace(body[len(body)-1]) == "" {
 			body = body[:len(body)-1]
 		}
-		if n := len(body); n > 0 && strings.HasPrefix(body[n-1], "paths:") {
-			for _, p := range strings.Split(strings.TrimPrefix(body[n-1], "paths:"), ",") {
-				if p = strings.TrimSpace(p); p != "" {
-					cur.Paths = append(cur.Paths, p)
+		// The meta lines at the end, in any order: "paths:" and "kind:".
+		for n := len(body); n > 0; n = len(body) {
+			last := body[n-1]
+			if strings.HasPrefix(last, "paths:") && cur.Paths == nil {
+				for _, p := range strings.Split(strings.TrimPrefix(last, "paths:"), ",") {
+					if p = strings.TrimSpace(p); p != "" {
+						cur.Paths = append(cur.Paths, p)
+					}
 				}
+			} else if strings.HasPrefix(last, "kind:") && cur.Kind == "" {
+				cur.Kind = NormKind(strings.TrimPrefix(last, "kind:"))
+			} else {
+				break
 			}
 			body = body[:n-1]
 		}
@@ -115,6 +142,9 @@ func Marshal(ls []Lesson) []byte {
 		fmt.Fprintf(&b, "\n## %s · %s {#%s}\n", l.Date, l.Title, l.ID)
 		if l.Text != "" {
 			b.WriteString(l.Text + "\n")
+		}
+		if k := NormKind(l.Kind); k != "" {
+			b.WriteString("kind: " + k + "\n")
 		}
 		if len(l.Paths) > 0 {
 			b.WriteString("paths: " + strings.Join(l.Paths, ", ") + "\n")
