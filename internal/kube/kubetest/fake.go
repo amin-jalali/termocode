@@ -217,7 +217,8 @@ func (f *Fake) Fixtures(t testing.TB, dir string) {
 	t.Helper()
 	for _, name := range []string{"pods.json", "deployments.json", "services.json", "jobs.json", "namespaces.json",
 		"statefulsets.json", "daemonsets.json", "replicasets.json", "cronjobs.json", "configmaps.json", "secrets.txt",
-		"ingresses.json", "persistentvolumeclaims.json", "nodes.json", "events.json"} {
+		"ingresses.json", "persistentvolumeclaims.json", "nodes.json", "events.json",
+		"api-resources.txt", "certificates.cert-manager.io.json"} { // CTX-20: the : kind prompt and a CRD
 		b, err := os.ReadFile(filepath.Join(dir, name))
 		if err != nil {
 			t.Fatal(err)
