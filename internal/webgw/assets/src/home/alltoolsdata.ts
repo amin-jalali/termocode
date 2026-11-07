@@ -7,6 +7,7 @@
 // Pure: reading, grouping, searching and where a row goes.
 import type { Route } from "../state/route";
 import type { StringKey } from "../strings";
+import { dict } from "../state/dict";
 
 /** Target is where a row goes: a screen of the phone (route) or a view
  * of the registry, opened in the Home (#/home/view/<id>, plan 3.11.4). */
@@ -106,7 +107,7 @@ function str(o: Obj, key: string): string {
 function strMap(v: unknown): Record<string, string> | undefined {
   const o = obj(v);
   if (!o) return undefined;
-  const out: Record<string, string> = {};
+  const out = dict<string>();
   let n = 0;
   for (const [k, x] of Object.entries(o)) {
     if (typeof x === "string" && n < 12) {

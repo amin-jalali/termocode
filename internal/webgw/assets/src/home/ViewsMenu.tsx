@@ -4,7 +4,7 @@
 // view's block in the Home stream. Asking costs no tokens.
 import { h, H } from "./jsx";
 import { hs, type HomeKey } from "./strings";
-import { has } from "../state/dict";
+import { dict, has } from "../state/dict";
 import { byFeature, readCatalog, type ViewCatalog, type ViewDef, type ViewParam, type ViewSpec } from "./views";
 
 /** The catalog, read once per page (the registry changes only with a
@@ -85,7 +85,7 @@ function Params({ def, onRun, onBack }: { def: ViewDef; onRun: (s: ViewSpec) => 
     e.preventDefault();
     const missing = (def.params ?? []).find((p) => p.required && !(args[p.id] ?? "").trim());
     if (missing) return setWhy(hs("views.need", { label: missing.label }));
-    const clean: Record<string, string> = {};
+    const clean = dict<string>();
     for (const p of def.params ?? []) if ((args[p.id] ?? "").trim()) clean[p.id] = args[p.id].trim();
     onRun(Object.keys(clean).length ? { view: def.id, args: clean } : { view: def.id });
   };

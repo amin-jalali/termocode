@@ -14,10 +14,11 @@ import { StatusMark } from "../phone/Mark";
 import type { Status } from "../phone/status";
 import { t } from "../strings";
 import "../strings.phone";
-import { ROW_CHIPS as CHIPS, NEEDS, loadPins, orderChips, savePins, togglePin, type RowChipDef as ChipDef, type ChipId, type ChipItem, type ChipMark, type ChipState } from "./chips";
+import { ROW_CHIPS as CHIPS, NEEDS, orderChips, togglePin, validPins, type RowChipDef as ChipDef, type ChipId, type ChipItem, type ChipMark, type ChipState } from "./chips";
+import { loadChipPins, saveChipPins } from "../lib/prefs";
 
 /** pins are this phone's pinned chips; pinMode says the row is pinning. */
-export const pins = signal<ChipId[]>(loadPins());
+export const pins = signal<ChipId[]>(validPins(loadChipPins() ?? []));
 export const pinMode = signal(false);
 
 const MARKS: Record<Exclude<ChipMark, "">, Status> = { waits: "needs", review: "review", busy: "working", bad: "failed", clear: "done" };
@@ -35,7 +36,7 @@ function pin(id: ChipId): void {
     return;
   }
   pins.value = r.pins;
-  savePins(r.pins);
+  saveChipPins(validPins(r.pins));
 }
 
 function OneChip({ c, onPick }: { c: ChipItem; onPick: (id: ChipId) => void }) {

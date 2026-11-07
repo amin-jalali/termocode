@@ -8,6 +8,7 @@
 import type { BoardProjects, RunsSnap, WorkflowsSnap, WorktreesSnap } from "../../../../../webproto/proto";
 import { H, h } from "../jsx";
 import { type BoardFilter, type BoardRow, type BoardSection, type ProjectData, SHAPE, boardMoney, buildBoard, sectionLine } from "./model";
+import { dict } from "../../state/dict";
 
 /** BS are the board's strings: English only (owner 2026-11-07). */
 export const BS = {
@@ -77,7 +78,7 @@ export function BoardAll(props: BoardAllProps) {
   const runs = H.store.topic("runs").value?.data as RunsSnap | undefined;
   const lanes = H.store.topic("worktrees").value?.data as WorktreesSnap | undefined;
   const flows = H.store.topic("workflows").value?.data as WorkflowsSnap | undefined;
-  const data: Record<string, ProjectData> = {};
+  const data = dict<ProjectData>();
   if (list) data[list.home] = { runs: runs?.runs, worktrees: lanes?.worktrees, workflows: flows?.runs, cards: H.cards.value };
   const view = buildBoard(list, data, filter);
 
