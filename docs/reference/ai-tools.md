@@ -2334,7 +2334,9 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `join-lines` | Edit: Join Lines | confirm (fileWrite) |   |
 | `kubernetes-apply-file` | Kubernetes: Apply Current File… | never | writes to the cluster; only the user applies a file, after the diff |
 | `kubernetes-context` | Kubernetes: Switch Context… | never | opens a picker or prompt that only the user can answer; use a typed tool; the context is the user's choice |
+| `kubernetes-hpa` | Kubernetes: Autoscalers (HPA) | auto |   |
 | `kubernetes-namespace` | Kubernetes: Switch Namespace… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `kubernetes-nodes` | Kubernetes: Nodes… | never | opens a picker or prompt that only the user can answer; use a typed tool; cordon and drain are the user's choice |
 | `kubernetes-rbac` | Kubernetes: Permissions (RBAC) | auto |   |
 | `kubernetes-refresh` | Kubernetes: Refresh | auto |   |
 | `kubernetes-report` | Kubernetes: Cluster Report | auto |   |

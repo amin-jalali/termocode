@@ -95,6 +95,10 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if have && r.kind == kubeRowItem && r.section != kubeForwardsSection {
 			return m, m.kubeEditYAML(kubeKindOf(r.section), r.name)
 		}
+	case "N":
+		return m, m.kubeNodes()
+	case "H":
+		return m, m.kubeHPA()
 	case "A":
 		return m, m.kubeRBAC()
 	case "x":
@@ -163,6 +167,8 @@ func kubeKeyRows() []confirm.KeyRow {
 		[]string{"Cluster"},
 		[]string{"x", "cluster report: pulse, owner tree, problems"},
 		[]string{"A", "permissions: can-i, role bindings, service accounts"},
+		[]string{"N", "nodes: cordon, uncordon, drain (asks first)"},
+		[]string{"H", "autoscalers (HPA, read only)"},
 		[]string{"c n", "pick the context, the namespace"},
 		[]string{"[ ]", "back, forward (context / namespace)"},
 		[]string{"R", "load now"},

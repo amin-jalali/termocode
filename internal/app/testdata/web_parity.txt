@@ -576,6 +576,8 @@ missing	http-copy-snippet	HTTP|S
 missing	http-fields	HTTP|S
 missing	http-import-openapi	HTTP|S
 missing	kubernetes-apply-file	Kubernetes|M
+missing	kubernetes-hpa	Kubernetes|S
+missing	kubernetes-nodes	Kubernetes|M
 missing	kubernetes-rbac	Kubernetes|S
 missing	kubernetes-report	Kubernetes|S
 missing	kubernetes-snippet	Kubernetes|S

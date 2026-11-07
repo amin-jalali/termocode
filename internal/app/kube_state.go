@@ -72,6 +72,9 @@ type kubeState struct {
 	pendingScale   kubeScaleTarget   // the scale prompt's and card's deployment (kube_scale.go)
 	pendingDelete  kubeDeleteTarget  // the delete card's object (kube_delete.go)
 	pendingApply   kubeApplyTarget   // the apply card's file (kube_apply.go)
+	pendingNode    kubeNodeTarget    // the node card's node and action (kube_nodes.go)
+	nodes          []kube.Node       // the node picker's rows (kube_nodes.go)
+	nodesContext   string            // the context they came from
 
 	forwards map[string]*kube.Forward // by context/namespace/pod (kube_forward.go)
 
@@ -368,6 +371,10 @@ func (m *Model) handleKubeMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onKubeDiff(msg), true
 	case kubeApplyMsg:
 		return m.onKubeApply(msg), true
+	case kubeNodesMsg:
+		return m.onKubeNodes(msg), true
+	case kubeNodeActionMsg:
+		return m.onKubeNodeAction(msg), true
 	case kubePageMsg:
 		return m.onKubePage(msg), true
 	case kubeEditMsg:

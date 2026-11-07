@@ -59,6 +59,9 @@ func (m *Model) handleKubeConfirm(id string) (tea.Cmd, bool) {
 	if m.confirmKind == confirmKindKubeScale && m.kube != nil { // kube_scale.go
 		return m.answerKubeScale(id), true
 	}
+	if m.confirmKind == confirmKindKubeNode && m.kube != nil {
+		return m.answerKubeNode(id), true // kube_nodes.go
+	}
 	if m.confirmKind == confirmKindKubeApply && m.kube != nil {
 		return m.answerKubeApply(id), true // kube_apply.go
 	}

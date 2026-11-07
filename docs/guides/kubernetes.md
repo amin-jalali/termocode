@@ -71,6 +71,8 @@ kubeconfig, so other terminals keep their context.
 | `a` | Apply the editor's saved file: shows the diff, then asks first. |
 | `x` | Cluster report of the namespace (a read-only page). |
 | `A` | Permissions of the namespace (a read-only page). |
+| `N` | Nodes of the cluster: cordon, uncordon or drain one (asks first). |
+| `H` | Autoscalers (HPA) of the namespace (a read-only page). |
 | `c` / `n` | Pick the context / the namespace. |
 | `[` / `]` | Back / forward to the context and namespace you had before. |
 | `R` | Load the lists now. |
@@ -155,6 +157,25 @@ page about the namespace:
 When you may not read one part, that part says why and the others still
 show. The AI may open the page.
 
+## Nodes and autoscalers
+
+**Kubernetes: Nodes…** (or `N` in the view) lists the nodes of the
+cluster with their status, roles, version and age. Pick a node to see
+what you can do:
+
+- **Cordon**: no new pods go to the node. Its running pods stay.
+- **Uncordon** (on a cordoned node): it takes new pods again.
+- **Drain**: cordon the node and evict its pods, so they start on other
+  nodes. DaemonSet pods stay; `emptyDir` data of evicted pods is lost.
+
+Each one asks first. The card shows the node, the context and the
+command. **Cancel** is the first button and has the focus, so `Enter` or
+`Esc` alone never changes a node.
+
+**Kubernetes: Autoscalers (HPA)** (or `H` in the view) opens a read-only
+page of the namespace's horizontal pod autoscalers: the target, min and
+max replicas, how many run now and how many it wants, and the metrics.
+
 ## Edit and apply YAML
 
 **Kubernetes: Apply Current File…** (or `a` in the view) applies the file
@@ -184,8 +205,8 @@ The AI can open the view and load it again. It can also read the
 cluster, in the context the view shows: `kube_list` (the four lists),
 `kube_describe` (one object) and `kube_logs` (the last lines of a pod).
 Secrets in their answers are hidden. The AI can never restart or
-scale a deployment, delete an object, apply a file, start a
-port-forward or switch the context.
+scale a deployment, delete an object, apply a file, cordon or drain a
+node, start a port-forward or switch the context.
 
 ## When something is wrong
 
