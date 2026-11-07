@@ -331,6 +331,12 @@ func run(argv []string) int {
 			return cmdKill(dir)
 		}
 	}
+	if co, _, err := parseContainerOpen(args); err != nil {
+		fmt.Fprintln(os.Stderr, "termocode: "+err.Error())
+		return 2
+	} else if co.Name != "" {
+		return runContainer(co)
+	}
 	os.Args = append(os.Args[:1], args...)
 	// If the user passed a folder as the first arg (and it's not a known
 	// subcommand), chdir into it so termocode opens that workspace.
@@ -419,6 +425,8 @@ func printUsage() {
 	fmt.Println("  termocode [dir]            open dir (default: the current folder)")
 	fmt.Println("  termocode --no-session     run without a persistent session")
 	fmt.Println("  termocode sessions         list the running sessions")
+	fmt.Println("  termocode --container name [--context c] /folder")
+	fmt.Println("                             open /folder inside a running container")
 	fmt.Println("  termocode attach [dir]     attach to the session of dir")
 	fmt.Println("  termocode kill [dir]       end the session of dir")
 	fmt.Println("  termocode ssh [--dir d] [--web] [ssh options] host")
