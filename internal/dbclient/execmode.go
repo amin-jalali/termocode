@@ -48,6 +48,8 @@ type StmtSpan struct {
 }
 
 // StatementSpans splits text into statements with their byte ranges.
+// A span starts at the statement's first code byte, after any leading
+// comments.
 func StatementSpans(text, driver string) []StmtSpan {
 	sqls, err := Split(text, driver)
 	if err != nil {
@@ -62,6 +64,11 @@ func StatementSpans(text, driver string) []StmtSpan {
 		}
 		at += off
 		off = at + len(s)
+		// Comments before the statement are not part of what runs.
+		if k := skipLeadingComments(s); k < len(s) {
+			at += k
+			s = s[k:]
+		}
 		out = append(out, StmtSpan{SQL: s, Start: at, End: off})
 	}
 	return out
