@@ -19,6 +19,9 @@
 //	describe.txt         answer of `describe …`
 //	restart.err          `rollout restart` fails with this stderr
 //	logs.txt             answer of `logs …`
+//	exec.txt             answer of `exec …` (a pod directory listing)
+//	exec.err             `exec …` fails with this stderr
+//	cp.err               `cp …` fails with this stderr
 //	pf-port.txt          the local port `port-forward` reports (43123)
 //	pf.err               `port-forward` fails with this stderr
 //
@@ -73,6 +76,12 @@ rollout)
   if [ -f "$D/restart.err" ]; then cat "$D/restart.err" >&2; exit 1; fi
   echo "deployment.apps/$3 restarted"; exit 0 ;;
 logs) cat "$D/logs.txt" 2>/dev/null; exit 0 ;;
+exec)
+  if [ -f "$D/exec.err" ]; then cat "$D/exec.err" >&2; exit 1; fi
+  cat "$D/exec.txt" 2>/dev/null; exit 0 ;;
+cp)
+  if [ -f "$D/cp.err" ]; then cat "$D/cp.err" >&2; exit 1; fi
+  exit 0 ;;
 port-forward)
   if [ -f "$D/pf.err" ]; then cat "$D/pf.err" >&2; exit 1; fi
   echo $$ > "$D/pf.pid"
