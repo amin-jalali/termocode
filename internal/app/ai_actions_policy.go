@@ -373,6 +373,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-select":                    aiNever("SQL runs require the database query tool and its guard"),
 	"db-describe":                  aiAuto(),
 	"db-ddl":                       aiAuto(),
+	"db-goto-definition":           aiAuto(),
+	"db-find-usages":               aiAuto(),
 	"db-count-rows":                aiNever("Table rows are read with the database tools"),
 	"db-transaction-mode":          aiNever(aiNoAIConfig),
 	"db-commit":                    aiNever("the user's transaction"),

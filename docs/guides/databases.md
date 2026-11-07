@@ -198,6 +198,8 @@ The data page asks the server for one page at a time (`db_page_rows`, default 10
 
 PostgreSQL has no `CREATE TABLE` text to ask for, so its DDL is rebuilt from the catalogs (columns, primary key, indexes, foreign keys) and the buffer says so; it is a reconstruction, not a dump. MySQL / MariaDB and SQLite show the server's own statement.
 
+**From SQL.** In a console or a project `.sql` file, put the cursor on a table or view name (`users`, `public.users`, `"Order Items"`). **Databases: Go to Definition** opens its DDL; the name must be loaded in the tree, so expand its schema first. **Databases: Find Usages** lists every line of the project's `.sql` files that names it (whole word, any case); Enter opens the line.
+
 ## Completion
 
 In a SQL buffer, `Ctrl+X Ctrl+O` (and the pop-up that opens while you type) offers keywords, tables, views, routines, sequences and schemas from the tree you have already opened. After `alias.` or `table.` it offers that table's columns; the alias comes from the statement at the cursor (`FROM users u`, `JOIN orders AS o`). The first time a table's columns are needed they are read once and the pop-up opens again. Completion reads a cached copy: it never asks the server while you type.
@@ -262,6 +264,10 @@ termocode reads both schemas in read-only sessions and writes each one as clean 
 **Copy migration script** (`y`) copies a script that makes the target match the source. **Open script** (`o`) opens it in a read-only SQL buffer. termocode never runs this script: you read it, change it if needed, and run it yourself. The script does the basic steps: create and drop tables, add and drop columns, drop and create indexes and views. Other differences (a changed column type, a changed key, a routine) are lines that start with `-- REVIEW:`, for you to do by hand. The top of the script says which schema it changes and lists every destructive statement (`DROP TABLE`, `DROP COLUMN`, `DROP INDEX`, `DROP VIEW`); each one also has a `-- DESTRUCTIVE` line above it, because it deletes objects or data.
 
 Very large schemas are compared up to 2,000 tables; the card and the script say so when a schema is bigger.
+
+## Query parameters
+
+A statement with parameters asks for each value before it runs: `?`, `:name`, `$1` (PostgreSQL, SQLite) and `@name` (not MySQL, where `@name` is a server variable). The values are bound, never pasted into the SQL. Type `NULL` for a null; a whole number is sent as a number. The console remembers the last values for this session and offers them next time. `Esc` runs nothing. Text in quotes and comments, `::` casts and the PostgreSQL `?` operator are not parameters.
 
 ## SQL history
 

@@ -55,6 +55,9 @@ type dbRun struct {
 	notes               []string     // lines added to Messages (what a submit did)
 	plan                *dbPlanRun   // an EXPLAIN run (db_explain.go): the page shows the Plan view
 	redis               *dbRedisView // a Redis value page (db_redis.go)
+	bound               bool         // its query parameters are filled (db_params.go)
+	boundSQL            string       // sql with the driver's placeholders
+	args                []any        // the values bound to them
 }
 
 type dbConsoleState struct {
@@ -104,6 +107,9 @@ type dbConsoleState struct {
 	// Redis value page writes (db_redis.go)
 	redisEdit  *dbRedisEdit
 	redisWrite *dbRedisWrite
+	// query parameters (db_params.go)
+	paramAsk *dbParamAsk
+	params   map[string]map[string]string // console file → name → last value
 }
 
 func (m *Model) dbConsole() *dbConsoleState {
@@ -518,6 +524,9 @@ func (m *Model) databaseReviewRun(r *dbRun) tea.Cmd {
 	if m.databases.manualMode(r.conn) && dbTxControl(r.sql) {
 		return m.pushToastDetail(toast.Info, "Use Commit (K) or Roll back (Z)", "Manual transaction mode: "+strings.ToUpper(firstSQLWord(r.sql))+" is not sent.")
 	}
+	if refs := dbNeedsParams(r, c.Driver); len(refs) > 0 {
+		return m.databaseAskParams(r, refs)
+	}
 	kind, stmts := dbclient.Classify(r.sql, c.Driver)
 	if kind == dbclient.KindRead {
 		return m.databaseStartRun(r)
@@ -662,6 +671,7 @@ func (m *Model) databaseStartRunRevealed(r *dbRun) tea.Cmd {
 	return tea.Batch(pageCmd, func() tea.Msg {
 		var result dbclient.Result
 		began := false
+		execSQL, args := r.execSQL()
 		switch {
 		case r.redis != nil:
 			var view *dbRedisView
@@ -670,9 +680,9 @@ func (m *Model) databaseStartRunRevealed(r *dbRun) tea.Cmd {
 		case r.plan != nil:
 			result = dbExplainExec(ctx, sess, driver, r.plan, inTx, limit)
 		case r.readOnly && inTx:
-			result = dbReadInTx(ctx, sess, r.sql, dbclient.RunOptions{MaxRows: limit})
+			result = dbReadInTx(ctx, sess, execSQL, dbclient.RunOptions{MaxRows: limit, Args: args})
 		case r.readOnly:
-			result = dbRunReadOnly(ctx, sess, r.sql, dbclient.RunOptions{MaxRows: limit})
+			result = dbRunReadOnly(ctx, sess, execSQL, dbclient.RunOptions{MaxRows: limit, Args: args})
 		default:
 			if manual && !inTx {
 				// The transaction outlives this run: never a context that ends.
@@ -681,7 +691,7 @@ func (m *Model) databaseStartRunRevealed(r *dbRun) tea.Cmd {
 				}
 				began = true
 			}
-			result = sess.Run(ctx, r.sql, dbclient.RunOptions{MaxRows: limit})
+			result = sess.Run(ctx, execSQL, dbclient.RunOptions{MaxRows: limit, Args: args})
 		}
 		return dbRunMsg{gen: gen, run: r, result: result, key: key, began: began, manual: manual}
 	})
@@ -756,6 +766,7 @@ func (m *Model) databaseFinishRun(msg dbRunMsg) tea.Cmd {
 		next.sql = next.statements[next.index]
 		next.result = dbclient.Result{}
 		next.tab, next.notes = nil, nil
+		next.bound, next.boundSQL, next.args = false, "", nil
 		if res.Err != nil {
 			// Stop at the error; the card offers to go on with the rest.
 			s.contRun = &next
@@ -895,6 +906,9 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseComparePicker(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseUsagesPicker(id); ok {
 		return cmd, true
 	}
 	switch m.pickerKind {
