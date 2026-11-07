@@ -35,6 +35,8 @@ func worktreeKeyRows() []confirm.KeyRow {
 		[]string{"n", "new worktree: name, start point, agent and first task"},
 		[]string{"c", "new child worktree: from this one's branch, listed under it"},
 		[]string{"L", "show the setup of a new worktree (its terminal tab)"},
+		[]string{"r", "run the dev server on the worktree's own port ($PORT) · again: show its tab"},
+		[]string{"o", "open the running dev server's address in the browser"},
 		[]string{"A", "adopt a worktree made outside termocode (keeps its notes)"},
 		[]string{"F", "forget a worktree whose folder is gone"},
 		[]string{"x", "archive: remove the folder, keep the branch · on an archived row: restore"},
@@ -65,6 +67,8 @@ func worktreePaletteItems() []picker.Item {
 		{ID: wtNewPaletteID, Title: "Worktree: New…"},
 		{ID: wtChildPaletteID, Title: "Worktree: New Child of Selected…"},
 		{ID: wtSetupLogPaletteID, Title: "Worktree: Show Setup Log"},
+		{ID: wtRunPaletteID, Title: "Worktree: Run Dev Server of Selected"},
+		{ID: wtRunOpenPaletteID, Title: "Worktree: Open Dev Server of Selected"},
 		{ID: wtLinkPaletteID, Title: "Worktree: Link Issue or PR…"},
 		{ID: wtNotesPaletteID, Title: "Worktree: Show Notes of Selected"},
 		{ID: wtAdoptPaletteID, Title: "Worktree: Adopt Selected"},
@@ -100,6 +104,10 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.openWorktreeNewChild(), true
 	case wtSetupLogPaletteID:
 		return m.worktreeSetupLog(), true
+	case wtRunPaletteID:
+		return m.worktreeRun(), true
+	case wtRunOpenPaletteID:
+		return m.worktreeRunOpen(), true
 	case wtLinkPaletteID:
 		return m.worktreeLink(), true
 	case wtNotesPaletteID:
@@ -179,6 +187,10 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.openWorktreeNewChild()
 	case "L":
 		return m, m.worktreeSetupLog()
+	case "r":
+		return m, m.worktreeRun()
+	case "o":
+		return m, m.worktreeRunOpen()
 	case "i":
 		return m, m.worktreeLink()
 	case "N":

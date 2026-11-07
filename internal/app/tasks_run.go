@@ -529,6 +529,9 @@ func (m *Model) onTaskExit(buf, code int) tea.Cmd {
 	if c, ok := m.wtSetupExit(buf, code); ok { // a worktree setup tab (worktrees_setup.go)
 		return c
 	}
+	if c, ok := m.wtRunExit(buf, code); ok { // a worktree dev server tab (worktrees_run.go)
+		return c
+	}
 	if c, ok := m.raceOnVerifyExit(buf, code); ok { // a race lane's verify (agent_race_compare.go)
 		return c
 	}

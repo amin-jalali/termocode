@@ -35,6 +35,8 @@ repository's git folder, never in your project.
 | `n` | New worktree (see below) |
 | `c` | New child worktree: it starts from the selected one's branch |
 | `L` | Show the setup of a new worktree (its terminal tab) |
+| `r` | Run the dev server on the worktree's own port (`$PORT`); again: show its tab |
+| `o` | Open the running dev server's address in the browser |
 | `A` | Adopt a worktree made outside termocode |
 | `F` | Forget a worktree whose folder is gone |
 | `s` | Sleep: end its agent tabs and move it under ASLEEP; again: wake it |
@@ -92,6 +94,36 @@ A repository can list files for each new worktree in
   run in a terminal tab of their own inside the new worktree, so you can
   watch them, with your environment minus termocode's secrets. The card
   shows `setup ● running`, `✓` or `✗`; `L` shows the tab.
+
+## A dev server per worktree
+
+Parallel worktrees of a web app fight for the same port. Give the
+repository one run line in `.termocode/worktrees.json`, and each
+worktree gets a port of its own:
+
+```jsonc
+{
+  "run": "pnpm dev --port $PORT",   // the dev server; reads $PORT
+  "ports": "3000-3099",             // where ports come from (default 3001-3099)
+  "url": "http://localhost:$PORT"   // what o opens (this is the default)
+}
+```
+
+- `r` (**Worktree: Run Dev Server of Selected**) picks the lowest port of
+  the range that no other worktree holds and nothing listens on. The
+  worktree keeps it (in `worktrees.json` in the git folder), so it gets
+  the same port next time.
+- The line runs in a terminal tab inside the worktree, with `PORT` set
+  and your environment minus termocode's secrets. It comes from the
+  repository, so it needs the same trust as **setup**: a card shows the
+  line and the port, **Not now** comes first, and a changed file asks
+  again.
+- The card shows `▶ localhost:3004 (o opens)` while it runs, and
+  `port 3004 · r runs` when it does not. `o` (**Worktree: Open Dev Server
+  of Selected**) opens the address; `r` again shows the tab. Close the
+  tab to stop the server.
+- When every port of the range is held or in use, nothing starts and a
+  message says to stop a server or widen `ports`.
 
 ## Child worktrees
 
@@ -250,3 +282,5 @@ list by group, with a filter of its own.
   name).
 - The page names a worktree by an id the laptop made; it never sends a
   folder path.
+- A worktree's card data carries its dev server port, and the address
+  while it runs. Starting it stays on the laptop (`r`).
