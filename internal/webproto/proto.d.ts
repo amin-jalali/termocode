@@ -902,6 +902,23 @@ export interface PRReviewArgs {
   body?: string;
 }
 
+export interface ViewSaveArgs {
+  id?: string;
+  name: string;
+  spec: unknown;
+  pin?: boolean;
+}
+
+export interface ViewIDArgs {
+  id: string;
+}
+
+export interface ViewPinArgs {
+  id: string;
+  on: boolean;
+  order?: number;
+}
+
 export interface AIUseArgs {
   name: string;
 }
@@ -2941,6 +2958,18 @@ export interface ChatSide {
   answer: string;
 }
 
+export interface ViewList {
+  views: SavedView[];
+  pins: string[];
+}
+
+export interface SavedView {
+  id: string;
+  name: string;
+  spec: unknown;
+  updated: number;
+}
+
 export interface AutoApprove {
   rows: AutoApproveRow[];
 }
@@ -3225,6 +3254,10 @@ export interface OpArgs {
   "pr.checkout": PRNumberArgs;
   "ai.mcp_items": EmptyArgs;
   "chat.side": ChatSendArgs;
+  "view.list": EmptyArgs;
+  "view.save": ViewSaveArgs;
+  "view.delete": ViewIDArgs;
+  "view.pin": ViewPinArgs;
   "ai.use_profile": AIUseArgs;
   "ai.use_model": AIUseArgs;
   "ai.auto_approve": EmptyArgs;
@@ -3489,6 +3522,9 @@ export interface OpResult {
   "pr.checkout": AskRef;
   "ai.mcp_items": MCPItems;
   "chat.side": ChatSide;
+  "view.list": ViewList;
+  "view.save": SavedView;
+  "view.pin": ViewList;
   "ai.use_profile": AskRef;
   "ai.use_model": AskRef;
   "ai.auto_approve": AutoApprove;

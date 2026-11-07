@@ -64,6 +64,10 @@ type Device struct {
 	LastSeen    time.Time `json:"last_seen,omitempty"`
 	// Bookmark is the remembered browser's key (WEBP-12), as a hash.
 	Bookmark *Bookmark `json:"bookmark,omitempty"`
+	// Pins are the saved views on this device's Home, in order (MOB-71;
+	// ids from views.json, at most webproto.MaxViewPins). They go with
+	// the device when it is removed.
+	Pins []string `json:"pins,omitempty"`
 }
 
 // Bookmark is what the laptop keeps of a device's bookmark key: the
@@ -131,6 +135,9 @@ func (s *Store) read() ([]Device, bool, error) {
 	var f file
 	if json.Unmarshal(b, &f) != nil {
 		return nil, true, nil
+	}
+	for i := range f.Devices {
+		f.Devices[i].Pins = cleanPins(f.Devices[i].Pins)
 	}
 	return f.Devices, false, nil
 }
