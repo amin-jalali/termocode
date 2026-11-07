@@ -95,5 +95,8 @@ func (m *Model) handleKubePickerSelect(id string) tea.Cmd {
 		}
 		return m.kubeRescope(st.context, value)
 	}
+	if kind == "snippet" {
+		return m.kubeOpenSnippet(value)
+	}
 	return m.handleKubePodPick(kind, value)
 }

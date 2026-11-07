@@ -88,6 +88,14 @@ context, the namespace and the command (`kubectl rollout restart`).
 **Cancel** is the first button and has the focus, so `Enter` or `Esc`
 alone never restarts anything. **Restart** replaces the pods one by one.
 
+## New manifest from a snippet
+
+**Kubernetes: New Manifest from Snippet…** opens a new YAML buffer with a
+Deployment, Service, Ingress, ConfigMap, Secret, Job, CronJob,
+PersistentVolumeClaim or StatefulSet. The name is `my-app` and the
+namespace is the view's namespace; change them and save the file. Nothing
+is sent to the cluster.
+
 ## The AI
 
 The AI can open the view and load it again. It can also read the

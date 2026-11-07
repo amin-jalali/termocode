@@ -15,12 +15,16 @@ func kubePaletteItems() []picker.Item {
 		{ID: "kubernetes-refresh", Title: "Kubernetes: Refresh"},
 		{ID: "kubernetes-context", Title: "Kubernetes: Switch Context…"},
 		{ID: "kubernetes-namespace", Title: "Kubernetes: Switch Namespace…"},
+		{ID: "kubernetes-snippet", Title: "Kubernetes: New Manifest from Snippet…"},
 	}
 }
 
 // dispatchKubePalette runs the "Kubernetes: …" palette commands.
 func (m *Model) dispatchKubePalette(id string) (tea.Cmd, bool) {
 	switch id {
+	case "kubernetes-snippet":
+		m.openTasksPickerItems(" New Manifest ", kubeSnippetItems())
+		return nil, true
 	case "kubernetes-show":
 		return m.revealKube(), true
 	case "kubernetes-refresh":
