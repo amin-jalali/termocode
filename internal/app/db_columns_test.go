@@ -80,7 +80,7 @@ func TestDBColumnsHideMoveFreezeScroll(t *testing.T) {
 	if got := strings.Join(dbHeader(t, m), " "); got != "d a" {
 		t.Fatalf("unfrozen scroll: %q", got)
 	}
-	m.databasePageKey("=", 0, 0) // reset
+	m.databasePageKey("g=", 0, 0) // reset
 	if got := strings.Join(dbHeader(t, m), " "); got != "a b c d" {
 		t.Fatalf("reset: %q", got)
 	}
@@ -180,5 +180,44 @@ func TestDBColumnsKeysWired(t *testing.T) {
 		if !strings.Contains(all, want) {
 			t.Errorf("key card misses %q", want)
 		}
+	}
+}
+
+func TestDBColumnsMouseResize(t *testing.T) {
+	withConfigDir(t)
+	m := dbColumnsModel()
+	w := func(j int) int { p := m.databasePage(); return p.bounds[j+1] - p.bounds[j] }
+	before := w(1)
+	m.databaseColumnResize(1, 5) // drag b's right edge 5 cells right
+	if got := w(1); got != before+5 {
+		t.Fatalf("wider: %d, want %d", got, before+5)
+	}
+	m.databaseColumnResize(1, -100) // never narrower than the smallest width
+	if got := w(1); got != before+1 {
+		t.Fatalf("narrowest: %d, want %d", got, before+1)
+	}
+	m.databaseColumnResize(9, 5) // off the grid: nothing
+	m.databaseColumnResize(0, 0)
+	if got := w(0); got != before {
+		t.Fatalf("a changed: %d", got)
+	}
+	// The width is saved with the table's layout.
+	m2 := dbColumnsModel()
+	if got := func() int { p := m2.databasePage(); return p.bounds[2] - p.bounds[1] }(); got != before+1 {
+		t.Fatalf("restored: %d", got)
+	}
+}
+
+func TestDBColumnsResetIsGEquals(t *testing.T) {
+	withConfigDir(t)
+	m := dbColumnsModel()
+	m.databasePageKey("H", 0, 1)
+	m.databasePageKey("=", 0, 0) // = is the quick filter / aggregate, not a reset
+	if got := strings.Join(dbHeader(t, m), " "); got != "a c d" {
+		t.Fatalf("= reset the layout: %q", got)
+	}
+	m.databasePageKey("g=", 0, 0)
+	if got := strings.Join(dbHeader(t, m), " "); got != "a b c d" {
+		t.Fatalf("g= did not reset: %q", got)
 	}
 }
