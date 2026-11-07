@@ -146,6 +146,27 @@ The export holds your config files (settings, theme, keys, snippets,
 commands…). It leaves out session state and **secrets**: API keys, tokens
 and passwords are removed.
 
+## Share a setup with your team
+
+A setup is a named set of your settings that lives in the project, so the
+team can commit it and use it with one command.
+
+1. Run **Preferences: Save Setup to This Project…** and type a name (for
+   example `team`).
+2. A card lists what goes in: settings, keys, snippets, user commands and
+   your custom theme. **Cancel** is first. Pick **Save Setup**.
+3. termocode writes `.termocode/setups/<name>.json`. API keys, tokens and
+   passwords are removed. Check the file, then commit it.
+
+To use a setup, run **Preferences: Use a Project Setup…** and pick it. The
+card lists the files it replaces (**Cancel** is first). termocode saves a
+backup of your settings first. **Use Setup & Reload** applies everything
+at once.
+
+A setup comes from the project. Use it only if you trust its authors:
+user commands in it run shell commands when you pick them. Per-machine
+files (databases, connections, credentials) never go into a setup.
+
 ## Bring your settings from another editor
 
 1. Run **Preferences: Import from Another Editor…**. The list shows the
