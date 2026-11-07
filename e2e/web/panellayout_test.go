@@ -34,7 +34,7 @@ func TestPanelMaximizePositionAndSashReset(t *testing.T) {
 	layoutKey(p, "j")
 	p.WaitJS(`document.querySelector(".wb-panel")`)
 	p.TapJS(`document.querySelector('.wb-panel [data-act="panel-max"]')`)
-	p.WaitJS(`document.querySelector(".wb.is-panel-max") && document.querySelector(".wb-editor").offsetHeight === 0 && document.querySelector(".wb-panel").getBoundingClientRect().top < 60`)
+	p.WaitJS(`document.querySelector(".wb.is-panel-max") && document.querySelector(".ed-groups").offsetHeight === 0 && document.querySelector(".wb-panel").getBoundingClientRect().top < 60`)
 	p.TapJS(`document.querySelector('.wb-panel [data-act="panel-max"]')`)
 	p.WaitJS(`!document.querySelector(".wb.is-panel-max") && document.querySelector(".wb-editor").offsetHeight > 200`)
 	// Moved right of the editor, from the panel's … menu.

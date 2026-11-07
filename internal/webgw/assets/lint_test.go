@@ -192,6 +192,9 @@ func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
 			text = strings.Replace(text, `import("/assets/workbench.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/strings-fa.js")`, "", 1)
 		}
+		if e.Path == "monaco-frame.js" { // the frame's one dynamic import: Vim mode (WEBP-1), a fixed path
+			text = strings.Replace(text, `import("/assets/monaco-vim.js")`, "", 1)
+		}
 		for _, r := range []*regexp.Regexp{
 			regexp.MustCompile(`\beval\s*\(`), regexp.MustCompile(`\bnew Function\b|\bFunction\s*\(\s*["'\x60]`),
 			regexp.MustCompile(`document\.write`), regexp.MustCompile(`\bimport\s*\(`),
