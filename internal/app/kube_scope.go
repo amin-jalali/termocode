@@ -97,6 +97,9 @@ func (m *Model) handleKubePickerSelect(id string) tea.Cmd {
 	case "pf-svc", "pf-deployment":
 		return m.handleKubeForwardPick(kind, value)
 	}
+	if cmd, ok := m.handleKubeRolloutPick(kind, value); ok { // kube_rollout.go
+		return cmd
+	}
 	if kind == "snippet" {
 		return m.kubeOpenSnippet(value)
 	}

@@ -66,6 +66,8 @@ kubeconfig, so other terminals keep their context.
 | `y` | Copy the name. On a **FORWARDS** row: copy the local address. |
 | `r` | Deployment: restart it (asks first). |
 | `s` | Deployment: scale it (asks the number, then asks first). |
+| `o` | Deployment: rollout status and history; roll back to an older revision (asks first). |
+| `I` | Deployment: set the image of one container (asks the image, then asks first). |
 | `d` | Delete the row's object (asks first). |
 | `c` / `n` | Pick the context / the namespace. |
 | `[` / `]` | Back / forward to the context and namespace you had before. |
@@ -128,6 +130,28 @@ scale`). 0 stops every pod, and the card says so. **Cancel** is the
 first button and has the focus, so `Enter` or `Esc` alone never scales
 anything. The same number as now changes nothing.
 
+## Rollout: status, history, roll back
+
+`o` on a deployment reads `kubectl rollout status` and `kubectl rollout
+history` and opens a list. Nothing changes yet.
+
+- **Status and history** opens a read-only page with the status and
+  every revision, newest first, with its change cause.
+- The newest revision says **current**.
+- An older revision rolls the deployment back to it. A card shows the
+  deployment, the revision, the context, the namespace and the command
+  (`kubectl rollout undo --to-revision`). **Cancel** is the first button
+  and has the focus, so `Enter` or `Esc` alone never rolls anything back.
+
+## Set image
+
+`I` on a deployment asks for the new image as `container=image`. It
+starts with the first container and its image now; the note lists every
+container. With one container you can type only the image. A card then
+shows the change (`shop/api:v3 → shop/api:v4`), the context, the
+namespace and the command (`kubectl set image`). **Cancel** is the first
+button and has the focus. The same image as now changes nothing.
+
 ## Delete an object
 
 `d` on a pod, deployment, service or job asks first. The card shows the
@@ -150,8 +174,8 @@ is sent to the cluster.
 The AI can open the view, load it again and open the metrics page. It can also read the
 cluster, in the context the view shows: `kube_list` (the four lists),
 `kube_describe` (one object) and `kube_logs` (the last lines of a pod).
-Secrets in their answers are hidden. The AI can never restart or
-scale a deployment, delete an object, start a port-forward or switch
+Secrets in their answers are hidden. The AI can never restart,
+scale, roll back or change the image of a deployment, delete an object, start a port-forward or switch
 the context.
 
 ## When something is wrong

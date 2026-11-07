@@ -71,6 +71,10 @@ type kubeState struct {
 	pendingRestart kubeRestartTarget // the restart card's deployment (kube_restart.go)
 	pendingScale   kubeScaleTarget   // the scale prompt's and card's deployment (kube_scale.go)
 	pendingDelete  kubeDeleteTarget  // the delete card's object (kube_delete.go)
+	pendingUndo    kubeUndoTarget    // the rollback card's revision (kube_rollout.go)
+	pendingImage   kubeImageTarget   // the set image prompt's and card's change
+	imageOf        kube.Deployment   // the deployment the image prompt asks about
+	lastRollout    kubeRolloutMsg    // the rollout picker's status and history
 
 	forwards map[string]*kube.Forward // by context/namespace/pod (kube_forward.go)
 
@@ -383,6 +387,12 @@ func (m *Model) handleKubeMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onKubeDelete(msg), true
 	case kubeTopMsg:
 		return m.onKubeTop(msg), true
+	case kubeRolloutMsg:
+		return m.onKubeRollout(msg), true
+	case kubeUndoMsg:
+		return m.onKubeUndo(msg), true
+	case kubeImageMsg:
+		return m.onKubeImage(msg), true
 	}
 	return nil, false
 }

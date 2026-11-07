@@ -86,6 +86,15 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			m.askKubeScale(d, "", "")
 			return m, nil
 		}
+	case "o":
+		if d, ok := st.selectedDeployment(); ok {
+			return m, m.kubeRollout(d.Name) // kube_rollout.go
+		}
+	case "I":
+		if d, ok := st.selectedDeployment(); ok {
+			m.askKubeImage(d, "", "")
+			return m, nil
+		}
 	case "d":
 		if have && r.kind == kubeRowItem {
 			m.askKubeDelete(kubeKindOf(r.section), r.name)
@@ -149,6 +158,8 @@ func kubeKeyRows() []confirm.KeyRow {
 		[]string{"y", "copy the name"},
 		[]string{"r", "deployment: restart (asks first)"},
 		[]string{"s", "deployment: scale (asks first)"},
+		[]string{"o", "deployment: rollout status, history, roll back"},
+		[]string{"I", "deployment: set image (asks first)"},
 		[]string{"d", "delete (asks first)"},
 		[]string{"Cluster"},
 		[]string{"c n", "pick the context, the namespace"},

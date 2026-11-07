@@ -335,7 +335,7 @@ func (st *kubeState) footer(now time.Time) []string {
 		if fw := st.forwardOf("deployment", d.Name); fw != nil {
 			return []string{fmt.Sprintf("127.0.0.1:%d %s %d · %s", fw.Local, kubeArrow(), fw.Remote, line), "i describe · r restart · f stop forward · ? keys"}
 		}
-		return []string{line, "i describe · r restart · ? keys"}
+		return []string{line, "o rollout · I image · r restart · ? keys"}
 	case "services":
 		s := st.services[r.idx]
 		line := s.Type + " · " + s.ClusterIP + " · " + s.PortsText()
