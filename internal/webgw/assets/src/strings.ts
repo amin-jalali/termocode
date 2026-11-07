@@ -808,6 +808,14 @@ export const S = {
   "ph.ask": "What do you want?",
   "ph.checks": "Checks: {state}",
   "ph.ci": "CI",
+  // Phone app (MOBUX-21): states
+  "ph.loading": "Loading",
+  "ph.offline": "Offline — answers are not saved",
+  "ph.offline_sr": "Offline. Answers are not saved until the phone is back online.",
+  "ph.asleep": "Laptop asleep · last seen {time}",
+  "ph.asleep_day": "Laptop asleep · last seen on {time}",
+  "ph.asleep_sr": "The laptop does not answer. Last seen {time}.",
+  "ph.retry": "Retry",
 } as const;
 
 /** StringKey is a key of the page's strings or of the workbench's

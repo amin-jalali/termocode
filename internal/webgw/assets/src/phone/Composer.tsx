@@ -4,6 +4,7 @@
 // greyed and does nothing (inputs change state, not shape).
 import { h } from "preact";
 import { t } from "../strings";
+import { phoneOnline } from "./conn";
 
 export interface Attached {
   id: string;
@@ -29,7 +30,9 @@ export function Composer({
   placeholder?: string;
 }) {
   const empty = value.trim() === "" && (!attached || attached.length === 0);
-  const off = offline || empty;
+  // Offline (the prop, or the live link: phoneOnline) Send is greyed:
+  // a send is never queued (MOBUX-21).
+  const off = offline || !phoneOnline.value || empty;
   return (
     <form
       class="ph-composer"
@@ -62,7 +65,7 @@ export function Composer({
           enterkeyhint="send"
           onInput={(e) => onInput((e.currentTarget as HTMLTextAreaElement).value)}
         />
-        <button type="submit" class="ph-composer-send" aria-disabled={off ? "true" : undefined}>
+        <button type="submit" class="ph-composer-send ph-answer" aria-disabled={off ? "true" : undefined}>
           {t("send")}
         </button>
       </div>

@@ -31,7 +31,7 @@ import { Progress, SkeletonBubbles, SkeletonRows } from "../ui/Skeleton";
 import { StripView } from "../ui/Strip";
 import { Toasts, ToastView } from "../ui/Toasts";
 import { WaitingLaptop } from "../ui/Waiting";
-import { Block, BoardTile, Composer, PhoneCard, PhoneChip, PhoneChips, PhoneSheet, Row, Rows, StatusMark, STATUS, type Status } from "../phone/index";
+import { Block, BoardTile, Composer, ConnLine, ErrorLine, PhoneCard, PhoneSkeleton, PhoneChip, PhoneChips, PhoneSheet, Row, Rows, StatusMark, STATUS, type Status } from "../phone/index";
 import "./replay";
 
 installSafety();
@@ -288,6 +288,15 @@ function PhoneKit() {
         onRemove={(id) => setAttached(attached.filter((a) => a.id !== id))}
       />
       <Composer value="" onInput={() => undefined} onSend={() => undefined} offline />
+      <ConnLine conn="offline" text={t("ph.offline")} />
+      <ConnLine conn="asleep" text={t("ph.asleep", { time: "10:42" })} onTry={() => toast("info", "Try now")} />
+      <ConnLine conn="final" text={t("e.ended")} />
+      <PhoneSkeleton shape="cards" />
+      <PhoneSkeleton shape="block" n={3} />
+      <PhoneSkeleton shape="rows" n={3} />
+      <PhoneSkeleton shape="board" n={2} />
+      <ErrorLine text="The pull requests did not load." onRetry={() => toast("info", "Retry")} />
+      <ErrorLine text="The pull requests did not load." onRetry={() => undefined} offline />
     </div>
   );
 }
@@ -304,7 +313,7 @@ function PhoneSheetDemo() {
           actions={[
             { label: "Just start", risky: true, onClick: () => setOpen(false) },
             { label: "Talk about it", primary: true, onClick: () => setOpen(false) },
-            { label: "Cancel", safe: true, onClick: () => setOpen(false) },
+            { label: "Cancel", safe: true, local: true, onClick: () => setOpen(false) },
           ]}
         >
           <p class="kit-note">Cancel comes first and has focus; Just start wakes after 600 ms.</p>
