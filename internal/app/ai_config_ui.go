@@ -124,6 +124,8 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onAgentAccountLabel(value), true
 	case promptKindAgentSessionsSearch: // agent_sessions_search.go
 		return m.onAgentSessionsSearch(value), true
+	case promptKindWTPull: // worktrees_move.go
+		return m.onWTPullEntered(value), true
 	case promptKindAgentPacksSource: // agent_packs_ui.go
 		return m.onAgentPackSource(value), true
 	case promptKindAIWebKey: // ai_web_tools.go
@@ -221,6 +223,12 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerWTSleep(id), true
 	case confirmKindWTArchive: // worktrees_archive.go
 		return m.answerWTArchive(id), true
+	case confirmKindWTMove: // worktrees_move.go
+		return m.answerWTMove(id), true
+	case confirmKindWTUnpack:
+		return m.answerWTUnpack(id), true
+	case confirmKindWTPull:
+		return m.answerWTPull(id), true
 	case confirmKindWTDelete, confirmKindWTDeleteDirty: // worktrees_delete.go
 		return m.answerWTDelete(m.confirmKind, id), true
 	case confirmKindWTCleanup, confirmKindWTCleanupDirty: // worktrees_cleanup.go
@@ -348,6 +356,12 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerWTSleep("") // Esc: Keep running
 	case confirmKindWTArchive:
 		return m.answerWTArchive("") // Esc: Cancel
+	case confirmKindWTMove:
+		return m.answerWTMove("") // Esc: Cancel
+	case confirmKindWTUnpack:
+		return m.answerWTUnpack("") // Esc: Cancel
+	case confirmKindWTPull:
+		return m.answerWTPull("") // Esc: Cancel
 	case confirmKindWTDelete, confirmKindWTDeleteDirty:
 		return m.answerWTDelete(m.confirmKind, "") // Esc: Cancel
 	case confirmKindWTCleanup, confirmKindWTCleanupDirty:

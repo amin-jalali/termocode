@@ -40,6 +40,8 @@ func worktreeKeyRows() []confirm.KeyRow {
 		[]string{"x", "archive: remove the folder, keep the branch · on an archived row: restore"},
 		[]string{"D", "delete the worktree and its branch (asks, step by step)"},
 		[]string{"C", "clean up: tick merged and old worktrees, archive them together"},
+		[]string{"M", "move to another machine: pack it into one file (commits, changes, new files, notes)"},
+		[]string{"U", "unpack a moved lane as a new worktree, or pull one from a host over ssh"},
 		[]string{"s", "sleep: end its agent tabs, move it under ASLEEP · again: wake it"},
 		[]string{"List"},
 		[]string{"f", "filter: All, Mine, Agents, Dirty, Asleep, External"},
@@ -71,6 +73,9 @@ func worktreePaletteItems() []picker.Item {
 		{ID: wtArchivePaletteID, Title: "Worktree: Archive or Restore Selected…"},
 		{ID: wtDeletePaletteID, Title: "Worktree: Delete Selected…"},
 		{ID: wtCleanupPaletteID, Title: "Worktree: Clean Up…"},
+		{ID: wtMovePaletteID, Title: "Worktree: Move Selected to Another Machine…"},
+		{ID: wtUnpackPaletteID, Title: "Worktree: Unpack a Moved Lane…"},
+		{ID: wtPullPaletteID, Title: "Worktree: Pull a Lane from a Host…"},
 	}
 }
 
@@ -112,6 +117,12 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.worktreeDelete(), true
 	case wtCleanupPaletteID:
 		return m.worktreeCleanup(), true
+	case wtMovePaletteID:
+		return m.worktreeMove(), true
+	case wtUnpackPaletteID:
+		return m.worktreeUnpack(), true
+	case wtPullPaletteID:
+		return m.worktreePull(), true
 	}
 	return nil, false
 }
@@ -187,6 +198,10 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.worktreeDelete()
 	case "C":
 		return m, m.worktreeCleanup()
+	case "M":
+		return m, m.worktreeMove()
+	case "U":
+		return m, m.worktreeUnpack()
 	case "f":
 		m.worktreeNextFilter()
 	case "R":

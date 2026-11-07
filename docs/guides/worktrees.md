@@ -41,6 +41,8 @@ repository's git folder, never in your project.
 | `x` | Archive: remove the folder, keep the branch; on an archived row: restore |
 | `D` | Delete the worktree and its branch (asks step by step) |
 | `C` | Clean up: tick merged and old worktrees, archive them together |
+| `M` | Move to another machine: pack it into one file (see below) |
+| `U` | Unpack a moved lane as a new worktree, or pull one from a host |
 | `f` | Filter: All, Mine, Agents, Dirty, Asleep, External |
 | `/` | Filter by name (`Esc` clears) |
 | `R` | Read every worktree again |
@@ -199,6 +201,56 @@ opens one card that lists every worktree that will be archived
 (**Cancel** first). A ticked worktree with changed files then asks on
 its own card: **Keep it** comes first. Clean up archives, so the
 branches stay and `x` restores any of them.
+
+## Move a lane to another machine
+
+Start a lane on your laptop and let it go on on a server, or bring a
+server's lane to your laptop to test it. The repository must be on both
+machines; termocode too.
+
+`M` (**Worktree: Move Selected to Another Machine…**) packs the worktree
+into one `.tlane` file in `~/.local/share/termocode/lanes/`:
+
+- the commits the remotes do not have yet (a git bundle),
+- the changes not committed (staged and not staged),
+- the new files git does not track yet (ignored files stay; files over
+  10 MB are left out and listed),
+- its notes, its name and its agent,
+- its Claude Code chats, while **agent transcripts** is allowed in
+  Settings, so `claude --resume` goes on there.
+
+A card asks first; **Cancel** comes first. **Pack and download** also
+sends the file to your own computer (over ssh: through the terminal).
+Nothing in the worktree changes. Once the lane runs on the other
+machine, archive it here (`x`). If an agent still runs in it, `s` puts
+it to sleep first.
+
+`U` (**Worktree: Unpack a Moved Lane…**) lists the packs in the lanes
+folder and in `~/Downloads`. Its card shows where the lane comes from,
+the new folder and branch, and what comes with it. Unpack always makes
+a **new** worktree next to the others: a free branch name (`-moved` is
+added when the name is taken), a new folder, and it never writes over a
+file. When the changes do not apply, the worktree stays on its commit
+and the changes are kept next to it as `<folder>.lane.patch`. When the
+repository here lacks the commits the lane is built on, `git fetch`
+first.
+
+**Pull a lane from a host…** (the first row of `U`, or **Worktree: Pull
+a Lane from a Host…**) asks for `host:folder`, then a card, then packs
+the lane there over your own ssh (keys, agent, `~/.ssh/config`; no
+password is asked) and opens the unpack card.
+
+The same from a shell:
+
+```sh
+termocode lane pack [--out FILE|-] [--chats] [DIR]   # pack the worktree DIR is in
+termocode lane info FILE                             # what a pack holds
+termocode lane unpack [--repo DIR] [--name BRANCH] FILE|-
+termocode lane pull [--chats] host:~/src/app.worktrees/fix-login
+termocode lane push [--chats] [DIR] host:~/src/app   # pack here, unpack there
+```
+
+The AI never moves, unpacks or pulls a lane.
 
 ## From the web page
 
