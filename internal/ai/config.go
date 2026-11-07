@@ -57,6 +57,10 @@ type Settings struct {
 	// StepEscalate is ai_step_escalate (OMX-16; nil: on): a step not on
 	// the deep slot may answer ESCALATE to run once more on deep.
 	StepEscalate *bool `json:"ai_step_escalate,omitempty"`
+	// Team is ai_team_mode (OMX-40; nil: off): agent steps that run at
+	// the same time get the team tools (notes between steps, shared
+	// claims). Edited by hand.
+	Team *bool `json:"ai_team_mode,omitempty"`
 	// PlanReviewRounds is ai_plan_review_rounds (OMX-14; 0: off, at most
 	// 5) and PlanFile ai_plan_file (nil: off): .termocode/plans/<slug>.md.
 	PlanReviewRounds int   `json:"ai_plan_review_rounds,omitempty"`
@@ -95,6 +99,9 @@ type Settings struct {
 	// or when the provider says the context is too long. Edited by hand.
 	Compact string `json:"ai_compact,omitempty"`
 }
+
+// TeamMode reports ai_team_mode (off unless true).
+func (s Settings) TeamMode() bool { return s.Team != nil && *s.Team }
 
 // DefaultStepStall is the stall limit when ai_step_stall_minutes is
 // not set.

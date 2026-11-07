@@ -832,6 +832,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_plan_review_rounds": aiNever(aiNoAIConfig),
 	"ai_plan_file":          aiNever(aiNoAIConfig),
 	"ai_step_stall_minutes": aiNever(aiNoAIConfig),
+	"ai_team_mode":          aiNever(aiNoAIConfig),
 	"ai_memory_recall":      aiNever(aiNoAIConfig),
 	"ai_web_fetch":          aiNever(aiNoAIConfig + "; the AI never turns on its own web access"),
 	"ai_web_search":         aiNever(aiNoAIConfig + "; the AI never turns on its own web access"),
