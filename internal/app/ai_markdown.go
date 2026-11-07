@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
+	"github.com/amin-jalali/termocode/internal/diagram"
 	"github.com/amin-jalali/termocode/internal/rtl"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
@@ -556,6 +557,14 @@ func renderCodeCard(code []string, lang string, s mdStyles, width, indent, msgId
 	if label == "" {
 		label = "code"
 	}
+	// A finished diagram block (CMP-70) shows the drawing; Copy, Apply and
+	// Save as still take the source. While it streams, the source shows.
+	var drawn []string
+	if done {
+		if rows, ok := diagram.Render(lang, strings.Join(code, "\n"), cardW-2); ok {
+			drawn, label = rows, diagram.Lang(lang)+" · diagram"
+		}
+	}
 	copyL, applyL, saveL := "Copy", "Apply", "Save as"
 	switch theme.CurrentIconMode {
 	case theme.IconModeNerdFont:
@@ -613,7 +622,18 @@ func renderCodeCard(code []string, lang string, s mdStyles, width, indent, msgId
 	// prefix of a continuation; a source line's first row keeps the
 	// source line for a whole-line copy (tabs, not the spaces shown).
 	bodyBg := lipgloss.NewStyle().Background(s.cardBg)
-	for li, line := range highlightCode(strings.Join(code, "\n"), lang, s) {
+	body := code
+	var styled [][]mdSpan
+	if drawn != nil {
+		plain := lipgloss.NewStyle().Background(s.cardBg).Foreground(theme.LG(theme.TextPrimary))
+		for _, row := range drawn {
+			styled = append(styled, []mdSpan{{text: row, st: plain}})
+		}
+		body = drawn
+	} else {
+		styled = highlightCode(strings.Join(code, "\n"), lang, s)
+	}
+	for li, line := range styled {
 		segs := wrapStyledLine(line, cardW-2)
 		texts := make([]string, len(segs))
 		xs := make([]int, len(segs))
@@ -628,8 +648,8 @@ func renderCodeCard(code []string, lang string, s mdStyles, width, indent, msgId
 		full := joinParts(line)
 		joins := aiJoins(full, texts)
 		raw := full
-		if li < len(code) {
-			raw = code[li]
+		if li < len(body) {
+			raw = body[li]
 		}
 		// Code keeps its left-to-right order; only RTL runs inside it (a
 		// Persian comment or string) are shaped and turned (ai_rtl.go).

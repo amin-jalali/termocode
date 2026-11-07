@@ -96,6 +96,10 @@ To put code from the answer into your file, run
 **AI: Apply Last Code Block to File**, or click **Apply** on the code
 card. You see the change in the review card first (see below).
 
+Mermaid, CSV / TSV and Excalidraw blocks in an answer are drawn as text
+diagrams once the block is finished; see
+[Diagrams in Markdown](editing.md#diagrams-in-markdown).
+
 | Key (chat focused) | Action |
 |---|---|
 | `Enter` | Send |
