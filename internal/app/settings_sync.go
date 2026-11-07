@@ -329,10 +329,10 @@ func (m *Model) prepareSettingsImport(source string) tea.Cmd {
 	}
 	lines = append(lines, "", "A backup of your current settings is saved first.")
 	m.confirm = confirm.New("Import Settings?", strings.Join(lines, "\n"), []confirm.Button{
-		{ID: "import-reload", Title: "Import & Reload", Style: confirm.StylePrimary},
-		{ID: "import", Title: "Import"},
 		{ID: "cancel", Title: "Cancel"},
-	})
+		{ID: "import", Title: "Import"},
+		{ID: "import-reload", Title: "Import & Reload", Style: confirm.StylePrimary},
+	}).WithFocus(0)
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindSettingsImport

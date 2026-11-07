@@ -16,6 +16,14 @@ type Client struct {
 	Version   string       // the running version, for the User-Agent
 }
 
+// HTTPError is an answer that is not 200 OK.
+type HTTPError struct {
+	URL  string
+	Code int
+}
+
+func (e *HTTPError) Error() string { return fmt.Sprintf("%s: HTTP %d", e.URL, e.Code) }
+
 // errNotHTTPS refuses a plain-http address.
 var errNotHTTPS = errors.New("update: only https addresses are used")
 
@@ -71,7 +79,7 @@ func (c Client) get(ctx context.Context, raw string, accept string) (*http.Respo
 	}
 	if resp.StatusCode != http.StatusOK {
 		resp.Body.Close()
-		return nil, fmt.Errorf("%s: HTTP %d", raw, resp.StatusCode)
+		return nil, &HTTPError{URL: raw, Code: resp.StatusCode}
 	}
 	return resp, nil
 }
