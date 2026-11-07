@@ -36,13 +36,13 @@ import { Toasts, ToastView } from "../ui/Toasts";
 import { WaitingLaptop } from "../ui/Waiting";
 import { Block as PhoneBlock, BoardTile, Composer, PhoneCard, PhoneChip, PhoneChips, PhoneShell, PhoneSheet, Row, Rows, StatusMark, STATUS, StreamMsg, type Status } from "../phone/index";
 import "./replay";
-import type { Block } from "../../../../webproto/proto";
+import type { Block as ProtoBlock } from "../../../../webproto/proto";
 
 /** blockSamples: one block of each kind (MOB-3), plus one kind this page
  * does not know. Sample data only. */
 const KIT_NOW = Date.UTC(2026, 10, 7, 12, 0, 0);
 const prRef = { kind: "pr", id: "418" };
-const blockSamples: Block[] = [
+const blockSamples: ProtoBlock[] = [
   {
     id: "k1", kind: "list", title: "Open pull requests", live: true, total: 5, truncated: true,
     items: [
@@ -78,7 +78,7 @@ const blockSamples: Block[] = [
       { id: "done", label: "Done", tone: "ok", items: [{ id: "r9", title: "docs: pairing", tone: "ok" }] },
     ] },
   },
-  { id: "k12", kind: "map" as Block["kind"], title: "A block from a newer laptop" },
+  { id: "k12", kind: "map" as ProtoBlock["kind"], title: "A block from a newer laptop" },
   { id: "k13", kind: "status", title: "Failing CI · shop", state: "bad", stale: true },
 ];
 

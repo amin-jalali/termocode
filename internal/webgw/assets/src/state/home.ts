@@ -236,3 +236,39 @@ export function readBlock(data: unknown): { kind: string; title: string } | null
   const b = v as { kind?: unknown; title?: unknown };
   return typeof b.kind === "string" && typeof b.title === "string" ? (v as { kind: string; title: string }) : null;
 }
+
+/** HomeSummary is what the Home's three cards say (MOBUX-4): how many
+ * things wait for the user, run now, and ended today, each with the
+ * newest one's title. known is false while the laptop has sent no inbox
+ * (the cards then show only the waiting cards' count). */
+export interface HomeSummary {
+  known: boolean;
+  needs: { n: number; first?: string };
+  working: { n: number; first?: string };
+  done: { n: number; failed: number; first?: string };
+}
+
+/** startOfDay is local midnight of the day of now, in Unix ms. */
+export function startOfDay(now: number): number {
+  const d = new Date(now);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+/** homeSummary counts the inbox for the Home's cards: needs you and
+ * working as they are now, done (and failed) since local midnight. The
+ * inbox is newest first, so first is the newest. Without an inbox the
+ * waiting cards count as "needs you". */
+export function homeSummary(inbox: readonly InboxItem[] | null, cards: readonly Card[], now: number): HomeSummary {
+  const day = startOfDay(now);
+  const needs = inbox ? inbox.filter((x) => x.state === "needs_you") : [];
+  const working = inbox ? inbox.filter((x) => x.state === "working") : [];
+  const done = inbox ? inbox.filter((x) => x.state === "done" && x.since >= day) : [];
+  const failed = inbox ? inbox.filter((x) => x.state === "failed" && x.since >= day).length : 0;
+  return {
+    known: inbox !== null,
+    needs: { n: inbox ? needs.length : cards.length, first: inbox ? needs[0]?.title : cards[0]?.title },
+    working: { n: working.length, first: working[0]?.title },
+    done: { n: done.length, failed, first: done[0]?.title },
+  };
+}

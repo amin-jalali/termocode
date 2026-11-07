@@ -13,7 +13,9 @@ import { Panels } from "./Panels";
 import { catalog, ViewsMenu } from "./ViewsMenu";
 import { Customize } from "./Customize";
 import { readLive, readUpdate, specFromRoute, type ViewDef, type ViewSpec } from "./views";
-import { addQuick, boardBlock, dropQuick, gitBlock, lastIndex, mergeStream, needsYouBlock, patchQuick, projectsBlock, readBlock, readInbox, readProjects, runsBlock, tasksBlock, type HomeBlock, type Labels, type Quick } from "../state/home";
+import { HomeStart, type StartCard } from "./Start";
+import { PinnedViews, startSaved } from "./saved";
+import { addQuick, boardBlock, dropQuick, gitBlock, homeSummary, lastIndex, mergeStream, needsYouBlock, patchQuick, projectsBlock, readBlock, readInbox, readProjects, runsBlock, tasksBlock, type HomeBlock, type Labels, type Quick } from "../state/home";
 import { readGit } from "../state/git";
 import { readRuns, readTasks } from "../state/tasks";
 import type { Signal } from "@preact/signals";
@@ -188,6 +190,7 @@ export function Home() {
       }),
     [],
   );
+  H.useEffect(() => startSaved(), []);
   const body = H.useRef<HTMLDivElement | null>(null);
   const stick = H.useRef(true);
   const laptop = H.readChat(data("chat"));
@@ -317,19 +320,20 @@ export function Home() {
     run(c);
   };
 
+  const chipOf = (id: string) => CHIPS.find((c) => c.id === id);
+  // A Home card opens the list behind it through its chip (no tokens):
+  // needs you → the needs-you list, working and done today → the board.
+  const onCard = (card: StartCard) => {
+    const c = chipOf(card === "needs" ? "needs" : "board");
+    if (c) onChip(c);
+  };
   const busy = laptop?.busy ?? false;
   return (
     <section class="home" data-view="home" aria-label={hs("title")}>
       <TopBar panels={panels} />
       <div class="home-stream" ref={body} role="log" aria-live="polite">
-        {stream.length === 0 && (
-          <p class="home-hello" dir="auto">
-            <span class="star" aria-hidden="true">
-              ✦
-            </span>{" "}
-            {hs("hello")}
-          </p>
-        )}
+        {stream.length === 0 && <HomeStart sum={homeSummary(readInbox(data("inbox")), H.cards.value, Date.now())} onCard={onCard} />}
+        {stream.length > 0 && <PinnedViews />}
         {stream.map((it) => {
           if (it.kind === "msg") return <H.Message key={"m" + it.m.i} m={it.m} chat={chatId} canFetch />;
           const q = it.q;

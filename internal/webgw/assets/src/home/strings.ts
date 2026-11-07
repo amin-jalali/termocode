@@ -134,6 +134,17 @@ export const HS = {
   "layout.chart": "chart",
   "layout.json": "raw",
   "layout.form": "form",
+  "start.hello": "Hello. Here is your laptop today.",
+  "start.cards": "Today on the laptop",
+  "start.card": "{title}: {n}. {detail}",
+  "start.needs": "Needs you",
+  "start.working": "Working",
+  "start.done": "Done today",
+  "start.none_needs": "Nothing waits for you.",
+  "start.none_working": "Nothing runs now.",
+  "start.none_done": "Nothing ended yet today.",
+  "start.failed": "{n} failed",
+  "start.waiting": "Waiting for the laptop…",
 } as const;
 
 export type HomeKey = keyof typeof HS;
