@@ -126,6 +126,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	if c, ok := m.handleContainerWSMsg(msg); ok { // container_workspace.go
 		return m, c
 	}
+	if c, ok := m.handleContainerLSPMsg(msg); ok { // container_lsp.go
+		return m, c
+	}
 	if c, ok := m.handleDevContainerMsg(msg); ok { // devcontainer_open.go
 		return m, c
 	}
@@ -2560,6 +2563,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.onRegistryPicked(msg.ID)
 	case pickerKindLayoutOpen: // layout_palette.go
 		return m.onLayoutOpenPicked(msg.ID)
+	case pickerKindContainerLSPWhere: // container_lsp.go
+		return m.onContainerLSPWherePicked(msg.ID)
 	case pickerKindLayoutDelete: // layout_delete.go
 		return m.onLayoutDeletePicked(msg.ID)
 	case pickerKindSecretStore: // secrets_store_ui.go

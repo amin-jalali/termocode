@@ -456,6 +456,8 @@ func paletteItems() []picker.Item {
 	items = append(items, prPaletteItems()...)        // G-PR (pr_list.go)
 	items = append(items, termPanePaletteItems()...)  // terminal splits (terminal_split.go)
 	items = append(items, gitxPaletteItems()...)      // GITX features (gitx_hub.go)
+	// RC-6: where a container workspace's language servers run (container_lsp.go).
+	items = append(items, containerLSPPaletteItems()...)
 	// Group A — AI commands (ai_state.go).
 	for _, e := range aiPaletteItems() {
 		items = append(items, picker.Item{ID: e.id, Title: e.title, Hint: e.hint})
@@ -943,6 +945,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.openSnippetManager()
 	default:
 		if cmd, ok := m.dispatchGitxPalette(id); ok { // gitx_hub.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchContainerLSPPalette(id); ok { // container_lsp.go
 			return cmd
 		}
 		if cmd, ok := m.dispatchImportPalette(id); ok { // import_editor.go

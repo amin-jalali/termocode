@@ -163,6 +163,11 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"goto-symbol-file":            aiNever(aiNoPicker + " (lsp_nav)"),
 	"goto-symbol-workspace":       aiNever(aiNoPicker + " (lsp_nav)"),
 	"lsp-manage":                  aiNever(aiNoPicker + " (lsp_servers)"),
+	// RC-6: language servers of a container workspace (container_lsp.go).
+	"lsp-container-where":       aiNever(aiNoPicker),
+	"lsp-container-diagnostics": aiConfirm(ai.ClassIDE),
+	"lsp-mirror-refresh":        aiConfirm(ai.ClassIDE), // reads the container's code into the local cache
+	"lsp-mirror-clear":          aiNever("opens a card only the user answers; it deletes the local mirror"),
 
 	// ── Git ──
 	"git-stage":              aiConfirm(ai.ClassGit),
