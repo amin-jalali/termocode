@@ -109,6 +109,7 @@ type settingsConfig struct {
 	WebMaxViewers  *int   `json:"web_max_viewers,omitempty"`
 	// WebPushDetail: what a phone push says (MOB-30, web_push.go).
 	WebPushDetail string `json:"web_push_detail,omitempty"`
+	WebPhone      string `json:"web_phone,omitempty"` // MOB-31
 	// Blame (git_blame_view.go). File only; the palette toggles write them.
 	GitInlineBlame      *bool `json:"git_inline_blame,omitempty"`
 	GitStatusBlame      *bool `json:"git_status_blame,omitempty"`

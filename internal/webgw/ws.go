@@ -81,6 +81,10 @@ type WSConfig struct {
 	// WatchTokens gives a paired device a watch token (app.watch_token,
 	// MOB-23); nil: the op is not available.
 	WatchTokens *WatchTokens
+	// PhoneWatch (web_phone "on", MOB-31): each ping a paired, non-guest
+	// device's link answers is use (its session and Activity), so a phone
+	// that only watches keeps the gateway up. Max still ends the session.
+	PhoneWatch bool
 }
 
 // Defaults of WSConfig.
@@ -317,6 +321,8 @@ type wsConn struct {
 
 	grantLogin string      // browser reader only: the open control challenge
 	asking     atomic.Bool // the laptop is being asked for control
+
+	watcher bool // set at hello: an answered ping is use (PhoneWatch)
 }
 
 // serve runs one connection until it ends.
@@ -349,6 +355,9 @@ func (c *wsConn) keepalive() {
 		if err != nil {
 			c.end(webproto.CloseCode(websocket.StatusAbnormalClosure), false)
 			return
+		}
+		if c.watcher {
+			c.activity() // MOB-31: a phone that watches is use
 		}
 	}
 }
@@ -407,6 +416,7 @@ func (c *wsConn) hello() bool {
 		return false
 	}
 	c.sess, c.token = sess, h.Token
+	c.watcher = c.s.watcher(sess.Device)
 	if c.id, err = connID(); err != nil {
 		c.close(closeInternal)
 		return false
@@ -440,6 +450,17 @@ func (s *WS) deviceOK(device string) bool {
 	}
 	d, ok, err := s.cfg.Devices.Get(device)
 	return err == nil && ok && !d.NeedsRepair
+}
+
+// watcher: with PhoneWatch, a session of the owner's own paired device
+// (in the store, not a guest) watches. The launch link ("loc-…") and
+// guests never keep the gateway up by being open.
+func (s *WS) watcher(device string) bool {
+	if !s.cfg.PhoneWatch || !strings.HasPrefix(device, "dev-") || s.cfg.Devices == nil {
+		return false
+	}
+	d, ok, err := s.cfg.Devices.Get(device)
+	return err == nil && ok && !d.Guest && !d.NeedsRepair
 }
 
 // CloseDevice closes every live connection of device with code and

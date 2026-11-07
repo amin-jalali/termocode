@@ -67,6 +67,7 @@ func webGatewayConfig(args []string, errw io.Writer) (webgw.RunConfig, bool) {
 	devices := fs.String("devices", "", "the paired-device folder (pairing and passkeys on)")
 	totp := fs.Bool("totp", false, "a paired device also needs a one-time code")
 	appKey := fs.Bool("app-key", false, "the Android app may sign in with its keystore key")
+	phone := fs.Bool("phone-watch", false, "a paired phone that watches keeps the gateway up (web_phone)")
 	if err := fs.Parse(args); err != nil || *dir == "" || *audit == "" || fs.NArg() != 0 ||
 		(*sshPort != 0 && (*port != 0 || *sshPort < 1024 || *sshPort > 65535 || *tailnet)) {
 		fmt.Fprintln(errw, "termocode: the web gateway is started by termocode itself")
@@ -95,5 +96,6 @@ func webGatewayConfig(args []string, errw io.Writer) (webgw.RunConfig, bool) {
 	cfg.DevicesDir = *devices
 	cfg.RequireTOTP = *totp
 	cfg.AppKeyLogin = *appKey
+	cfg.PhoneWatch = *phone
 	return cfg, true
 }

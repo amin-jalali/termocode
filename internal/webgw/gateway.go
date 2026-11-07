@@ -29,7 +29,8 @@ import (
 // it when the user opens the web panel. It lives while the UI does (the
 // control connection) and stops on the first of: the kill switch on the
 // laptop (4009), the UI going away (4012), no use for Idle (4006), Max
-// after it began (4007), or SIGTERM from the UI (4009).
+// after it began (4007), or SIGTERM from the UI (4009). With PhoneWatch
+// a paired phone that watches is use (MOB-31); nothing else changes.
 
 // RunConfig sets up one gateway run.
 type RunConfig struct {
@@ -70,6 +71,10 @@ type RunConfig struct {
 	// AppKeyLogin lets the Android app pair and sign in with its keystore
 	// key when passkeys fail in its WebView (web_app_key_login, MOB-27).
 	AppKeyLogin bool
+	// PhoneWatch (web_phone "on", MOB-31): a paired, non-guest device
+	// whose link answers the pings counts as use, so a phone that only
+	// watches keeps the gateway up. Max still ends it.
+	PhoneWatch bool
 	// Tailnet, when set, is tailnet mode (WEB-31): still 127.0.0.1 only,
 	// reached from the user's tailnet through tailscale serve on
 	// https://<machine>.<tailnet>.ts.net/; Funnel is refused.
@@ -86,6 +91,8 @@ type Status struct {
 	Started time.Time `json:"started"`
 	IdleS   int       `json:"idle_s"`
 	MaxS    int       `json:"max_s"`
+	// PhoneWatch: a watching phone keeps the gateway up (MOB-31).
+	PhoneWatch bool `json:"phone_watch,omitempty"`
 }
 
 // handoff is what the gateway writes on fd 3 once it serves: the port
@@ -231,7 +238,7 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 			}}
 	}
 	ws := NewWS(WSConfig{Site: site, Tokens: tokens, Audit: audit, Dial: cfg.Dial, Now: now, Devices: devices, Control: control,
-		WatchTokens: watchToks, MaxViewers: cfg.MaxViewers, Activity: func() { last.Store(time.Now().UnixNano()) }})
+		WatchTokens: watchToks, MaxViewers: cfg.MaxViewers, PhoneWatch: cfg.PhoneWatch, Activity: func() { last.Store(time.Now().UnixNano()) }})
 	wsRef.Store(ws)
 	mux := siteMux(site, auth, ws, cfg.Assets)
 	if pairing != nil {
@@ -278,13 +285,16 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	}
 	started := time.Now()
 	st := Status{PID: os.Getpid(), Port: port, URL: url, Sock: cfg.UnixPath, Started: started,
-		IdleS: int(cfg.Idle / time.Second), MaxS: int(cfg.Max / time.Second)}
+		IdleS: int(cfg.Idle / time.Second), MaxS: int(cfg.Max / time.Second), PhoneWatch: cfg.PhoneWatch}
 	if err := writeStatus(cfg.StatusPath, st); err != nil {
 		return 0, err
 	}
 	defer func() { _ = os.Remove(cfg.StatusPath) }()
 	if cfg.UnixPath != "" {
 		where += " over ssh"
+	}
+	if cfg.PhoneWatch {
+		where += ", a watching phone keeps it up"
 	}
 	if err := audit.Log(Event{Kind: EvStart, Summary: where}); err != nil {
 		return 0, err
