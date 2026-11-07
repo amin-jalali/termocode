@@ -34,6 +34,7 @@ type dbPlanRun struct {
 	target  string // the statement that is explained (as typed, without ";")
 	wrap    bool   // an analyzed write: begin … always roll back
 	parsed  dbclient.Plan
+	bars    bool // b: the bar view of each node's share (DBX-39)
 }
 
 func (p *dbPlanRun) label() string {
@@ -234,6 +235,10 @@ func dbExplainExec(ctx context.Context, sess dbclient.Session, driver string, pl
 // (nvim folds by indent), the costly node marked and coloured.
 func (m *Model) databasePlanView(p *dbPage, pl *dbPlanRun, width int) {
 	p.fold = true
+	if pl.bars && len(pl.parsed.Lines) > 0 {
+		databasePlanBars(p, pl, width)
+		return
+	}
 	costly := "  <- costly"
 	for _, l := range pl.parsed.Lines {
 		text := dbSafeMultiline(strings.ReplaceAll(strings.TrimSpace(l.Text), "\n", " "))
@@ -263,6 +268,38 @@ func (m *Model) databasePlanView(p *dbPage, pl *dbPlanRun, width int) {
 		}
 	}
 	_ = width
+}
+
+// databasePlanBars is the bar view (b): one bar per node for its own
+// share of the cost or time, the biggest coloured.
+func databasePlanBars(p *dbPage, pl *dbPlanRun, width int) {
+	bw := min(max(width/4, 10), 30)
+	for _, l := range pl.parsed.Lines {
+		if l.Detail {
+			continue
+		}
+		bar := dbclient.PlanBars(dbclient.Plan{Lines: []dbclient.PlanLine{l}}, bw)
+		if len(bar) == 0 {
+			continue
+		}
+		line := " " + dbSafeMultiline(strings.ReplaceAll(bar[0], "\n", " "))
+		n := p.add(line)
+		if l.Costly {
+			p.hl(n, 0, len(line), "TermocodeHttpStatusWarn")
+		}
+	}
+	if len(pl.parsed.Summary) > 0 {
+		p.add("")
+		for _, s := range pl.parsed.Summary {
+			n := p.add(" " + dbSafeMultiline(s))
+			p.hl(n, 0, len(p.lines[n-1]), "TermocodeHttpSummary")
+		}
+	}
+}
+
+// dbPlanNative is the server's own plan answer (JSON when it gave one).
+func dbPlanNative(pl *dbPlanRun) string {
+	return dbSafeMultiline(strings.TrimSpace(pl.parsed.Raw))
 }
 
 // databasePlanRaw is the Raw view: the server's own answer (JSON indented).

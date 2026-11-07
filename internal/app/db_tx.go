@@ -40,6 +40,8 @@ const (
 type dbTxState struct {
 	open   bool
 	writes int // statements that changed something since it began
+	// savepoints are the names set in this transaction, oldest first (DBX-40).
+	savepoints []string
 }
 
 // dbTxConn is the connection a session key belongs to.

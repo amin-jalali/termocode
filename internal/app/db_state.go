@@ -87,7 +87,10 @@ type dbState struct {
 	addFromURL          bool
 	menuRow             dbTreeRow
 	pendingDisconnectID string
-	closeSessionKey     string // the session Databases: Sessions… asks to close
+	closeSessionKey     string          // the session Databases: Sessions… asks to close
+	savepointKey        string          // the session Set / Roll Back to Savepoint acts on
+	savepointName       string          // the savepoint the rollback card is for
+	csvConns            []dbclient.Conn // session-only CSV/TSV copies (db_csv_open.go)
 	sessions            map[string]dbclient.Session
 	passwords           map[string]string
 	connectionEpochs    map[string]uint64
@@ -308,6 +311,9 @@ func (s *dbState) load(root string) {
 	if project != nil {
 		s.projectConns = project
 	}
+	for _, c := range s.csvConns {
+		conns = dbReplaceConn(conns, c)
+	}
 	s.conns = conns
 	for _, c := range conns {
 		n := dbNode{kind: dbNodeConnection, name: dbConnName(c), path: c.ID, conn: c.ID, detail: dbConnDetail(c)}
@@ -315,6 +321,9 @@ func (s *dbState) load(root string) {
 			n.problem = dbFriendlyProblem(c.Problem)
 		}
 		s.nodes[c.ID] = n
+	}
+	if s.console != nil {
+		s.console.mergeSQLAttach(root)
 	}
 	s.findSuggestions()
 	s.loaded = true

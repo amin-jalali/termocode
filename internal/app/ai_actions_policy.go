@@ -528,6 +528,11 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-chart":                          aiNever(aiNoPicker),
 	"db-copy-as":                        aiNever(aiNoPicker),
 	"db-export-tables":                  aiNever(aiNoPicker + " (db_query + write_file)"),
+	"db-sql-outline":               aiNever("moves the user's cursor; the AI reads files with its own tools"),
+	"db-switch-connection":         aiNever(aiNoAIConfig),
+	"db-savepoint":                 aiNever("the user's sessions and transactions"),
+	"db-rollback-savepoint":        aiNever("the user's sessions and transactions"),
+	"db-open-csv":                  aiNever("the user picks the file; the AI reads files with its own tools"),
 
 	// ── Tasks ──
 	"tasks-run":            aiNever(aiNoPicker),

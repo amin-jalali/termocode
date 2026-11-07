@@ -528,6 +528,11 @@ missing	db-heatmap	Databases|S
 missing	db-import-new-table	Databases|M
 missing	db-run-dump	Databases|M
 missing	db-search-data	Databases|M
+missing	db-savepoint	Databases|S
+missing	db-sql-outline	Databases|S
+missing	db-switch-connection	Databases|S
+missing	db-rollback-savepoint	Databases|S
+missing	db-open-csv	Databases|S
 missing	db-server-info	Databases|S
 missing	db-sessions	Databases|S
 missing	db-submit-source	Databases|S

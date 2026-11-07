@@ -36,6 +36,8 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-result-load-all", Title: "Databases: Load All Result Rows"},
 		{ID: "db-run-file", Title: "Databases: Run File"},
 		{ID: "db-explain", Title: "Databases: Explain Statement"},
+		{ID: "db-sql-outline", Title: "Databases: Go to Statement…"},
+		{ID: "db-switch-connection", Title: "Databases: Switch File Connection…"},
 		{ID: "db-format", Title: "Databases: Format Statement or Selection"},
 		{ID: "db-format-file", Title: "Databases: Format File"},
 		{ID: "db-explain-analyze", Title: "Databases: Explain Analyze Statement…"},
@@ -71,6 +73,8 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-commit", Title: "Databases: Commit"},
 		{ID: "db-rollback", Title: "Databases: Roll Back"},
 		{ID: "db-open-sessions", Title: "Databases: Sessions…"},
+		{ID: "db-savepoint", Title: "Databases: Set Savepoint…"},
+		{ID: "db-rollback-savepoint", Title: "Databases: Roll Back to Savepoint…"},
 		{ID: "db-submit-changes", Title: "Databases: Submit Pending Changes…"},
 		{ID: "db-revert-changes", Title: "Databases: Revert Pending Changes…"},
 		{ID: "db-result-pin", Title: "Databases: Pin Result Tab"},
@@ -78,6 +82,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-import-csv", Title: "Databases: Import CSV into Table…"},
 		{ID: "db-import-new-table", Title: "Databases: Import CSV as New Table…"},
 		{ID: "db-run-dump", Title: "Databases: Run SQL Dump File…"},
+		{ID: "db-open-csv", Title: "Databases: Open CSV/TSV as Table…"},
 		{ID: "db-generate-data", Title: "Databases: Generate Test Data…"},
 		{ID: "db-compare-schemas", Title: "Databases: Compare Schemas…"},
 		{ID: "db-search-data", Title: "Databases: Search Data in Schema…"},
@@ -158,6 +163,16 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseCommitKey(false), true
 	case "db-open-sessions":
 		return m.databaseSessionsPicker(), true
+	case "db-sql-outline":
+		return m.databaseSQLOutline(), true
+	case "db-switch-connection":
+		return m.databaseSQLSwitchPicker(), true
+	case "db-savepoint":
+		return m.databaseSavepointStart(), true
+	case "db-rollback-savepoint":
+		return m.databaseSavepointPicker(), true
+	case "db-open-csv":
+		return m.databaseOpenCSVStart(), true
 	case "db-submit-changes":
 		return m.databaseSubmitCard(), true
 	case "db-revert-changes":
@@ -1107,6 +1122,8 @@ func dbPageKeyRows() []confirm.KeyRow {
 		[]string{"Run"},
 		[]string{"r", "run again"},
 		[]string{"x / X", "explain / explain analyze"},
+		[]string{"b", "plan: bar view of each step's share"},
+		[]string{"C", "plan: copy the server's own plan (JSON)"},
 		[]string{"h", "SQL history"},
 		[]string{"gd", "go to the statement"},
 		[]string{"Esc", "cancel a running query"},

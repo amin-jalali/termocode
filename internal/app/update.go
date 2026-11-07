@@ -294,6 +294,10 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBJobTick(msg)
 	case dbExportDoneMsg:
 		return m, m.onDBExportDone(msg)
+	case dbOpenCSVFilesMsg:
+		return m, m.onDBOpenCSVFiles(msg)
+	case dbOpenCSVMsg:
+		return m, m.onDBOpenCSV(msg)
 	case dbImportFilesMsg:
 		return m, m.onDBImportFiles(msg)
 	case dbImportPreviewMsg:
@@ -302,6 +306,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBImportDone(msg)
 	case dbRefreshMsg:
 		return m, m.onDBRefresh(msg)
+	case dbSavepointMsg:
+		return m, m.onDBSavepoint(msg)
 	case dbTxDoneMsg:
 		return m, m.onDBTxDone(msg)
 	case dbMetaMsg:
