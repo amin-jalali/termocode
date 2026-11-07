@@ -375,6 +375,7 @@ web	workflow-stop	op:workflows.stop
 web	workflows	view:workflows
 web	workspace-add-folder	cmd:addFolder
 web	workspace-remove-folder	cmd:removeFolder
+web	worktree-new	op:worktrees.new_task
 web	zen-mode	cmd:zen
 excluded	ai-agent-hooks	laptop only: installs hooks into outside agents on the laptop
 excluded	ai-agent-packs	laptop only: installs files into outside agents on the laptop
@@ -711,7 +712,6 @@ missing	worktree-filter	Worktrees|M
 missing	worktree-forget	Worktrees|M
 missing	worktree-jump	Worktrees|M
 missing	worktree-link	Worktrees|M
-missing	worktree-new	Worktrees|M
 missing	worktree-new-child	Worktrees|M
 missing	worktree-notes	Worktrees|M
 missing	worktree-open	Worktrees|M

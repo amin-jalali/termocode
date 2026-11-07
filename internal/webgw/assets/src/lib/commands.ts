@@ -154,6 +154,7 @@ export function commands(): Command[] {
     { id: "httpQuick", label: "cmd.http_quick", run: () => ((httpForm.value = "quick"), openSide("http")) },
     { id: "search", label: "cmd.search", run: () => go({ tab: "more", rest: "search", query: {} }) },
     { id: "tasks", label: "cmd.tasks", run: () => go({ tab: "more", rest: "tasks", query: {} }) },
+    { id: "newTask", label: "cmd.new_task", run: () => go({ tab: "more", rest: "new-task", query: {} }) },
     { id: "runs", label: "cmd.runs", run: () => go({ tab: "more", rest: "runs", query: {} }) },
     { id: "settings", label: "cmd.settings", run: () => go({ tab: "more", rest: "settings", query: {} }) },
     { id: "terminal", label: "cmd.terminal", keys: "Ctrl+`", run: () => go({ tab: "term", rest: "", query: {} }) },

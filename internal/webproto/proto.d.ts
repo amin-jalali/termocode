@@ -545,6 +545,13 @@ export interface WorktreeArgs {
   id: string;
 }
 
+export interface WorktreeTaskArgs {
+  name?: string;
+  from?: string;
+  agent: string;
+  task: string;
+}
+
 export interface AIWorktreeTextArgs {
   id: string;
   path: string;
@@ -2339,6 +2346,27 @@ export interface WorktreeDone {
   note?: string;
 }
 
+export interface WorktreeTaskForm {
+  state: "none" | "ready";
+  from?: string;
+  refs: string[];
+  agents: WorktreeTaskAgent[];
+  setup?: "trusted" | "asks";
+  base?: string;
+}
+
+export interface WorktreeTaskAgent {
+  id: string;
+  title: string;
+}
+
+export interface WorktreeTaskDone {
+  id: string;
+  branch: string;
+  where: string;
+  note?: string;
+}
+
 export interface AIWorktrees {
   off?: boolean;
   noRepo?: boolean;
@@ -3105,6 +3133,8 @@ export interface OpArgs {
   "worktrees.note": WorktreeNoteArgs;
   "worktrees.archive": WorktreeArgs;
   "worktrees.delete": WorktreeArgs;
+  "worktrees.task_form": EmptyArgs;
+  "worktrees.new_task": WorktreeTaskArgs;
   "ai.worktrees": EmptyArgs;
   "ai.worktree_text": AIWorktreeTextArgs;
   "ai.worktree_merge": AIWorktreeArgs;
@@ -3374,6 +3404,8 @@ export interface OpResult {
   "worktrees.note": WorktreeDone;
   "worktrees.archive": AskRef;
   "worktrees.delete": AskRef;
+  "worktrees.task_form": WorktreeTaskForm;
+  "worktrees.new_task": WorktreeTaskDone;
   "ai.worktrees": AIWorktrees;
   "ai.worktree_text": AIWorktreeText;
   "ai.worktree_merge": AskRef;

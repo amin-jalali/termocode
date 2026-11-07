@@ -162,3 +162,14 @@
 .im-key.is-off { color: var(--red); }
 .im-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .im-note { margin: 0 0 4px; font-size: 0.8125rem; opacity: 0.8; }
+
+/* New task (CMP-49): a background task on the laptop from the page. */
+.nt-form { display: flex; flex-direction: column; gap: var(--s2, 8px); padding: 12px; }
+.nt-form.is-desk { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.nt-field { display: flex; flex-direction: column; gap: 4px; }
+.nt-label { font-size: 0.8125rem; font-weight: 600; }
+.nt-input input, .nt-sel { width: 100%; min-height: var(--tap, 36px); padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg, transparent); color: inherit; font: inherit; box-sizing: border-box; }
+.nt-form.is-desk .nt-sel { min-height: 26px; }
+.nt-hint, .nt-msg { margin: 0; font-size: 0.8125rem; color: var(--muted); }
+.nt-msg { padding: 12px; }
+.nt-form .choices { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }

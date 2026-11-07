@@ -19,6 +19,7 @@ import { ContainersView } from "./more/ContainersView";
 import { DBView } from "./more/DBView";
 import { SearchView } from "./more/SearchView";
 import { TasksView } from "./more/TasksView";
+import { NewTaskView } from "./more/NewTaskView";
 import { TestingView } from "./run/TestingView";
 import { DebugView } from "./run/DebugView";
 import { ServicesView } from "./run/ServicesView";
@@ -42,6 +43,7 @@ export function MoreView() {
   const sub = route.value.tab === "more" ? route.value.rest : "";
   if (sub === "search") return <SearchView />;
   if (sub === "tasks") return <TasksView />;
+  if (sub === "new-task") return <NewTaskView />;
   if (sub === "runs") return <RunsView />;
   if (sub === "workflows") return <WorkflowsView />;
   if (sub === "settings") return <SettingsView />;
@@ -77,6 +79,9 @@ export function MoreView() {
         <nav class="more-links" aria-label={t("tab.more")}>
           <button type="button" class="more-link" onClick={() => go({ tab: "more", rest: "search", query: {} })}>
             {t("more.search")}
+          </button>
+          <button type="button" class="more-link" data-sub="new-task" onClick={() => go({ tab: "more", rest: "new-task", query: {} })}>
+            {t("nt.title")}
           </button>
           <button type="button" class="more-link" onClick={() => go({ tab: "more", rest: "tasks", query: {} })}>
             {t("more.tasks")}

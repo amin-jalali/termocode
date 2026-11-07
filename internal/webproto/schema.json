@@ -2473,6 +2473,36 @@
       "phase": "v2"
     },
     {
+      "op": "worktrees.task_form",
+      "args": "EmptyArgs",
+      "result": "WorktreeTaskForm",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "worktrees.new_task",
+      "args": "WorktreeTaskArgs",
+      "result": "WorktreeTaskDone",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 8192,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "ai.worktrees",
       "args": "EmptyArgs",
       "result": "AIWorktrees",
@@ -14673,6 +14703,108 @@
         "on"
       ],
       "additionalProperties": false
+    },
+    "WorktreeTaskAgent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ],
+      "additionalProperties": true
+    },
+    "WorktreeTaskArgs": {
+      "type": "object",
+      "properties": {
+        "agent": {
+          "type": "string"
+        },
+        "from": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "task": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "agent",
+        "task"
+      ],
+      "additionalProperties": false
+    },
+    "WorktreeTaskDone": {
+      "type": "object",
+      "properties": {
+        "branch": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "where": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "branch",
+        "where"
+      ],
+      "additionalProperties": true
+    },
+    "WorktreeTaskForm": {
+      "type": "object",
+      "properties": {
+        "agents": {
+          "items": {
+            "$ref": "#/defs/WorktreeTaskAgent"
+          },
+          "type": "array"
+        },
+        "base": {
+          "type": "string"
+        },
+        "from": {
+          "type": "string"
+        },
+        "refs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "setup": {
+          "enum": [
+            "trusted",
+            "asks"
+          ]
+        },
+        "state": {
+          "enum": [
+            "none",
+            "ready"
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "refs",
+        "agents"
+      ],
+      "additionalProperties": true
     },
     "WorktreesSnap": {
       "type": "object",

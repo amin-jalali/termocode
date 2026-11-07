@@ -253,6 +253,8 @@ func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onWTNewPrep(msg), true
 	case wtCreatedMsg:
 		return m.onWTCreated(msg), true
+	case wtWebTaskMsg: // a new task from the page (web_worktrees_task.go)
+		return m.onWTWebTask(msg), true
 	case wtForgotMsg:
 		return m.onWTForgot(msg), true
 	case wtArchivePrepMsg:

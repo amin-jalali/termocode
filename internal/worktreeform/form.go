@@ -80,6 +80,24 @@ func BranchFromIssue(n int, title string) string {
 	return out
 }
 
+// taskBranchWords is how many words of a task make its branch.
+const taskBranchWords = 6
+
+// BranchFromTask drafts a branch from a task's first words (a task
+// started from the page with no name, CMP-49): "task/" and the words as
+// BranchFromName makes them. "" when no word is left.
+func BranchFromTask(task string) string {
+	words := strings.Fields(strings.ReplaceAll(task, "/", " "))
+	if len(words) > taskBranchWords {
+		words = words[:taskBranchWords]
+	}
+	slug := BranchFromName(strings.Join(words, " "))
+	if slug == "" {
+		return ""
+	}
+	return strings.TrimRight(BranchFromName("task/"+slug), "-/")
+}
+
 // cutRunes is s cut to at most n bytes on a rune border.
 func cutRunes(s string, n int) string {
 	var b strings.Builder
