@@ -38,6 +38,9 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-explain", Title: "Databases: Explain Statement"},
 		{ID: "db-sql-outline", Title: "Databases: Go to Statement…"},
 		{ID: "db-switch-connection", Title: "Databases: Switch File Connection…"},
+		{ID: "db-sql-folder-dialect", Title: "Databases: Set Folder SQL Dialect…"},
+		{ID: "db-highlight-usages", Title: "Databases: Highlight Usages in File"},
+		{ID: "db-embedded-sql", Title: "Databases: Go to SQL in Strings…"},
 		{ID: "db-format", Title: "Databases: Format Statement or Selection"},
 		{ID: "db-format-file", Title: "Databases: Format File"},
 		{ID: "db-explain-analyze", Title: "Databases: Explain Analyze Statement…"},
@@ -188,6 +191,12 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseSQLOutline(), true
 	case "db-switch-connection":
 		return m.databaseSQLSwitchPicker(), true
+	case "db-sql-folder-dialect":
+		return m.databaseSQLFolderDialectPicker(), true
+	case "db-highlight-usages":
+		return m.databaseHighlightUsages(), true
+	case "db-embedded-sql":
+		return m.databaseEmbeddedSQL(), true
 	case "db-savepoint":
 		return m.databaseSavepointStart(), true
 	case "db-rollback-savepoint":

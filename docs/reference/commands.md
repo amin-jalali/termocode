@@ -231,6 +231,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Generate Test Data… | `db-generate-data` |   |   |
 | Databases: Go to Definition | `db-goto-definition` |   |   |
 | Databases: Go to Result Row… | `db-result-goto-row` |   |   |
+| Databases: Go to SQL in Strings… | `db-embedded-sql` |   |   |
+| Databases: Highlight Usages in File | `db-highlight-usages` |   |   |
 | Databases: History… | `db-history` |   |   |
 | Databases: Import CSV into Table… | `db-import-csv` |   |   |
 | Databases: Load All Result Rows | `db-result-load-all` |   |   |
@@ -250,6 +252,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: SSL Settings… | `db-ssl` |   |   |
 | Databases: Select 100 Rows in Console | `db-select` |   |   |
 | Databases: Sessions… | `db-open-sessions` |   |   |
+| Databases: Set Folder SQL Dialect… | `db-sql-folder-dialect` |   |   |
 | Databases: Set Redis Key TTL… | `redis-set-ttl` |   |   |
 | Databases: Set Result Page Size… | `db-result-page-size` |   |   |
 | Databases: Show DDL | `db-ddl` |   |   |

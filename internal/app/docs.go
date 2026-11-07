@@ -293,6 +293,7 @@ var fileOnlySettings = []SettingEntry{
 	{Key: "db_csv_header", Type: "bool", Default: "true", Category: "Databases (file only)", Description: "CSV and TSV exports start with a row of column names."},
 	{Key: "db_csv_null", Type: "string", Default: "(empty)", Category: "Databases (file only)", Description: "Text a NULL cell gets in CSV and TSV exports."},
 	{Key: "db_export_mask", Type: "string[]", Default: "[]", Category: "Databases (file only)", Description: "Column names (any case; * and ? match) whose values exports, Copy As and Export Tables to Folder write as ••••, for example [\"*password*\", \"email\"]."},
+	{Key: "db_sql_syntax_off", Type: "string[]", Default: "[]", Category: "Databases (file only)", Description: "SQL dialects whose syntax errors the live inspections do not show, for example [\"mysql\"]. Unknown names and other warnings stay."},
 	{Key: "containers_engine", Type: "enum", Default: "auto", Category: "Containers (file only)", Choices: []string{"auto", "docker", "podman"},
 		Description: "Container engine of the Containers view. auto tries Docker, then Podman; docker or podman uses only that engine. Press R in the view after changing it."},
 	{Key: "containers_sections", Type: "string[]", Default: "all", Category: "Containers (file only)",

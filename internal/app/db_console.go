@@ -213,6 +213,8 @@ type dbConsoleSettings struct {
 	CSVHeader    *bool    `json:"db_csv_header"`
 	CSVNull      *string  `json:"db_csv_null"`
 	ExportMask   []string `json:"db_export_mask"`
+	// SQL files (db_sqllang_more.go, DBX-41)
+	SyntaxOff []string `json:"db_sql_syntax_off"`
 }
 
 // exportMask is the column name patterns whose values exports and copies hide.
@@ -1058,6 +1060,9 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseSQLPicked(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseSQLMorePicked(id); ok { // db_sqllang_more.go
 		return cmd, true
 	}
 	if cmd, ok := m.databaseTransferPicker(id); ok {
