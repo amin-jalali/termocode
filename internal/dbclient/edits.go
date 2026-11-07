@@ -2,6 +2,8 @@ package dbclient
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -33,6 +35,9 @@ type EditValue struct {
 	Value  Cell
 	Old    Cell
 	Check  bool
+	// Default sets the column to its DEFAULT (DBX-55): the keyword goes
+	// into the SQL and Value is not used.
+	Default bool
 }
 
 // RowEdit is the pending change of one row. Key holds the key columns and
@@ -109,6 +114,25 @@ func (b *editBuilder) value(c Cell) {
 	b.preview.WriteString(EditLiteral(b.d, c))
 }
 
+// set writes the new value of v: the DEFAULT keyword or a bound value.
+func (b *editBuilder) set(v EditValue) {
+	if v.Default {
+		b.text("DEFAULT")
+		return
+	}
+	b.value(v.Value)
+}
+
+// NewCellUUID is a fresh random version 4 UUID for Generate UUID (DBX-55).
+func NewCellUUID() Cell {
+	var u [16]byte
+	_, _ = rand.Read(u[:])
+	u[6] = u[6]&0x0f | 0x40
+	u[8] = u[8]&0x3f | 0x80
+	h := hex.EncodeToString(u[:])
+	return Cell{Text: h[0:8] + "-" + h[8:12] + "-" + h[12:16] + "-" + h[16:20] + "-" + h[20:]}
+}
+
 func editArg(c Cell) any {
 	if c.Null {
 		return nil
@@ -168,6 +192,13 @@ func editStatement(d Dialect, table string, e RowEdit) (EditStatement, error) {
 		if len(e.Key) == 0 {
 			return EditStatement{}, errors.New("the table has no key: the row cannot be found safely")
 		}
+		if _, lite := d.(SQLiteDialect); lite {
+			for _, v := range e.Values {
+				if v.Default {
+					return EditStatement{}, fmt.Errorf("SQLite cannot set %s back to its DEFAULT in an UPDATE: type the value instead", v.Column)
+				}
+			}
+		}
 		b.text("UPDATE " + table + " SET ")
 		for i, v := range e.Values {
 			if i > 0 {
@@ -177,13 +208,23 @@ func editStatement(d Dialect, table string, e RowEdit) (EditStatement, error) {
 				return EditStatement{}, err
 			}
 			b.text(" = ")
-			b.value(v.Value)
+			b.set(v)
 		}
 		if err := b.keyWhere(e.Key, e.Values); err != nil {
 			return EditStatement{}, err
 		}
 	case EditInsert:
 		b.text("INSERT INTO " + table)
+		if _, lite := d.(SQLiteDialect); lite {
+			// SQLite has no DEFAULT in VALUES: leave the column out.
+			kept := e.Values[:0:0]
+			for _, v := range e.Values {
+				if !v.Default {
+					kept = append(kept, v)
+				}
+			}
+			e.Values = kept
+		}
 		if len(e.Values) == 0 {
 			if _, mysql := d.(MySQLDialect); mysql {
 				b.text(" () VALUES ()")
@@ -206,7 +247,7 @@ func editStatement(d Dialect, table string, e RowEdit) (EditStatement, error) {
 			if i > 0 {
 				b.text(", ")
 			}
-			b.value(v.Value)
+			b.set(v)
 		}
 		b.text(")")
 	default:
