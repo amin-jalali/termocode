@@ -232,7 +232,8 @@ func TestAIGitHunkDiscardHasNoAlwaysAllow(t *testing.T) {
 
 // Spec: git_stash push then pop (git auto-approved) round-trips a change:
 // push makes the file clean and the open tab shows the committed text;
-// pop brings the change back on disk and in the tab.
+// pop asks on a Cancel-first card, then brings the change back on disk
+// and in the tab.
 func TestAIGitStashPushPopRoundTrip(t *testing.T) {
 	s, srv := fakeToolModel(t,
 		toolCall{"git_stash", map[string]any{"op": "push", "message": "wip-a"}},
@@ -251,11 +252,20 @@ func TestAIGitStashPushPopRoundTrip(t *testing.T) {
 		t.Errorf("stash list %q", got)
 	}
 	release()
+	// Pop drops the entry, so it asks on a Cancel-first card with no
+	// "Always allow", even with git auto-approved (push did not ask).
+	if !d.WaitFor(func() bool {
+		s := screen(d)
+		return strings.Contains(s, "AI wants to") && strings.Contains(s, "Stash pop stash@{0}")
+	}, 5*time.Second) {
+		t.Fatalf("pop did not ask:\n%s", screen(d))
+	}
+	if strings.Contains(screen(d), "Always allow") {
+		t.Errorf("pop offers Always allow:\n%s", screen(d))
+	}
+	clickButton(d, "Allow")
 	if !d.WaitForText("fake-done", 5*time.Second) {
 		t.Fatalf("no final answer:\n%s", screen(d))
-	}
-	if strings.Contains(screen(d), "AI wants to") {
-		t.Errorf("asked although git is auto-approved:\n%s", screen(d))
 	}
 	if diskFile(d, "a.txt") != "alpha\nBRAVO\ncharlie\n" {
 		t.Errorf("after pop, disk %q", diskFile(d, "a.txt"))
