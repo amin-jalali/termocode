@@ -1,0 +1,22 @@
+{
+  "repositories": [
+    {
+      "name": "acme/api",
+      "setup_script": "# install deps\nnpm ci\n\nnpm run build\n",
+      "memories": [
+        { "content": "Run the tests with npm test before you commit." },
+        "Use pnpm only in the web folder."
+      ]
+    }
+  ],
+  "scheduled_tasks": [
+    { "name": "Nightly Deps Bump!", "prompt": "Update the dependencies and fix the build.", "cron": "0 3 * * *", "timezone": "Europe/Berlin" },
+    { "title": "Weekly report", "instructions": "Write a short report of last week's merged work.", "schedule": "weekly", "time": "08:30" },
+    { "name": "Odd one", "prompt": "Clean up.", "schedule": "every full moon" }
+  ],
+  "tasks": [
+    { "title": "Fix login timeout", "description": "Users get logged out after 5 minutes.", "status": "inprogress" },
+    { "title": "Add dark mode", "status": "done" },
+    { "title": "", "description": "no title, kept out" }
+  ]
+}
