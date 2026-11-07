@@ -134,6 +134,7 @@ func wtCtlList(entries []worktrees.Entry, dir string) []agentctl.Worktree {
 		if n, ok := e.Meta.LastNote(); ok {
 			w.Note = n.Text
 		}
+		wtBlockedBy(entries, e, &w) // CMP-80 (worktrees_deps.go)
 		out = append(out, w)
 	}
 	return out
@@ -208,6 +209,10 @@ func (m *Model) onWTCtl(call agentCtlCall) tea.Cmd {
 				}
 			}
 			return wtCtlLinkAskMsg{call: call, path: path, title: title, common: common, root: dir, ref: ref}
+		case agentctl.OpWorktreeBlock, agentctl.OpWorktreeUnblock: // CMP-80 (worktrees_deps.go)
+			if _, err := wtSetBlocker(entries, common, path, r.Text, r.Op == agentctl.OpWorktreeUnblock); err != nil {
+				return fail(err)
+			}
 		}
 		call.reply <- agentctl.Reply{OK: true}
 		return wtCtlDoneMsg{}
@@ -328,7 +333,7 @@ func aiWorktreeTools(root string) []ai.Tool {
 		{
 			Name: "worktrees_list",
 			Description: "List the git worktrees of this repository: path, branch, kind (main, user, agent, external), " +
-				"parent, the linked issue or PR with its state and CI, the agent status (working, blocked, done) and the last note.",
+				"parent, the linked issue or PR with its state and CI, the agent status (working, blocked, done), what it waits for and the last note.",
 			Params:   map[string]any{},
 			Describe: func(map[string]any) string { return "List worktrees" },
 			Run: func(context.Context, map[string]any) (string, error) {
@@ -339,7 +344,14 @@ func aiWorktreeTools(root string) []ai.Tool {
 				var b strings.Builder
 				for _, w := range wtCtlList(entries, wtRealDir(root)) {
 					fmt.Fprintf(&b, "- %s (%s", w.Path, w.Kind)
-					for _, kv := range [][2]string{{"branch", w.Branch}, {"name", w.Name}, {"parent", w.Parent}, {"link", w.Link}, {"status", w.Checkpoint}} {
+					waits := ""
+					if len(w.BlockedBy) > 0 {
+						waits = strings.Join(w.BlockedBy, ", ")
+						if !w.Waits {
+							waits += " (all done)"
+						}
+					}
+					for _, kv := range [][2]string{{"branch", w.Branch}, {"name", w.Name}, {"parent", w.Parent}, {"link", w.Link}, {"status", w.Checkpoint}, {"waits for", waits}} {
 						if kv[1] != "" {
 							fmt.Fprintf(&b, ", %s %s", kv[0], kv[1])
 						}
@@ -392,6 +404,7 @@ func aiWorktreeTools(root string) []ai.Tool {
 				return "Noted on " + e.Title() + ".", nil
 			},
 		},
+		aiWorktreeBlockTool(root), // CMP-80 (worktrees_deps.go)
 	}
 }
 

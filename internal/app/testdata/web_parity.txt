@@ -461,6 +461,10 @@ excluded	workflow-undo-write	laptop only: an undo writes to outside systems agai
 missing	agent-sessions-search-all	AI|S
 missing	ai-history-search	AI|S
 missing	ai-mcp-accounts	AI|S
+missing	ai-powers	AI|S
+missing	ai-run-task-list	AI|M
+missing	bugfix-spec-fix	AI|S
+missing	bugfix-spec-new	AI|S
 missing	containers-all-contexts	Containers|M
 missing	containers-build-cache-prune	Containers|S
 missing	containers-build-check	Containers|S
@@ -718,6 +722,7 @@ missing	worktree-adopt	Worktrees|M
 missing	worktree-archive	Worktrees|M
 missing	worktree-cleanup	Worktrees|M
 missing	worktree-delete	Worktrees|M
+missing	worktree-deps	Worktrees|S
 missing	worktree-filter	Worktrees|M
 missing	worktree-forget	Worktrees|M
 missing	worktree-jump	Worktrees|M

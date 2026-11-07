@@ -301,6 +301,22 @@ Add files to your next message in three ways:
 - **`@path`.** Write `@src/main.go` (or `@file src/main.go`) in your
   message. The file is attached when you send.
 
+You can also name other context with an `@` word. termocode reads it when
+you send, shows each read as a tool line, and gives the text to the model
+as data (secrets hidden, up to 60 KB each, at most 8 per message):
+
+| Word | What the model gets |
+|---|---|
+| `@chat:<id>` or `@chat:<words>` | an old chat by its id, or the chats that match the words |
+| `@symbol:<name>` | the workspace symbols with that name (language server) |
+| `@diagnostics` or `@diagnostics:<path>` | the errors and warnings of the open files, or of one file |
+| `@changes` or `@changes:<path>` | your uncommitted changes |
+| `@diff` or `@diff:<base>` | this branch's change since it left its base (`main`, or the base you name) |
+| `@url:<url>` or `@https://…` | the text of one web page (private and local addresses are refused) |
+
+Each word uses the chat's own read-only tool, so a word whose tool is off
+(for example web reading) only adds a short note.
+
 Text files are sent as text (up to 60 KB). Images (PNG, JPEG, GIF, WebP)
 are sent as images to Anthropic, OpenAI and OpenRouter. Other providers
 get a short note instead. Other binary files are refused.
@@ -314,6 +330,27 @@ To get files out:
   the new file.
 - **AI: Export Chat as Markdown** writes the chat to
   `ai-chat-<date>.md` in the workspace and opens it.
+
+## Bugfix specs
+
+A bugfix spec says what a fix must do and what it must not break.
+
+1. **AI: New Bugfix Spec…** asks for the bug in a few words. termocode
+   writes `.termocode/specs/<name>/bugfix.md` and opens it. Nothing goes
+   to a model.
+2. Fill in three sections, one line per item:
+   - **Current behavior**: what happens now.
+   - **Expected behavior**: what should happen. Each line becomes a test
+     that fails before the fix.
+   - **Unchanged behavior**: what must keep working. Each line gets a guard
+     test that passes before and after the fix.
+3. **AI: Fix Bug from Spec…** lists your specs. A spec with an empty
+   section opens at that section. A ready one puts a test-first fix prompt
+   in the chat, with the spec attached. Read it, then press `Enter` to send
+   it.
+
+The AI cannot run these two commands. The spec is a normal file: commit
+it with the fix if you like.
 
 ## AI code actions (review, then apply)
 

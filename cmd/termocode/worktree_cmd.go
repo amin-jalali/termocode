@@ -13,7 +13,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/worktrees"
 )
 
-// `termocode worktree list|note|status|link` (WTX-12): an agent (or you)
+// `termocode worktree list|note|status|link|block|unblock` (WTX-12, CMP-80): an agent (or you)
 // leaves a note or a status on the worktree it works in, over the
 // control socket of the running termocode. The worktree is the one the
 // current folder is in.
@@ -28,6 +28,10 @@ const worktreeUsage = `termocode worktree: notes and status for the worktree you
         set this worktree's status
   termocode worktree link <number|#N|URL>
         link an issue or pull request (termocode asks you first)
+  termocode worktree block <worktree>
+        this worktree's work waits for the other one (a path, branch or name)
+  termocode worktree unblock <worktree>
+        it no longer waits for it
 
 The worktree is the one the current folder is in. Notes are shown as plain
 text in termocode's WORKTREES view.
@@ -78,6 +82,14 @@ func runWorktreeIn(args []string, out, errw io.Writer, getenv func(string) strin
 		}
 		req.Op, req.Text = agentctl.OpWorktreeLink, args[1]
 		timeout = 3 * time.Minute // the user answers a card
+	case "block", "unblock":
+		if len(args) != 2 {
+			return usage()
+		}
+		req.Op, req.Text = agentctl.OpWorktreeBlock, args[1]
+		if args[0] == "unblock" {
+			req.Op = agentctl.OpWorktreeUnblock
+		}
 	default:
 		return usage()
 	}
@@ -96,7 +108,7 @@ func runWorktreeIn(args []string, out, errw io.Writer, getenv func(string) strin
 		return 0
 	}
 	tw := tabwriter.NewWriter(out, 2, 4, 2, ' ', 0)
-	fmt.Fprintln(tw, "BRANCH\tKIND\tSTATUS\tLINK\tNOTE\tPATH")
+	fmt.Fprintln(tw, "BRANCH\tKIND\tSTATUS\tWAITS FOR\tLINK\tNOTE\tPATH")
 	for _, w := range rep.Worktrees {
 		b := dash(w.Branch)
 		if w.Here {
@@ -106,7 +118,11 @@ func runWorktreeIn(args []string, out, errw io.Writer, getenv func(string) strin
 		if w.Gone {
 			kind += " (gone)"
 		}
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", b, kind, dash(w.Checkpoint), dash(w.Link), dash(w.Note), w.Path)
+		waits := strings.Join(w.BlockedBy, ", ")
+		if waits != "" && !w.Waits {
+			waits += " (done)"
+		}
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", b, kind, dash(w.Checkpoint), dash(waits), dash(w.Link), dash(w.Note), w.Path)
 	}
 	_ = tw.Flush()
 	return 0

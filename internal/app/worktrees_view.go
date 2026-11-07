@@ -435,6 +435,9 @@ func wtCardLines(it wtItem, s wtStatus, active, focused bool, w int, now time.Ti
 	if c := it.e.Meta.Checkpoint; c != "" {
 		links = append(links, c)
 	}
+	if it.waits != "" { // CMP-80: what blocks it
+		links = append(links, aiCleanText(it.waits))
+	}
 	if l := wtLinkLine(it.e.Meta); l != "" {
 		links = append(links, l)
 	}
