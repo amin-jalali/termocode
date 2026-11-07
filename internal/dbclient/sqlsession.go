@@ -51,6 +51,9 @@ func NewSQLSession(ctx context.Context, conn Conn, password string) (*SQLSession
 	case "mysql":
 		dialect = MySQLDialect{}
 	default:
+		if err := DriverMissing(driver); err != nil {
+			return nil, err
+		}
 		return nil, fmt.Errorf("unsupported SQL driver %q", conn.Driver)
 	}
 	db, release, err := openSQLDB(conn, password)
@@ -320,10 +323,17 @@ func (s *SQLSession) Run(ctx context.Context, statement string, opts RunOptions)
 // Explain runs an explain form and guarantees that ANALYZE side effects are
 // rolled back when the analyzed statement is not read-only.
 func (s *SQLSession) Explain(ctx context.Context, statement string, analyze bool) Result {
-	if !analyze {
-		return s.Run(ctx, s.dialect.Explain(statement, false), RunOptions{})
+	if p, ok := s.conn.PGPreset(); analyze && ok && p.Quirks.NoExplainAnalyze {
+		analyze = false // DBX-60: Redshift has no EXPLAIN ANALYZE
 	}
-	explain := s.dialect.Explain(statement, true)
+	text := func(a bool) string { return s.dialect.Explain(statement, a) }
+	if p, ok := s.conn.PGPreset(); ok && p.Quirks.TextExplain {
+		text = func(a bool) string { return PresetExplainForms(p.ID, s.name, statement, a, false)[0] }
+	}
+	if !analyze {
+		return s.Run(ctx, text(false), RunOptions{})
+	}
+	explain := text(true)
 	if s.mariadb {
 		explain = "ANALYZE " + statement
 	}
@@ -705,6 +715,10 @@ func (s *SQLSession) Close() error {
 
 func (s *SQLSession) Introspect(ctx context.Context, req IntrospectionRequest) (IntrospectionResult, error) {
 	queries := s.dialect.CatalogQueries()
+	preset, isPreset := s.conn.PGPreset()
+	if isPreset {
+		queries = preset.Queries(queries) // DBX-60: catalog differences
+	}
 	result := IntrospectionResult{}
 	if req.Object != "" && req.Schema == "" {
 		currentSchema := "SELECT current_schema()"
@@ -739,6 +753,11 @@ func (s *SQLSession) Introspect(ctx context.Context, req IntrospectionRequest) (
 	if req.Object == "" {
 		if err := s.readObjects(ctx, queries["objects"], &result.Objects, req.Schema); err != nil {
 			return result, err
+		}
+		// TimescaleDB: a database without the extension still shows its tables.
+		var hyper []string
+		if queries["hypertables"] != "" && s.readCatalog(ctx, queries["hypertables"], &hyper, req.Schema) == nil {
+			MarkHypertables(result.Objects, hyper)
 		}
 		for _, key := range []string{"routines", "sequences"} {
 			dst := &result.Routines

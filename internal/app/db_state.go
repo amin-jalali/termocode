@@ -391,6 +391,8 @@ func dbConnDetail(c dbclient.Conn) string {
 	d := c.Driver
 	if _, ok := dbclient.PresetByID(c.Preset); ok {
 		d = c.Preset
+	} else if p, ok := c.PGPreset(); ok {
+		d = p.ID
 	}
 	// The tunnel and SSL tags come right after the driver so a narrow
 	// sidebar still shows them.
@@ -979,8 +981,11 @@ func (s *dbState) addObjects(path, conn string, r dbclient.IntrospectionResult) 
 			kind = dbNodeView
 		}
 		group := "Tables"
-		if kind == dbNodeView {
+		switch {
+		case kind == dbNodeView:
 			group = "Views"
+		case o.Kind == "HYPERTABLE":
+			group = "Hypertables" // TimescaleDB (DBX-60): opens like a table
 		}
 		gpath := path + "/" + group
 		if _, ok := s.nodes[gpath]; !ok {

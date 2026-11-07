@@ -9,7 +9,8 @@ import (
 )
 
 // SQLServerDialect contains Microsoft SQL Server / Azure SQL (T-SQL)
-// syntax and catalog queries. The driver itself is not wired yet.
+// syntax and catalog queries. DialectFor returns it; the driver is not
+// built in yet (DriverMissing).
 type SQLServerDialect struct{}
 
 func (SQLServerDialect) QuoteIdent(s string) string {

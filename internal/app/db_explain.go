@@ -31,6 +31,7 @@ const confirmKindDBExplain confirmKindEnum = 1400
 // dbPlanRun is what makes a run a plan run.
 type dbPlanRun struct {
 	analyze bool
+	preset  string // PostgreSQL family preset (DBX-60): its explain quirks
 	target  string // the statement that is explained (as typed, without ";")
 	wrap    bool   // an analyzed write: begin … always roll back
 	parsed  dbclient.Plan
@@ -111,6 +112,13 @@ func (m *Model) databaseExplainStart(r *dbRun) tea.Cmd {
 	if pl.analyze && dbIsSQLite(c.Driver) {
 		pl.analyze = false // SQLite has no ANALYZE: the plan is all there is, and it never runs the statement
 		note = m.pushToastDetail(toast.Info, "SQLite has no EXPLAIN ANALYZE", "Showing the query plan; the statement does not run.")
+	}
+	if p, ok := c.PGPreset(); ok {
+		pl.preset = p.ID
+		if pl.analyze && p.Quirks.NoExplainAnalyze {
+			pl.analyze = false
+			note = m.pushToastDetail(toast.Info, p.Label+" has no EXPLAIN ANALYZE", "Showing the query plan; the statement does not run.")
+		}
 	}
 	r.sql = pl.label() + pl.target
 	r.statements = []string{r.sql}
@@ -199,7 +207,7 @@ func dbExplainExec(ctx context.Context, sess dbclient.Session, driver string, pl
 	if x, ok := dbclient.UnwrapSession(sess).(interface{ MariaDB() bool }); ok {
 		maria = x.MariaDB()
 	}
-	forms := dbclient.ExplainForms(driver, pl.target, pl.analyze, maria)
+	forms := dbclient.PresetExplainForms(pl.preset, driver, pl.target, pl.analyze, maria)
 	if len(forms) == 0 {
 		return dbclient.Result{Err: errors.New("this connection has no query plan")}
 	}

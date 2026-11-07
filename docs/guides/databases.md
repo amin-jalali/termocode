@@ -108,6 +108,15 @@ Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, or **F
 
 The MySQL family has presets on the MySQL driver: MariaDB, TiDB (port 4000), PlanetScale / Vitess and Amazon Aurora (MySQL) (both with TLS), and SingleStore. A preset fills the port, user and SSL mode, shows a short note on what differs from MySQL, and is saved as `"preset"` in the connection; the tree shows its name next to the host.
 
+The PostgreSQL family has presets on the PostgreSQL driver: CockroachDB (port 26257), YugabyteDB (port 5433), TimescaleDB, Supabase and Neon (both with TLS), Amazon Redshift (port 5439, TLS), Greenplum, AlloyDB and Citus. Pick one in the add picker, or write `"driver": "cockroachdb"` (or `"preset"`) in the config; a `cockroachdb://` URL or a known cloud host name picks the preset too. What differs from PostgreSQL:
+
+- TimescaleDB: hypertables get their own **Hypertables** group in the tree; they open like tables.
+- Amazon Redshift: no materialized views or sequences in the tree, and no EXPLAIN ANALYZE (`x`/analyze shows the plan only).
+- CockroachDB and Redshift: the plan is the server's text plan (plain `EXPLAIN`).
+
+SQL Server / Azure SQL (`"driver": "sqlserver"`, also `mssql` or `azuresql`; port 1433) and Oracle (`"driver": "oracle"`) can be saved in the config, but their drivers are not built in yet: connecting says so. A `*.database.windows.net` host turns on TLS (`encrypt=true`); `"params": {"fedauth": "ActiveDirectoryDefault"}` asks for Microsoft Entra (AD) sign-in once the driver is in.
+For Oracle (port 1521; `ora` works too) the database is the service name. `"params": {"tns": "PROD"}` takes host, port, service (or SID) and TCPS from `tnsnames.ora` (in `$TNS_ADMIN`, else `$ORACLE_HOME/network/admin`), and `"wallet": "/path/to/wallet"` uses a wallet folder with TLS.
+
 - **A server type** asks for the host, port, user and database. Then it asks for a masked password.
 - **From a URL** asks you to paste one, for example `postgres://app@localhost:5432/app`. Schemes `postgres`, `postgresql`, `mysql`, `mariadb`, `redis`, `rediss`, `sqlite` and `file` work. A password in the URL is taken out and stored as a secret. If the URL has none, you are asked for it.
 
