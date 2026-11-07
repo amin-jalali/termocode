@@ -213,6 +213,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Delete Redis Key… | `redis-delete-key` |   |   |
 | Databases: Describe Table | `db-describe` |   |   |
 | Databases: Disconnect Selected… | `db-disconnect` |   |   |
+| Databases: Edit Object Source | `db-edit-source` |   |   |
 | Databases: Edit Virtual Objects… | `db-virtual-objects` |   |   |
 | Databases: End Session… | `db-end-session` |   |   |
 | Databases: Explain Analyze Statement… | `db-explain-analyze` |   |   |
@@ -231,6 +232,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: New Console | `db-new-console` |   |   |
 | Databases: Open Guide | `db-guide` |   |   |
 | Databases: Open Table Data | `db-data` |   |   |
+| Databases: Pending Source Changes… | `db-pending-sources` |   |   |
 | Databases: Pin Result Tab | `db-result-pin` |   |   |
 | Databases: Quick Documentation | `db-quick-doc` |   |   |
 | Databases: Refresh | `db-refresh` |   |   |
@@ -246,6 +248,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Show INSERT Column Hints | `db-insert-hints` |   |   |
 | Databases: Show Server Info | `db-server-info` |   |   |
 | Databases: Show Sessions and Locks | `db-sessions` |   |   |
+| Databases: Submit Object Source… | `db-submit-source` |   |   |
 | Databases: Submit Pending Changes… | `db-submit-changes` |   |   |
 | Databases: Test Connection | `db-test-connection` |   |   |
 | Databases: Transaction Mode… | `db-transaction-mode` |   |   |

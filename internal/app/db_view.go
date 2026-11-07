@@ -573,6 +573,12 @@ func (m Model) handleDatabasesSidebarMouse(x, y int, t tea.MouseEventType) (Mode
 		if r.kind == dbNodeTable || r.kind == dbNodeView {
 			items = []menu.Item{{ID: "data", Title: "Open data", Hint: "o", Icon: "▦"}, {ID: "describe", Title: "Describe", Hint: "d", Icon: "ⓘ"}, {ID: "ddl", Title: "Show DDL", Hint: "D", Icon: "≡"}, {ID: "select", Title: "Select 100 rows in console", Hint: "s", Icon: "▸"}, {ID: "count", Title: "Count rows", Hint: "#", Icon: "#"}, {ID: "copyname", Title: "Copy name", Hint: "y", Icon: "⧉"}, {ID: "quickdoc", Title: "Quick documentation", Hint: "K", Icon: "ⓘ"}, {Sep: true}, {ID: "refresh", Title: "Refresh", Hint: "R", Icon: "↻"}}
 		}
+		if r.kind == dbNodeView {
+			items = append(items[:len(items)-2:len(items)-2], menu.Item{ID: "editsource", Title: "Edit source", Hint: "E", Icon: "✎"}, menu.Item{Sep: true}, menu.Item{ID: "refresh", Title: "Refresh", Hint: "R", Icon: "↻"})
+		}
+		if r.kind == dbNodeRoutine || r.kind == dbNodeTrigger {
+			items = []menu.Item{{ID: "editsource", Title: "Edit source", Hint: "E", Icon: "✎"}, {ID: "quickdoc", Title: "Quick documentation", Hint: "K", Icon: "ⓘ"}, {Sep: true}, {ID: "refresh", Title: "Refresh", Hint: "R", Icon: "↻"}}
+		}
 		if r.kind == dbNodeSuggestion {
 			items = []menu.Item{{ID: "add", Title: "Add connection", Hint: "a", Icon: "+"}, {ID: "hide", Title: "Hide suggestion", Hint: "x", Icon: theme.GlyphClose.String()}}
 		}
@@ -650,8 +656,8 @@ func (m *Model) handleDatabasesMenuSelect(id string) tea.Cmd {
 		return m.databaseRefresh()
 	case "txmode":
 		return m.databaseTxModePicker(r.conn)
-	case "data", "describe", "ddl", "select", "count", "copyname", "quickdoc":
-		key := map[string]rune{"data": 'o', "describe": 'd', "ddl": 'D', "select": 's', "count": '#', "copyname": 'y', "quickdoc": 'K'}[id]
+	case "data", "describe", "ddl", "select", "count", "copyname", "quickdoc", "editsource":
+		key := map[string]rune{"data": 'o', "describe": 'd', "ddl": 'D', "select": 's', "count": '#', "copyname": 'y', "quickdoc": 'K', "editsource": 'E'}[id]
 		updated, cmd := m.handleDatabasesSidebarKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{key}})
 		*m = updated
 		return cmd

@@ -2064,6 +2064,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-ddl` | Databases: Show DDL | auto |   |
 | `db-describe` | Databases: Describe Table | auto |   |
 | `db-disconnect` | Databases: Disconnect Selected… | confirm (always asks) |   |
+| `db-edit-source` | Databases: Edit Object Source | auto |   |
 | `db-end-session` | Databases: End Session… | never | ends another session and rolls back its transaction; only the user can choose it |
 | `db-er-diagram` | Databases: Export ER Diagram… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-explain` | Databases: Explain Statement | never | opens a picker or prompt that only the user can answer; use a typed tool (db_explain) |
@@ -2082,6 +2083,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-insert-hints` | Databases: Show INSERT Column Hints | auto |   |
 | `db-new-console` | Databases: New Console | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-open-sessions` | Databases: Sessions… | never | the user's sessions and transactions |
+| `db-pending-sources` | Databases: Pending Source Changes… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-quick-doc` | Databases: Quick Documentation | auto |   |
 | `db-refresh` | Databases: Refresh | auto |   |
 | `db-result-pin` | Databases: Pin Result Tab | auto |   |
@@ -2094,6 +2096,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-sessions` | Databases: Show Sessions and Locks | never | SQL runs require the database query tool and its guard |
 | `db-ssl` | Databases: SSL Settings… | never | AI provider, credentials and approvals stay with the user |
 | `db-submit-changes` | Databases: Submit Pending Changes… | never | the user's pending edits; use the database query tool |
+| `db-submit-source` | Databases: Submit Object Source… | never | changes a database object; only the user can confirm the card |
 | `db-test-connection` | Databases: Test Connection | auto |   |
 | `db-transaction-mode` | Databases: Transaction Mode… | never | AI provider, credentials and approvals stay with the user |
 | `db-virtual-objects` | Databases: Edit Virtual Objects… | never | opens the user's virtual objects file for the user to edit |

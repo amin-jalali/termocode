@@ -69,6 +69,9 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-end-session", Title: "Databases: End Session…"},
 		{ID: "db-er-diagram", Title: "Databases: Export ER Diagram…"},
 		{ID: "db-virtual-objects", Title: "Databases: Edit Virtual Objects…"},
+		{ID: "db-edit-source", Title: "Databases: Edit Object Source"},
+		{ID: "db-submit-source", Title: "Databases: Submit Object Source…"},
+		{ID: "db-pending-sources", Title: "Databases: Pending Source Changes…"},
 		{ID: "db-guide", Title: "Databases: Open Guide"},
 		{ID: "redis-set-ttl", Title: "Databases: Set Redis Key TTL…"},
 		{ID: "redis-delete-key", Title: "Databases: Delete Redis Key…"},
@@ -125,6 +128,12 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseCompareStart(), true
 	case "db-er-diagram":
 		return m.databaseERStart(), true
+	case "db-edit-source":
+		return tea.Batch(m.revealDatabasesView(false), m.databaseEditSourceStart()), true
+	case "db-submit-source":
+		return m.databaseSubmitSourceStart(), true
+	case "db-pending-sources":
+		return m.databasePendingSources(), true
 	case "db-virtual-objects":
 		return tea.Batch(m.revealDatabasesView(false), m.databaseEditVirtual()), true
 	case "db-guide":
@@ -343,6 +352,8 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.databaseCountFromTree()
 	case "K":
 		return m, m.databaseQuickDocTree()
+	case "E":
+		return m, m.databaseEditSourceStart()
 	case "i":
 		return m, m.databaseImportStart()
 	case "?":
@@ -982,6 +993,8 @@ func dbTreeKeyRows() []confirm.KeyRow {
 		[]string{"i", "import a CSV file"},
 		[]string{"y", "copy the name"},
 		[]string{"K", "quick documentation (columns, keys; also on a column or routine)"},
+		[]string{"On a view, routine or trigger"},
+		[]string{"E", "edit its source in a buffer (submit with Databases: Submit Object Source…)"},
 		[]string{"On a virtual view"},
 		[]string{"Enter", "run its saved SELECT in the console"},
 	)
