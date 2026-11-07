@@ -319,9 +319,11 @@ input box is on screen, never into a question.
 | `d` | Discard one lane (**Cancel** first) |
 | `v` | Run the verify command in every finished lane |
 | `s` | Ask your **Quick** model for a 3-line summary of the differences (capped, secrets hidden; the cost is shown) |
+| `p` | Ask your **Main** model to judge: it ranks the finished lanes with one reason each and picks one (★). Verify results count first; diffs are capped and secrets hidden; the cost is shown. A card then offers to merge the pick (**Cancel** first) |
 | `x` | Stop every lane |
 
-After a merge, a card asks about the other lanes: **Keep** is first. A
+The judge only advises: nothing merges until you press **Merge** on its
+card, and that runs the same merge as `m`. After a merge, a card asks about the other lanes: **Keep** is first. A
 lane whose agent still works is never merged or discarded. The AI chat can
 start a race with `agent_race_start`, always behind a card (**Deny**
 first).
