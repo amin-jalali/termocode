@@ -21,8 +21,8 @@ const (
 type Tracker struct {
 	// Leader is the first key that opens a sequence, as a token ("<space>").
 	Leader string
-	// Load returns the mappings; called once per sequence, on the first
-	// key after the leader (or when the popup is due).
+	// Load returns the mappings; called once per sequence, when the
+	// leader is pressed (before the editor gets the key and waits).
 	Load func() []Mapping
 	// Expire is how long the editor keeps waiting for the next key
 	// (nvim's timeoutlen); 0 = it waits forever. When it passes, the
@@ -97,6 +97,10 @@ func (t *Tracker) Press(tok string) Outcome {
 		if t.Leader != "" && tok == t.Leader {
 			t.seq = []string{tok}
 			t.shown = false
+			// Read the mappings now, before the key reaches the editor:
+			// nvim waiting for the next key answers no questions.
+			t.maps, t.loaded = nil, false
+			t.entries()
 			return t.arm(Delay)
 		}
 		return Outcome{}
