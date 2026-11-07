@@ -2002,6 +2002,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-attach` | Containers: Attach | never | opens a picker or prompt that only the user can answer; use a typed tool (container attach) |
 | `containers-browse-tags` | Containers: Browse Remote Tags… | never | opens a picker or prompt that only the user can answer; use a typed tool; it asks a registry over the network on the user's behalf |
 | `containers-registry-catalog` | Containers: Browse Registry Catalog… | never | opens a picker or prompt that only the user can answer; use a typed tool; it asks a registry over the network, maybe with the user's saved token |
+| `containers-check-updates` | Containers: Check Running Images for Updates | never | asks every registry of the running images over the network on the user's behalf |
 | `containers-compose-down` | Containers: Remove Project Containers… | never | project removal requires the user's confirm card |
 | `containers-compose-restart` | Containers: Restart Project | confirm (always asks) |   |
 | `containers-compose-stop` | Containers: Stop Project | confirm (always asks) |   |

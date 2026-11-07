@@ -1403,6 +1403,7 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "containers-search", Title: "Containers: Search Docker Hub…"},
 		{ID: "containers-browse-tags", Title: "Containers: Browse Remote Tags…"},
 		{ID: "containers-registry-catalog", Title: "Containers: Browse Registry Catalog…"},
+		{ID: "containers-check-updates", Title: "Containers: Check Running Images for Updates"},
 		{ID: "containers-filter", Title: "Containers: Filter Rows…"},
 		{ID: "containers-start", Title: "Containers: Start Selected"},
 		{ID: "containers-stop", Title: "Containers: Stop Selected"},
@@ -1666,6 +1667,8 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 				return m.browseFromPalette()
 			case "containers-registry-catalog": // containers_registry_more.go
 				return m.catalogFromPalette()
+			case "containers-check-updates": // containers_image_updates.go
+				return m.checkImageUpdates()
 			case "containers-filter":
 				m.focus = FocusExplorer
 				m.services.filterTyping = true

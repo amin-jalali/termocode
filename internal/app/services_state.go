@@ -179,6 +179,9 @@ type servicesState struct {
 	regHint        string // the cloud hint card's command
 	regHintHost    string
 	regHostNote    string // a note for the next user prompt
+
+	// CTX-36: image ref -> a newer image is on the registry (last check).
+	imageUpdates map[string]bool
 }
 
 func newServicesState() *servicesState {
@@ -617,6 +620,8 @@ func (m *Model) handleServicesMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onContainerGroupDone(msg), true
 	case imagePageMsg:
 		return m.onImagePage(msg), true
+	case imageUpdatesMsg: // containers_image_updates.go
+		return m.onImageUpdates(msg), true
 	case registryCatalogMsg:
 		return m.onRegistryCatalog(msg), true
 	case registryDigestMsg:

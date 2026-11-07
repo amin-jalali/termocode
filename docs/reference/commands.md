@@ -124,6 +124,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Attach | `containers-attach` |   |   |
 | Containers: Browse Remote Tags… | `containers-browse-tags` |   |   |
 | Containers: Browse Registry Catalog… | `containers-registry-catalog` |   |   |
+| Containers: Check Running Images for Updates | `containers-check-updates` |   |   |
 | Containers: Build Image from Dockerfile… | `containers-image-build` |   |   |
 | Containers: Choose Compose Env File… | `services-env-file` |   |   |
 | Containers: Configure Services (services.json) | `services-configure` |   |   |

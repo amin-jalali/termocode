@@ -2,6 +2,7 @@ package containers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 )
 
@@ -26,4 +27,14 @@ func (e *Engine) RecreatePlan(id string, o RunOptions) ([][]string, map[string]s
 		return nil, nil, err
 	}
 	return [][]string{{e.Binary, "pull", o.Image}, {e.Binary, "rm", "-f", id}, run.Argv}, run.Env, nil
+}
+
+// ImageRepoDigests reads the RepoDigests ("repo@sha256:…") of the first
+// object of `inspect <image>` output; nil when there are none.
+func ImageRepoDigests(b []byte) []string {
+	var list []struct{ RepoDigests []string }
+	if json.Unmarshal(b, &list) != nil || len(list) == 0 {
+		return nil
+	}
+	return list[0].RepoDigests
 }

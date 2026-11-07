@@ -424,6 +424,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"containers-search":            aiNever(aiNoPicker + "; it asks Docker Hub on the user's behalf"),
 	"containers-browse-tags":       aiNever(aiNoPicker + "; it asks a registry over the network on the user's behalf"),
 	"containers-registry-catalog":  aiNever(aiNoPicker + "; it asks a registry over the network, maybe with the user's saved token"),
+	"containers-check-updates":     aiNever("asks every registry of the running images over the network on the user's behalf"),
 	"containers-filter":            aiNever("the filter is typed by the user; the AI uses containers_list / images_list"),
 	"containers-refresh":           aiAuto(),
 	"containers-help":              aiAuto(),

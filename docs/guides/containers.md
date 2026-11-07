@@ -381,6 +381,18 @@ the tag's manifest digest with your saved token and shows a card with
 manifest goes too. Local images stay. Many registries turn deletes off;
 then the card's action says so.
 
+### Image updates
+
+**Containers: Check Running Images for Updates** asks, for each tag a
+running container uses (at most 20, digest-pinned images skipped), the
+registry's digest of that tag and compares it with the local image's repo
+digest. It runs only when you ask. Images with a newer version are named in
+a notice, and their containers show `update available` in the footer.
+Nothing is pulled or restarted: `u` on the image pulls it, and
+**Recreate (pull, same settings)…** in the container menu restarts with it.
+Local-only and private images (without an opted-in saved token) are
+counted as not checked.
+
 ### Cloud registries
 
 **Connect registry…** also lists **AWS ECR…**, **Azure Container
