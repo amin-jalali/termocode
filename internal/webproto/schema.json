@@ -310,6 +310,15 @@
       "deltas": [
         "WorktreesSnap"
       ]
+    },
+    {
+      "name": "projects",
+      "keyed": false,
+      "phase": "v2",
+      "snap": "ProjectsSnap",
+      "deltas": [
+        "ProjectsSnap"
+      ]
     }
   ],
   "events": {
@@ -11834,6 +11843,83 @@
         "col"
       ],
       "additionalProperties": false
+    },
+    "ProjectItem": {
+      "type": "object",
+      "properties": {
+        "attached": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "opened_at": {
+          "type": "integer"
+        },
+        "recent": {
+          "type": "boolean"
+        },
+        "service": {
+          "type": "boolean"
+        },
+        "state": {
+          "enum": [
+            "here",
+            "running",
+            "asleep"
+          ]
+        },
+        "waiting": {
+          "type": "integer"
+        },
+        "where": {
+          "type": "string"
+        },
+        "working": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "where",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "ProjectsSnap": {
+      "type": "object",
+      "properties": {
+        "more": {
+          "type": "integer"
+        },
+        "projects": {
+          "items": {
+            "$ref": "#/defs/ProjectItem"
+          },
+          "type": "array"
+        },
+        "state": {
+          "enum": [
+            "loading",
+            "ready"
+          ]
+        },
+        "waiting": {
+          "type": "integer"
+        },
+        "working": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "state",
+        "projects"
+      ],
+      "additionalProperties": true
     },
     "PruneArgs": {
       "type": "object",
