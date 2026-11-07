@@ -118,3 +118,40 @@ func TestBookmarkOldLocalStorageKeyMovesToTheCookie(t *testing.T) {
 		t.Fatalf("the old key was not moved into a new cookie: %+v", ck)
 	}
 }
+
+// Spec (MOB stabilize, tablet 2026-11-07): a remembered browser whose
+// device the laptop removed says so when it opens again, "This device was
+// removed. Pair it again from termocode.", not "Open this page from
+// termocode" (which sent the tablet to a link it cannot get).
+func TestBookmarkOfARemovedDeviceSaysRemoved(t *testing.T) {
+	s := StartServer(t)
+	p := NewPage(t, s, Phone)
+	plain, digest, _ := webgw.NewLinkSecret()
+	s.Pairing.SetSecret(digest, webgw.PairTTL, false)
+	p.Do(chromedp.Navigate(s.localhostBase() + "/#p=" + plain))
+	p.virtualAuthenticator()
+	p.Tap(".pair .connect-foot button")
+	<-s.Asks
+	s.PairAnswers <- webdevices.RoleControl
+	p.WaitJS(`!!document.querySelector(".pair .remember input")`)
+	p.Tap(".pair .remember input")
+	p.WaitJS(`document.querySelector(".pair .remember input").checked`)
+	p.Tap(".pair .connect-foot .btn-primary")
+	c := s.Hub.Accept(t)
+	c.HandshakeMeta(t, Meta("c-paired"))
+	p.WaitJS(`document.documentElement.dataset.link === "online"`)
+
+	devs, err := s.Devices.List()
+	if err != nil || len(devs) != 1 {
+		t.Fatalf("devices: %v %v", devs, err)
+	}
+	if _, ok, err := s.Devices.Remove(devs[0].ID); !ok || err != nil {
+		t.Fatalf("remove: %v %v", ok, err)
+	}
+	Eval[bool](p, `(sessionStorage.clear(), true)`)
+	p.Reload()
+	p.WaitJS(`(document.querySelector(".connect-line.is-error")?.textContent ?? "").includes("This device was removed")`)
+	if got := Eval[string](p, `document.querySelector(".connect-line")?.textContent ?? ""`); got != "This device was removed. Pair it again from termocode." {
+		t.Fatalf("connect line = %q", got)
+	}
+}
