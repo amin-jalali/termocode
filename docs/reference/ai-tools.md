@@ -1970,6 +1970,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai-profile-trust` | AI: Project Profiles Trust… | never | trusting a project's prompts is the user's decision |
 | `ai-reasoning-next` | AI: Next Reasoning Level | never | AI provider, credentials and approvals stay with the user; more thinking costs the user more |
 | `ai-review` | AI: Review Pending Changes | never | the user reviews proposed edits |
+| `ai-review-order` | AI: Toggle Review Order (explain first / as proposed) | never | AI provider, credentials and approvals stay with the user |
 | `ai-rules` | AI: Project Rules… | never | trusting a project's rules is the user's decision |
 | `ai-runs` | AI: Runs | never | the user's monitoring page; it holds Stop, Pause and Resume |
 | `ai-ship` | AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop | never | it pushes and opens a pull request: the user starts it |
@@ -2580,6 +2581,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai_prompt_cache` | never | AI provider, credentials and approvals stay with the user |
 | `ai_provider` | never | AI provider, credentials and approvals stay with the user |
 | `ai_reasoning` | never | AI provider, credentials and approvals stay with the user |
+| `ai_review_order` | never | AI provider, credentials and approvals stay with the user |
 | `ai_step_escalate` | never | AI provider, credentials and approvals stay with the user |
 | `ai_step_stall_minutes` | never | AI provider, credentials and approvals stay with the user |
 | `ai_until_done_budget_usd` | never | AI provider, credentials and approvals stay with the user |

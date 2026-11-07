@@ -303,6 +303,8 @@ var fileOnlySettings = []SettingEntry{
 		Description: "Agent tool classes that run without asking: " + strings.Join(ai.ToolClasses, ", ") + ". Set with AI: Agent Auto-Approve…."},
 	{Key: "ai_edit_review", Type: "enum", Default: "review", Category: "AI (file only)", Choices: []string{"review", "auto"},
 		Description: "review: the agent's file changes (write_file, create_file, LSP rename, code actions, format) open as a diff where you accept or reject each change; the agent waits and is told what was written. auto: the old way (a confirm dialog, or no question when fileWrite is auto-approved). Auto-approving fileWrite also skips the review. Toggle with AI: Toggle Edit Review."},
+	{Key: "ai_review_order", Type: "enum", Default: "explain", Category: "AI (file only)", Choices: []string{"explain", "proposed"},
+		Description: "Order of the files in the AI review card (and the web's review cards). explain: the files that explain the change come first: notes and docs, then schemas and the files that define new names, then the code that uses them, tests last; each moved file says why. proposed: the order the agent proposed them in. Toggle with AI: Toggle Review Order."},
 	{Key: "ai_max_steps", Type: "int", Default: strconv.Itoa(ai.DefaultMaxSteps), Category: "AI (file only)",
 		Description: "Most tool steps the AI agent takes for one chat message. At the limit it stops and asks you to send \"continue\"."},
 	{Key: "ai_prices", Type: "object", Default: "{}", Category: "AI (file only)",

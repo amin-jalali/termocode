@@ -81,6 +81,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Toggle Keep Going While Todos Are Open | `ai-keep-going` |   |   |
 | AI: Toggle Next Edit Suggestions | `ai-toggle-next-edit` |   |   |
 | AI: Toggle Plan Approval | `ai-plan-approval` |   |   |
+| AI: Toggle Review Order (explain first / as proposed) | `ai-review-order` |   |   |
 | AI: Trigger Inline Completion | `ai-trigger-inline` | <code>Alt+&#92;</code> | <code>Alt+&#92;</code> |
 | AI: Undo Last Turn | `ai-undo-turn` |   |   |
 | AI: Unlock Secrets | `secrets-unlock` |   |   |

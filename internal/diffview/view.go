@@ -493,6 +493,10 @@ func (m Model) layout(draw bool) layoutOut {
 		mid := " " + pos + " "
 		right := []seg{{prev, btn}, {mid, bg.Foreground(p.muted)}, {next, btn},
 			{"  ", bg}, {" Split ", splitSt}, {" Unified ", uniSt}, {" ", bg}}
+		// The file's place in the order (CMP-58) shows only when it fits.
+		if why := (seg{"  · " + f.Why, bg.Foreground(p.dim)}); f.Why != "" && segsWidth(left)+segsWidth([]seg{why})+segsWidth(right)+2 <= g.iw {
+			left = append(left, why)
+		}
 		// Narrow: drop the title, then the file name keeps what is left.
 		if segsWidth(left)+segsWidth(right)+2 > g.iw {
 			left = append([]seg{left[0]}, left[3:]...)
