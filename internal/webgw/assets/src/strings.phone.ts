@@ -25,6 +25,18 @@ export const SP = {
   "blk.raw": "Raw data",
   "blk.form_send": "Send to the laptop",
   "blk.form_laptop": "Fill this in on the laptop",
+  // Home context chips (MOBUX-3)
+  "chips.label": "Shortcuts",
+  "chips.needs": "Needs you · {n}",
+  "chips.clear": "Nothing waits",
+  "chips.board": "Board",
+  "chips.research": "Research",
+  "chips.mcp": "MCP",
+  "chips.whatcan": "What can I do?",
+  "chips.edit": "Pin chips",
+  "chips.body_hint": "Tap up to 3 chips to keep them first. Tap again to unpin.",
+  "chips.full": "Up to 3 chips stay pinned. Unpin one first.",
+  "chips.pinned_name": "{name}, pinned",
 } as const;
 
 addStrings(SP);

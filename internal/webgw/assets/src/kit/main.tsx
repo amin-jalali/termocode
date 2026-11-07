@@ -407,14 +407,7 @@ function ShellDemo() {
         onProject={(id) => (shellProject.value = id)}
         link={shellOffline.value ? "offline" : "live"}
         onMenu={() => toast("info", "All tools")}
-        chips={
-          <PhoneChips label="Shortcuts">
-            <PhoneChip label="Needs you" status="needs" count={2} onClick={() => undefined} />
-            <PhoneChip label="Board" pinned onClick={() => undefined} />
-            <PhoneChip label="Projects" onClick={() => undefined} />
-            <PhoneChip label="Review" onClick={() => undefined} />
-          </PhoneChips>
-        }
+        chips={<ChipRow state={chipStates.waits} onPick={(id) => toast("info", "Chip " + id)} />}
         composer={{
           value: shellDraft.value,
           onInput: (v) => (shellDraft.value = v),

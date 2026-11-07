@@ -38,7 +38,7 @@ export interface ChipState {
 }
 
 /** Shape of a chip: color always comes with one of these (MOBUX rule). */
-export type ChipMark = "waits" | "busy" | "bad" | "clear" | "";
+export type ChipMark = "waits" | "review" | "busy" | "bad" | "clear" | "";
 
 /** ChipItem is one chip as drawn, in order. */
 export interface ChipItem {
@@ -56,7 +56,7 @@ export const NEEDS: ChipId = "needs";
 export const CHIPS: readonly ChipDef[] = [
   { id: NEEDS },
   { id: "board", label: "chips.board" },
-  { id: "projects", label: "chips.projects" },
+  { id: "projects", label: "ph.switch_title" },
   { id: "views", label: "tabs.label" },
   { id: "tasks", label: "more.tasks" },
   { id: "review", label: "pill.review" },
@@ -85,7 +85,7 @@ function stateOf(id: ChipId, s: ChipState): { count: number; mark: ChipMark } {
     case NEEDS:
       return s.needsYou > 0 ? { count: s.needsYou, mark: "waits" } : { count: 0, mark: "clear" };
     case "review":
-      return s.review > 0 ? { count: s.review, mark: "waits" } : { count: 0, mark: "" };
+      return s.review > 0 ? { count: s.review, mark: "review" } : { count: 0, mark: "" };
     case "board":
       return s.working > 0 ? { count: s.working, mark: "busy" } : { count: 0, mark: "" };
     case "git":

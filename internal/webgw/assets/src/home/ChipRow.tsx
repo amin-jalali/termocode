@@ -1,21 +1,26 @@
 // The Home's chip row (MOBUX-3): context chips above the composer, one
-// line that scrolls sideways. The order comes from home/chips.ts. "Pin
-// chips" at the end (or a long press on any chip) turns the row into
-// pin mode: a tap then pins or unpins, up to 3, and Done ends it. A tap
-// outside pin mode calls onPick; a chip never spends tokens.
+// line that scrolls sideways, in the phone shell's dock (MOBUX-2). The
+// order comes from home/chips.ts. "Pin chips" at the end (or a long
+// press on any chip) turns the row into pin mode: a tap then pins or
+// unpins, up to 3, and Done ends it. A tap outside pin mode calls
+// onPick; a chip never spends tokens. Status is the phone's colour and
+// shape (StatusMark), never colour alone.
 import { h } from "preact";
 import { signal } from "@preact/signals";
 import { useEffect, useRef } from "preact/hooks";
 import { useLongPress } from "../lib/longpress";
 import { toast } from "../lib/toasts";
+import { StatusMark } from "../phone/Mark";
+import type { Status } from "../phone/status";
 import { t } from "../strings";
+import "../strings.phone";
 import { CHIPS, NEEDS, loadPins, orderChips, savePins, togglePin, type ChipDef, type ChipId, type ChipItem, type ChipMark, type ChipState } from "./chips";
 
 /** pins are this phone's pinned chips; pinMode says the row is pinning. */
 export const pins = signal<ChipId[]>(loadPins());
 export const pinMode = signal(false);
 
-const MARKS: Record<Exclude<ChipMark, "">, string> = { waits: "●", busy: "◐", bad: "✗", clear: "✓" };
+const MARKS: Record<Exclude<ChipMark, "">, Status> = { waits: "needs", review: "review", busy: "working", bad: "failed", clear: "done" };
 
 /** chipName is the chip's visible name. */
 export function chipName(c: ChipItem): string {
@@ -37,7 +42,8 @@ function OneChip({ c, onPick }: { c: ChipItem; onPick: (id: ChipId) => void }) {
   const name = chipName(c);
   const editing = pinMode.value;
   const canPin = c.def.id !== NEEDS;
-  const cls = `hchip${c.mark ? " mark-" + c.mark : ""}${c.pinned ? " is-pinned" : ""}`;
+  const counted = c.def.id !== NEEDS && c.count > 0;
+  const cls = `ph-chip hchip${c.mark ? " mark-" + c.mark : ""}${c.mark === "waits" ? " is-needs" : ""}${c.pinned ? " is-pinned" : ""}`;
   return (
     <button
       type="button"
@@ -45,13 +51,17 @@ function OneChip({ c, onPick }: { c: ChipItem; onPick: (id: ChipId) => void }) {
       data-chip={c.def.id}
       disabled={editing && !canPin}
       aria-pressed={editing && canPin ? (c.pinned ? "true" : "false") : undefined}
-      aria-label={c.pinned ? t("chips.pinned_name", { name: c.def.id !== NEEDS && c.count > 0 ? `${name} ${c.count}` : name }) : undefined}
+      aria-label={c.pinned ? t("chips.pinned_name", { name: counted ? `${name} ${c.count}` : name }) : undefined}
       onClick={() => (editing ? canPin && pin(c.def.id) : onPick(c.def.id))}
     >
-      {c.mark && <span class="hchip-mark" aria-hidden="true">{MARKS[c.mark]}</span>}
-      <span class="hchip-name">{name}</span>
-      {c.def.id !== NEEDS && c.count > 0 && <span class="hchip-n">{c.count}</span>}
-      {c.pinned && <span class="hchip-pin" aria-hidden="true">📌</span>}
+      {c.pinned && (
+        <span class="ph-chip-pin" aria-hidden="true">
+          📌
+        </span>
+      )}
+      {c.mark && <StatusMark s={MARKS[c.mark]} hidden />}
+      <span>{name}</span>
+      {counted && <span class="ph-chip-count">{c.count}</span>}
     </button>
   );
 }
@@ -75,10 +85,14 @@ export function ChipRow({ state, defs = CHIPS, onPick }: { state: ChipState; def
 
   return (
     <div class="hchips-wrap">
-      {editing && <p class="hchips-hint" role="status">{t("chips.body_hint")}</p>}
-      <div class={`hchips${editing ? " is-pinning" : ""}`} ref={row} role="group" aria-label={t("chips.label")}>
+      {editing && (
+        <p class="hchips-hint" role="status">
+          {t("chips.body_hint")}
+        </p>
+      )}
+      <div class={`ph-chips hchips${editing ? " is-pinning" : ""}`} ref={row} role="group" aria-label={t("chips.label")}>
         {editing && (
-          <button type="button" class="hchip is-done" onClick={() => (pinMode.value = false)}>
+          <button type="button" class="ph-chip hchip is-done" onClick={() => (pinMode.value = false)}>
             {t("done")}
           </button>
         )}
@@ -86,9 +100,11 @@ export function ChipRow({ state, defs = CHIPS, onPick }: { state: ChipState; def
           <OneChip key={c.def.id} c={c} onPick={onPick} />
         ))}
         {!editing && (
-          <button type="button" class="hchip is-edit" onClick={() => (pinMode.value = true)}>
-            <span class="hchip-pin" aria-hidden="true">📌</span>
-            <span class="hchip-name">{t("chips.edit")}</span>
+          <button type="button" class="ph-chip hchip is-edit" onClick={() => (pinMode.value = true)}>
+            <span class="ph-chip-pin" aria-hidden="true">
+              📌
+            </span>
+            <span>{t("chips.edit")}</span>
           </button>
         )}
       </div>
