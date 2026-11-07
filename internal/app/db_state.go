@@ -39,6 +39,8 @@ const (
 	dbNodeRedisKey  // a key with its type
 	dbNodeRedisMore // the scan stopped at db_redis_max_keys / no keys
 	dbNodeLoading   // "Loading…": the node's children are on their way (quiet, not a problem)
+	dbNodeTrigger   // a trigger of a schema (DBX-13)
+	dbNodeExtension // an extension installed in a schema (DBX-13)
 )
 
 type dbNode struct {
@@ -838,6 +840,11 @@ func (s *dbState) addIntrospection(path string, result dbclient.IntrospectionRes
 			s.nodes[child] = dbNode{kind: dbNodeDetail, name: "Foreign key · " + fk.Column + " → " + fk.RefTable + "." + fk.RefColumn, path: child, conn: n.conn}
 			n.children = append(n.children, child)
 		}
+		for _, ck := range result.Checks {
+			child := path + "/check/" + ck.Name
+			s.nodes[child] = dbNode{kind: dbNodeDetail, name: "Check · " + ck.Name + "  " + ck.Expr, path: child, conn: n.conn}
+			n.children = append(n.children, child)
+		}
 	}
 	n.loaded = true
 	n.loading = false
@@ -888,6 +895,23 @@ func (s *dbState) addObjects(path, conn string, r dbclient.IntrospectionResult) 
 		child := gpath + "/" + name
 		s.nodes[child] = dbNode{kind: dbNodeSequence, name: name, path: child, conn: conn}
 		appendDBChild(s.nodes, gpath, child)
+	}
+	// Triggers and Extensions get a group only when there are some.
+	for _, g := range []struct {
+		name  string
+		kind  dbNodeKind
+		names []string
+	}{{"Triggers", dbNodeTrigger, r.Triggers}, {"Extensions", dbNodeExtension, r.Extensions}} {
+		for _, name := range g.names {
+			gpath := path + "/" + g.name
+			if _, ok := s.nodes[gpath]; !ok {
+				s.nodes[gpath] = dbNode{kind: dbNodeGroup, name: g.name, path: gpath, conn: conn, loaded: true}
+				appendDBChild(s.nodes, path, gpath)
+			}
+			child := gpath + "/" + name
+			s.nodes[child] = dbNode{kind: g.kind, name: name, path: child, conn: conn}
+			appendDBChild(s.nodes, gpath, child)
+		}
 	}
 }
 

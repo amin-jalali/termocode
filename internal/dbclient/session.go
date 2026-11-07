@@ -40,6 +40,17 @@ type IntrospectionResult struct {
 	Keys        []string
 	Routines    []string
 	Sequences   []string
+	// Triggers and Extensions are schema level, Checks object level
+	// (DBX-13). They are optional: a server that cannot list them
+	// leaves them empty.
+	Triggers   []string
+	Extensions []string
+	Checks     []SchemaCheck
+}
+
+// SchemaCheck is one check constraint of a table.
+type SchemaCheck struct {
+	Name, Expr string
 }
 
 type SchemaObject struct {

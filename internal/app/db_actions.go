@@ -1278,6 +1278,16 @@ func sanitizeDBIntrospection(in dbclient.IntrospectionResult) dbclient.Introspec
 	for i := range in.Sequences {
 		in.Sequences[i] = sanitizeDBText(in.Sequences[i])
 	}
+	for i := range in.Triggers {
+		in.Triggers[i] = sanitizeDBText(in.Triggers[i])
+	}
+	for i := range in.Extensions {
+		in.Extensions[i] = sanitizeDBText(in.Extensions[i])
+	}
+	for i := range in.Checks {
+		in.Checks[i].Name = sanitizeDBText(in.Checks[i].Name)
+		in.Checks[i].Expr = sanitizeDBText(in.Checks[i].Expr)
+	}
 	return in
 }
 

@@ -23,13 +23,16 @@ func (PostgresDialect) CatalogQueries() map[string]string {
 	return map[string]string{
 		"databases":    `SELECT datname FROM pg_database WHERE datistemplate = false ORDER BY datname`,
 		"schemas":      `SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT LIKE 'pg_%' AND schema_name <> 'information_schema' ORDER BY schema_name`,
-		"objects":      `SELECT table_name, table_type FROM information_schema.tables WHERE table_schema = $1 ORDER BY table_name`,
+		"objects":      `SELECT table_name, table_type FROM information_schema.tables WHERE table_schema = $1 UNION ALL SELECT matviewname, 'MATERIALIZED VIEW' FROM pg_matviews WHERE schemaname = $1 ORDER BY 1`,
 		"columns":      `SELECT c.column_name, c.data_type FROM information_schema.columns c WHERE c.table_schema = $1 AND c.table_name = $2 ORDER BY c.ordinal_position`,
 		"keys":         `SELECT kcu.column_name FROM information_schema.table_constraints tc JOIN information_schema.key_column_usage kcu ON tc.constraint_name=kcu.constraint_name AND tc.constraint_schema=kcu.constraint_schema WHERE tc.constraint_type='PRIMARY KEY' AND tc.table_schema=$1 AND tc.table_name = $2 ORDER BY kcu.ordinal_position`,
 		"indexes":      `SELECT i.relname, string_agg(a.attname, E'\x1f' ORDER BY k.ordinality), ix.indisunique, t.relname FROM pg_index ix JOIN pg_class t ON t.oid=ix.indrelid JOIN pg_class i ON i.oid=ix.indexrelid JOIN pg_namespace n ON n.oid=t.relnamespace CROSS JOIN LATERAL unnest(ix.indkey) WITH ORDINALITY AS k(attnum, ordinality) JOIN pg_attribute a ON a.attrelid=t.oid AND a.attnum=k.attnum WHERE n.nspname=$1 AND t.relname = $2 GROUP BY i.relname, ix.indisunique, t.relname ORDER BY i.relname`,
 		"foreign_keys": `SELECT con.conname, a.attname, rc.relname, ra.attname FROM pg_constraint con JOIN pg_class c ON c.oid=con.conrelid JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_class rc ON rc.oid=con.confrelid CROSS JOIN LATERAL unnest(con.conkey, con.confkey) WITH ORDINALITY AS k(attnum, refnum, ord) JOIN pg_attribute a ON a.attrelid=con.conrelid AND a.attnum=k.attnum JOIN pg_attribute ra ON ra.attrelid=con.confrelid AND ra.attnum=k.refnum WHERE con.contype='f' AND n.nspname=$1 AND c.relname = $2 ORDER BY con.conname, k.ord`,
 		"routines":     `SELECT routine_name FROM information_schema.routines WHERE routine_schema=$1 ORDER BY routine_name`,
 		"sequences":    `SELECT sequence_name FROM information_schema.sequences WHERE sequence_schema=$1 ORDER BY sequence_name`,
+		"triggers":     `SELECT DISTINCT trigger_name FROM information_schema.triggers WHERE trigger_schema=$1 ORDER BY trigger_name`,
+		"extensions":   `SELECT e.extname FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace WHERE n.nspname=$1 ORDER BY e.extname`,
+		"checks":       `SELECT con.conname, pg_get_constraintdef(con.oid) FROM pg_constraint con JOIN pg_class c ON c.oid=con.conrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE con.contype='c' AND n.nspname=$1 AND c.relname = $2 ORDER BY con.conname`,
 	}
 }
 func (d PostgresDialect) DDL(table string) (string, []any) {

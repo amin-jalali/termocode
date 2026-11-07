@@ -730,6 +730,15 @@ func (s *SQLSession) Introspect(ctx context.Context, req IntrospectionRequest) (
 				return result, err
 			}
 		}
+		// Optional lists (DBX-13): a server that cannot answer one still
+		// shows the rest of the tree.
+		var tr, ex []string
+		if s.readCatalog(ctx, queries["triggers"], &tr, req.Schema) == nil {
+			result.Triggers = tr
+		}
+		if s.readCatalog(ctx, queries["extensions"], &ex, req.Schema) == nil {
+			result.Extensions = ex
+		}
 		return result, nil
 	}
 	return s.introspectObject(ctx, req, queries, result)
@@ -797,6 +806,16 @@ func (s *SQLSession) introspectObject(ctx context.Context, req IntrospectionRequ
 			case "foreign_keys":
 				if len(row) >= 4 {
 					out.ForeignKeys = append(out.ForeignKeys, SchemaForeignKey{Name: row[0].Text, Column: row[1].Text, RefTable: row[2].Text, RefColumn: row[3].Text})
+				}
+			}
+		}
+	}
+	if q := queries["checks"]; q != "" {
+		// Optional (DBX-13): MySQL before 8.0.16 has no check_constraints.
+		if r := s.Run(ctx, q, RunOptions{MaxRows: 10000, Args: []any{req.Schema, req.Object}}); r.Err == nil {
+			for _, row := range r.Rows {
+				if len(row) >= 2 {
+					out.Checks = append(out.Checks, SchemaCheck{Name: row[0].Text, Expr: row[1].Text})
 				}
 			}
 		}
