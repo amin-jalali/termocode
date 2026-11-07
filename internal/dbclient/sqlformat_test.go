@@ -135,7 +135,7 @@ func sqlTokenTexts(sql, dialect string) []string {
 	var out []string
 	for _, tk := range toks {
 		s := tk.text
-		if tk.kind == tokWord {
+		if tk.kind == fkWord {
 			s = strings.ToUpper(s)
 		}
 		out = append(out, s)
