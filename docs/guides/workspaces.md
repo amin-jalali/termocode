@@ -165,6 +165,53 @@ termocode service uninstall
 - `--yes` skips the question; `--dir d` picks another folder.
 - Termux (Android) has no user services; the command says so.
 
+## Sessions in your menu bar
+
+`termocode bar` prints a short summary of all running sessions and the
+agents in their terminal tabs, for a menu bar, tray or status bar. The
+title puts agents that wait for you first:
+
+```
+$ termocode bar
+tc 1 waiting · 1 working
+~/api  attached  claude waiting, codex working
+~/web  detached  no agents
+```
+
+Pick the form your bar tool reads with `--format`:
+
+| Form | For |
+|---|---|
+| `text` (default) | a quick look in a terminal, or any tool that shows the first line |
+| `json` | status-bar modules: one line with `text`, `tooltip`, `class` (`none`, `idle`, `working`, `waiting`) and the `sessions` |
+| `menu` | menu-bar tools that run a script plugin: the title, then per session its agents and an **Attach** item that opens the session in a terminal |
+
+Run it every few seconds from the tool (a 5 s refresh is enough). Example
+for a status-bar module that reads JSON:
+
+```json
+"custom/termocode": {
+  "exec": "termocode bar --format json",
+  "return-type": "json",
+  "interval": 5
+}
+```
+
+For a menu-bar tool with script plugins, save this as an executable
+plugin file named like `termocode.5s.sh`:
+
+```sh
+#!/bin/sh
+exec termocode bar --format menu
+```
+
+- It only reads. Nothing in the menu ends a session; use `termocode kill`
+  in a terminal for that.
+- Agent states come from the hooks (`termocode agent report`), else from
+  the screen. A session that does not answer within 2 s shows "no answer".
+- Only persistent sessions show. A termocode started with `--no-session`
+  is not listed.
+
 ## Start fresh
 
 - **Developer: Reset Session** clears the saved tabs and cursor history of
