@@ -37,12 +37,28 @@ import { Progress, SkeletonBubbles, SkeletonRows } from "../ui/Skeleton";
 import { StripView } from "../ui/Strip";
 import { Toasts, ToastView } from "../ui/Toasts";
 import { WaitingLaptop } from "../ui/Waiting";
-import { Block as PhoneBlock, BoardTile, Composer, ConnLine, ErrorLine, PhoneCard, PhoneSkeleton, PhoneChip, PhoneChips, PhoneShell, PhoneSheet, RaceCompare, readRaces, Row, Rows, StatusMark, STATUS, StreamMsg, type Status } from "../phone/index";
+import { Block as PhoneBlock, BoardTile, Composer, ConnLine, ErrorLine, PhoneCard, PhoneSkeleton, PhoneChip, PhoneChips, PhoneShell, PhoneSheet, LiveBoard, RaceCompare, readRaces, Row, Rows, StatusMark, STATUS, StreamMsg, type Board, type Status } from "../phone/index";
 import { ChipRow } from "../home/ChipRow";
 import type { ChipState } from "../home/chips";
 import { KitCustomize } from "./customize";
 import { AllTools } from "../home/AllTools";
 import { readCatalog, viewHash, type Target } from "../home/alltools";
+
+// A sample live board (MOBUX-9) for the kit.
+const KIT_BOARD: Board = {
+  built: 0,
+  today_usd: 4.2,
+  counts: { needs_you: 2, working: 2, review: 1, done: 2 },
+  items: [
+    { id: "card:c1", kind: "card", column: "needs_you", state: "wait", title: "run go test", sub: "lane fix-login", ref: "c1" },
+    { id: "workflow:w1", kind: "workflow", column: "needs_you", state: "wait", title: "nightly", why: "waits: write", ref: "w1" },
+    { id: "run:r1", kind: "run", column: "working", state: "run", title: "rate limit", sub: "sonnet", step: 3, steps: 5, cost_usd: 0.8, ref: "r1" },
+    { id: "lane:l2", kind: "lane", column: "working", state: "run", title: "fix-cache", sub: "opus", ci: "run", ref: "l2" },
+    { id: "lane:l1", kind: "lane", column: "review", state: "ok", title: "fix-login +41 −9", sub: "sonnet", ci: "fail", ref: "l1" },
+    { id: "run:r0", kind: "run", column: "done", state: "ok", title: "docs: pairing", cost_usd: 0.31, ref: "r0" },
+    { id: "run:r9", kind: "run", column: "done", state: "fail", title: "bump deps", cost_usd: 0.12, ref: "r9" },
+  ],
+};
 import "./replay";
 import type { Block as ProtoBlock } from "../../../../webproto/proto";
 
@@ -365,6 +381,8 @@ function PhoneKit() {
         <BoardTile status="review" title="race #3" project="api" agent="3 lanes" step="2 done" cost="$1.10" />
         <BoardTile status="done" title="lane fix-login +41 −9" project="shop" ci="done" />
       </div>
+      <LiveBoard board={KIT_BOARD} online project="shop" onOpen={(r) => toast("info", "Open " + r.tab + "/" + r.rest)} />
+      <LiveBoard board={KIT_BOARD} online={false} stale project="shop" onOpen={() => undefined} />
       <Composer
         value={text}
         onInput={setText}

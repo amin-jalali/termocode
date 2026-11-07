@@ -1091,6 +1091,21 @@ export const S = {
   "ph.task.ref_issue": "issue #{n}",
   "ph.task.ref_pr": "pull request #{n}",
   "ph.task.ref_mr": "merge request !{n}",
+  // Phone live board (MOBUX-9)
+  "ph.board": "Board",
+  "ph.board.needs_you": "Needs you",
+  "ph.board.working": "Working",
+  "ph.board.review": "Review",
+  "ph.board.done": "Done today",
+  "ph.board.empty": "Nothing here.",
+  "ph.board.today": "{cost} today",
+  "ph.board.logs": "Logs",
+  "ph.board.diff": "Diff",
+  "ph.board.chat": "Chat",
+  "ph.board.card": "Answer",
+  "ph.board.stale": "Offline. This is the last board we saw.",
+  "ph.board.failed": "The board did not load.",
+  "ph.board.more": "{n} more on the laptop",
 } as const;
 
 /** StringKey is a key of the page's strings, of the workbench's
