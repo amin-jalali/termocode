@@ -63,7 +63,8 @@ folder.
 
 ## When termocode listens
 
-The setting `mcp_server` in `config.json` decides:
+The setting `mcp_server` decides. Set it in **Settings → MCP** (the AI can
+not change it), or in `config.json`:
 
 | Value | Meaning |
 |---|---|
@@ -71,7 +72,8 @@ The setting `mcp_server` in `config.json` decides:
 | `on` | Listen from the start of termocode. |
 | `off` | Never listen. The flags and the OpenCode card are skipped too. |
 
-The change applies when you save `config.json`. Nothing listens on the
+A choice in Settings applies at once; a change in the file applies when
+you save `config.json`. Nothing listens on the
 network: only a private socket in the session folder, which only your own
 user can open. termocode checks the user of every connection. See
 [Settings](../reference/settings.md).

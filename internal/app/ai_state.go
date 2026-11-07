@@ -847,6 +847,9 @@ func aiSettingValue(id string) (string, bool) {
 	if v, ok := mcpSettingValue(id); ok {
 		return v, true
 	}
+	if v, ok := mcpServeSettingValue(id); ok { // AH-9 (mcp_settings_serve.go)
+		return v, true
+	}
 	if v, ok := httpSettingValue(id); ok { // HTTP client (http_settings.go)
 		return v, true
 	}
@@ -900,6 +903,9 @@ func aiSettingValue(id string) (string, bool) {
 // when the row is not an AI one.
 func (m *Model) applyAISetting(id, value string) (tea.Cmd, bool) {
 	if cmd, ok := m.applyMCPSetting(id, value); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.applyMCPServeSetting(id, value); ok { // AH-9 (mcp_settings_serve.go)
 		return cmd, true
 	}
 	if c, ok := m.applyHTTPSetting(id, value); ok { // HTTP client (http_settings.go)

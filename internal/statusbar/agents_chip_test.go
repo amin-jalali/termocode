@@ -56,7 +56,7 @@ func TestAgentsChipSpan(t *testing.T) {
 	}
 }
 
-// A narrow bar drops the centre whole (chip included) and stays one row
+// A narrow bar drops the centre whole (only the short "⇄ 2" stays, AH-9) and stays one row
 // of exactly the window's width.
 func TestAgentsChipNarrow(t *testing.T) {
 	m := Model{}

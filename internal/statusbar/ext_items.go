@@ -41,7 +41,7 @@ func (m Model) ExtItemSpans(s State) []ExtItemSpan {
 		return nil
 	}
 	l := m.layout(s)
-	if l.centerW == 0 {
+	if !l.fullCenter() {
 		return nil
 	}
 	base := s

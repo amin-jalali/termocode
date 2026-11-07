@@ -71,6 +71,7 @@ func mcpSettingsCategories(cats map[string]string) map[string]string {
 	for id := range mcpSettingKeys {
 		cats[id] = "MCP"
 	}
+	cats[mcpServeRowID] = "MCP" // AH-9 (mcp_settings_serve.go)
 	return cats
 }
 

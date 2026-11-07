@@ -765,7 +765,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"http_ai_max_kb":       aiNever(aiNoAIConfig),
 	"mcp_github_client_id": aiNever(aiNoAIConfig),
 	// The door outside agents use to drive the IDE (mcp_serve*.go).
-	"mcp_server": aiNever("lets outside agents use the IDE's tools; the user turns it on or off in config.json"),
+	"mcp_server": aiNever("lets outside agents use the IDE's tools; the user turns it on or off in Settings (MCP) or config.json"),
 	// What an outside agent may do without a card: the user's answer only.
 	"mcp_server_auto_approve": aiNever("what outside agents may do without asking; only the user's \"Always allow\" on their card sets it"),
 	// The web panel gives shell access from a browser (web_settings.go).
