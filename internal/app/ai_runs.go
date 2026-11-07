@@ -377,6 +377,8 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 		Acts:       acts,
 		StallAfter: s.settings.StepStall(), // OMX-23
 		Escalate:   escalate,               // OMX-16
+		Team:       s.settings.TeamMode(),  // OMX-40
+		TeamCheck:  aiTeamNoteCheck,
 		Cost: func(n agentdag.Node, u ai.Usage) (float64, bool) {
 			if n.CLI != "" {
 				return 0, false // the subscription: no price, not in the budget

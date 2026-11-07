@@ -2603,6 +2603,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai_reasoning` | never | AI provider, credentials and approvals stay with the user |
 | `ai_step_escalate` | never | AI provider, credentials and approvals stay with the user |
 | `ai_step_stall_minutes` | never | AI provider, credentials and approvals stay with the user |
+| `ai_team_mode` | never | AI provider, credentials and approvals stay with the user |
 | `ai_until_done_budget_usd` | never | AI provider, credentials and approvals stay with the user |
 | `ai_until_done_rounds` | never | AI provider, credentials and approvals stay with the user |
 | `ai_web_fetch` | never | AI provider, credentials and approvals stay with the user; the AI never turns on its own web access |
