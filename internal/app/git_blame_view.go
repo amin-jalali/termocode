@@ -39,6 +39,9 @@ type gitBlameState struct {
 	inline, status, ignoreWS, moves bool
 	// annotate: blame annotations beside every line (not saved).
 	annotate bool
+	// lens: the line history lens above the cursor's block
+	// (git_line_lens, git_line_lens.go).
+	lens bool
 
 	key     string // file + options the lines belong to
 	loading string // key of the load in flight
@@ -47,6 +50,8 @@ type gitBlameState struct {
 
 	inlineText string        // text painted at the end of the cursor line
 	rows       []blameAnnRow // annotations painted beside the lines
+	lensText   string        // lens painted above line lensFrom
+	lensFrom   int
 }
 
 // gitBlameLoadedMsg is a finished blame of key.
@@ -174,6 +179,7 @@ func (m *Model) gitBlameInit() {
 	m.gitBlame.init = true
 	m.gitBlame.inline, m.gitBlame.status = on(c.GitInlineBlame), on(c.GitStatusBlame)
 	m.gitBlame.ignoreWS, m.gitBlame.moves = on(c.GitBlameIgnoreWS), on(c.GitBlameDetectMoves)
+	m.gitBlame.lens = on(c.GitLineLens)
 }
 
 // saveGitBlameSettings writes the four blame settings to config.json.
@@ -191,7 +197,7 @@ func (m *Model) saveGitBlameSettings() {
 }
 
 func (m *Model) gitBlameWanted() bool {
-	return m.gitBlame.inline || m.gitBlame.status || m.gitBlame.annotate
+	return m.gitBlame.inline || m.gitBlame.status || m.gitBlame.annotate || m.gitBlame.lens
 }
 
 // gitBlameTarget is the file to blame: a file in the repo, or a revision
@@ -309,6 +315,7 @@ func gitBlameGlyph() string {
 func (m *Model) paintGitBlame() {
 	m.paintInlineBlame()
 	m.paintBlameAnnotations()
+	m.paintLineLens()
 }
 
 // paintInlineBlame puts the cursor line's blame at its end.
@@ -406,6 +413,7 @@ func (m *Model) onGitBlameState() tea.Cmd {
 	cmd := m.gitBlameRefreshCmd(false)
 	if cmd == nil {
 		m.paintInlineBlame()
+		m.paintLineLens()
 	}
 	return cmd
 }
@@ -594,6 +602,13 @@ return ''
 // gitLineHistoryPicker lists the commits that changed the cursor line
 // (or the selected lines); Enter opens one.
 func (m *Model) gitLineHistoryPicker() tea.Cmd {
+	from, to := m.gitLineRange()
+	return m.gitLineHistoryPickerRange(from, to)
+}
+
+// gitLineHistoryPickerRange lists the commits that changed lines
+// from..to; Enter opens one.
+func (m *Model) gitLineHistoryPickerRange(from, to int) tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
@@ -601,7 +616,6 @@ func (m *Model) gitLineHistoryPicker() tea.Cmd {
 	if !ok || rev != "" {
 		return m.gitBlameToast(toast.Warn, "Open a file of the repository first", "")
 	}
-	from, to := m.gitLineRange()
 	from, to = max(from, 1), max(to, 1)
 	cs, err := git.LineHistory(cwd, rel, from, to)
 	if err != nil {
