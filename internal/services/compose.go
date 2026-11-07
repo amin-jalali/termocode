@@ -23,8 +23,9 @@ type Compose struct {
 	Root     string
 	Files    []string // -f files (root-relative or absolute)
 	Profiles []string
-	Project  string // -p; "" = compose decides
-	Docker   string // the docker binary; "" = "docker"
+	Project  string   // -p; "" = compose decides
+	EnvFiles []string // --env-file files (root-relative); empty = compose's .env
+	Docker   string   // the docker binary; "" = "docker"
 	X        Exec
 	Timeout  time.Duration // per captured call; 0 = 60 s
 }
@@ -47,6 +48,9 @@ func (c *Compose) base() []string {
 	}
 	for _, p := range c.Profiles {
 		argv = append(argv, "--profile", p)
+	}
+	for _, f := range c.EnvFiles {
+		argv = append(argv, "--env-file", f)
 	}
 	return argv
 }
