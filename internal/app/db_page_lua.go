@@ -72,6 +72,45 @@ local function notify_range_edit(k)
  if D.first>0 then r1=a-D.first;r2=z-D.first end
  if _G.termocode_notify then _G.termocode_notify('termocode_db_range',k,r1,r2,col) end
 end
+-- Mouse resize (DBX-8): press on a column's right edge in the two header
+-- lines, drag, release; Go gets the display column and the cells moved.
+local function mouse_x(mp)
+ local info=vim.fn.getwininfo(mp.winid)[1]
+ local left=api.nvim_win_call(mp.winid,function() return vim.fn.winsaveview().leftcol end)
+ return mp.wincol-1-(info and info.textoff or 0)+left
+end
+local function edge_at(b,mp)
+ if D.first<3 or mp.line<D.first-2 or mp.line>=D.first then return nil end
+ local x=mouse_x(mp)
+ local n=#D.bounds
+ for i=1,n do
+  local e
+  if i<n then e=D.bounds[i+1]-2 else
+   e=vim.fn.strdisplaywidth(api.nvim_buf_get_lines(b,D.first-2,D.first-1,false)[1] or '')
+  end
+  if math.abs(x-e)<=1 then return i-1,x end
+ end
+end
+local drag
+local function on_mouse(b,ev)
+ local mp=vim.fn.getmousepos()
+ if ev=='press' then
+  drag=nil
+  if mp.winid~=0 and api.nvim_win_get_buf(mp.winid)==b then
+   local col,x=edge_at(b,mp)
+   if col then drag={col=col,x=x,win=mp.winid};return end
+  end
+  api.nvim_feedkeys(api.nvim_replace_termcodes('<LeftMouse>',true,false,true),'n',false)
+ elseif ev=='drag' then
+  if not drag then api.nvim_feedkeys(api.nvim_replace_termcodes('<LeftDrag>',true,false,true),'n',false) end
+ else
+  if not drag then api.nvim_feedkeys(api.nvim_replace_termcodes('<LeftRelease>',true,false,true),'n',false);return end
+  local d=drag;drag=nil
+  if mp.winid~=d.win then return end
+  local dx=mouse_x(mp)-d.x
+  if dx~=0 and _G.termocode_notify then _G.termocode_notify('termocode_db_resize',d.col,dx) end
+ end
+end
 local function set_win(win)
  local o=vim.wo[win]
  o.number,o.relativenumber=false,false
@@ -118,6 +157,10 @@ function _G._termocode_db_open(split,lines,hls,first,bounds,cursor,wrap,fold,nam
   for _,k in ipairs({']','[','r','h','f','o','c','C','S','v','y','q','#','t','e','E','+','-','u','w','p','P','K','Z','x','X','D','1','2','3','4','5','6','7','8','9','?','=','H','O','<','>','F','(',')','{','}','Y'}) do vim.keymap.set('n',k,function() notify(k) end,{buffer=b,silent=true,nowait=true}) end
   for _,k in ipairs({'e','+','-'}) do vim.keymap.set('x',k,function() notify_range_edit(k) end,{buffer=b,silent=true,nowait=true}) end
   vim.keymap.set('n','gd',function() notify('gd') end,{buffer=b,silent=true})
+  vim.keymap.set('n','g=',function() notify('g=') end,{buffer=b,silent=true,nowait=true})
+  vim.keymap.set('n','<LeftMouse>',function() on_mouse(b,'press') end,{buffer=b,silent=true})
+  vim.keymap.set('n','<LeftDrag>',function() on_mouse(b,'drag') end,{buffer=b,silent=true})
+  vim.keymap.set('n','<LeftRelease>',function() on_mouse(b,'release') end,{buffer=b,silent=true})
   for _,k in ipairs({'gf','gb','gr','gl'}) do vim.keymap.set('n',k,function() notify_fk(k) end,{buffer=b,silent=true,nowait=true}) end
   vim.keymap.set('x','=',function() notify_range('=') end,{buffer=b,silent=true,nowait=true})
   vim.keymap.set('n','<Tab>',function() notify('tab') end,{buffer=b,silent=true})

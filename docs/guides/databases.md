@@ -186,7 +186,8 @@ The result opens as the **SQL Result** page, in a split on the right when the ed
 | `F` | freeze the columns up to this one on the left (again: unfreeze) |
 | `{` / `}` | scroll the columns after the frozen ones |
 | `(` / `)` | make the column narrower / wider |
-| `=` | reset the column layout |
+| drag | drag a column's right edge in the two header lines to resize it |
+| `g=` | reset the column layout |
 
 The layout of a table is saved per connection and table, so it comes back the next time you open the table. A column the table gains shows at the end. A query result keeps its layout until you quit.
 
