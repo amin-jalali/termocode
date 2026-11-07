@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-// Revision is one row of `kubectl rollout history`.
-type Revision struct {
+// RolloutRevision is one row of `kubectl rollout history`.
+type RolloutRevision struct {
 	Number int
 	Cause  string // "" when kubectl shows <none>
 }
@@ -35,7 +35,7 @@ func (c Client) RolloutStatus(ctx context.Context, name string) (string, error) 
 
 // RolloutHistory is `kubectl rollout history deployment/<name>`, parsed
 // (read only).
-func (c Client) RolloutHistory(ctx context.Context, name string) ([]Revision, error) {
+func (c Client) RolloutHistory(ctx context.Context, name string) ([]RolloutRevision, error) {
 	if err := checkName("deployment name", name); err != nil {
 		return nil, err
 	}
@@ -46,8 +46,8 @@ func (c Client) RolloutHistory(ctx context.Context, name string) ([]Revision, er
 	return parseHistory(out), nil
 }
 
-func parseHistory(out string) []Revision {
-	var revs []Revision
+func parseHistory(out string) []RolloutRevision {
+	var revs []RolloutRevision
 	for _, line := range strings.Split(out, "\n") {
 		f := strings.Fields(line)
 		if len(f) == 0 {
@@ -61,7 +61,7 @@ func parseHistory(out string) []Revision {
 		if cause == "<none>" {
 			cause = ""
 		}
-		revs = append(revs, Revision{Number: n, Cause: cause})
+		revs = append(revs, RolloutRevision{Number: n, Cause: cause})
 	}
 	return revs
 }
