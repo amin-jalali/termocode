@@ -205,7 +205,7 @@ Messages use QoS 0 and MQTT 3.1.1.
 | HTTP: Cookies… | the cookies of the active environment (each environment has its own jar); Enter edits the value; Ctrl+D deletes; Clear all cookies… asks first |
 | HTTP: Saved Requests… | requests saved with `S` (`~/.config/termocode/http/saved.http`) |
 | HTTP: Copy as curl | one line; secrets stay as `{{templates}}` unless you choose "Copy with secrets" |
-| HTTP: Open API Docs | the open .http file as a read-only Markdown page: a table of requests, then headers, bodies and variables; secrets are hidden |
+| HTTP: Open API Docs | the open .http or OpenAPI / Swagger file (YAML or JSON) as a read-only Markdown page: a table of requests, then headers, bodies and variables; secrets are hidden |
 | HTTP: Import from curl… | `-X`, `-H`, `-d`, `--json`, `-u`, `-G` … become a new `###` block |
 | HTTP: Import OpenAPI… | an OpenAPI 3.x or Swagger 2.0 file (YAML or JSON), or its `https://…` URL, becomes `<title>.http` next to the file (a URL: in the workspace root; a relative server like `/v1` uses the URL's host): one `###` block per operation with example bodies; `{{baseUrl}}` goes into a new `http-client.env.json`; put `token` / `apiKey` / `basicAuth` in the private env file |
 | HTTP: Import Collection (JSON, HAR, Insomnia)… | a v2.1 collection JSON, a HAR or an Insomnia export becomes a new `.http` file next to it (never over a file); secret header values become `{{placeholders}}` |
@@ -217,6 +217,8 @@ Messages use QoS 0 and MQTT 3.1.1.
 | HTTP: Validate GraphQL Query | checks every field of the query against the schema and that the braces match |
 | HTTP: Set Request Proxy… | writes `# @proxy URL` above the request at the cursor (`http://`, `https://`, `socks5://`, or `none` to go direct); empty removes it. The title shows the proxy the request uses now |
 | HTTP: GraphQL Schema Docs… | the schema's types (root types first); Enter opens one as read-only SDL |
+| HTTP: Start Mock Server | serves the open .http or OpenAPI file on a random `127.0.0.1` port (the toast shows the URL). In a .http file each `###` block answers with `# @mock-status` (default 200), `# @mock-type` and `# @mock-body`; `{{var}}` and `:var` path segments match anything. An OpenAPI file answers each operation with its first 2xx response example. A new Start replaces the old server |
+| HTTP: Stop Mock Server | ends the mock server (quitting ends it too) |
 
 Proxy and retries per request: `# @proxy URL|none` above the request
 line, or `"$proxy"` in an environment of `http-client.env.json` for every

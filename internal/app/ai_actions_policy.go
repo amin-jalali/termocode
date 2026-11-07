@@ -713,6 +713,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"http-gql-validate":      aiNever("may fetch the schema over the network; use http_send"),
 	"http-proxy-set":         aiNever(aiNoPicker + " (read_file, write_file)"),
 	"http-gql-docs":          aiNever(aiNoPicker + " (http_send with the introspection query)"),
+	"http-mock-start":        aiConfirm(ai.ClassIDE), // listens on a 127.0.0.1 port
+	"http-mock-stop":         aiConfirm(ai.ClassIDE), // stops the user's mock server
 }
 
 // aiActionPolicyFor returns the policy of a palette id, including the

@@ -97,6 +97,8 @@ func httpPaletteItems() []picker.Item {
 		{ID: "http-clear-script-vars", Title: "HTTP: Clear Script Variables"},
 		{ID: "http-ws-send", Title: "HTTP: WebSocket Send Message…"},
 		{ID: "http-ws-close", Title: "HTTP: WebSocket Disconnect"},
+		{ID: "http-mock-start", Title: "HTTP: Start Mock Server"},
+		{ID: "http-mock-stop", Title: "HTTP: Stop Mock Server"},
 	}, append(httpGQLPaletteItems(), httpProxyPaletteItems()...)...)
 }
 
@@ -164,6 +166,10 @@ func (m *Model) dispatchHTTPPalette(id string) (tea.Cmd, bool) {
 		return m.httpOpenAPIDocs(), true
 	case "http-proxy-set":
 		return m.openHTTPProxyPrompt(), true
+	case "http-mock-start":
+		return m.httpStartMock(), true
+	case "http-mock-stop":
+		return m.httpStopMockCmd(), true
 	}
 	return nil, false
 }
@@ -297,6 +303,16 @@ func (m *Model) httpResend() tea.Cmd {
 // httpReadFile parses an .http file: the open buffer when there is one
 // (unsaved edits count), else the file on disk.
 func (m *Model) httpReadFile(file string) (httpclient.File, bool) {
+	raw, ok := m.httpReadRaw(file)
+	if !ok {
+		return httpclient.File{}, false
+	}
+	return httpclient.Parse(raw), true
+}
+
+// httpReadRaw is the text of file: its loaded buffer (unsaved edits
+// count), else the file on disk.
+func (m *Model) httpReadRaw(file string) (string, bool) {
 	if m.nvim != nil {
 		var raw string
 		if err := m.nvim.ExecLuaResult(`local name = ...
@@ -306,14 +322,14 @@ for _, b in ipairs(vim.api.nvim_list_bufs()) do
   end
 end
 return ''`, &raw, file); err == nil && raw != "" {
-			return httpclient.Parse(raw), true
+			return raw, true
 		}
 	}
 	b, err := os.ReadFile(file)
 	if err != nil {
-		return httpclient.File{}, false
+		return "", false
 	}
-	return httpclient.Parse(string(b)), true
+	return string(b), true
 }
 
 // httpShowLast opens the page on the last answer without sending.
@@ -1415,20 +1431,31 @@ func (m *Model) httpCopySnippet(r *httpRun, lang string) tea.Cmd {
 	return nil
 }
 
-// httpOpenAPIDocs shows the open .http file (unsaved edits count) as
-// read-only Markdown API docs. Secrets are hidden by httpclient.APIDocs.
+// httpOpenAPIDocs shows the open .http or OpenAPI file (unsaved edits
+// count) as read-only Markdown API docs. Secrets are hidden by
+// httpclient.APIDocs.
 func (m *Model) httpOpenAPIDocs() tea.Cmd {
-	file := m.httpCurrentFile()
+	file, raw, openapi := m.httpSourceFile()
 	if file == "" {
-		return m.pushToast(toast.Info, "Open an .http file first")
-	}
-	f, ok := m.httpReadFile(file)
-	if !ok {
-		return m.pushToast(toast.Errr, "Could not read "+filepath.Base(file))
+		return m.pushToast(toast.Info, "Open an .http or OpenAPI file first")
 	}
 	name := filepath.Base(file)
+	var md string
+	if openapi {
+		var err error
+		if md, err = httpclient.APIDocsOpenAPI([]byte(raw), name); err != nil {
+			return m.pushToastDetail(toast.Warn, "API docs: "+err.Error(), name)
+		}
+	} else {
+		if raw == "" {
+			if _, ok := m.httpReadRaw(file); !ok {
+				return m.pushToast(toast.Errr, "Could not read "+name)
+			}
+		}
+		md = httpclient.APIDocs(httpclient.Parse(raw), name)
+	}
 	m.ensureEditorWindowCurrent()
-	if err := m.openReadOnlyPage("API docs: "+name, httpclient.APIDocs(f, name), "", "markdown"); err != nil {
+	if err := m.openReadOnlyPage("API docs: "+name, md, "", "markdown"); err != nil {
 		return m.pushToastDetail(toast.Errr, "Could not open the API docs", err.Error())
 	}
 	m.focus = FocusEditor

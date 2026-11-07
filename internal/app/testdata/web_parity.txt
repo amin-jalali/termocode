@@ -642,6 +642,8 @@ missing	http-gql-schema	HTTP|S
 missing	http-gql-validate	HTTP|S
 missing	http-import-collection	HTTP|S
 missing	http-import-openapi	HTTP|S
+missing	http-mock-start	HTTP|S
+missing	http-mock-stop	HTTP|S
 missing	http-proxy-set	HTTP|S
 missing	http-ws-close	HTTP|S
 missing	http-ws-send	HTTP|S

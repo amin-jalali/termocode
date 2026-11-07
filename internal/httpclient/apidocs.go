@@ -85,3 +85,19 @@ func docsAnchor(s string) string {
 	}
 	return b.String()
 }
+
+// APIDocsOpenAPI renders an OpenAPI 3.x / Swagger 2.0 file as the same
+// Markdown docs (API-23): each operation as a request, its base URL as
+// the `baseUrl` variable. The spec title is the page title, else name.
+func APIDocsOpenAPI(data []byte, name string) (string, error) {
+	im, err := ImportOpenAPI(data)
+	if err != nil {
+		return "", err
+	}
+	title := im.Title
+	if title == "" {
+		title = name
+	}
+	src := "@baseUrl = " + openapiOneLine(im.Env["baseUrl"]) + "\n" + im.HTTP
+	return APIDocs(Parse(src), title), nil
+}
