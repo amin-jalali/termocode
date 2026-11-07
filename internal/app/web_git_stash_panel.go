@@ -94,7 +94,7 @@ func (m *Model) webGitStashAct(call *webCall) *webAsk {
 	case webproto.StashPop:
 		ask.title, ask.action = "Pop the stash?", "Pop"
 		ask.body = "Apply " + name + " to the working files, then drop it from the stash?"
-		run, running, fail, done = func(cwd string) error { return gitStashPopRef(cwd, ref) }, "Popping the stash…", "Pop failed", "Popped "+ref
+		run, running, fail, done = func(cwd string) error { return git.StashAt(cwd, nil).Pop(ref) }, "Popping the stash…", "Pop failed", "Popped "+ref
 	case webproto.StashDrop:
 		ask.title, ask.action = "Drop the stash?", "Drop"
 		ask.body = "Delete " + name + " from the stash? Its commit stays in git for a while, so it can still be brought back."
