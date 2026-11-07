@@ -288,6 +288,12 @@ func webChatMsgOf(i int, sm *ai.StoredMessage, streaming bool, max int) (webprot
 	for _, img := range sm.Images {
 		cm.Images = append(cm.Images, filepath.Base(img))
 	}
+	for _, a := range sm.Attached {
+		if len(cm.Attached) == webproto.MaxAttachedChips {
+			break
+		}
+		cm.Attached = append(cm.Attached, webproto.AttachChip{Kind: a.Kind, Label: webName(webChatRedact(a.Label))})
+	}
 	if r := sm.Run; r != nil {
 		cm.Run = &webproto.ChatRun{ID: r.ID, Profile: r.Profile, State: webRunState(r.State), ElapsedMs: r.ElapsedMs, CostUSD: r.Spent, PlanWait: r.PlanWait}
 	}

@@ -310,6 +310,24 @@
       "deltas": [
         "WorktreesSnap"
       ]
+    },
+    {
+      "name": "inbox",
+      "keyed": false,
+      "phase": "v2",
+      "snap": "InboxSnap",
+      "deltas": [
+        "InboxSnap"
+      ]
+    },
+    {
+      "name": "projects",
+      "keyed": false,
+      "phase": "v2",
+      "snap": "ProjectsSnap",
+      "deltas": [
+        "ProjectsSnap"
+      ]
     }
   ],
   "events": {
@@ -4789,6 +4807,69 @@
       ],
       "additionalProperties": true
     },
+    "Attach": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "task",
+            "ptask",
+            "issue",
+            "pr",
+            "file",
+            "lines",
+            "diff",
+            "worktree",
+            "run",
+            "race",
+            "workflow",
+            "card",
+            "resource",
+            "block",
+            "project",
+            "view"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "spec": {
+          "type": "string"
+        },
+        "to": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "AttachChip": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "label"
+      ],
+      "additionalProperties": true
+    },
     "Attention": {
       "type": "object",
       "properties": {
@@ -6108,6 +6189,12 @@
     "ChatMsg": {
       "type": "object",
       "properties": {
+        "attached": {
+          "items": {
+            "$ref": "#/defs/AttachChip"
+          },
+          "type": "array"
+        },
         "blocks": {
           "items": {
             "$ref": "#/defs/Block"
@@ -6255,6 +6342,12 @@
     "ChatSendArgs": {
       "type": "object",
       "properties": {
+        "attach": {
+          "items": {
+            "$ref": "#/defs/Attach"
+          },
+          "type": "array"
+        },
         "chat_id": {
           "type": "string"
         },
@@ -10425,6 +10518,112 @@
       ],
       "additionalProperties": false
     },
+    "InboxCounts": {
+      "type": "object",
+      "properties": {
+        "done": {
+          "type": "integer"
+        },
+        "failed": {
+          "type": "integer"
+        },
+        "needs_you": {
+          "type": "integer"
+        },
+        "working": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "needs_you",
+        "working",
+        "failed",
+        "done"
+      ],
+      "additionalProperties": true
+    },
+    "InboxItem": {
+      "type": "object",
+      "properties": {
+        "can": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "chat": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "card",
+            "run",
+            "lane",
+            "workflow",
+            "task",
+            "ci",
+            "race"
+          ]
+        },
+        "lane": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string"
+        },
+        "since": {
+          "type": "integer"
+        },
+        "state": {
+          "enum": [
+            "needs_you",
+            "working",
+            "failed",
+            "done"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "ws": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "ref",
+        "title",
+        "since",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "InboxSnap": {
+      "type": "object",
+      "properties": {
+        "counts": {
+          "$ref": "#/defs/InboxCounts"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/defs/InboxItem"
+          },
+          "type": "array"
+        },
+        "more": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "counts"
+      ],
+      "additionalProperties": true
+    },
     "InspectArgs": {
       "type": "object",
       "properties": {
@@ -12350,6 +12549,83 @@
         "col"
       ],
       "additionalProperties": false
+    },
+    "ProjectItem": {
+      "type": "object",
+      "properties": {
+        "attached": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "opened_at": {
+          "type": "integer"
+        },
+        "recent": {
+          "type": "boolean"
+        },
+        "service": {
+          "type": "boolean"
+        },
+        "state": {
+          "enum": [
+            "here",
+            "running",
+            "asleep"
+          ]
+        },
+        "waiting": {
+          "type": "integer"
+        },
+        "where": {
+          "type": "string"
+        },
+        "working": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "where",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "ProjectsSnap": {
+      "type": "object",
+      "properties": {
+        "more": {
+          "type": "integer"
+        },
+        "projects": {
+          "items": {
+            "$ref": "#/defs/ProjectItem"
+          },
+          "type": "array"
+        },
+        "state": {
+          "enum": [
+            "loading",
+            "ready"
+          ]
+        },
+        "waiting": {
+          "type": "integer"
+        },
+        "working": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "state",
+        "projects"
+      ],
+      "additionalProperties": true
     },
     "PruneArgs": {
       "type": "object",

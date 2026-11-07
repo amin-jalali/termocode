@@ -57,7 +57,8 @@ function MsgText({ text, streaming }: { text?: string; streaming?: boolean }) {
 function Extras({ m, canFetch }: { m: ChatMsg; canFetch: boolean }) {
   const imgs = m.images ?? [];
   const [open, setOpen] = useState<number | null>(null);
-  if (imgs.length === 0 && !m.rules) return null;
+  const sent = m.attached ?? []; // MOB-5: what came with it, by reference
+  if (imgs.length === 0 && !m.rules && sent.length === 0) return null;
   const canSee = canFetch && link.meta.value?.role === "controller";
   return (
     <div class="msg-extras" dir="ltr">
@@ -72,6 +73,11 @@ function Extras({ m, canFetch }: { m: ChatMsg; canFetch: boolean }) {
           </span>
         ),
       )}
+      {sent.map((a, i) => (
+        <span key={"a" + i} class="chip" dir="auto">
+          ↩ {a.label}
+        </span>
+      ))}
       {m.rules && <span class="chip">{t("chat.rules", { name: m.rules })}</span>}
       {open !== null && imgs[open] !== undefined && (
         <div class="msg-img">

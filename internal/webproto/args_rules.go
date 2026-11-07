@@ -151,7 +151,7 @@ func (a *ChatSendArgs) validate(int) error {
 	if a.ChatID != "" && !validName(a.ChatID, MaxID) {
 		return invalid("bad chat id")
 	}
-	return nil
+	return validAttaches(a.Attach)
 }
 
 func (a *CardsAnswerArgs) validate(int) error {

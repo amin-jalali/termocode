@@ -26,6 +26,12 @@ const (
 	StoredNote      = "note" // a status line of termocode (keep going stopped …); only shown
 )
 
+// StoredAttach is one chip of an item sent back with a message.
+type StoredAttach struct {
+	Kind  string `json:"kind"`
+	Label string `json:"label"`
+}
+
 // StoredMessage is one persisted chat line.
 type StoredMessage struct {
 	Role string `json:"role"`
@@ -33,6 +39,10 @@ type StoredMessage struct {
 	// Context is attached file / selection text sent to the model with a
 	// user message but not shown in the transcript.
 	Context string `json:"context,omitempty"`
+	// Attached are the chips of the items the user sent back from the
+	// web page with a user message (MOB-5): kind and label only, their
+	// resolved text is in Context. Only shown.
+	Attached []StoredAttach `json:"attached,omitempty"`
 	// Images are paths of image files sent with a user message. Only the
 	// path is stored; the file is read again for every request.
 	Images []string `json:"images,omitempty"`
