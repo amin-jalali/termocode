@@ -412,6 +412,8 @@ func (m *Model) handleServicesConfirm(id string) (tea.Cmd, bool) {
 			defer cancel()
 			return servicesActionDoneMsg{verb: "down", keys: keys, err: c.Down(ctx)}
 		}, true
+	case confirmKindContainerBulk:
+		return m.runContainerBulk(id), true
 	case confirmKindContainerRemove:
 		if id == "remove" {
 			return m.runContainerRemove(false), true
@@ -643,6 +645,9 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if cmd, ok := m.registryKey(k.String(), r); ok {
 			return m, cmd
 		}
+	}
+	if cmd, ok := m.containerBulkKey(k.String()); ok {
+		return m, cmd
 	}
 	switch k.String() {
 	case "up", "k":
@@ -935,7 +940,8 @@ func hostKeysHelp(r svcRow) (string, []confirm.KeyRow) {
 			[]string{"i", "inspect"},
 			[]string{"o", "open a port in the browser"},
 			[]string{"y", "copy the id"},
-			[]string{"D", "remove (asks first)"})
+			[]string{"D", "remove (asks first)"},
+			[]string{"v / V", "mark for a bulk action / clear marks (s x r D then ask once for all)"})
 	case r.kind == svcRowGroup && r.hostSectionID() == "containers":
 		return with("Project keys",
 			[]string{"s / x / r", "up / stop / restart the project"},
