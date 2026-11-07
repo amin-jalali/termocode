@@ -2,6 +2,7 @@
 // how many items wait; "needs" draws the chip with the needs colour and
 // shape; a pinned chip shows a pin (the user pins up to 3).
 import { h, type ComponentChildren } from "preact";
+import { t } from "../strings";
 import { StatusMark } from "./Mark";
 import type { Status } from "./status";
 
@@ -35,6 +36,7 @@ export function PhoneChip({
       {status && <StatusMark s={status} />}
       <span>{label}</span>
       {count !== undefined && count > 0 && <span class="ph-chip-count">{count}</span>}
+      {pinned && <span class="sr-only">{t("ph.pinned")}</span>}
     </button>
   );
 }

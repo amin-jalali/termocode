@@ -1106,6 +1106,15 @@ export const S = {
   "ph.board.stale": "Offline. This is the last board we saw.",
   "ph.board.failed": "The board did not load.",
   "ph.board.more": "{n} more on the laptop",
+  // Phone accessibility (MOBUX-22): This phone switches, screen reader names
+  "ph.on": "On",
+  "ph.off": "Off",
+  "ph.motion": "Motion",
+  "ph.motion.system": "Like the system",
+  "ph.motion.reduce": "Reduce",
+  "ph.pinned": "pinned",
+  // Home context chips (MOBUX-3)
+  "chips.projects": "Projects",
 } as const;
 
 /** StringKey is a key of the page's strings, of the workbench's

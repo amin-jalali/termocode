@@ -93,6 +93,8 @@
   .arm .arm-fill { display: none; }
   .arm:not(.is-armed) .arm-ticks { display: inline; }
 }
+:root[data-motion="reduce"] .arm .arm-fill { display: none; }
+:root[data-motion="reduce"] .arm:not(.is-armed) .arm-ticks { display: inline; }
 
 /* ---- Sheet ---- */
 .sheet-layer { position: fixed; inset: 0; z-index: var(--z-sheet); display: flex; align-items: flex-end; justify-content: center; padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }

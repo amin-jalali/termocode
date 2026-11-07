@@ -126,8 +126,8 @@ function Row({ k, v }: { k: string; v: string }) {
 }
 
 const onOff = [
-  { value: "off", label: tp("ph.off") },
-  { value: "on", label: tp("ph.on") },
+  { value: "off", label: tp("ph.phone_off") },
+  { value: "on", label: tp("ph.phone_on") },
 ] as const;
 
 function ForgetSheet() {

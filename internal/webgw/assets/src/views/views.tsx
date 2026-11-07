@@ -3,7 +3,7 @@
 // WEB-23); until then each shows its loading and empty states.
 import { h } from "preact";
 import { useEffect } from "preact/hooks";
-import { prefs, setPref, type Direction, type Language, type Theme } from "../lib/prefs";
+import { prefs, setPref, type Direction, type Language, type Motion, type Theme } from "../lib/prefs";
 import { go, route } from "../lib/router";
 import { layout } from "../lib/layout";
 import { t } from "../strings";
@@ -89,6 +89,9 @@ function ReviewLazy() {
   );
 }
 
+/** OnOff is a switch drawn as a two-choice row (haptics). */
+type OnOff = "on" | "off";
+
 export function MoreView() {
   const sub = route.value.tab === "more" ? route.value.rest : "";
   if (sub === "tools") return <ToolsView />;
@@ -126,6 +129,14 @@ export function MoreView() {
     { value: "auto", label: t("more.dir.auto") },
     { value: "en", label: t("more.lang.en") },
     { value: "fa", label: t("more.lang.fa") },
+  ] as const;
+  const motions = [
+    { value: "system", label: t("ph.motion.system") },
+    { value: "reduce", label: t("ph.motion.reduce") },
+  ] as const;
+  const buzz = [
+    { value: "on", label: t("ph.on") },
+    { value: "off", label: t("ph.off") },
   ] as const;
   return (
     <View tab="more" title={t("tab.more")}>
@@ -217,6 +228,14 @@ export function MoreView() {
           <div class="field">
             <span class="field-label">{t("more.dir")}</span>
             <Segmented<Direction> label={t("more.dir")} value={p.dir} choices={dirs} onChange={(v) => setPref("dir", v)} />
+          </div>
+          <div class="field">
+            <span class="field-label">{t("ph.motion")}</span>
+            <Segmented<Motion> label={t("ph.motion")} value={p.motion} choices={motions} onChange={(v) => setPref("motion", v)} />
+          </div>
+          <div class="field">
+            <span class="field-label">{t("more.haptics")}</span>
+            <Segmented<OnOff> label={t("more.haptics")} value={p.haptics ? "on" : "off"} choices={buzz} onChange={(v) => setPref("haptics", v === "on")} />
           </div>
           <NotifyField />
           <BookmarkField />
