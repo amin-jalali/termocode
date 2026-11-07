@@ -81,3 +81,20 @@ func TestDBRedisSummaryAndHintsFitEightyColumns(t *testing.T) {
 		t.Fatalf("hints = %q", h)
 	}
 }
+
+// DBX-69: KeyDB and Dragonfly speak the Redis protocol, so their images
+// are suggested as Redis connections too (not their GUI or operator images).
+func TestDBDiscoveryFindsKeyDBAndDragonflyImages(t *testing.T) {
+	for image, want := range map[string]string{
+		"eqalpha/keydb:latest":                         "redis",
+		"eqalpha/keydb":                                "redis",
+		"docker.dragonflydb.io/dragonflydb/dragonfly":  "redis",
+		"dragonflydb/dragonfly:v1.21":                  "redis",
+		"docker.dragonflydb.io/dragonflydb/operator:1": "",
+		"keydb-exporter:1":                             "",
+	} {
+		if got := dbDriverForImage(image); got != want {
+			t.Errorf("%s: %q, want %q", image, got, want)
+		}
+	}
+}
