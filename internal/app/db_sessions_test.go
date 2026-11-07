@@ -9,12 +9,12 @@ import (
 	"github.com/amin-jalali/termocode/internal/dbclient"
 )
 
-type closeCountSession struct {
+type dbSessCloser struct {
 	dbclient.Session
 	closed *int
 }
 
-func (s closeCountSession) Close() error { *s.closed++; return nil }
+func (s dbSessCloser) Close() error { *s.closed++; return nil }
 
 // dbSessionsModel has local-pg with its main session and a session of
 // database "audit"; the audit session has a transaction with 2 writes.
@@ -25,8 +25,8 @@ func dbSessionsModel(t *testing.T) (*Model, *int, *int) {
 	m.databases.loaded = true
 	m.databases.conns = []dbclient.Conn{{ID: "local-pg", Name: "local-pg", Driver: "postgres"}}
 	mainClosed, auditClosed := 0, 0
-	m.databases.sessions["local-pg"] = closeCountSession{closed: &mainClosed}
-	m.databases.sessions["local-pg/db/audit"] = closeCountSession{closed: &auditClosed}
+	m.databases.sessions["local-pg"] = dbSessCloser{closed: &mainClosed}
+	m.databases.sessions["local-pg/db/audit"] = dbSessCloser{closed: &auditClosed}
 	tx := m.databases.tx("local-pg/db/audit")
 	tx.open, tx.writes = true, 2
 	return m, &mainClosed, &auditClosed
