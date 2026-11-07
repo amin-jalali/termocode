@@ -121,6 +121,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	if c, ok := m.handleKubeMsg(msg); ok { // kube_state.go
 		return m, c
 	}
+	if c, ok := m.handleDevPreviewMsg(msg); ok { // devpreview_ui.go
+		return m, c
+	}
 	if c, ok := m.handleWTMsg(msg); ok { // worktrees_state.go
 		return m, c
 	}

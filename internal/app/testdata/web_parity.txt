@@ -722,6 +722,8 @@ missing	lsp-container-diagnostics	Workspace|S
 missing	lsp-container-where	Workspace|S
 missing	lsp-mirror-clear	Workspace|S
 missing	lsp-mirror-refresh	Workspace|S
+missing	preview-dev-servers	Preview|L
+missing	preview-open-newest	Preview|S
 missing	redis-copy-key	Databases|S
 missing	redis-rename-key	Databases|S
 missing	redis-slowlog	Databases|S

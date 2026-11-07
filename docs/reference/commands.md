@@ -716,6 +716,13 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Preferences: Open Settings (UI) | `open-settings-ui` |   |   |
 | Preferences: Undo Last Import… | `prefs-import-undo` |   |   |
 
+## Preview
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Preview: Dev Server URLs… | `preview-dev-servers` |   |   |
+| Preview: Open Newest Dev Server | `preview-open-newest` |   |   |
+
 ## Run
 
 | Title | ID | Key | Hint |

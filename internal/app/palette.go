@@ -447,6 +447,7 @@ func paletteItems() []picker.Item {
 	items = append(items, httpPaletteItems()...)      // HTTP client (http_commands.go)
 	items = append(items, secretsPaletteItems()...)   // secret store (secrets_ui.go)
 	items = append(items, mcpImportOtherPaletteItems()...)
+	items = append(items, devPreviewPaletteItems()...)
 	items = append(items, mcpServePaletteItems()...)   // termocode as an MCP server (mcp_serve_status.go)
 	items = append(items, webPaletteItems()...)        // the web panel (web_tui.go)
 	items = append(items, webAccessPaletteItems()...)  // pairing and devices (web_access.go)
@@ -1030,6 +1031,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 			return cmd
 		}
 		if cmd, ok := m.dispatchKubePalette(id); ok { // kube_actions.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchDevPreviewPalette(id); ok { // devpreview_ui.go (CMP-66)
 			return cmd
 		}
 		if cmd, ok := m.dispatchWorktreePalette(id); ok { // worktrees_keys.go

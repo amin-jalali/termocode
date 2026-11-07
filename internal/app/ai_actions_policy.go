@@ -465,6 +465,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"kubernetes-hpa":                    aiAuto(),
 	"kubernetes-nodes":                  aiNever(aiNoPicker + "; cordon and drain are the user's choice"),
 	"kubernetes-apply-file":             aiNever("writes to the cluster; only the user applies a file, after the diff"),
+	"preview-dev-servers":               aiNever(aiNoPicker + "; the agent reads its dev server address with terminal_read"), // devpreview_ui.go
+	"preview-open-newest":               aiNever(aiNoOutside),
 	"containers-context-use":            aiNever("a context switch is the user's choice; it moves every container action to another host"),
 	"containers-context-default":        aiNever("changes the machine-wide Docker default"),
 	"containers-context-create":         aiNever("a new context points every terminal at another host; it is the user's"),
