@@ -498,6 +498,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Search Log… | `git-log-search` |   |   |
 | Git: Set GitLab Token… | `git-gitlab-token` |   | `saved in the secret store for this GitLab host` |
 | Git: Set Identity (Name and E-mail)… | `git-identity` |   |   |
+| Git: Set Up PR Review Bot (GitHub)… | `git-pr-review-bot` |   |   |
 | Git: Set Upstream Branch… | `git-upstream-set` |   |   |
 | Git: Show Contributors | `git-contributors` |   | `the authors of this branch and their commit counts` |
 | Git: Show Diff for Current File | `git-diff` |   |   |

@@ -2270,6 +2270,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-pr-filter` | Git: Pull Requests (Filter)… | auto |   |
 | `git-pr-list` | Git: Pull Requests… | auto |   |
 | `git-pr-mine` | Git: My Pull Requests… | auto |   |
+| `git-pr-review-bot` | Git: Set Up PR Review Bot (GitHub)… | never | writes a CI workflow into the user's repository; the user confirms it on a card |
 | `git-publish` | Git: Publish to GitHub… | never | creates a GitHub repository in the user's name and pushes to it; user only |
 | `git-pull` | Git: Pull | confirm (git) |   |
 | `git-pull-options` | Git: Pull… | never | opens a picker or prompt that only the user can answer; use a typed tool |

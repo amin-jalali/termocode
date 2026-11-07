@@ -508,6 +508,50 @@ put a review request with the diff in the chat box. The branch review
 uses the change since the branch left `origin`'s default branch (or
 `main`). Nothing is sent until you press `Enter`.
 
+### PR review bot on GitHub
+
+`termocode review` is a short AI review of the branch for CI. It sends the
+diff since the base branch to the AI and keeps only the high-priority
+findings:
+
+- **P0**: it breaks the build, loses data, opens a security hole or crashes.
+- **P1**: a real bug or risk to fix before the merge.
+
+Style, names and small cleanups are left out. The answer is at most ten
+lines.
+
+```sh
+termocode review                      # print the review
+termocode review --post 42            # post it on pull request 42
+termocode review --fail-on p0 --json  # exit 1 on a P0, findings as JSON
+```
+
+`--post` needs [`gh`](https://cli.github.com) with a token (`GH_TOKEN`).
+The review is one comment. A new run updates that comment, so the pull
+request does not fill up. `--post auto` takes the pull request of the
+GitHub Actions event.
+
+The AI provider comes from your termocode AI settings, or from
+`ANTHROPIC_API_KEY`, `OPENAI_API_KEY` or `TERMOCODE_AI_*` in the
+environment.
+
+**Review rules.** Put them in `AGENTS.md` under a heading with "review" in
+it, for example `## Review rules`. Only those sections are sent with the
+review, at most 4 KB.
+
+**Set it up.** Run **Git: Set Up PR Review Bot (GitHub)…**. A card shows the
+workflow file `.github/workflows/termocode-review.yml`; **Add Workflow**
+writes it (Cancel is the default). An existing file is never replaced.
+Nothing is committed or pushed. Then:
+
+1. Commit and push the file.
+2. Add the repository secret `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`).
+
+The bot runs on every pull request that is not a draft. Comment
+`/termocode review` on a pull request to run it again. Only the owner,
+members and collaborators can start it from a comment. Pull requests from
+forks get no secrets on GitHub, so they are not reviewed.
+
 ## Clone a repository
 
 1. On the welcome screen, pick **Clone repository**. Or run
