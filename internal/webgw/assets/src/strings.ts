@@ -572,6 +572,8 @@ export const S = {
   "dv.tab_rev": "{name} ({hash} ↔ Working Tree)",
   "dv.tab_review": "{name} (AI Change)",
   "card.open_diff": "Open Changes",
+  "card.keep_change": "Keep change {n}",
+  "card.keep_none": "No change is kept. Keep one, or press Reject.",
   "sv.collapse": "Collapse All",
   "scm.more_actions": "More Actions…",
   "dbv.query_tab": "Query: {conn}",

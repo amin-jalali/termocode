@@ -169,6 +169,9 @@ func webAuditSummary(args any) string {
 		s = a.Query
 	case *webproto.CardsAnswerArgs:
 		s = a.ID + " " + a.Choice
+		if len(a.Hunks) > 0 {
+			s += " " + strconv.Itoa(len(a.Hunks)) + " changes"
+		}
 	case *webproto.ChatSendArgs:
 		s = strconv.Itoa(len(a.Text)) + " bytes"
 	case *webproto.GitCommitArgs:

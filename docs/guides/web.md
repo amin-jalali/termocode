@@ -81,6 +81,14 @@ termocode.
 On a phone the tabs are at the bottom. On a wider screen the files and
 the chat sit side by side.
 
+An AI change card with more than one change has a **Keep change** box on
+each change. Clear the boxes of the changes you do not want, then press
+**Accept**: only the kept changes are written.
+
+When you change a file in the page, the laptop shows a mark (**▍**) on
+that line with **✎** and your device's name. It moves with your next
+change and goes away after 30 seconds.
+
 ## Use it from a remote machine: `termocode ssh --web`
 
 When termocode runs on a server, open its panel on your own computer:

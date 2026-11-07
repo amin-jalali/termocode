@@ -190,6 +190,7 @@ export interface ChatSendArgs {
 export interface CardsAnswerArgs {
   id: string;
   choice: string;
+  hunks?: number[];
 }
 
 export interface SetTextArgs {
@@ -1098,6 +1099,7 @@ export interface CardDiff {
   added: number;
   removed: number;
   truncated?: boolean;
+  hunks?: CardHunk[];
 }
 
 export interface DiffRow {
@@ -1105,6 +1107,11 @@ export interface DiffRow {
   text: string;
   old?: number;
   new?: number;
+}
+
+export interface CardHunk {
+  first: number;
+  end: number;
 }
 
 export interface CardsDelta {

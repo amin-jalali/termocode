@@ -13,7 +13,7 @@ local res = {}
 for _, m in ipairs(vim.api.nvim_buf_get_extmarks(b, ns, 0, -1, { details = true })) do
   local d, txt = m[4], ''
   for _, c in ipairs(d.virt_text or {}) do txt = txt .. c[1] end
-  res[#res + 1] = m[2] .. ':' .. vim.trim((d.sign_text or '') .. ' ' .. txt)
+  res[#res + 1] = m[2] .. ':' .. vim.trim(d.sign_text or '') .. ' ' .. vim.trim(txt)
 end
 return res`, &out, buf)
 	return out

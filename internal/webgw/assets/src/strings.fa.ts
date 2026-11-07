@@ -790,6 +790,8 @@ export const FA: Record<StringKey, string> = {
   "dv.review": "بررسی…",
   "dv.changed": "فایل از آن زمان عوض شده است. تغییر را روی لپ‌تاپ بخوانید.",
   "card.open_diff": "باز کردن تغییرها",
+  "card.keep_change": "نگه داشتن تغییر {n}",
+  "card.keep_none": "هیچ تغییری نگه داشته نشده. یکی را نگه دارید، یا نپذیرفتن را بزنید.",
   "wb.panel_max": "بزرگ‌ترین اندازهٔ پنل",
   "wb.panel_restore": "برگرداندن اندازهٔ پنل",
   "wb.panel_more": "نماها و کارهای بیشتر…",

@@ -35,6 +35,9 @@ type ChatSendArgs struct {
 type CardsAnswerArgs struct {
 	ID     string `json:"id"`
 	Choice string `json:"choice"`
+	// Hunks: with accept on a review card, the changes to keep (indexes
+	// into the card's diff hunks); the rest is rejected. Empty: all.
+	Hunks []int `json:"hunks,omitempty"`
 }
 
 // PathArgs names one file or folder.

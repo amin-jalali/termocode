@@ -38,6 +38,10 @@ func (m *Model) webCardsAnswer(call *webCall) tea.Cmd {
 		call.fail(webproto.CodeForbidden, "Answer this on the laptop.")
 		return nil
 	}
+	if len(a.Hunks) > 0 && !m.webCardHunksOK(ref, a) {
+		call.fail(webproto.CodeBadRequest, "Those changes are not on this card.")
+		return nil
+	}
 	device := call.conn.device
 	if device == "" {
 		device = "web"
@@ -49,7 +53,7 @@ func (m *Model) webCardsAnswer(call *webCall) tea.Cmd {
 		call.reply(nil)
 		return tea.Batch(cmd, t)
 	}
-	cmd := m.webAnswerCard(ref, a.Choice)
+	cmd := m.webAnswerCard(ref, a.Choice, a.Hunks)
 	if p.by == nil {
 		p.by = map[string]string{}
 	}
@@ -76,7 +80,7 @@ func webCardAllows(c webproto.Card, choice string) bool {
 
 // webAnswerCard gives the answer to what waits, as the laptop's dialog
 // would, and closes that dialog.
-func (m *Model) webAnswerCard(ref *webCardRef, choice string) tea.Cmd {
+func (m *Model) webAnswerCard(ref *webCardRef, choice string, hunks []int) tea.Cmd {
 	switch obj := ref.obj.(type) {
 	case *aiPendingConfirm:
 		if m.confirmOpen && m.confirmKind == confirmKindAITool {
@@ -113,8 +117,14 @@ func (m *Model) webAnswerCard(ref *webCardRef, choice string) tea.Cmd {
 				continue
 			}
 			acc := map[int]bool{}
-			if choice == webproto.ChoiceAccept {
-				if d := r.card.Diff(i); d != nil && len(d.Hunks) > 0 {
+			if d := r.card.Diff(i); choice == webproto.ChoiceAccept && d != nil && len(hunks) > 0 {
+				for _, k := range hunks { // checked in webCardHunksOK
+					if k < len(d.Hunks) {
+						acc[d.Hunks[k].Index] = true
+					}
+				}
+			} else if choice == webproto.ChoiceAccept {
+				if d != nil && len(d.Hunks) > 0 {
 					for _, h := range d.Hunks {
 						acc[h.Index] = true
 					}
@@ -126,6 +136,33 @@ func (m *Model) webAnswerCard(ref *webCardRef, choice string) tea.Cmd {
 		}
 	}
 	return nil
+}
+
+// webCardHunksOK: a choice by change is an accept on a review card whose
+// diff lists its changes (two or more, see webCardsPub.diff), naming only
+// changes on it.
+func (m *Model) webCardHunksOK(ref *webCardRef, a *webproto.CardsAnswerArgs) bool {
+	it, ok := ref.obj.(*aiReviewItem)
+	r := m.aiS().review
+	if !ok || r == nil || a.Choice != webproto.ChoiceAccept {
+		return false
+	}
+	for i, x := range r.items {
+		if x != it {
+			continue
+		}
+		d := r.card.Diff(i)
+		if d == nil || len(d.Hunks) < 2 || len(d.Hunks) > webproto.MaxCardHunks {
+			return false
+		}
+		for _, k := range a.Hunks {
+			if k >= len(d.Hunks) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
 }
 
 // webAuditArgs names what the card was about, short and without secrets.

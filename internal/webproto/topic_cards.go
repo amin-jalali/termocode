@@ -37,6 +37,10 @@ const (
 // the page offers "Review on laptop".
 const MaxCardDiff = 256 << 10
 
+// MaxCardHunks caps the changes a review card lists for a choice by
+// change; a card with more is answered for the whole file.
+const MaxCardHunks = 128
+
 // CardsSnap is the cards topic: the waiting cards, oldest first.
 type CardsSnap struct {
 	Cards []Card `json:"cards"`
@@ -70,6 +74,15 @@ type CardDiff struct {
 	Added     int       `json:"added"`
 	Removed   int       `json:"removed"`
 	Truncated bool      `json:"truncated,omitempty"` // cut at MaxCardDiff
+	// Hunks are the changes, as rows of Rows, when there are two or more
+	// (and the rows are whole): the page may accept some of them.
+	Hunks []CardHunk `json:"hunks,omitempty"`
+}
+
+// CardHunk is one change of a review card: Rows[First:End].
+type CardHunk struct {
+	First int `json:"first"`
+	End   int `json:"end"`
 }
 
 // DiffRow is one row of a diff.

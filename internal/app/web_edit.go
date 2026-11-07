@@ -61,6 +61,12 @@ func webOpBufSetText(m *Model, call *webCall) tea.Cmd {
 	}
 	switch res.Err {
 	case "":
+		device := call.conn.device
+		if device == "" {
+			device = "web"
+		}
+		// The mark is a hint: an error leaves the edit as it is.
+		_ = m.nvim.ExecLuaArgs(webLuaEditMark, b.buf, a.Start.Row+len(lines)-1, device)
 		call.reply(webproto.EditRes{Tick: res.Tick, Dirty: res.Dirty})
 	case "conflict":
 		webFailData(call, webproto.CodeConflict, "The file changed on the laptop. Check and send again.", webproto.ConflictData{Tick: res.Tick})

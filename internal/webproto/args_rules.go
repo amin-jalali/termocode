@@ -158,6 +158,14 @@ func (a *CardsAnswerArgs) validate(int) error {
 	if !validName(a.ID, MaxID) || !validName(a.Choice, MaxChoice) {
 		return invalid("bad card or choice")
 	}
+	if len(a.Hunks) > MaxCardHunks {
+		return invalid("too many changes")
+	}
+	for _, h := range a.Hunks {
+		if h < 0 || h >= MaxCardHunks {
+			return invalid("bad change")
+		}
+	}
 	return nil
 }
 
