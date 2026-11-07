@@ -74,6 +74,7 @@ type ChatMsg struct {
 	Rules     string     `json:"rules,omitempty"`     // the project rules the turn used ("AGENTS.md")
 	Run       *ChatRun   `json:"run,omitempty"`
 	Steps     []ChatStep `json:"steps,omitempty"`
+	Blocks    []Block    `json:"blocks,omitempty"` // typed visual blocks after the text, ≤ MaxMsgBlocks
 }
 
 // ChatRun is the pipeline run a message shows.
@@ -88,14 +89,15 @@ type ChatRun struct {
 
 // ChatStep is one step of a run.
 type ChatStep struct {
-	ID    string   `json:"id"`
-	Title string   `json:"title,omitempty"`
-	State string   `json:"state,omitempty"` // pending, running, done, failed, skipped …
-	Model string   `json:"model,omitempty"`
-	Tools []string `json:"tools,omitempty"` // tool lines ("⚙ Read a.go → 10 lines")
-	Text  string   `json:"text,omitempty"`  // plain, while the step runs
-	MD    *MdNode  `json:"md,omitempty"`    // the answer as an AST once the step ended
-	Error string   `json:"error,omitempty"`
+	ID     string   `json:"id"`
+	Title  string   `json:"title,omitempty"`
+	State  string   `json:"state,omitempty"` // pending, running, done, failed, skipped …
+	Model  string   `json:"model,omitempty"`
+	Tools  []string `json:"tools,omitempty"` // tool lines ("⚙ Read a.go → 10 lines")
+	Text   string   `json:"text,omitempty"`  // plain, while the step runs
+	MD     *MdNode  `json:"md,omitempty"`    // the answer as an AST once the step ended
+	Error  string   `json:"error,omitempty"`
+	Blocks []Block  `json:"blocks,omitempty"` // typed visual blocks of the step, ≤ MaxMsgBlocks
 }
 
 // Chat delta ops.
@@ -149,15 +151,5 @@ const (
 	MdMaxLangLen = 32
 )
 
-// MdNode is one node of a markdown AST. Raw HTML never becomes a node;
-// a link's Href is http or https only (else the link is its text).
-type MdNode struct {
-	K     string     `json:"k" enum:"doc|p|h|em|strong|code|codeblock|ul|ol|li|blockquote|link|hr|br|table|th|td|text"`
-	Text  string     `json:"text,omitempty"`  // text, code, codeblock
-	C     []MdNode   `json:"c,omitempty"`     // children
-	Level int        `json:"level,omitempty"` // h: 1 to 6
-	Lang  string     `json:"lang,omitempty"`  // codeblock: the info word
-	Href  string     `json:"href,omitempty"`  // link
-	Start int        `json:"start,omitempty"` // ol: the first number, when not 1
-	Rows  [][]MdNode `json:"rows,omitempty"`  // table: rows of th / td cells, the header row first
-}
+// MdNode (a markdown AST node) is defined in internal/blocks and
+// aliased in blocks.go, so a text block carries the same AST.
