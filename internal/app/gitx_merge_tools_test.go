@@ -1,6 +1,8 @@
 package app
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -119,4 +121,46 @@ func gitxMergeRunDone(t *testing.T, m *Model, cmd tea.Cmd) bool {
 		return false
 	}
 	return walk(cmd)
+}
+
+// CMP-57: the security reviews put a threat-model review request in the
+// chat box (unsent); Edit Threat Model asks on a Cancel-first card before
+// it writes the template.
+func TestGitxSecurityReview(t *testing.T) {
+	m, dir := covGitRepo(t)
+	m.aiS().provider = &recordingAIProvider{}
+	covWrite(t, dir, "a.txt", "one\nexec.Command(x)\nthree\n")
+	covRefresh(m)
+	m.dispatchPaletteAction("git-ai-security-changes")
+	in := string(m.aiS().input)
+	if !strings.Contains(in, "STRIDE") || !strings.Contains(in, "a.txt:2 command exec") || !strings.Contains(in, "+exec.Command(x)") {
+		t.Fatalf("chat box %q", in)
+	}
+	covGit(t, dir, "checkout", "-q", "-b", "feature")
+	covCommit(t, dir, "feat: exec")
+	covRefresh(m)
+	m.aiS().input = nil
+	m.dispatchPaletteAction("git-ai-security-branch")
+	if in = string(m.aiS().input); !strings.Contains(in, "main") || !strings.Contains(in, "+exec.Command(x)") {
+		t.Fatalf("branch security review %q", in)
+	}
+
+	m.dispatchPaletteAction("git-threat-model")
+	if !m.confirmOpen || m.confirmKind != confirmKindGitx {
+		t.Fatal("no card before the threat model file is written")
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".termocode", "threat-model.md")); err == nil {
+		t.Fatal("file written before the user said yes")
+	}
+	m.confirmOpen = false
+	m.gitx.onConfirm(m, "create")
+	b, err := os.ReadFile(filepath.Join(dir, ".termocode", "threat-model.md"))
+	if err != nil || !strings.Contains(string(b), "## Trust boundaries") {
+		t.Fatalf("threat model file %q %v", b, err)
+	}
+	m.aiS().input = nil
+	m.dispatchPaletteAction("git-ai-security-branch")
+	if in = string(m.aiS().input); !strings.Contains(in, "## Trust boundaries") {
+		t.Fatalf("saved threat model not in the request %q", in)
+	}
 }
