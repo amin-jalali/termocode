@@ -109,10 +109,16 @@ func TestWelcome_QuickActionHits(t *testing.T) {
 }
 
 // TestWelcome_NoBoxesWhenShort: when the tiles do not fit, START is the
-// one-line rows and no box is drawn.
+// one-line rows and no box is drawn. Unicode icons: the corners checked
+// here are the Unicode box (ASCII draws + corners). At 120 wide the two
+// tile columns fit down to 16 rows, so 15 is the first height without them.
 func TestWelcome_NoBoxesWhenShort(t *testing.T) {
 	withConfigDir(t)
-	for _, sz := range [][2]int{{120, 18}, {64, 16}, {44, 14}} {
+	oldIcons := theme.CurrentIconMode
+	theme.CurrentIconMode = theme.IconModeUnicode
+	invalidateWelcome()
+	t.Cleanup(func() { theme.CurrentIconMode = oldIcons; invalidateWelcome() })
+	for _, sz := range [][2]int{{120, 15}, {64, 16}, {44, 14}} {
 		out := ansi.Strip(renderWelcome(sz[0], sz[1], 0, true))
 		for _, g := range []string{"╭", "╰", "╮", "╯"} {
 			if strings.Contains(out, g) {

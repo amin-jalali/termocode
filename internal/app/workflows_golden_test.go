@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"github.com/amin-jalali/termocode/internal/theme"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,6 +41,9 @@ func wfxGoldenRig(t *testing.T) *Model {
 // Spec (WFX-7): every screen of the view at 80×24 and 120×40 matches its
 // golden (UPDATE_GOLDEN=1 writes them).
 func TestWorkflowsGoldens(t *testing.T) {
+	// The goldens are ASCII icons; pin it so an earlier test that left
+	// another icon mode cannot change the screen.
+	statsIcons(t, theme.IconModeASCII)
 	m := wfxGoldenRig(t)
 	screens := []struct{ name, detail string }{
 		{"sidebar", "-"}, {"overview", ""}, {"workflow", "mine"}, {"untrusted", "docs-report"},

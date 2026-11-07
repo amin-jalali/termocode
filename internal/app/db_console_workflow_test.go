@@ -15,6 +15,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/app"
 	"github.com/amin-jalali/termocode/internal/dbclient"
 	"github.com/amin-jalali/termocode/internal/testkit"
+	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -432,6 +433,11 @@ func TestDBConsoleLongGuardShowsWholeStatement(t *testing.T) {
 }
 
 func TestDBConsoleJSONPageBatchesAndLens(t *testing.T) {
+	// The lens text below is the ASCII glyph; pin the icon mode so an
+	// earlier test that left another one cannot change it.
+	oldIcons := theme.CurrentIconMode
+	theme.CurrentIconMode = theme.IconModeASCII
+	t.Cleanup(func() { theme.CurrentIconMode = oldIcons })
 	s := &consoleSession{}
 	t.Cleanup(app.SetDatabaseSessionFactoryForTest(func(context.Context, dbclient.Conn, string) (dbclient.Session, error) { return s, nil }))
 	d := testkit.New(t, testkit.Options{W: 150, H: 42, Nvim: true, Config: map[string]string{"config.json": `{"setup_done":true,"animations":"off","db_page_rows":1000}`}, Files: map[string]string{"query.sql": "-- @conn local\nSELECT 1;\n\n-- second\nSELECT 2;\n", ".termocode/databases.json": dbTestConns}})

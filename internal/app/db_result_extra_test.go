@@ -106,7 +106,10 @@ func TestDBResultCellMenu(t *testing.T) {
 // the .sql buffer.
 func TestDBResultInlineUnderQuery(t *testing.T) {
 	d := dbTypedDriver(t, dbResultCfg+`,"db_inline_result":true}`)
-	d.Key("ctrl+w", "h")
+	// No keys here: Ctrl+W closes the result tab, and when query.sql comes
+	// back in insert mode a further key is typed into the statement, which
+	// then no longer matches the run and loses its inline result. The Lua
+	// below reads every buffer, so the focus does not matter.
 	got := ""
 	if !d.WaitFor(func() bool {
 		got = dbLua(t, d, `local out={};for _,b in ipairs(vim.api.nvim_list_bufs()) do if vim.api.nvim_buf_get_name(b):match('query%.sql$') then local ns=vim.api.nvim_create_namespace('termocode_sql_inline');for _,m in ipairs(vim.api.nvim_buf_get_extmarks(b,ns,0,-1,{details=true})) do for _,l in ipairs(m[4].virt_lines or {}) do for _,c in ipairs(l) do out[#out+1]=c[1] end end end end end;return table.concat(out,'\n')`)

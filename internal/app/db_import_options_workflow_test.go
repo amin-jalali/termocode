@@ -17,7 +17,9 @@ func TestDBImportOptionsSkipLinesAndDateFormat(t *testing.T) {
 	if !strings.Contains(card, "Options…") {
 		t.Fatalf("no Options button:\n%s", card)
 	}
-	d.Key("right", "right", "right", "right", "enter") // Options…
+	// Nothing maps yet (the first line is not the header), so there is no
+	// Import button: Options… is the fourth button.
+	d.Key("right", "right", "right", "enter") // Options…
 	if !d.WaitForText("Lines to skip at the start", 2*time.Second) {
 		t.Fatalf("no options picker:\n%s", frameText(d))
 	}

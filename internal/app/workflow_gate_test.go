@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/amin-jalali/termocode/internal/theme"
 	"os"
 	"path/filepath"
 	"strings"
@@ -166,6 +167,9 @@ func TestWorkflowGatePreviewRedactedAndCapped(t *testing.T) {
 
 // Golden (WFX-6): the card at 80×24.
 func TestWorkflowGateCardGolden(t *testing.T) {
+	// The goldens are ASCII icons; pin it so an earlier test that left
+	// another icon mode cannot change the screen.
+	statsIcons(t, theme.IconModeASCII)
 	m := aiTestModel(t)
 	m.w, m.h = 80, 24
 	var got []WorkflowGateDecision

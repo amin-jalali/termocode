@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/amin-jalali/termocode/internal/theme"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,6 +19,9 @@ import (
 // (Enter and Esc keep it); Stop run ends it, finished items keep their
 // results. The card matches its golden (UPDATE_GOLDEN=1 writes it).
 func TestWorkflowsOffAsksToStopTheRun(t *testing.T) {
+	// The goldens are ASCII icons; pin it so an earlier test that left
+	// another icon mode cannot change the screen.
+	statsIcons(t, theme.IconModeASCII)
 	m, _ := wfxRig(t)
 	wfxAddScheduled(t, m, "tick", "", true)
 	st := m.wfxS()
