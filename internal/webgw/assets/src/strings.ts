@@ -798,6 +798,28 @@ export const S = {
   "cmd.failed": "The command did not run.",
   "cmd.ask_text": "Run “{name}” on the laptop?",
   "cmd.ran_laptop": "Done on the laptop: {name}",
+  // Phone app (MOBUX-1): status words and base components
+  "ph.st.needs": "Waits for you",
+  "ph.st.working": "Working now",
+  "ph.st.review": "Ready for review",
+  "ph.st.idle": "Idle",
+  "ph.st.asleep": "Sleeping",
+  "ph.customize": "Customize",
+  "ph.ask": "What do you want?",
+  "ph.checks": "Checks: {state}",
+  "ph.ci": "CI",
+  // Phone app shell (MOBUX-2)
+  "ph.switch": "Project: {name}. Change project",
+  "ph.switch_title": "Projects",
+  "ph.current": "Current project",
+  "ph.menu": "All tools",
+  "ph.live": "Live",
+  "ph.offline": "Offline",
+  "ph.asleep": "Laptop asleep",
+  "ph.mic": "Speak",
+  "ph.mic_hint": "Tap the 🎤 on your keyboard to speak.",
+  "ph.attach": "Attach",
+  "ph.stream": "Chat",
 } as const;
 
 /** StringKey is a key of the page's strings or of the workbench's

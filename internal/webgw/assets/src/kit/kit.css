@@ -66,3 +66,12 @@ body { background: var(--bg-panel); }
 .ts-body { font-size: var(--fs-body); line-height: var(--lh-body); }
 .ts-row { font-family: var(--font-mono); font-size: var(--fs-row); line-height: var(--lh-row); }
 .ts-hint { font-family: var(--font-mono); font-size: var(--fs-hint); line-height: var(--lh-hint); color: var(--dim); white-space: pre; }
+
+/* Phone app section (MOBUX-1) */
+.ph-kit { display: flex; flex-direction: column; gap: var(--p-gap); max-width: 360px; background: var(--p-bg); padding: var(--p-s3) 0; }
+.ph-kit-marks { display: flex; flex-wrap: wrap; gap: var(--p-s3); padding: 0 var(--p-gutter); font: var(--p-fs-meta) / var(--p-lh-meta) var(--p-mono); color: var(--p-text-2); }
+.ph-kit-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--p-s2); padding: 0 var(--p-gutter); }
+.ph-kit-tiles { display: flex; flex-direction: column; gap: var(--p-s2); padding: 0 var(--p-gutter); }
+.ph-kit > .ph-block { margin: 0 var(--p-gutter); }
+.ph-kit-shell { width: 360px; max-width: 100%; }
+.ph-kit-shell .ph-shell { height: 640px; }
