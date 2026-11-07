@@ -35,6 +35,32 @@ func TestRolloutRestart(t *testing.T) {
 	}
 }
 
+func TestDeleteDoesNotWait(t *testing.T) {
+	f, c := fakeClient(t)
+	if err := c.Delete(context.Background(), "pod", "api-1"); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.Calls(); len(got) != 1 || got[0] != "delete pod api-1 --wait=false --context dev --namespace shop" {
+		t.Errorf("calls = %v", got)
+	}
+	f.Set(t, "delete.err", "Error from server (Forbidden): pods \"api-1\" is forbidden: User \"dev\" cannot delete resource \"pods\"\n")
+	if err := c.Delete(context.Background(), "pod", "api-1"); kube.KindOf(err) != kube.ErrForbidden {
+		t.Errorf("err = %v", err)
+	}
+}
+
+func TestDeleteRefusesAnEmptyName(t *testing.T) {
+	f, c := fakeClient(t)
+	for _, bad := range [][2]string{{"pod", ""}, {"", "api-1"}, {"pod", "-A"}, {"pod", "--all"}} {
+		if err := c.Delete(context.Background(), bad[0], bad[1]); err == nil {
+			t.Errorf("Delete(%q, %q) did not fail", bad[0], bad[1])
+		}
+	}
+	if n := len(f.Calls()); n != 0 {
+		t.Errorf("kubectl ran %d times: %v", n, f.Calls())
+	}
+}
+
 func TestTerminalCommands(t *testing.T) {
 	c := kube.Client{Binary: "/bin/kubectl", Context: "dev", Namespace: "shop"}
 	logs := c.LogsCommand("api-1", "sidecar")

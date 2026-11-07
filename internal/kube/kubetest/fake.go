@@ -27,6 +27,7 @@
 //	undo.err             `rollout undo` fails with this stderr
 //	set-image.err        `set image` fails with this stderr
 //	scale.err            `scale` fails with this stderr
+//	delete.err           `delete` fails with this stderr
 //	logs.txt             answer of `logs …`
 //	pf-port.txt          the local port `port-forward` reports (43123)
 //	pf.err               `port-forward` fails with this stderr
@@ -106,6 +107,9 @@ top)
 scale)
   if [ -f "$D/scale.err" ]; then cat "$D/scale.err" >&2; exit 1; fi
   echo "$2 scaled"; exit 0 ;;
+delete)
+  if [ -f "$D/delete.err" ]; then cat "$D/delete.err" >&2; exit 1; fi
+  echo "$2 \"$3\" deleted"; exit 0 ;;
 port-forward)
   if [ -f "$D/pf.err" ]; then cat "$D/pf.err" >&2; exit 1; fi
   echo $$ > "$D/pf.pid"
