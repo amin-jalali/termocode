@@ -54,6 +54,24 @@ If both files use the same `id`, the project entry wins. Press `e` on a connecti
 | `environment` | `development` (default), or `production` for the stricter cards. |
 | `readOnly` | `true` makes the AI refuse writes. Your own writes ask with a warning. |
 | `ssh`, `ssl`, `tls` | See [SSH tunnels](#ssh-tunnels) and [SSL and TLS](#ssl-and-tls). |
+| `options` | Session options, see below. |
+
+**Connection options** (`"options": {…}`), checked when the file loads:
+
+| Key | Meaning |
+| --- | --- |
+| `schema` | Default schema: the PostgreSQL `search_path` (a comma list) or the MySQL database to `USE`. |
+| `timeZone` | Session time zone, like `UTC` or `Europe/Berlin`. |
+| `isolation` | `read uncommitted`, `read committed`, `repeatable read` or `serializable`. |
+| `initSQL` | Statements every new session runs after the options above. |
+| `txMode` | `manual` starts the connection in manual commit (the transaction mode picker still switches it). |
+| `idleMinutes` | Closes connections that were idle this long; a new one opens on the next query. |
+| `socket` | Unix socket path (PostgreSQL: the socket directory). |
+| `databases`, `schemas` | Globs: the tree shows only these. |
+| `objects` | Globs that show tables, views and routines; `!glob` hides them. |
+| `readOnlyTables` | `schema.table` or `table` globs that the grid refuses to edit. |
+
+Every pooled connection runs the schema, time zone, isolation and `initSQL` statements first; a failing one fails the connection with its reason.
 
 A row with a problem shows the reason, for example `literal password in project config`, `duplicate connection id` or `sqlite path is outside the workspace`. Fix the file and press `R`.
 

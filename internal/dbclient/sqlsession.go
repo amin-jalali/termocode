@@ -59,7 +59,7 @@ func NewSQLSession(ctx context.Context, conn Conn, password string) (*SQLSession
 	}
 	db.SetMaxOpenConns(2)
 	db.SetMaxIdleConns(2)
-	db.SetConnMaxIdleTime(0)
+	db.SetConnMaxIdleTime(conn.Options.IdleTimeout()) // idleMinutes closes idle connections; the pool opens new ones (DBX-28)
 	db.SetConnMaxLifetime(0)
 	s := newSQLSession(db, dialect, driver, conn, false)
 	s.openDB = func() (*sql.DB, func(), error) { return openSQLDB(conn, password) }
@@ -126,6 +126,17 @@ func openSQLDB(conn Conn, password string) (*sql.DB, func(), error) {
 			// The database host is resolved by the SSH server, not here.
 			cfg.LookupFunc = func(_ context.Context, host string) ([]string, error) { return []string{host}, nil }
 		}
+		if stmts := connStartSQL(conn); len(stmts) > 0 {
+			after := func(ctx context.Context, c *pgx.Conn) error {
+				for _, q := range stmts {
+					if _, err := c.Exec(ctx, q); err != nil {
+						return fmt.Errorf("start SQL %q: %s", sanitizeLine(firstLine(q)), Redact(err.Error()))
+					}
+				}
+				return nil
+			}
+			return stdlib.OpenDB(*cfg, stdlib.OptionAfterConnect(after)), noop, nil
+		}
 		return stdlib.OpenDB(*cfg), noop, nil
 	case "mysql":
 		cfg := mysql.NewConfig()
@@ -141,6 +152,9 @@ func openSQLDB(conn Conn, password string) (*sql.DB, func(), error) {
 		}
 		cfg.User, cfg.Passwd, cfg.DBName = conn.User, password, conn.Database
 		cfg.Net, cfg.Addr, cfg.ParseTime = "tcp", netJoinHostPort(conn.Host, conn.Port), true
+		if conn.Options != nil && conn.Options.Socket != "" && conn.Dial == nil {
+			cfg.Net, cfg.Addr = "unix", conn.Options.Socket
+		}
 		params := map[string]string{}
 		tlsParam := ""
 		for k, v := range conn.Params {
@@ -181,6 +195,9 @@ func openSQLDB(conn Conn, password string) (*sql.DB, func(), error) {
 		if err != nil {
 			release()
 			return nil, noop, fmt.Errorf("invalid MySQL connection settings: %s", Redact(err.Error()))
+		}
+		if stmts := connStartSQL(conn); len(stmts) > 0 {
+			return sql.OpenDB(startSQLConnector{Connector: connector, stmts: stmts}), release, nil
 		}
 		return sql.OpenDB(connector), release, nil
 	default:

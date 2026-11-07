@@ -1298,6 +1298,7 @@ func (m *Model) onDBConnect(msg dbConnectMsg) tea.Cmd {
 		s.setTunnel(msg.id, msg.tunnel)
 	}
 	s.activeID = msg.id
+	s.applyConnTxMode(msg.id) // DBX-28: txMode saved with the connection
 	s.touch()
 	if s.console != nil && s.console.waiting != nil && s.console.waiting.conn == msg.id {
 		return tea.Batch(m.databaseExpand(msg.id), m.databaseStartRun(s.console.waiting))
