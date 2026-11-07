@@ -124,6 +124,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Attach | `containers-attach` |   |   |
 | Containers: Browse Remote Tags… | `containers-browse-tags` |   |   |
 | Containers: Build Image from Dockerfile… | `containers-image-build` |   |   |
+| Containers: Choose Compose Env File… | `services-env-file` |   |   |
 | Containers: Configure Services (services.json) | `services-configure` |   |   |
 | Containers: Connect Registry… | `containers-registry-connect` |   |   |
 | Containers: Copy ID | `containers-copy-id` |   |   |
@@ -162,9 +163,11 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Restart Project | `containers-compose-restart` |   |   |
 | Containers: Restart Selected | `containers-restart` |   |   |
 | Containers: Restart Service… | `services-restart` |   |   |
+| Containers: Run One-Off Command in Service… | `services-compose-run` |   |   |
 | Containers: Run Selected Image… | `containers-image-run` |   |   |
 | Containers: Search Docker Hub… | `containers-search` |   |   |
 | Containers: Show Image History | `containers-image-history` |   |   |
+| Containers: Show Resolved Compose Config | `services-compose-config` |   |   |
 | Containers: Show Service Logs… | `services-logs` |   |   |
 | Containers: Sign Out of Registry… | `containers-registry-signout` |   |   |
 | Containers: Start All Services | `services-start-all` |   |   |
@@ -177,6 +180,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Stop Service… | `services-stop` |   |   |
 | Containers: Switch Context… | `containers-context-use` |   |   |
 | Containers: Tag Selected Image… | `containers-image-tag` |   |   |
+| Containers: Watch Project (Rebuild on Change) | `services-compose-watch` |   |   |
 
 ## Copy
 
@@ -194,6 +198,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Databases: AI Explain Query | `db-ai-explain-query` |   |   |
+| Databases: AI Fix Query Error | `db-ai-fix-error` |   |   |
+| Databases: AI Generate SQL from Schema… | `db-ai-generate-sql` |   |   |
 | Databases: Add Connection… | `db-add` |   |   |
 | Databases: Add SSH Tunnel… | `db-add-tunnel` |   |   |
 | Databases: Cancel Query | `db-cancel` |   |   |
@@ -216,6 +223,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Focus | `db-focus` |   |   |
 | Databases: Format File | `db-format-file` |   |   |
 | Databases: Format Statement or Selection | `db-format` |   |   |
+| Databases: Generate Test Data… | `db-generate-data` |   |   |
 | Databases: Go to Definition | `db-goto-definition` |   |   |
 | Databases: History… | `db-history` |   |   |
 | Databases: Import CSV into Table… | `db-import-csv` |   |   |
@@ -578,6 +586,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Kubernetes: New Manifest from Snippet… | `kubernetes-snippet` |   |   |
 | Kubernetes: Refresh | `kubernetes-refresh` |   |   |
 | Kubernetes: Show | `kubernetes-show` |   |   |
 | Kubernetes: Switch Context… | `kubernetes-context` |   |   |

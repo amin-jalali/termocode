@@ -2008,8 +2008,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-context-default` | Containers: Make Context Default… | never | changes the machine-wide Docker default |
 | `containers-context-use` | Containers: Switch Context… | never | a context switch is the user's choice; it moves every container action to another host |
 | `containers-copy-id` | Containers: Copy ID | auto |   |
-| `containers-filter` | Containers: Filter Rows… | never | the filter is typed by the user; the AI uses containers_list / images_list |
 | `containers-engine-config` | Containers: Open Engine Config | auto |   |
+| `containers-filter` | Containers: Filter Rows… | never | the filter is typed by the user; the AI uses containers_list / images_list |
 | `containers-focus` | Containers: Focus | auto |   |
 | `containers-help` | Containers: Open Guide | auto |   |
 | `containers-image-build` | Containers: Build Image from Dockerfile… | never | building an image is the user's; nothing is offered to the model |
@@ -2050,8 +2050,11 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `dap-install` | DAP: Install Adapter... | never | opens a picker or prompt that only the user can answer; use a typed tool (dap_adapters) |
 | `db-add` | Databases: Add Connection… | never | AI provider, credentials and approvals stay with the user |
 | `db-add-tunnel` | Databases: Add SSH Tunnel… | never | AI provider, credentials and approvals stay with the user |
-| `db-cancel-session` | Databases: Cancel Session Query… | never | stops another session's work; only the user can choose it |
+| `db-ai-explain-query` | Databases: AI Explain Query | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `db-ai-fix-error` | Databases: AI Fix Query Error | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `db-ai-generate-sql` | Databases: AI Generate SQL from Schema… | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `db-cancel` | Databases: Cancel Query | auto |   |
+| `db-cancel-session` | Databases: Cancel Session Query… | never | stops another session's work; only the user can choose it |
 | `db-commit` | Databases: Commit | never | the user's transaction |
 | `db-compare-schemas` | Databases: Compare Schemas… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-configure` | Databases: Configure | confirm (always asks) |   |
@@ -2062,6 +2065,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-describe` | Databases: Describe Table | auto |   |
 | `db-disconnect` | Databases: Disconnect Selected… | confirm (always asks) |   |
 | `db-end-session` | Databases: End Session… | never | ends another session and rolls back its transaction; only the user can choose it |
+| `db-er-diagram` | Databases: Export ER Diagram… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-explain` | Databases: Explain Statement | never | opens a picker or prompt that only the user can answer; use a typed tool (db_explain) |
 | `db-explain-analyze` | Databases: Explain Analyze Statement… | never | executes the statement; use db_explain |
 | `db-export` | Databases: Export Result… | never | opens a picker or prompt that only the user can answer; use a typed tool (db_query + write_file) |
@@ -2070,11 +2074,13 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-focus` | Databases: Focus | auto |   |
 | `db-format` | Databases: Format Statement or Selection | confirm (fileWrite) |   |
 | `db-format-file` | Databases: Format File | confirm (fileWrite) |   |
+| `db-generate-data` | Databases: Generate Test Data… | never | it writes a script of rows the user reviews and runs |
 | `db-goto-definition` | Databases: Go to Definition | auto |   |
 | `db-guide` | Databases: Open Guide | auto |   |
 | `db-history` | Databases: History… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-import-csv` | Databases: Import CSV into Table… | never | importing rows is a write the user confirms (db_query) |
 | `db-new-console` | Databases: New Console | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `db-open-sessions` | Databases: Sessions… | never | the user's sessions and transactions |
 | `db-refresh` | Databases: Refresh | auto |   |
 | `db-result-pin` | Databases: Pin Result Tab | auto |   |
 | `db-revert-changes` | Databases: Revert Pending Changes… | never | the user's pending edits |
@@ -2330,6 +2336,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `kubernetes-namespace` | Kubernetes: Switch Namespace… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `kubernetes-refresh` | Kubernetes: Refresh | auto |   |
 | `kubernetes-show` | Kubernetes: Show | auto |   |
+| `kubernetes-snippet` | Kubernetes: New Manifest from Snippet… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `layout-delete` | Layout: Delete… | never | the AI changes the layout with the layout_set tool |
 | `layout-open` | Layout: Open… | never | the AI changes the layout with the layout_set tool |
 | `layout-reset` | Layout: Reset to Default | never | the AI changes the layout with the layout_set tool |
@@ -2386,7 +2393,11 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `secrets-passphrase` | AI: Change Secrets Passphrase… | never | AI provider, credentials and approvals stay with the user |
 | `secrets-store` | AI: Secret Store… | never | AI provider, credentials and approvals stay with the user |
 | `secrets-unlock` | AI: Unlock Secrets | never | AI provider, credentials and approvals stay with the user |
+| `services-compose-config` | Containers: Show Resolved Compose Config | never | shows values from the env files; the user's page |
+| `services-compose-run` | Containers: Run One-Off Command in Service… | never | opens a picker or prompt that only the user can answer; use a typed tool (services tools) |
+| `services-compose-watch` | Containers: Watch Project (Rebuild on Change) | never | starts a long-running watch that rebuilds services; the user's |
 | `services-configure` | Containers: Configure Services (services.json) | confirm (ide) |   |
+| `services-env-file` | Containers: Choose Compose Env File… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `services-focus` | Containers: Focus Project Services | auto |   |
 | `services-logs` | Containers: Show Service Logs… | never | opens a picker or prompt that only the user can answer; use a typed tool (services_logs) |
 | `services-open-compose` | Containers: Open Compose File | auto |   |
