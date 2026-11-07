@@ -146,6 +146,8 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `db_geometry_format` | enum | `hex` | How the grid shows geometry columns: hex bytes, or WKT text like SRID=4326;POINT(1 2) (WKB, EWKB and MySQL values). |
 | `db_exec_mode` | enum | `largest` | What the Run key sends from a .sql file: the whole statement at the caret, the smallest one (a subquery too), it and all after it, or a list to choose from. Set with Databases: Choose Execution Mode…. |
 | `db_selection_split` | bool | `true` | Split a selection into statements (true) or send it to the server as one text (false). |
+| `db_result_new_tab` | bool | `false` | Each run opens a new result tab and keeps the old ones (up to 9) instead of replacing the tabs that are not pinned. |
+| `db_auto_transpose` | bool | `false` | A console result with one row opens flipped: one line per column (t flips it back). |
 
 ## Containers (file only)
 

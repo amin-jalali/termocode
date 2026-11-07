@@ -362,6 +362,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-run-smallest":              aiNever("SQL runs require the database query tool and its guard"),
 	"db-run-ask":                   aiNever(aiNoPicker),
 	"db-exec-mode":                 aiNever(aiNoPicker),
+	"db-result-page-size":          aiNever(aiNoPicker),
+	"db-result-goto-row":           aiNever(aiNoPicker),
+	"db-result-load-all":           aiNever("SQL runs require the database query tool and its guard"),
 	"db-explain":                   aiNever(aiNoPicker + " (db_explain)"),
 	"db-explain-analyze":           aiNever("executes the statement; use db_explain"),
 	"db-format":                    aiConfirm(ai.ClassFileWrite),
@@ -762,6 +765,8 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"db_geometry_format":   aiConfirm(ai.ClassSettings),
 	"db_exec_mode":         aiConfirm(ai.ClassSettings), // DBX-25: what the Run key sends
 	"db_selection_split":   aiConfirm(ai.ClassSettings),
+	"db_result_new_tab":    aiConfirm(ai.ClassSettings), // DBX-26: display only
+	"db_auto_transpose":    aiConfirm(ai.ClassSettings),
 	"http_timeout":         aiConfirm(ai.ClassSettings),
 	"http_max_redirects":   aiConfirm(ai.ClassSettings),
 	"http_cookie_jar":      aiConfirm(ai.ClassSettings),

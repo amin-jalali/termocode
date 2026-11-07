@@ -132,7 +132,7 @@ const dbRowTag = "\x00row:"
 // pageIdx is the index in the loaded result of each row on the page.
 func (s *dbConsoleState) pageIdx() []int {
 	s.displayedResult()
-	n := loadDBConsoleSettings().pageRows()
+	n := s.pageSize()
 	start := min(s.page*n, len(s.cacheIdx))
 	end := min(start+n, len(s.cacheIdx))
 	return s.cacheIdx[start:end]
@@ -148,13 +148,13 @@ type dbViewKey struct {
 
 func (s *dbConsoleState) pageCount() int {
 	n := len(s.displayedResult().Rows)
-	size := loadDBConsoleSettings().pageRows()
+	size := s.pageSize()
 	return max((n+size-1)/size, 1)
 }
 
 func (s *dbConsoleState) pageResult() dbclient.Result {
 	r := s.displayedResult()
-	n := loadDBConsoleSettings().pageRows()
+	n := s.pageSize()
 	start := min(s.page*n, len(r.Rows))
 	end := min(start+n, len(r.Rows))
 	r.Rows = r.Rows[start:end]
@@ -854,7 +854,10 @@ func (m *Model) databaseShowPage() tea.Cmd {
 	case s.keepCursor:
 		cursor = -1 // stay on the row being edited
 	}
-	s.cursorNewRow, s.keepCursor = false, false
+	if s.gotoRow > 0 && p.first > 0 {
+		cursor = min(p.first+s.gotoRow-1, end) // Go to Result Row (DBX-26)
+	}
+	s.cursorNewRow, s.keepCursor, s.gotoRow = false, false, 0
 	_ = m.nvim.ExecLuaArgs(`_G._termocode_db_open(...)`, m.editorPaneWidth() >= 120, p.lines[:end], p.hls, p.first, p.bounds, cursor, p.first == 0 && s.view != dbViewJSON && !p.fold, p.fold, dbPageName(s.shown))
 	m.focus = FocusEditor
 	if end < len(p.lines) {
@@ -1006,6 +1009,10 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 			}
 		}
 		return m.databaseShowPage()
+	case "N":
+		return m.databaseGotoRowPrompt()
+	case "L":
+		return m.databaseLoadAll()
 	case "#":
 		if tv == nil {
 			return nil

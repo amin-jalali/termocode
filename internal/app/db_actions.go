@@ -31,6 +31,9 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-run-smallest", Title: "Databases: Run Smallest Statement (Subquery) at Caret"},
 		{ID: "db-run-ask", Title: "Databases: Run… (Choose Statement or Subquery)"},
 		{ID: "db-exec-mode", Title: "Databases: Choose Execution Mode…"},
+		{ID: "db-result-page-size", Title: "Databases: Set Result Page Size…"},
+		{ID: "db-result-goto-row", Title: "Databases: Go to Result Row…"},
+		{ID: "db-result-load-all", Title: "Databases: Load All Result Rows"},
 		{ID: "db-run-file", Title: "Databases: Run File"},
 		{ID: "db-explain", Title: "Databases: Explain Statement"},
 		{ID: "db-format", Title: "Databases: Format Statement or Selection"},
@@ -97,6 +100,12 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseSendExec(false, nil, dbclient.ExecSmallest.String()), true
 	case "db-run-ask":
 		return m.databaseSendExec(false, nil, dbclient.ExecAsk.String()), true
+	case "db-result-page-size":
+		return m.databasePageSizePicker(), true
+	case "db-result-goto-row":
+		return m.databaseGotoRowPrompt(), true
+	case "db-result-load-all":
+		return m.databaseLoadAll(), true
 	case "db-exec-mode":
 		return m.databaseExecModePicker(), true
 	case "db-explain":
@@ -985,6 +994,8 @@ func dbPageKeyRows() []confirm.KeyRow {
 		[]string{"Read"},
 		[]string{"Tab", "switch Grid, JSON and Messages"},
 		[]string{"] / [", "next / previous page"},
+		[]string{"N", "go to row N"},
+		[]string{"L", "load all rows (past db_max_rows)"},
 		[]string{"o", "sort by a column"},
 		[]string{"f", "show only some rows"},
 		[]string{"=", "show only rows with this cell's value"},

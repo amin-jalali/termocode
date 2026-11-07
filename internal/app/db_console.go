@@ -100,6 +100,7 @@ type dbConsoleState struct {
 	batchSeq     uint64
 	keepCursor   bool // the next page write keeps the cursor where it is
 	cursorNewRow bool // the next page write puts the cursor on the last new row
+	gotoRow      int  // the next page write puts the cursor on this page row + 1 (0: no)
 	// editing (db_edit.go)
 	editTab                         *dbTab
 	editAt                          dbEditPos
@@ -172,6 +173,9 @@ type dbConsoleSettings struct {
 	// Execution modes (db_execmode.go, DBX-25)
 	ExecMode       *string `json:"db_exec_mode"`
 	SelectionSplit *bool   `json:"db_selection_split"`
+	// Result page (db_result_more.go, DBX-26)
+	ResultNewTab  *bool `json:"db_result_new_tab"`
+	AutoTranspose *bool `json:"db_auto_transpose"`
 }
 
 func loadDBConsoleSettings() dbConsoleSettings {
@@ -218,7 +222,7 @@ func (s dbConsoleSettings) historyMax() int {
 
 func (s *dbConsoleState) pageSize() int {
 	if s.size < 1 {
-		return 100
+		return loadDBConsoleSettings().pageRows()
 	}
 	return s.size
 }
@@ -805,6 +809,9 @@ func (m *Model) databaseFinishRun(msg dbRunMsg) tea.Cmd {
 		s.view = dbViewMessages
 	default:
 		status = fmt.Sprintf("%s · %d ms", dbPlural(len(res.Rows), "row"), res.Elapsed.Milliseconds())
+		if len(res.Rows) == 1 && len(res.Columns) > 1 && msg.run.tv == nil && msg.run.plan == nil && msg.run.redis == nil && loadDBConsoleSettings().AutoTranspose != nil && *loadDBConsoleSettings().AutoTranspose {
+			s.trans, s.trow = true, 0 // one row reads better as name/value lines (DBX-26)
+		}
 	}
 	if msg.manual {
 		status += m.dbTxStatus(msg.run.conn)
@@ -981,6 +988,8 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	switch m.pickerKind {
+	case pickerKindDBPageSize:
+		return m.databaseSetPageSize(id), true
 	case pickerKindDBExecMode:
 		return m.databaseExecModeSet(id), true
 	case pickerKindDBExecAsk:

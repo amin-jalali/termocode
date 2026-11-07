@@ -226,8 +226,10 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Format Statement or Selection | `db-format` |   |   |
 | Databases: Generate Test Data… | `db-generate-data` |   |   |
 | Databases: Go to Definition | `db-goto-definition` |   |   |
+| Databases: Go to Result Row… | `db-result-goto-row` |   |   |
 | Databases: History… | `db-history` |   |   |
 | Databases: Import CSV into Table… | `db-import-csv` |   |   |
+| Databases: Load All Result Rows | `db-result-load-all` |   |   |
 | Databases: New Console | `db-new-console` |   |   |
 | Databases: Open Guide | `db-guide` |   |   |
 | Databases: Open Table Data | `db-data` |   |   |
@@ -244,6 +246,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Select 100 Rows in Console | `db-select` |   |   |
 | Databases: Sessions… | `db-open-sessions` |   |   |
 | Databases: Set Redis Key TTL… | `redis-set-ttl` |   |   |
+| Databases: Set Result Page Size… | `db-result-page-size` |   |   |
 | Databases: Show DDL | `db-ddl` |   |   |
 | Databases: Show Server Info | `db-server-info` |   |   |
 | Databases: Show Sessions and Locks | `db-sessions` |   |   |

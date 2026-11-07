@@ -153,6 +153,8 @@ Press `Ctrl+Alt+R` (or `Ctrl+Enter` in terminals that send it) to run the statem
 
 **Execution modes.** `db_exec_mode` sets what the run key sends: `largest` (the whole statement, the default), `smallest` (the innermost subquery around the caret), `from-caret` (the statement and every one after it) or `ask` (a list to choose from, innermost first). **Databases: Choose Execution Mode…** saves it. **Databases: Run From Caret to End of File**, **Run Smallest Statement (Subquery) at Caret** and **Run… (Choose Statement or Subquery)** do one run in that mode. `db_selection_split` set to `false` sends a selection to the server as one text instead of splitting it.
 
+**Result page.** `N` goes to row N (it opens that page and puts the cursor on the row). `L` loads all rows when the result was cut at `db_max_rows` (it runs the statement again, up to 100000 rows). **Databases: Set Result Page Size…** changes the rows per page of the shown result at once. `db_result_new_tab` keeps every result in its own tab; `db_auto_transpose` opens a one-row result flipped (one line per column).
+
 A read runs at once. Any other statement asks first, and the card shows the exact SQL (use Up/Down to read a long one). The title says what is special: `DELETE` or `UPDATE` without `WHERE`, `DROP`, `TRUNCATE`, `ALTER`, a production connection, or a read-only connection. There is no "always allow". In a file run, each write gets its own card.
 
 ## Results

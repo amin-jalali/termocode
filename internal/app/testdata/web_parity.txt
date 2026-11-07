@@ -468,6 +468,9 @@ missing	db-format-file	Databases|S
 missing	db-generate-data	Databases|M
 missing	db-goto-definition	Databases|S
 missing	db-open-sessions	Databases|S
+missing	db-result-goto-row	Databases|S
+missing	db-result-load-all	Databases|S
+missing	db-result-page-size	Databases|S
 missing	db-run-ask	Databases|S
 missing	db-run-from-caret	Databases|S
 missing	db-run-smallest	Databases|S

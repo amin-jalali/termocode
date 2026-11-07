@@ -109,7 +109,7 @@ func (s *dbConsoleState) placeRun(r *dbRun) {
 			s.cache = nil
 			return
 		}
-	} else {
+	} else if !loadDBConsoleSettings().resultNewTab() {
 		kept := s.tabs[:0]
 		for _, t := range s.tabs {
 			if t.pinned || t.dirty() {
