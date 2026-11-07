@@ -179,6 +179,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.onAIHistoryDeleteConfirm(id), true
 	case confirmKindAIHistoryClear:
 		return m.onAIHistoryClearConfirm(id), true
+	case confirmKindAIRouterOn: // CMP-25 (ai_router.go)
+		return m.answerAIRouterOn(id), true
 	case confirmKindMCPTrust:
 		return m.answerMCPTrust(id), true
 	case confirmKindMCPImportOther: // mcp_import_other.go

@@ -699,6 +699,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// turn the question off.
 	"ai-reasoning-next": aiNever(aiNoAIConfig + "; more thinking costs the user more"),
 	"ai-plan-approval":  aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
+	"ai-auto-model":     aiNever(aiNoAIConfig + "; the AI never picks its own model"),
 	"ai-plan-review":    aiNever("the plan card is the user's answer; the AI never approves its own plan"),
 	"ai-profile-edit":   aiNever(aiNoAIConfig),
 	"ai-profile-new":    aiNever(aiNoAIConfig),
@@ -831,6 +832,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_prompt_cache":       aiNever(aiNoAIConfig),
 	"ai_reasoning":          aiNever(aiNoAIConfig),
 	"ai_fallback":           aiNever(aiNoAIConfig),
+	"ai_router":             aiNever(aiNoAIConfig),
 	"ai_concurrency":        aiNever(aiNoAIConfig),
 	"ai_parallel_max":       aiNever(aiNoAIConfig),
 	"ai_worktrees":          aiNever(aiNoAIConfig),

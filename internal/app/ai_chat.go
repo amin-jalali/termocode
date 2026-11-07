@@ -276,7 +276,8 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		return m.startAIRun(text, prof, rules)
 	}
 	step := prof.Run("").Nodes[0]
-	slot, err := s.resolveSlot(step.Slot)
+	slotName, routeNote := s.aiRouteTurn(prof, step.Slot, text) // CMP-25: before the attachments are taken
+	slot, err := s.resolveSlot(slotName)
 	if err != nil {
 		return m.aiProfileProblem(prof.Name, err)
 	}
@@ -292,9 +293,11 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		model = "" // the chat's own model: stored chats stay as they were
 	}
 	s.conv.Messages = append(s.conv.Messages,
-		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Images: images, Rules: aiRulesLabel(rules), Lessons: lessons},
-		ai.StoredMessage{Role: ai.StoredAssistant, Model: model},
-	)
+		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Images: images, Rules: aiRulesLabel(rules), Lessons: lessons})
+	if routeNote != "" { // CMP-25: for the user, not the model
+		s.conv.Messages = append(s.conv.Messages, ai.StoredMessage{Role: ai.StoredTool, Text: routeNote})
+	}
+	s.conv.Messages = append(s.conv.Messages, ai.StoredMessage{Role: ai.StoredAssistant, Model: model})
 	s.scroll = 0
 
 	s.chatGen++
@@ -337,10 +340,10 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		MaxSteps:    s.settings.MaxSteps, // 0: ai.DefaultMaxSteps
 		BeforeCalls: aiBeforeCalls(root, call),
 		Confirm:     aiChatConfirmFunc(gen, ch, auto, ""),
-		Reasoning:   s.reasoningFor(step.Slot, slot.cfg, s.turnThink),
-		Name:        aiSlotLabel(step.Slot, slot.cfg),
-		Fallbacks:   s.aiFallbacks(step.Slot), // OMX-4
-		Compact:     m.aiCompactor(slot),      // OMX-3
+		Reasoning:   s.reasoningFor(slotName, slot.cfg, s.turnThink),
+		Name:        aiSlotLabel(slotName, slot.cfg),
+		Fallbacks:   s.aiFallbacks(slotName), // OMX-4
+		Compact:     m.aiCompactor(slot),     // OMX-3
 		// OMX-25: tool results are cut to what still fits the window.
 		ContextWindow: aiContextWindow(s.settings, slot.cfg.Model),
 	}

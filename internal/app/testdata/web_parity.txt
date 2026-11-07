@@ -12,6 +12,7 @@ web	ai-apply-code	palette
 web	ai-apply-proposal	op:cards.answer
 web	ai-attach	cmd:aiAttach
 web	ai-auto-approve	op:ai.set_auto_approve
+web	ai-auto-model	palette
 web	ai-cancel	op:chat.stop
 web	ai-configure	op:ai.info
 web	ai-discard-proposal	op:cards.answer
