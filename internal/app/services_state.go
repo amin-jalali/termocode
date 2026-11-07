@@ -157,6 +157,9 @@ type servicesState struct {
 
 	// G-DST: live CPU and memory of the running containers.
 	stats containerStats
+
+	// CTX-33: the --env-file picked for this session ("" = compose's .env).
+	envFile string
 }
 
 func newServicesState() *servicesState {
@@ -186,8 +189,12 @@ func (st *servicesState) composeBackend() *services.Compose {
 	if !st.det.Compose {
 		return nil
 	}
-	return &services.Compose{Root: st.root, Files: st.det.ComposeFiles, Profiles: st.det.Profiles,
+	c := &services.Compose{Root: st.root, Files: st.det.ComposeFiles, Profiles: st.det.Profiles,
 		Project: st.det.Project, X: servicesExec}
+	if st.envFile != "" {
+		c.EnvFiles = []string{st.envFile}
+	}
+	return c
 }
 
 // findService returns the declared service of a section by name.
@@ -591,6 +598,8 @@ func (m *Model) handleServicesMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onContainerGroupDone(msg), true
 	case imagePageMsg:
 		return m.onImagePage(msg), true
+	case composeConfigMsg:
+		return m.onComposeConfig(msg), true
 	case hostActionDoneMsg:
 		return m.onHostActionDone(msg), true
 	case registryLoginDoneMsg:
