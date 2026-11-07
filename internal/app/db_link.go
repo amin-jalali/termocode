@@ -302,7 +302,7 @@ func (s *dbState) databaseSelectPath(path string) bool {
 func (m *Model) databaseOpenFromRow(r svcRow) tea.Cmd {
 	t, ok := m.dbTargetFromRow(r)
 	if !ok {
-		return m.pushToastDetail(toast.Info, "Not a database container", "Open in Databases works on PostgreSQL, MySQL, MariaDB, Redis and Valkey.")
+		return m.pushToastDetail(toast.Info, "Not a database container", "Open in Databases works on PostgreSQL, MySQL, MariaDB, Redis, Valkey, KeyDB and Dragonfly.")
 	}
 	return m.databaseOpenTarget(t)
 }
