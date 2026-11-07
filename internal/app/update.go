@@ -318,6 +318,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBImportPreview(msg)
 	case dbImportDoneMsg:
 		return m, m.onDBImportDone(msg)
+	case dbCopyReadMsg: // db_copy_table.go
+		return m, m.onDBCopyRead(msg)
 	case dbRefreshMsg:
 		return m, m.onDBRefresh(msg)
 	case dbSavepointMsg:

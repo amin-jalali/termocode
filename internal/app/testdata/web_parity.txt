@@ -542,6 +542,7 @@ missing	db-run-from-caret	Databases|S
 missing	db-run-smallest	Databases|S
 missing	db-schema-cache-info	Databases|S
 missing	db-heatmap	Databases|S
+missing	db-copy-table-data	Databases|M
 missing	db-import-new-table	Databases|M
 missing	db-run-dump	Databases|M
 missing	db-search-data	Databases|M

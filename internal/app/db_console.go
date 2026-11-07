@@ -131,6 +131,8 @@ type dbConsoleState struct {
 	exp *dbExport
 	imp *dbImport
 	job *dbJob
+	// copy table data between connections (db_copy_table.go)
+	copyTbl *dbCopyTable
 	// Redis value page writes (db_redis.go)
 	redisEdit  *dbRedisEdit
 	redisWrite *dbRedisWrite

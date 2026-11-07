@@ -81,6 +81,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-export", Title: "Databases: Export Result…"},
 		{ID: "db-import-csv", Title: "Databases: Import CSV into Table…"},
 		{ID: "db-import-new-table", Title: "Databases: Import CSV as New Table…"},
+		{ID: "db-copy-table-data", Title: "Databases: Copy Table Data to Another Connection…", Hint: "the rows go through the import card"},
 		{ID: "db-run-dump", Title: "Databases: Run SQL Dump File…"},
 		{ID: "db-open-csv", Title: "Databases: Open CSV/TSV as Table…"},
 		{ID: "db-generate-data", Title: "Databases: Generate Test Data…"},
@@ -300,6 +301,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return tea.Batch(open, m.databaseExportTablesStart()), true
 	case "db-import-new-table":
 		return tea.Batch(open, m.databaseNewTableStart()), true
+	case "db-copy-table-data":
+		return tea.Batch(open, m.databaseCopyTableStart()), true
 	case "db-run-dump":
 		return tea.Batch(open, m.databaseDumpStart()), true
 	case "db-new-console":

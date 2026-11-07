@@ -43,6 +43,12 @@ type dbImport struct {
 	files   []string
 	sessKey string
 	skipBad bool // Bad rows: skip (left out and logged) instead of stop
+	// a copy from another table (db_copy_table.go): the private file to
+	// remove when the import ends, where the rows came from, and whether
+	// the export mask changed some of them
+	tmp      string
+	copyFrom string
+	masked   bool
 }
 
 const dbImportTypePath = "\x00path"
@@ -149,19 +155,24 @@ func (m *Model) databaseImportLoad(value string) tea.Cmd {
 	}
 	abs, display, err := m.dbResolvePath(value)
 	if err != nil {
-		s.imp = nil
+		s.dbImportEnd()
 		return m.pushToastDetail(toast.Warn, "Cannot import", err.Error())
 	}
 	sess := m.databases.sessions[imp.sessKey]
 	if sess == nil {
-		s.imp = nil
+		s.dbImportEnd()
 		return m.pushToastDetail(toast.Info, "Not connected", "Connect first: Enter on the connection.")
 	}
 	imp.path, imp.display = abs, display
 	req := imp.t.request()
-	return tea.Batch(m.pushToast(toast.Info, "Reading "+sanitizeDBText(display)+"…"), func() tea.Msg {
+	sniff := dbclient.SniffCSV
+	reading := "Reading " + sanitizeDBText(display) + "…"
+	if imp.tmp != "" {
+		sniff, reading = dbclient.SniffCopyCSV, "Reading the copied rows…"
+	}
+	return tea.Batch(m.pushToast(toast.Info, reading), func() tea.Msg {
 		msg := dbImportPreviewMsg{imp: imp}
-		sn, err := dbclient.SniffCSV(abs)
+		sn, err := sniff(abs)
 		if err != nil {
 			msg.err = err
 			return msg
@@ -198,11 +209,11 @@ func (m *Model) onDBImportPreview(msg dbImportPreviewMsg) tea.Cmd {
 	}
 	imp := msg.imp
 	if msg.err != nil {
-		s.imp = nil
+		s.dbImportEnd()
 		return m.pushToastDetail(toast.Warn, "Cannot import "+sanitizeDBText(imp.display), dbErrorText(msg.err))
 	}
 	if len(msg.cols) == 0 {
-		s.imp = nil
+		s.dbImportEnd()
 		return m.pushToastDetail(toast.Warn, "Cannot import", "The columns of "+imp.t.label()+" could not be read.")
 	}
 	imp.sniff, imp.records, imp.cols = msg.sniff, msg.records, msg.cols
@@ -245,6 +256,12 @@ func (m *Model) dbImportCardText(imp *dbImport) string {
 	}
 	fmt.Fprintf(&b, "%s · %s · delimiter %s · %s · %s\n", sanitizeDBText(imp.display), imp.sniff.Encoding, dbCSVDelimiter(imp.sniff.Delimiter), header, dbPlural(imp.rows(), "row"))
 	fmt.Fprintf(&b, "Into %s on %s\n", imp.t.label(), sanitizeDBText(dbConnName(imp.conn)))
+	if imp.copyFrom != "" {
+		b.WriteString("Copied from " + imp.copyFrom + " (read-only); empty text arrives as NULL.\n")
+		if imp.masked {
+			b.WriteString("The export mask is on: masked columns arrive masked.\n")
+		}
+	}
 	if imp.skipBad {
 		b.WriteString("Rows are inserted in groups, in one transaction.\nRows that fail are skipped and listed in an error log. Empty cells become NULL.\n")
 	} else {
@@ -342,7 +359,7 @@ func (m *Model) databaseImportConfirm(id string) tea.Cmd {
 		imp.skipBad = !imp.skipBad
 		return m.databaseImportCard()
 	}
-	s.imp = nil
+	s.dbImportEnd()
 	return nil
 }
 
@@ -421,17 +438,17 @@ func (m *Model) databaseImportRun() tea.Cmd {
 		return nil
 	}
 	if s.job != nil || s.running != nil || s.submitting != nil {
-		s.imp = nil
+		s.dbImportEnd()
 		return m.pushToastDetail(toast.Warn, "A query or transfer is running", "Esc cancels it.")
 	}
 	sess := m.databases.sessions[imp.sessKey]
 	if sess == nil {
-		s.imp = nil
+		s.dbImportEnd()
 		return m.pushToastDetail(toast.Info, "Not connected", "Connect first: Enter on the connection.")
 	}
 	d := dbclient.DialectFor(imp.t.driver)
 	if d == nil {
-		s.imp = nil
+		s.dbImportEnd()
 		return m.pushToastDetail(toast.Warn, "Cannot import", "This connection does not use SQL.")
 	}
 	var targets []string
@@ -473,7 +490,9 @@ func (m *Model) onDBImportDone(msg dbImportDoneMsg) tea.Cmd {
 	if s.job != msg.job {
 		return nil
 	}
-	s.job, s.imp = nil, nil
+	s.job = nil
+	s.dbImportEnd()
+	msg.imp.dropTemp()
 	m.closeJobCard()
 	if msg.began {
 		m.databases.tx(msg.key).open = true
