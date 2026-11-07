@@ -2334,6 +2334,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `join-lines` | Edit: Join Lines | confirm (fileWrite) |   |
 | `kubernetes-context` | Kubernetes: Switch Context… | never | opens a picker or prompt that only the user can answer; use a typed tool; the context is the user's choice |
 | `kubernetes-helm` | Kubernetes: Helm Releases… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `kubernetes-kind` | Kubernetes: Show Kind… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `kubernetes-namespace` | Kubernetes: Switch Namespace… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `kubernetes-refresh` | Kubernetes: Refresh | auto |   |
 | `kubernetes-show` | Kubernetes: Show | auto |   |

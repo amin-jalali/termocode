@@ -84,6 +84,12 @@ type kubeState struct {
 	topOff  bool                       // no metrics-server: not asked until R
 	metrics *kube.MetricsHistory       // sparkline samples
 
+	kind      *kube.APIResource  // the : kind shown after JOBS (kube_kind.go); nil = none
+	kindObjs  []kube.Object      // its objects
+	kindAll   bool               // in every namespace
+	apiRes    []kube.APIResource // the last api-resources answer
+	apiResCtx string             // of this context
+
 	seq    uint64 // bumped on every change (render cache)
 	render struct {
 		sync.Mutex
@@ -170,6 +176,9 @@ type kubeLoadMsg struct {
 	top       []kube.PodMetrics // kube_top.go
 	topErr    error
 	topAsked  bool
+	kindRef   string // the kind this load listed ("" = none; kube_kind.go)
+	kindAll   bool
+	kindObjs  []kube.Object
 	err       error            // the whole load failed
 	errs      map[string]error // one section failed
 }
@@ -191,6 +200,11 @@ func (m *Model) kubeLoad() tea.Cmd {
 	c := st.client()
 	detected := st.detected
 	askTop := !st.topOff
+	var kind kube.APIResource
+	kindAll := st.kindAll
+	if st.kind != nil {
+		kind = *st.kind
+	}
 	return func() tea.Msg {
 		defer cancel()
 		msg := kubeLoadMsg{gen: gen, errs: map[string]error{}}
@@ -233,6 +247,20 @@ func (m *Model) kubeLoad() tea.Cmd {
 		crash.Go("kubernetes deployments", func() { defer wg.Done(); var err error; msg.deploys, err = c.Deployments(ctx); set("deployments", err) })
 		crash.Go("kubernetes services", func() { defer wg.Done(); var err error; msg.services, err = c.Services(ctx); set("services", err) })
 		crash.Go("kubernetes jobs", func() { defer wg.Done(); var err error; msg.jobs, err = c.Jobs(ctx); set("jobs", err) })
+		wanted := len(kubeSections)
+		if kind.Name != "" { // the : kind, a fifth section
+			wanted++
+			msg.kindRef, msg.kindAll = kind.Ref(), kindAll
+			kc := c
+			kc.AllNamespaces = kindAll
+			wg.Add(1)
+			crash.Go("kubernetes kind", func() {
+				defer wg.Done()
+				var err error
+				msg.kindObjs, err = kc.Objects(ctx, kind)
+				set(kubeKindSection, err)
+			})
+		}
 		if askTop { // not a section: no metrics never fails the load
 			msg.topAsked = true
 			wg.Add(1)
@@ -240,7 +268,7 @@ func (m *Model) kubeLoad() tea.Cmd {
 		}
 		wg.Wait()
 		// The cluster itself does not answer: one line, not four.
-		if len(msg.errs) == len(kubeSections) {
+		if len(msg.errs) == wanted {
 			for _, err := range msg.errs {
 				if k := kube.KindOf(err); k == kube.ErrNoCluster || k == kube.ErrTimeout || k == kube.ErrNoConfig {
 					msg.err = err
@@ -287,6 +315,10 @@ func (m *Model) onKubeLoad(msg kubeLoadMsg) tea.Cmd {
 	st.errs = map[string]string{}
 	for sec, err := range msg.errs {
 		st.errs[sec] = err.Error()
+	}
+	st.kindObjs = nil
+	if st.kind != nil && msg.kindRef == st.kind.Ref() && msg.kindAll == st.kindAll {
+		st.kindObjs = msg.kindObjs
 	}
 	if msg.topAsked {
 		st.noteTop(msg.top, msg.topErr)
@@ -358,6 +390,7 @@ func (m *Model) kubeGo(context, namespace string) tea.Cmd {
 	st.context, st.namespace = context, namespace
 	st.pods, st.deploys, st.services, st.jobs = nil, nil, nil, nil
 	st.top = nil
+	st.kindObjs = nil
 	st.errs = map[string]string{}
 	st.err, st.loaded = "", false
 	st.cursor = 0
@@ -389,6 +422,8 @@ func (m *Model) handleKubeMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onKubeDelete(msg), true
 	case kubeTopMsg:
 		return m.onKubeTop(msg), true
+	case kubeKindsMsg:
+		return m.onKubeKinds(msg), true
 	case kubeHelmListMsg:
 		return m.onKubeHelmList(msg), true
 	case kubeHelmPageMsg:

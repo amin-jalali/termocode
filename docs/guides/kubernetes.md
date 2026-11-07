@@ -69,6 +69,8 @@ kubeconfig, so other terminals keep their context.
 | `o` | Deployment: rollout status and history; roll back to an older revision (asks first). |
 | `I` | Deployment: set the image of one container (asks the image, then asks first). |
 | `d` | Delete the row's object (asks first). |
+| `:` | Show any kind as one more section: a CRD, a short name, an alias. `" -A"` at the end: every namespace. |
+| `A` | The `:` kind in every namespace, or in the view's one again. |
 | `c` / `n` | Pick the context / the namespace. |
 | `[` / `]` | Back / forward to the context and namespace you had before. |
 | `t` | Metrics: CPU and memory of the nodes and the pods (a read-only page). |
@@ -161,6 +163,34 @@ object, the context, the namespace and the command (`kubectl delete`).
 alone never deletes anything. **Delete** does not wait: the list shows
 the object as it goes. A pod that belongs to a deployment or a job is
 made again; deleting a deployment or a job deletes its pods too.
+
+## Any kind
+
+`:` (or **Kubernetes: Show Kind…** in the palette) reads `kubectl
+api-resources`, so it knows every kind of the cluster, the custom ones
+(CRDs) too. Type a kind:
+
+- its plural, singular or short name (`certificates`, `certificate`,
+  `cert`), its Kind (`Certificate`), or `name.group`
+  (`certificates.cert-manager.io`) when two groups use the same name;
+- or an alias of your own (see below).
+
+`Tab` completes the name. Add ` -A` to list every namespace. The kind
+shows as one more section after **JOBS** and loads with the others.
+`i`, `v`, `E` and `y` work on its rows, in the object's own namespace;
+the rows change nothing. `A` switches between every namespace and the
+view's one. `:` with an empty answer hides the section.
+
+### Aliases
+
+Put your own short names in `kube_aliases.json`, next to `config.json`
+(`~/.config/termocode/`):
+
+```json
+{"tls": "certificates.cert-manager.io", "wg": "widgets"}
+```
+
+The `:` prompt lists them.
 
 ## Helm releases
 

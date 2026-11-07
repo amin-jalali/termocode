@@ -415,6 +415,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"kubernetes-refresh":           aiAuto(),
 	"kubernetes-top":               aiAuto(),            // read only (kube_top.go)
 	"kubernetes-helm":              aiNever(aiNoPicker), // kube_helm.go
+	"kubernetes-kind":              aiNever(aiNoPicker), // kube_kind.go
 	"kubernetes-context":           aiNever(aiNoPicker + "; the context is the user's choice"),
 	"kubernetes-namespace":         aiNever(aiNoPicker),
 	"kubernetes-snippet":           aiNever(aiNoPicker), // kube_snippet.go

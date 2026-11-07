@@ -135,7 +135,7 @@ func (st *kubeState) renderRaw(w, h int, focused bool, now time.Time, hy int) st
 		var line string
 		switch r.kind {
 		case kubeRowSection:
-			line = renderServiceSection(kubeSectionTitle(r.section), st.count(r.section), st.collapsed[r.section], active, focused, w)
+			line = renderServiceSection(st.sectionTitle(r.section), st.count(r.section), st.collapsed[r.section], active, focused, w)
 		case kubeRowItem:
 			line = st.renderItem(r, active, focused, w, now)
 		case kubeRowNote:
@@ -265,6 +265,28 @@ func (st *kubeState) itemParts(r kubeRow, w int, now time.Time) (theme.Icon, the
 		default:
 		}
 		return g, c, fmt.Sprintf(":%d %s %d", fw.Local, kubeArrow(), fw.Remote)
+	case kubeKindSection:
+		if r.idx >= len(st.kindObjs) {
+			break
+		}
+		o := st.kindObjs[r.idx]
+		g, c := theme.GlyphSvcStopped, theme.TextDim
+		switch o.Status {
+		case "Ready", "Running", "Active", "Bound", "Succeeded":
+			g, c = theme.GlyphSvcUp, theme.GitAdded
+		case "Not ready", "Failed":
+			g, c = theme.GlyphSvcExited, theme.DiagError
+		case "Pending":
+			g, c = theme.GlyphSvcStarting, theme.GitModified
+		}
+		right := kube.Age(o.Created, now)
+		if wide && o.Status != "" {
+			right = o.Status + " " + right
+		}
+		if st.kindAll && o.Namespace != "" {
+			right = o.Namespace + " " + right
+		}
+		return g, c, right
 	case "jobs":
 		j := st.jobs[r.idx]
 		g, c := kubeJobGlyph(j)
@@ -346,6 +368,17 @@ func (st *kubeState) footer(now time.Time) []string {
 	case kubeForwardsSection:
 		if _, fw, ok := st.selectedForward(); ok && fw != nil {
 			return []string{fmt.Sprintf("127.0.0.1:%d %s %s:%d", fw.Local, kubeArrow(), fw.Target(), fw.Remote), "f stop · y copy address · ? keys"}
+		}
+	case kubeKindSection:
+		if o, ok := st.selectedKindObject(); ok {
+			line := st.kind.Kind
+			if o.Namespace != "" {
+				line += " · ns " + o.Namespace
+			}
+			if o.Status != "" {
+				line += " · " + o.Status
+			}
+			return []string{line, "i describe · v yaml · A all namespaces · : kind · ? keys"}
 		}
 	case "jobs":
 		j := st.jobs[r.idx]

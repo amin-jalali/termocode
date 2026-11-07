@@ -17,6 +17,7 @@ func kubePaletteItems() []picker.Item {
 		{ID: "kubernetes-namespace", Title: "Kubernetes: Switch Namespace…"},
 		{ID: "kubernetes-top", Title: "Kubernetes: Show Metrics"},
 		{ID: "kubernetes-helm", Title: "Kubernetes: Helm Releases…"},
+		{ID: "kubernetes-kind", Title: "Kubernetes: Show Kind…"},
 		{ID: "kubernetes-snippet", Title: "Kubernetes: New Manifest from Snippet…"},
 	}
 }
@@ -29,6 +30,12 @@ func (m *Model) dispatchKubePalette(id string) (tea.Cmd, bool) {
 		return nil, true
 	case "kubernetes-show":
 		return m.revealKube(), true
+	case "kubernetes-kind":
+		open := m.revealKube()
+		if m.kube.binary == "" {
+			return open, true // the view loads and says why
+		}
+		return tea.Batch(open, m.kubeAskKind()), true
 	case "kubernetes-helm":
 		open := m.revealKube()
 		if m.kube.binary == "" {

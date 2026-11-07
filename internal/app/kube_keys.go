@@ -21,6 +21,11 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, nil
 	}
 	r, have := st.currentRow()
+	if have && r.kind == kubeRowItem && r.section == kubeKindSection { // kube_kind.go
+		if cmd, ok := m.handleKubeKindKey(k.String()); ok {
+			return m, cmd
+		}
+	}
 	switch k.String() {
 	case "up", "k":
 		st.move(-1)
@@ -111,6 +116,10 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if have && r.kind == kubeRowItem {
 			return m, m.kubeCopyName(r.name)
 		}
+	case ":":
+		return m, m.kubeAskKind() // kube_kind.go
+	case "A":
+		return m, m.kubeToggleKindAll()
 	case "H":
 		return m, m.kubeHelmList() // kube_helm.go
 	case "t":
@@ -163,6 +172,9 @@ func kubeKeyRows() []confirm.KeyRow {
 		[]string{"o", "deployment: rollout status, history, roll back"},
 		[]string{"I", "deployment: set image (asks first)"},
 		[]string{"d", "delete (asks first)"},
+		[]string{"Any kind"},
+		[]string{":", "show a kind (CRDs, aliases; \" -A\" every namespace)"},
+		[]string{"A", "the kind in every namespace, or this one"},
 		[]string{"Cluster"},
 		[]string{"c n", "pick the context, the namespace"},
 		[]string{"[ ]", "back, forward (context / namespace)"},

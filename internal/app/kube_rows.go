@@ -28,6 +28,14 @@ func (r kubeRow) selectable() bool { return r.kind == kubeRowSection || r.kind =
 // kubeSectionTitle is a section header's label.
 func kubeSectionTitle(sec string) string { return strings.ToUpper(sec) }
 
+// sectionTitle is kubeSectionTitle, with the : kind's own name.
+func (st *kubeState) sectionTitle(sec string) string {
+	if sec == kubeKindSection {
+		return st.kindTitle()
+	}
+	return kubeSectionTitle(sec)
+}
+
 // names is the object names of one section, in kubectl's order.
 func (st *kubeState) names(sec string) []string {
 	var out []string
@@ -47,6 +55,10 @@ func (st *kubeState) names(sec string) []string {
 	case "jobs":
 		for _, j := range st.jobs {
 			out = append(out, j.Name)
+		}
+	case kubeKindSection:
+		for _, o := range st.kindObjs {
+			out = append(out, o.Name)
 		}
 	case kubeForwardsSection:
 		for _, k := range st.forwardKeys() {
@@ -72,6 +84,9 @@ func (st *kubeState) rows() []kubeRow {
 	}
 	var out []kubeRow
 	secs := kubeSections
+	if st.kind != nil { // the : kind, after JOBS (kube_kind.go)
+		secs = append(secs[:len(secs):len(secs)], kubeKindSection)
+	}
 	if len(st.forwards) > 0 { // last, so starting one never moves the cursor
 		secs = append(secs[:len(secs):len(secs)], kubeForwardsSection)
 	}
@@ -94,6 +109,9 @@ func (st *kubeState) rows() []kubeRow {
 		}
 		if shown == 0 {
 			text := "No " + sec
+			if sec == kubeKindSection && st.kind != nil {
+				text = "No " + st.kind.Name
+			}
 			if st.filter != "" && len(names) > 0 {
 				text = "No match"
 			}
