@@ -144,6 +144,16 @@ to detach without stopping the container.
 Logs, shell, attach, stats and pulls run in terminal tabs, so you see
 progress and can type.
 
+The right-click menu of a container also has **Duplicate…** and
+**Recreate (pull, same settings)…**. Both read the container's settings
+(`inspect`: image, name, ports, volumes, network, restart policy, user,
+workdir, labels, entrypoint, command and env) and show a card with
+**Cancel** first and the exact command. Duplicate starts a copy named
+`<name>-copy`. Recreate pulls the image again, removes the container
+(`rm -f`; volumes stay) and starts a new one with the same settings. Env
+values are never in the command: it names them (`-e NAME`) and the
+terminal tab's environment carries the values.
+
 ## Compose extras
 
 The palette has more compose commands for this folder's project:
@@ -192,7 +202,10 @@ separate `<none> dangling` group. A repository count includes the number of
 images and, when applicable, how many containers use them. On a tag, `u`
 pulls, `P` asks before pushing, `t` asks for a new tag, `Enter` asks for a
 container name, ports, and environment entries, then shows the full run
-command before opening a terminal tab. `h` opens image history, `i` opens
+command before opening a terminal tab. **More options…** on that card takes
+`volume=SRC:DST`, `network=`, `restart=`, `user=`, `workdir=`, `hostname=`,
+`platform=`, `label=KEY=value`, `entrypoint=`, `detach`, `no-rm`, then `--`
+and the command, and shows the new command (env values passed by name only). `h` opens image history, `i` opens
 read-only image details, and `D` removes an image only when no container uses
 it. `z` on the IMAGES heading asks before pruning dangling images; it never
 removes tagged images.

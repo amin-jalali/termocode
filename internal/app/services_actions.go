@@ -94,6 +94,16 @@ func (m *Model) servicesRunCommand(c services.Command, key string) error {
 	if strings.HasPrefix(key, containerTabPrefix) && m.services != nil {
 		job.Env = m.services.contextEnv() // the session's DOCKER_CONTEXT
 	}
+	if len(c.Env) > 0 { // values named by -e NAME in argv (CTX-34)
+		env := map[string]any{}
+		for k, v := range job.Env {
+			env[k] = v
+		}
+		for k, v := range c.Env {
+			env[k] = v
+		}
+		job.Env = env
+	}
 	_, err := m.spawnTerminalJob(job)
 	return err
 }
@@ -454,12 +464,17 @@ func (m *Model) handleServicesConfirm(id string) (tea.Cmd, bool) {
 		}
 		return m.imagePush(ref), true
 	case confirmKindContainerHostAction:
+		if id == "run-options" && m.pendingHostOperation == "run-image" { // containers_clone.go
+			return m.askRunOptions(), true
+		}
 		if id != "run" && id != "remove" && id != "prune" && id != "create" && id != "use" && id != "signout" && id != "tag" {
 			return m.runHostAction("cancel"), true
 		}
 		return m.runHostAction(id), true
 	case confirmKindServicesQuit:
 		return m.answerServicesQuit(id), true
+	case confirmKindContainerClone: // containers_clone.go
+		return m.answerContainerClone(id), true
 	case confirmKindServicesDeployGit: // services_deploy_git.go
 		return m.answerDeployGit(id), true
 	case confirmKindServicesDownVolumes: // services_compose_more.go

@@ -163,6 +163,11 @@ type servicesState struct {
 
 	// CTX-33: the deploy-from-git card's command line and stack name.
 	deployGitLine, deployGitName string
+
+	// CTX-34: env values of the run card (More options) and the
+	// Duplicate / Recreate plan; never in argv.
+	runEnv       map[string]string
+	clonePending clonePending
 }
 
 func newServicesState() *servicesState {
@@ -601,6 +606,8 @@ func (m *Model) handleServicesMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onContainerGroupDone(msg), true
 	case imagePageMsg:
 		return m.onImagePage(msg), true
+	case containerCloneMsg:
+		return m.onContainerClone(msg), true
 	case composeConfigMsg:
 		return m.onComposeConfig(msg), true
 	case hostActionDoneMsg:

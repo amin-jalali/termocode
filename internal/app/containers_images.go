@@ -220,14 +220,8 @@ func (m *Model) onContainerImagePrompt(kind promptKindEnum, value string) tea.Cm
 			m.promptOpen, m.promptKind = true, promptKindContainerRunEnv
 			return nil
 		}
-		args := m.services.containerEngine.RunCommand(m.pendingImageRef, m.pendingRunName, m.pendingRunPorts, m.pendingRunEnv).Argv
-		m.pendingHostArgs, m.pendingHostOperation, m.pendingHostTarget = args, "run-image", "images"
-		m.confirm = confirm.New("Run image?", "Review the command before it runs.\n\nCommand: "+svcShellLine(args), []confirm.Button{
-			{ID: "cancel", Title: "Cancel"}, {ID: "run", Title: "Run", Style: confirm.StylePrimary},
-		})
-		m.confirm.SetSize(m.w, m.h)
-		m.confirmOpen, m.confirmKind = true, confirmKindContainerHostAction
-		m.promptOpen = false
+		m.services.runEnv = nil
+		m.openRunImageCard(m.services.containerEngine.RunCommand(m.pendingImageRef, m.pendingRunName, m.pendingRunPorts, m.pendingRunEnv).Argv)
 	}
 	return nil
 }
@@ -299,6 +293,7 @@ func (m *Model) runHostAction(id string) tea.Cmd {
 	if id == "cancel" {
 		m.pendingHostArgs, m.pendingHostOperation, m.pendingHostTarget = nil, "", ""
 		m.pendingBuild = containers.BuildOptions{}
+		m.services.runEnv = nil
 		return nil
 	}
 	args := append([]string(nil), m.pendingHostArgs...)
@@ -311,7 +306,8 @@ func (m *Model) runHostAction(id string) tea.Cmd {
 		return m.runImageBuild()
 	}
 	if operation == "run-image" {
-		cmd := services.Command{Label: "run: " + m.pendingImageRef, Argv: args}
+		cmd := services.Command{Label: "run: " + m.pendingImageRef, Argv: args, Env: m.services.runEnv}
+		m.services.runEnv = nil
 		if err := m.servicesRunCommand(cmd, containerTabPrefix+"run:"+m.pendingImageRef); err != nil {
 			return m.servicesToast(toast.Errr, "Cannot run image", err.Error())
 		}
