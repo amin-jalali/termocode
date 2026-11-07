@@ -1921,6 +1921,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai-attach` | AI: Add File / Selection to Chat | never | adds to the chat input; read the file with read_file |
 | `ai-auto-approve` | AI: Agent Auto-Approve… | never | AI provider, credentials and approvals stay with the user |
 | `ai-cancel` | AI: Stop Generating | never | stops the model's own turn |
+| `ai-chat-comments` | AI: Chat Comments… | never | opens a picker or prompt that only the user can answer; use a typed tool; a comment reaches the AI only when the user adds it to a message |
 | `ai-configure` | AI: Configure Provider… | never | AI provider, credentials and approvals stay with the user |
 | `ai-credentials` | Open Config: AI Credentials | never | AI provider, credentials and approvals stay with the user |
 | `ai-discard-proposal` | AI: Discard Proposed Edit | never | the user reviews proposed edits |
@@ -1972,6 +1973,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai-review` | AI: Review Pending Changes | never | the user reviews proposed edits |
 | `ai-rules` | AI: Project Rules… | never | trusting a project's rules is the user's decision |
 | `ai-runs` | AI: Runs | never | the user's monitoring page; it holds Stop, Pause and Resume |
+| `ai-share-chat` | AI: Share Chat by Link… | never | it makes a link that lets another person watch this computer; only the user shares |
 | `ai-ship` | AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop | never | it pushes and opens a pull request: the user starts it |
 | `ai-side` | AI: Side Question… | never | the side chat is the user's own question beside the AI's turn |
 | `ai-sign-in-claude` | AI: Sign in with Claude (OAuth, opt-in)… | never | AI provider, credentials and approvals stay with the user |

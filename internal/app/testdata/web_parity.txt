@@ -382,6 +382,7 @@ excluded	ai-credentials	security: credentials file is laptop only
 excluded	ai-doctor	laptop only: checks the laptop setup
 excluded	ai-mcp-config	laptop only: edits the MCP config file
 excluded	ai-profile-trust	security: trust decisions are made on the laptop
+excluded	ai-share-chat	laptop only: the share link and its QR code are made on the laptop, like Web: Share as Viewer
 excluded	ai-sign-in-claude	security: OAuth sign-in happens on the laptop
 excluded	ai-sign-out-claude	security: credentials are managed on the laptop
 excluded	buffer-info	laptop only: TUI status overlay
@@ -457,6 +458,7 @@ excluded	web-stop	laptop only: stops the web panel itself
 excluded	workflow-edit-file	laptop only: workflow files are edited and trusted on the laptop (plan §5.7)
 excluded	workflow-enable	laptop only: turning a schedule on changes what runs unattended (plan §5.7)
 excluded	workflow-undo-write	laptop only: an undo writes to outside systems again, behind the laptop's card (plan §5.7)
+missing	ai-chat-comments	AI|S
 missing	containers-all-contexts	Containers|M
 missing	containers-build-cache-prune	Containers|S
 missing	containers-build-check	Containers|S

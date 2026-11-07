@@ -56,6 +56,8 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAIModelPicked(id), true
 	case pickerKindAIHistory:
 		return m.onAIHistoryPicked(id), true
+	case pickerKindAIChatComments: // ai_chat_comments.go
+		return m.onAIChatCommentPicked(id), true
 	case pickerKindAIHistoryDelete:
 		return m.onAIHistoryDeletePicked(id), true
 	case pickerKindAIHistoryRename:
@@ -290,6 +292,10 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerWebStart(id), true
 	case confirmKindWebAsk: // web_ask.go
 		return m.answerWebAsk(id), true
+	case confirmKindAIShareChat: // ai_chat_comments.go
+		return m.answerAIShareChat(id), true
+	case confirmKindAIChatComment:
+		return m.answerAIChatComment(id), true
 	}
 	if cmd, ok := m.handleWebAccessConfirm(id); ok { // web_access.go
 		return cmd, true
@@ -382,6 +388,10 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerWebStart("") // Esc: Not now
 	case confirmKindWebAsk:
 		return m.answerWebAsk("") // Esc: Cancel
+	case confirmKindAIShareChat:
+		return m.answerAIShareChat("") // Esc: Cancel
+	case confirmKindAIChatComment:
+		return m.answerAIChatComment("") // Esc: Cancel
 	}
 	if cmd, ok := m.handleWebAccessConfirm(""); ok { // web_access.go: Esc is the safe answer
 		return cmd

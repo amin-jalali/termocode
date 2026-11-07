@@ -528,6 +528,8 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-open-chat", "AI: Open Chat", "Alt+A"},
 		{"ai-new-chat", "AI: New Chat", ""},
 		{"ai-history", "AI: Chat History…", ""},
+		{aiShareChatID, "AI: Share Chat by Link…", "a viewer link; they watch and comment"},
+		{aiChatCommentsID, "AI: Chat Comments…", "comments from people you shared the chat with"},
 		{"ai-history-rename", "AI: Rename Chat…", ""},
 		{"ai-fork-chat", "AI: Fork Chat from Message…", ""},
 		{"ai-history-delete", "AI: Delete Chat…", ""},
@@ -614,7 +616,7 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 	switch id {
 	case "ai-configure", "ai-sign-in-claude", "ai-sign-out-claude", "ai-credentials",
 		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
-		"ai-history-rename", "ai-history-delete", "ai-history-clear", "ai-fork-chat",
+		"ai-history-rename", "ai-history-delete", "ai-history-clear", "ai-fork-chat", aiShareChatID, aiChatCommentsID,
 		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reconnect-all", "ai-mcp-profile", "ai-mcp-catalog", "ai-mcp-bundle", "ai-mcp-updates", "ai-mcp-reset-cache",
 		"ai-agent-hooks", "ai-agent-packs": // agent CLI files need no provider
 	default:
@@ -630,6 +632,10 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.newAIChat(), true
 	case "ai-history":
 		return m.openAIHistory(), true
+	case aiShareChatID: // CMP-88 (ai_chat_comments.go)
+		return m.openAIShareChat(), true
+	case aiChatCommentsID:
+		return m.openAIChatComments(), true
 	case "ai-worktrees": // G-WT (ai_worktree_list.go)
 		return m.openAIWorktrees(), true
 	case "ai-worktrees-toggle":
