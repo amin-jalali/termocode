@@ -249,6 +249,7 @@ type httpState struct {
 	gqlDocs    *httpclient.GQLSchema
 
 	mqttRunning bool        // an MQTT session runs (http_mqtt.go)
+	grpcRunning bool        // a gRPC call or describe runs (http_grpc.go)
 	proxyReq    httpPickReq // the request HTTP: Set Request Proxy… edits
 
 	// The web's request (one at a time) and the hosts the laptop allowed
@@ -635,6 +636,8 @@ func (m *Model) handleHTTPMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.httpOpenAPIFetched(msg), true
 	case httpMQTTDoneMsg:
 		return m.onHTTPMQTTDone(msg), true
+	case httpGRPCDoneMsg:
+		return m.onHTTPGRPCDone(msg), true
 	case httpGQLSchemaMsg:
 		return m.onHTTPGQLSchema(msg), true
 	case httpPrivateEnvCheckMsg:
