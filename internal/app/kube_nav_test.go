@@ -9,7 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func kubeKey(m *Model, key string) {
+func kubeNavKey(m *Model, key string) {
 	k := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(key)}
 	mm, _ := m.handleKubeSidebarKey(k)
 	*m = mm
@@ -23,29 +23,29 @@ func TestKubeBackForwardWalksTheScopes(t *testing.T) {
 	}
 	m.kubeRescope("dev", "billing")
 	m.kubeRescope("prod", "web")
-	kubeKey(m, "[")
+	kubeNavKey(m, "[")
 	if st.context != "dev" || st.namespace != "billing" {
 		t.Fatalf("back 1 = %s/%s", st.context, st.namespace)
 	}
-	kubeKey(m, "[")
+	kubeNavKey(m, "[")
 	if st.context != "dev" || st.namespace != "shop" {
 		t.Fatalf("back 2 = %s/%s", st.context, st.namespace)
 	}
-	kubeKey(m, "[") // nothing older: stays
+	kubeNavKey(m, "[") // nothing older: stays
 	if st.namespace != "shop" {
 		t.Fatalf("back past the start = %s/%s", st.context, st.namespace)
 	}
-	kubeKey(m, "]")
+	kubeNavKey(m, "]")
 	if st.namespace != "billing" {
 		t.Fatalf("forward = %s/%s", st.context, st.namespace)
 	}
 	// A new place drops the forward list.
 	m.kubeRescope("dev", "ops")
-	kubeKey(m, "]")
+	kubeNavKey(m, "]")
 	if st.namespace != "ops" {
 		t.Fatalf("forward after a new place = %s/%s", st.context, st.namespace)
 	}
-	kubeKey(m, "[")
+	kubeNavKey(m, "[")
 	if st.namespace != "billing" {
 		t.Fatalf("back after a new place = %s/%s", st.context, st.namespace)
 	}
@@ -67,7 +67,7 @@ func TestKubeScreenText(t *testing.T) {
 
 func TestKubeSaveScreen(t *testing.T) {
 	_, m := kubeLoaded(t, 100, 30)
-	kubeKey(m, "w")
+	kubeNavKey(m, "w")
 	if !m.promptOpen || m.promptKind != promptKindKubeSaveScreen || !strings.HasSuffix(m.prompt.Value(), ".txt") {
 		t.Fatalf("no save prompt: open=%v kind=%d value=%q", m.promptOpen, m.promptKind, m.prompt.Value())
 	}
