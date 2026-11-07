@@ -36,6 +36,11 @@ const (
 	pickerKindDBTestResult
 )
 
+// pickerKindHTTPSnippet is HTTP: Copy as Code…'s language picker.
+const (
+	pickerKindHTTPSnippet pickerKindEnum = 1190
+)
+
 const (
 	promptKindHTTPQuick promptKindEnum = 1100 + iota
 	promptKindHTTPImport
@@ -74,6 +79,7 @@ func httpPaletteItems() []picker.Item {
 		{ID: "http-saved", Title: "HTTP: Saved Requests…"},
 		{ID: "http-save", Title: "HTTP: Save Request to Saved…"},
 		{ID: "http-copy-curl", Title: "HTTP: Copy as curl"},
+		{ID: "http-copy-snippet", Title: "HTTP: Copy as Code…"},
 		{ID: "http-import-curl", Title: "HTTP: Import from curl…"},
 		{ID: "http-new-file", Title: "HTTP: New .http File…"},
 		{ID: "http-save-body", Title: "HTTP: Save Response Body…"},
@@ -110,6 +116,8 @@ func (m *Model) dispatchHTTPPalette(id string) (tea.Cmd, bool) {
 		return m.openHTTPSaved(), true
 	case "http-save":
 		return m.httpSaveRequestPrompt(), true
+	case "http-copy-snippet":
+		return m.openHTTPSnippetPicker(), true
 	case "http-copy-curl":
 		return m.httpCopyCurlAction(), true
 	case "http-import-curl":
@@ -501,6 +509,8 @@ func (m *Model) handleHTTPPickerSelect(id string) (tea.Cmd, bool) {
 			env = "(none)"
 		}
 		return m.pushToastDetail(toast.Info, "HTTP environment: "+env, ""), true
+	case pickerKindHTTPSnippet:
+		return m.httpCopySnippet(s.copyRun, id), true
 	case pickerKindHTTPSaved:
 		if id == "__edit" {
 			return m.httpOpenInEditor(httpSavedPath()), true
@@ -1056,13 +1066,22 @@ func (m *Model) handleHTTPConfirm(id string) (tea.Cmd, bool) {
 		if r == nil {
 			return nil, true
 		}
-		switch id {
-		case "secrets":
-			return m.copyWithToast(httpclient.ToCurl(r.rr, true), "Copied curl (with secrets)"), true
-		case "template":
-			return m.copyWithToast(httpclient.ToCurl(r.rr, false), "Copied curl"), true
+		lang := s.copyLang
+		if lang == "" {
+			lang = "curl"
 		}
-		return nil, true
+		what := httpSnippetTitle(lang)
+		if id != "secrets" && id != "template" {
+			return nil, true
+		}
+		text, err := httpclient.ToSnippet(lang, r.rr, id == "secrets")
+		if err != nil {
+			return nil, true
+		}
+		if id == "secrets" {
+			return m.copyWithToast(text, "Copied "+what+" (with secrets)"), true
+		}
+		return m.copyWithToast(text, "Copied "+what), true
 	case confirmKindHTTPGitignore:
 		if id != "add" {
 			return nil, true
@@ -1085,34 +1104,85 @@ func (m *Model) handleHTTPConfirm(id string) (tea.Cmd, bool) {
 
 // ── copy as curl ────────────────────────────────────────────────────────
 
-// httpCopyCurlAction copies the request at the cursor (in an .http
-// buffer) or the shown one.
-func (m *Model) httpCopyCurlAction() tea.Cmd {
+// httpCopyRunAtCursor is the request at the cursor (in an .http
+// buffer) or the shown one; a non-nil cmd is a warning toast.
+func (m *Model) httpCopyRunAtCursor() (*httpRun, tea.Cmd) {
 	if f := m.httpCurrentFile(); f != "" {
 		file, pf, req, err := m.httpRequestFromBuffer(0, 0)
 		if err != nil {
-			return m.pushToastDetail(toast.Warn, "HTTP: "+err.Error(), "")
+			return nil, m.pushToastDetail(toast.Warn, "HTTP: "+err.Error(), "")
 		}
 		rv := httpResolver(file, pf.Vars, "")
 		rv.Responses = m.httpS().chainSource(file)
 		rr, _ := rv.Resolve(*req)
-		return m.httpCopyCurl(&httpRun{rr: rr, file: file, label: req.Label()})
+		return &httpRun{rr: rr, file: file, label: req.Label()}, nil
 	}
-	return m.httpCopyCurl(m.httpS().shown)
+	return m.httpS().shown, nil
+}
+
+// httpCopyCurlAction copies the request at the cursor (in an .http
+// buffer) or the shown one.
+func (m *Model) httpCopyCurlAction() tea.Cmd {
+	r, warn := m.httpCopyRunAtCursor()
+	if warn != nil {
+		return warn
+	}
+	return m.httpCopyCurl(r)
+}
+
+// openHTTPSnippetPicker lists the languages HTTP: Copy as Code… writes,
+// for the request at the cursor or the shown one.
+func (m *Model) openHTTPSnippetPicker() tea.Cmd {
+	r, warn := m.httpCopyRunAtCursor()
+	if warn != nil {
+		return warn
+	}
+	if r == nil {
+		return m.pushToastDetail(toast.Info, "No request to copy", "")
+	}
+	m.httpS().copyRun = r
+	items := make([]picker.Item, 0, len(httpclient.SnippetLangs))
+	for _, l := range httpclient.SnippetLangs {
+		items = append(items, picker.Item{ID: l.ID, Title: l.Title})
+	}
+	return m.openHTTPPicker(pickerKindHTTPSnippet, " Copy as Code ", items, nil)
+}
+
+// httpSnippetTitle is the toast name of a snippet language ("" = curl).
+func httpSnippetTitle(lang string) string {
+	for _, l := range httpclient.SnippetLangs {
+		if l.ID == lang {
+			return l.Title
+		}
+	}
+	return "curl"
 }
 
 // httpCopyCurl copies a one-line curl. Secret values are copied as their
 // {{template}}; with a secret in the request the user chooses.
 func (m *Model) httpCopyCurl(r *httpRun) tea.Cmd {
+	return m.httpCopySnippet(r, "curl")
+}
+
+// httpCopySnippet copies r as code in lang (curl, go, python, …).
+// Secret values are copied as their {{template}}; with a secret in the
+// request the user chooses.
+func (m *Model) httpCopySnippet(r *httpRun, lang string) tea.Cmd {
 	if r == nil {
 		return m.pushToastDetail(toast.Info, "No request to copy", "")
 	}
-	m.httpS().copyRun = r
-	plain, full := httpclient.ToCurl(r.rr, false), httpclient.ToCurl(r.rr, true)
-	if plain == full {
-		return m.copyWithToast(plain, "Copied curl")
+	plain, err := httpclient.ToSnippet(lang, r.rr, false)
+	if err != nil {
+		return nil
 	}
-	m.confirm = confirm.New("Copy as curl",
+	s := m.httpS()
+	s.copyRun, s.copyLang = r, lang
+	full, _ := httpclient.ToSnippet(lang, r.rr, true)
+	what := httpSnippetTitle(lang)
+	if plain == full {
+		return m.copyWithToast(plain, "Copied "+what)
+	}
+	m.confirm = confirm.New("Copy as "+what,
 		"The request holds secret values. Copy it with {{templates}} in their place, or with the secrets?",
 		[]confirm.Button{{ID: "template", Title: "Copy with templates", Style: confirm.StylePrimary},
 			{ID: "secrets", Title: "Copy with secrets", Style: confirm.StyleDestructive}, {ID: "cancel", Title: "Cancel"}})

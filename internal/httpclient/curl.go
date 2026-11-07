@@ -11,6 +11,24 @@ import (
 // URL or body that holds a private / $secret value is written as its
 // template ({{token}}), so the command can be shared.
 func ToCurl(rr Resolved, withSecrets bool) string {
+	r := shareable(rr, withSecrets)
+	var b strings.Builder
+	b.WriteString("curl -X " + shellWord(r.Method) + " " + shellQuote(r.URL))
+	for _, h := range r.Headers {
+		b.WriteString(" -H " + shellQuote(h.Name+": "+h.Value))
+	}
+	if r.Body != nil && *r.Body != "" {
+		b.WriteString(" --data-raw " + shellQuote(*r.Body))
+	}
+	b.WriteString(" --compressed")
+	return b.String()
+}
+
+// shareable is the request to write into a command or snippet. Without
+// secrets, a header, URL or body that holds a private / $secret value
+// is its template ({{token}}) instead; a secret header without a
+// template is redacted.
+func shareable(rr Resolved, withSecrets bool) Request {
 	hasSecret := func(s string) bool {
 		for _, v := range rr.Secrets {
 			if v != "" && strings.Contains(s, v) {
@@ -19,12 +37,10 @@ func ToCurl(rr Resolved, withSecrets bool) string {
 		}
 		return false
 	}
-	u := rr.URL
-	if !withSecrets && hasSecret(u) {
-		u = rr.Template.URL
+	out := Request{Method: rr.Method, URL: rr.URL}
+	if !withSecrets && hasSecret(out.URL) {
+		out.URL = rr.Template.URL
 	}
-	var b strings.Builder
-	b.WriteString("curl -X " + shellWord(rr.Method) + " " + shellQuote(u))
 	for i, h := range rr.Headers {
 		v := h.Value
 		if !withSecrets && (SecretHeader(h.Name) || hasSecret(v)) {
@@ -37,17 +53,16 @@ func ToCurl(rr Resolved, withSecrets bool) string {
 				v = Redacted
 			}
 		}
-		b.WriteString(" -H " + shellQuote(h.Name+": "+v))
+		out.Headers = append(out.Headers, Header{Name: h.Name, Value: v})
 	}
 	if rr.Body != nil && *rr.Body != "" {
 		body := *rr.Body
 		if !withSecrets && hasSecret(body) && rr.Template.Body != nil {
 			body = *rr.Template.Body
 		}
-		b.WriteString(" --data-raw " + shellQuote(body))
+		out.Body = &body
 	}
-	b.WriteString(" --compressed")
-	return b.String()
+	return out
 }
 
 // shellWord is s as is when it is a plain word (GET, PATCH), else
