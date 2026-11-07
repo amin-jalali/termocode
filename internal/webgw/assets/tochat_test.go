@@ -100,3 +100,21 @@ func toChatSrc(t *testing.T, path string) string {
 	}
 	return string(b)
 }
+
+// Every item, table row and block head of the phone's blocks carries ↩,
+// and an attach action goes to the composer on the page; the strings are
+// the phone's English-only ones (strings.phone.ts), not app.js's.
+func TestEveryBlockRowHasToChat(t *testing.T) {
+	src := toChatSrc(t, "src/ui/Blocks.tsx")
+	for _, want := range []string{`<ToChat to={itemRef(block, it)}`, `<ToChat to={rowRef(block, base + i)}`, `<ToChat to={blockRef(b)}`, `a.kind === "attach" ? attachAction(`} {
+		if !strings.Contains(src, want) {
+			t.Errorf("Blocks.tsx lost %q", want)
+		}
+	}
+	if strings.Contains(toChatSrc(t, "src/strings.ts"), `"tochat.`) || strings.Contains(toChatSrc(t, "src/strings.fa.ts"), `"tochat.`) {
+		t.Error("the ↩ strings belong in strings.phone.ts (English only)")
+	}
+	if !strings.Contains(toChatSrc(t, "src/strings.phone.ts"), `"tochat.add"`) {
+		t.Error("strings.phone.ts has no tochat.add")
+	}
+}
