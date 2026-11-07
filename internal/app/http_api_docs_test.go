@@ -14,7 +14,7 @@ func TestHTTPAPIDocsOpensPage(t *testing.T) {
 	if _, ok := m.dispatchHTTPPalette("http-api-docs"); !ok {
 		t.Fatal("not handled without a file")
 	}
-	if !strings.Contains(covSvcToast(m), "Open an .http file") {
+	if !strings.Contains(covSvcToast(m), "Open an .http or OpenAPI file") {
 		t.Fatalf("toast = %q", covSvcToast(m))
 	}
 	file := filepath.Join(root, "api.http")

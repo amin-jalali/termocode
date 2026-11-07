@@ -1316,20 +1316,31 @@ func (m *Model) httpCopySnippet(r *httpRun, lang string) tea.Cmd {
 	return nil
 }
 
-// httpOpenAPIDocs shows the open .http file (unsaved edits count) as
-// read-only Markdown API docs. Secrets are hidden by httpclient.APIDocs.
+// httpOpenAPIDocs shows the open .http or OpenAPI file (unsaved edits
+// count) as read-only Markdown API docs. Secrets are hidden by
+// httpclient.APIDocs.
 func (m *Model) httpOpenAPIDocs() tea.Cmd {
-	file := m.httpCurrentFile()
+	file, raw, openapi := m.httpSourceFile()
 	if file == "" {
-		return m.pushToast(toast.Info, "Open an .http file first")
-	}
-	f, ok := m.httpReadFile(file)
-	if !ok {
-		return m.pushToast(toast.Errr, "Could not read "+filepath.Base(file))
+		return m.pushToast(toast.Info, "Open an .http or OpenAPI file first")
 	}
 	name := filepath.Base(file)
+	var md string
+	if openapi {
+		var err error
+		if md, err = httpclient.APIDocsOpenAPI([]byte(raw), name); err != nil {
+			return m.pushToastDetail(toast.Warn, "API docs: "+err.Error(), name)
+		}
+	} else {
+		if raw == "" {
+			if _, ok := m.httpReadRaw(file); !ok {
+				return m.pushToast(toast.Errr, "Could not read "+name)
+			}
+		}
+		md = httpclient.APIDocs(httpclient.Parse(raw), name)
+	}
 	m.ensureEditorWindowCurrent()
-	if err := m.openReadOnlyPage("API docs: "+name, httpclient.APIDocs(f, name), "", "markdown"); err != nil {
+	if err := m.openReadOnlyPage("API docs: "+name, md, "", "markdown"); err != nil {
 		return m.pushToastDetail(toast.Errr, "Could not open the API docs", err.Error())
 	}
 	m.focus = FocusEditor
