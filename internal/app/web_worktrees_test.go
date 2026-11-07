@@ -132,6 +132,46 @@ func TestWorktreesPinNoteSleep(t *testing.T) {
 	}
 }
 
+// Spec (MOB-17): worktrees.link from the phone sets the lane's issue or
+// PR number as the laptop's Link card does (one replaces the other; the
+// laptop reads its title, state and CI with gh on its own cadence, so
+// the read is due at once); kind none unlinks; an unknown id is not
+// found and nothing changes.
+func TestWorktreesLinkFromPhone(t *testing.T) {
+	m := aiTestModel(t)
+	m.output = newOutputStore()
+	webTestHub(t, &m)
+	st := webTestWT(t, &m)
+	c := webTestSub(t, &m)
+	md := func(p string) worktrees.Meta { all, _ := worktrees.Load(st.common); return all[p] }
+
+	const api = "/elsewhere/api-v2"
+	var done webproto.WorktreeDone
+	f, _ := webTestCall(t, &m, c, webproto.OpWorktreesLink, `{"id":"`+webWorktreeID(api)+`","kind":"issue","number":412}`)
+	webTestData(t, f, &done)
+	if got := md(api); got.Issue != 412 || got.PR != 0 || !got.Link.Checked.IsZero() || !strings.Contains(done.Note, "#412") {
+		t.Fatalf("link issue: %+v %+v %v", got, done, f)
+	}
+	if !wtLinkDue(md(api), wtTestNow) {
+		t.Error("a new link is not due for its gh read")
+	}
+	webTestCall(t, &m, c, webproto.OpWorktreesLink, `{"id":"`+webWorktreeID(api)+`","kind":"pr","number":12}`)
+	if got := md(api); got.PR != 12 || got.Issue != 0 {
+		t.Fatalf("link PR: %+v", got)
+	}
+	const side = "/src/app.worktrees/wt-sidebar"
+	webTestCall(t, &m, c, webproto.OpWorktreesLink, `{"id":"`+webWorktreeID(side)+`","kind":"none","number":0}`)
+	if got := m.wtMetaOf(side); got.Issue != 0 || got.PR != 0 || got.Link != (worktrees.LinkInfo{}) {
+		t.Fatalf("unlink in the list: %+v", got)
+	}
+	if got := md(side); got.Issue != 0 || got.PR != 0 {
+		t.Fatalf("unlink on disk: %+v", got)
+	}
+	if f, _ := webTestCall(t, &m, c, webproto.OpWorktreesLink, `{"id":"000000000000","kind":"issue","number":7}`); webTestErr(f) != "not_found" {
+		t.Fatalf("unknown id: %v", f)
+	}
+}
+
 // Spec (WTX-16): archive waits for a laptop card (Cancel first); after
 // yes the laptop's own archive flow starts on that worktree (its card,
 // Cancel first) even when the laptop's filter hides it; nothing is
