@@ -708,6 +708,41 @@ arguments and its rule.
 To skip the question for one kind, run **AI: Agent Auto-Approve…** and turn
 on *fileWrite*, *git*, *run*, *ide* or *settings*. Turn on only what you trust.
 
+### Autopilot and approval rules
+
+termocode rates every change the agent wants to make as **low**, **medium**
+or **high** risk. Low: read-only commands (`ls`, `cat`, `grep`, `git status`,
+`git diff`, `git log`). Medium: file edits in the project, builds, tests and
+other local commands. High: deletes, `git push` / `git pull`, `rm`, `sudo`,
+network commands (`curl`, `ssh`, …), writes outside the project or to `.env`,
+`.git` and key files.
+
+**AI: Autopilot Level…** steps the level: *off* → *low* → *medium*. At *low*,
+low-risk actions run without a card; at *medium*, medium-risk ones too.
+Raising the level first shows a card with **Cancel** focused, so Enter alone
+changes nothing. A high-risk action **always** shows the card, even when its
+kind is set to Always allow. The card then names the risk and why it asks.
+
+Your own rules come first. Put them in `ai_approval_rules` in `config.json`:
+
+```json
+"ai_approval_rules": [
+  {"tool": "run_command", "match": "Run: go test *", "action": "allow"},
+  {"tool": "run_command", "match": "*docker*", "action": "deny"},
+  {"tool": "git_*", "action": "ask"}
+]
+```
+
+The first rule that fits wins. `deny` refuses without a card (the agent is
+told so); `allow` skips the card (never for a high-risk action); `ask` always
+shows it. `match` is a pattern over the card text (`*` is any text).
+
+**Guardian.** Set `ai_guardian` to a model slot (for example `"quick"`) and a
+second model checks each medium-risk action autopilot would run. It answers
+allow, or sends the action back to you with its reason on the card. It costs
+one small request per checked action and never allows what a rule denies.
+The AI can never change autopilot, the rules or the guardian.
+
 The IDE follows what the agent does: a new file shows in the explorer at once,
 a renamed open file keeps its tab under the new name, a deleted one closes its
 tab, and a written one shows the new text (undo with `u`). Git and shell tools

@@ -179,7 +179,10 @@ type aiState struct {
 	// planWait is the plan the running run waits on and runActs what
 	// its steps may do (G-PLAN, ai_plan_approval.go).
 	planWait *aiPlanWait
-	runActs  func(agentdag.Node) (writes, exec bool)
+	// autopilotNext is the level the open autopilot card would set
+	// (CMP-61, ai_autopilot.go).
+	autopilotNext string
+	runActs       func(agentdag.Node) (writes, exec bool)
 	// runQueue are the runs the AI started (agent_run_start) that wait
 	// for the chat; runInline the AI's own steps of such a run by run id;
 	// runNotStarted why a queued run never started (G-API,
@@ -573,6 +576,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-profile-show", "AI: Show Profile", ""},
 		{"ai-until-done", "AI: Work Until Done (toggle)", ""},
 		{"ai-plan-approval", "AI: Toggle Plan Approval", ""},
+		{"ai-autopilot", "AI: Autopilot Level… (off / low / medium risk)", ""},
 		{"ai-reasoning-next", "AI: Next Reasoning Level", ""},
 		{"ai-keep-going", "AI: Toggle Keep Going While Todos Are Open", ""},
 		{"ai-handoff", "AI: Handoff to a New Chat", ""},
@@ -765,6 +769,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.toggleAIKeepGoing(), true
 	case "ai-plan-approval": // G-PLAN (ai_plan_approval.go)
 		return m.toggleAIPlanApproval(), true
+	case "ai-autopilot": // CMP-61 (ai_autopilot.go)
+		return m.cycleAIAutopilot(), true
 	case "ai-plan-review":
 		return m.openAIPlanCard(), true
 	case "ai-agents":
