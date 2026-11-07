@@ -77,6 +77,8 @@ If both files use the same `id`, the project entry wins. Press `e` on a connecti
 
 Every pooled connection runs the schema, time zone, isolation and `initSQL` statements first; a failing one fails the connection with its reason.
 
+To change them without editing the file, run **Databases: Manage Connection…** on one of your own connections and pick **Connection Options…**. The list shows every option with its value. Pick one, type the new value (lists are comma lists, empty clears it) and press Enter. A bad value keeps the prompt open with the reason and saves nothing. An open session uses the new options after you connect again.
+
 **Schema loading.** `db_introspect_level` sets how much a table row loads (`auto` loads less in big schemas). `r` in the tree reloads only the object under the cursor; `R` reloads everything. Each load is kept in `db/schema-cache.json` (names and types, never data); when a load differs from the cached one the row says `changed since …`. **Databases: Show Schema Cache Info** tells when a connection was last loaded. `db_complete_catalogs` adds the system catalogs to SQL completion.
 
 **Import connections.** **Databases: Import Connections…** offers `~/.pgpass` and `~/.my.cnf` when they exist, or a path you type: a PostgreSQL password file, a MySQL option file (`.cnf` / `.ini`; each `[client…]` group is one connection) or a file with one connection URL per line. A card lists what it found (id, driver, address, and whether a password comes with it; never the password itself) with **Cancel** first. **Import** adds them to your own connections file; each password goes into the secret store as `${secret:db.<id>}`. Ids that are taken get a number. Lines with a wildcard host are skipped.
