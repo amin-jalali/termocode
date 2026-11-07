@@ -61,6 +61,7 @@ web	ai-review	op:cards.answer
 web	ai-rules	op:ai.info
 web	ai-runs	cmd:runs
 web	ai-ship	palette
+web	ai-ship-merge	palette
 web	ai-side	op:chat.side
 web	ai-skills	op:ai.info
 web	ai-toggle-inline	op:ai.complete
