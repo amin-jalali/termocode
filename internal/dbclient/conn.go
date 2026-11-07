@@ -15,8 +15,10 @@ type Conn struct {
 	ID     string `json:"id"`
 	Name   string `json:"name,omitempty"`
 	Driver string `json:"driver"`
-	// Preset names a PostgreSQL family database on the postgres driver
-	// ("cockroachdb", "redshift"; DBX-60). "" = plain, or the host's.
+	// Preset names a server of the driver's family: a PostgreSQL family
+	// database on the postgres driver ("cockroachdb", "redshift"; DBX-60,
+	// PGPresets) or a MySQL family server (MySQLPresets; DBX-61): its
+	// defaults and notes. "" = plain driver, or the host's.
 	Preset      string            `json:"preset,omitempty"`
 	Host        string            `json:"host,omitempty"`
 	Port        int               `json:"port,omitempty"`

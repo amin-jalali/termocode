@@ -81,6 +81,8 @@ With no connections yet, the view lists the suggestions and offers **a add** and
 
 Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, or **From a URL**.
 
+The MySQL family has presets on the MySQL driver: MariaDB, TiDB (port 4000), PlanetScale / Vitess and Amazon Aurora (MySQL) (both with TLS), and SingleStore. A preset fills the port, user and SSL mode, shows a short note on what differs from MySQL, and is saved as `"preset"` in the connection; the tree shows its name next to the host.
+
 - **A server type** asks for the host, port, user and database. Then it asks for a masked password.
 - **From a URL** asks you to paste one, for example `postgres://app@localhost:5432/app`. Schemes `postgres`, `postgresql`, `mysql`, `mariadb`, `redis`, `rediss`, `sqlite` and `file` work. A password in the URL is taken out and stored as a secret. If the URL has none, you are asked for it.
 

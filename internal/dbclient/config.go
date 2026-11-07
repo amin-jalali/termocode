@@ -47,7 +47,13 @@ func ParseConfig(data []byte, source, file, root string) ([]Conn, error) {
 		normFolderColor(c)
 		if c.Preset != "" {
 			c.Preset = strings.ToLower(c.Preset)
-			if p, ok := PGPresetByID(c.Preset); !ok {
+			if mp, ok := PresetByID(c.Preset); ok { // MySQL family (DBX-61)
+				if c.Driver != mp.Driver {
+					c.Problem = "preset needs the " + mp.Driver + " driver"
+				} else if c.Port == 0 {
+					c.Port = mp.Port
+				}
+			} else if p, ok := PGPresetByID(c.Preset); !ok {
 				c.Problem = "unknown PostgreSQL preset"
 			} else if c.Driver != "postgres" {
 				c.Problem = "preset needs the postgres driver"

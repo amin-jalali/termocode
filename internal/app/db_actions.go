@@ -772,7 +772,9 @@ func (m *Model) openDatabaseTypePicker() tea.Cmd { return m.databaseTypePicker(f
 // SSH tunnel steps, then the test.
 func (m *Model) databaseAddRemote() tea.Cmd { return m.databaseTypePicker(true) }
 
-func (m *Model) databaseTypePicker(remote bool) tea.Cmd {
+// dbTypePickerItems is the add picker: the drivers, then the MySQL
+// family presets (DBX-61).
+func dbTypePickerItems(remote bool) []picker.Item {
 	items := []picker.Item{
 		{ID: "postgres", Title: "PostgreSQL", Hint: "default port 5432"},
 		{ID: "mysql", Title: "MySQL / MariaDB", Hint: "default port 3306"},
@@ -780,9 +782,19 @@ func (m *Model) databaseTypePicker(remote bool) tea.Cmd {
 		{ID: "redis", Title: "Redis / Valkey", Hint: "default port 6379"},
 		{ID: "url", Title: "From a URL", Hint: "paste a connection URL"},
 	}
-	title := " Add a database connection "
 	if remote {
 		items = []picker.Item{items[0], items[1], items[3]}
+	}
+	for _, p := range dbclient.MySQLPresets() {
+		items = append(items, picker.Item{ID: "preset:" + p.ID, Title: p.Title, Hint: p.Hint})
+	}
+	return items
+}
+
+func (m *Model) databaseTypePicker(remote bool) tea.Cmd {
+	items := dbTypePickerItems(remote)
+	title := " Add a database connection "
+	if remote {
 		title = " Add a remote database (SSH) "
 	}
 	if m.databases != nil {
@@ -801,6 +813,13 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 	if s == nil {
 		return nil
 	}
+	preset, isPreset := dbclient.MySQLPreset{}, false
+	if id, ok := strings.CutPrefix(kind, "preset:"); ok {
+		if preset, isPreset = dbclient.PresetByID(id); !isPreset {
+			return nil
+		}
+		kind = preset.Driver
+	}
 	s.pendingConn = dbclient.Conn{Source: dbclient.SourceUser}
 	s.pendingPassword = ""
 	s.addFromURL = kind == "url"
@@ -811,6 +830,16 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 		return m.databaseAddPrompt(promptKindDBHost, "Server address", "Host name or address:", "localhost", false)
 	case "mysql":
 		s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.User = "mysql", 3306, "root"
+		if isPreset {
+			c := &s.pendingConn
+			c.Preset, c.Port, c.User = preset.ID, preset.Port, preset.User
+			if preset.SSLMode != "" {
+				c.SSL = &dbclient.SSLConfig{Mode: preset.SSLMode}
+			}
+			cmd := m.databaseAddPrompt(promptKindDBHost, preset.Title+": server address", "Host name or address:", preset.Host, false)
+			m.prompt.SetNote(preset.Note)
+			return cmd
+		}
 		return m.databaseAddPrompt(promptKindDBHost, "Server address", "Host name or address:", "localhost", false)
 	case "sqlite":
 		s.pendingConn.Driver = "sqlite"
