@@ -135,6 +135,8 @@ would commit it).
 | HTTP: Import from curl… | `-X`, `-H`, `-d`, `--json`, `-u`, `-G` … become a new `###` block |
 | HTTP: Import OpenAPI… | an OpenAPI 3.x or Swagger 2.0 file (YAML or JSON) becomes `<title>.http` next to it: one `###` block per operation with example bodies; `{{baseUrl}}` goes into a new `http-client.env.json`; put `token` / `apiKey` / `basicAuth` in the private env file |
 | HTTP: New .http File… | a file with two example requests |
+| HTTP: Start Mock Server | serves the open .http or OpenAPI file on a random `127.0.0.1` port (the toast shows the URL). In a .http file each `###` block answers with `# @mock-status` (default 200), `# @mock-type` and `# @mock-body`; `{{var}}` and `:var` path segments match anything. An OpenAPI file answers each operation with its first 2xx response example. A new Start replaces the old server |
+| HTTP: Stop Mock Server | ends the mock server (quitting ends it too) |
 
 Settings: `http_timeout`, `http_max_redirects`, `http_max_body_mb`,
 `http_cookie_jar`, `http_history_max`, `http_tls_insecure`,

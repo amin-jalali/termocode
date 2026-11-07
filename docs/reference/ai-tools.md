@@ -2318,6 +2318,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `http-import-curl` | HTTP: Import from curl… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_save_request) |
 | `http-import-openapi` | HTTP: Import OpenAPI… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_save_request) |
 | `http-last-response` | HTTP: Show Last Response | auto |   |
+| `http-mock-start` | HTTP: Start Mock Server | confirm (ide) |   |
+| `http-mock-stop` | HTTP: Stop Mock Server | confirm (ide) |   |
 | `http-new-file` | HTTP: New .http File… | never | opens a picker or prompt that only the user can answer; use a typed tool (create_file) |
 | `http-quick` | HTTP: Quick Request… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_send with method and url) |
 | `http-save` | HTTP: Save Request to Saved… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_save_request) |

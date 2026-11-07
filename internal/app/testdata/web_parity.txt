@@ -575,6 +575,8 @@ missing	http-cookies	HTTP|S
 missing	http-copy-snippet	HTTP|S
 missing	http-fields	HTTP|S
 missing	http-import-openapi	HTTP|S
+missing	http-mock-start	HTTP|S
+missing	http-mock-stop	HTTP|S
 missing	kubernetes-snippet	Kubernetes|S
 missing	local-history	Git|S
 missing	local-history-deleted	Git|S

@@ -89,6 +89,8 @@ func httpPaletteItems() []picker.Item {
 		{ID: "http-save-body", Title: "HTTP: Save Response Body…"},
 		{ID: "http-fields", Title: "HTTP: Edit Params and Headers…"},
 		{ID: "http-api-docs", Title: "HTTP: Open API Docs"},
+		{ID: "http-mock-start", Title: "HTTP: Start Mock Server"},
+		{ID: "http-mock-stop", Title: "HTTP: Stop Mock Server"},
 	}
 }
 
@@ -139,6 +141,10 @@ func (m *Model) dispatchHTTPPalette(id string) (tea.Cmd, bool) {
 		return m.openHTTPFields(0, 0), true
 	case "http-api-docs":
 		return m.httpOpenAPIDocs(), true
+	case "http-mock-start":
+		return m.httpStartMock(), true
+	case "http-mock-stop":
+		return m.httpStopMockCmd(), true
 	}
 	return nil, false
 }
@@ -250,6 +256,16 @@ func (m *Model) httpResend() tea.Cmd {
 // httpReadFile parses an .http file: the open buffer when there is one
 // (unsaved edits count), else the file on disk.
 func (m *Model) httpReadFile(file string) (httpclient.File, bool) {
+	raw, ok := m.httpReadRaw(file)
+	if !ok {
+		return httpclient.File{}, false
+	}
+	return httpclient.Parse(raw), true
+}
+
+// httpReadRaw is the text of file: its loaded buffer (unsaved edits
+// count), else the file on disk.
+func (m *Model) httpReadRaw(file string) (string, bool) {
 	if m.nvim != nil {
 		var raw string
 		if err := m.nvim.ExecLuaResult(`local name = ...
@@ -259,14 +275,14 @@ for _, b in ipairs(vim.api.nvim_list_bufs()) do
   end
 end
 return ''`, &raw, file); err == nil && raw != "" {
-			return httpclient.Parse(raw), true
+			return raw, true
 		}
 	}
 	b, err := os.ReadFile(file)
 	if err != nil {
-		return httpclient.File{}, false
+		return "", false
 	}
-	return httpclient.Parse(string(b)), true
+	return string(b), true
 }
 
 // httpShowLast opens the page on the last answer without sending.

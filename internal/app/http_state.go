@@ -230,6 +230,12 @@ type httpState struct {
 	webRun    *httpRun
 	webCancel context.CancelFunc
 	webHosts  map[string]bool
+
+	// The local mock server (API-22, http_mock.go).
+	mockAddr   string // host:port, "" = none running
+	mockFile   string // the .http / OpenAPI file it serves
+	mockCancel context.CancelFunc
+	mockSrv    *httpclient.Mock
 }
 
 type httpLens struct {
