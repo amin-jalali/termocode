@@ -114,9 +114,15 @@ type dbConsoleState struct {
 	tabs         []*dbTab // result tabs (db_tabs.go)
 	tab          int      // the tab on the page
 	batchSeq     uint64
-	keepCursor   bool // the next page write keeps the cursor where it is
-	cursorNewRow bool // the next page write puts the cursor on the last new row
-	gotoRow      int  // the next page write puts the cursor on this page row + 1 (0: no)
+	keepCursor   bool                // the next page write keeps the cursor where it is
+	cursorNewRow bool                // the next page write puts the cursor on the last new row
+	gotoRow      int                 // the next page write puts the cursor on this page row + 1 (0: no)
+	rowNums      *bool               // I: row numbers on/off (nil: db_row_numbers) (db_result_extra.go)
+	colTypes     *bool               // T: column types in the header (nil: db_column_types)
+	inline       map[string][]string // file + "\x00" + SQL → the inline result lines (db_inline_result)
+	inlineSeen   bool                // an inline result was drawn once (the lens refresh then redraws them)
+	menuRow      int                 // the cell the cell menu is for (m)
+	menuCol      int
 	// editing (db_edit.go)
 	editTab                         *dbTab
 	editAt                          dbEditPos
@@ -205,6 +211,9 @@ type dbConsoleSettings struct {
 	// Result page (db_result_more.go, DBX-26)
 	ResultNewTab  *bool `json:"db_result_new_tab"`
 	AutoTranspose *bool `json:"db_auto_transpose"`
+	RowNumbers    *bool `json:"db_row_numbers"`
+	ColumnTypes   *bool `json:"db_column_types"`
+	InlineResult  *bool `json:"db_inline_result"`
 	// Introspection (db_introspect.go, DBX-29)
 	IntrospectLevel  *string `json:"db_introspect_level"`
 	CompleteCatalogs *bool   `json:"db_complete_catalogs"`
@@ -876,6 +885,7 @@ func (m *Model) databaseFinishRun(msg dbRunMsg) tea.Cmd {
 	if msg.manual {
 		status += m.dbTxStatus(msg.run.conn)
 	}
+	m.databaseSetInline(msg.run) // before the lens refresh draws it (DBX-26)
 	m.databaseRefreshLens(msg.run.file, msg.run.sql, status)
 	cmds := []tea.Cmd{m.databaseShowPage(), txCmd}
 	if msg.run.tv == nil && msg.run.redis == nil { // a data view or a value page is not something the user typed
@@ -1105,6 +1115,8 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 	switch m.pickerKind {
 	case pickerKindDBPageSize:
 		return m.databaseSetPageSize(id), true
+	case pickerKindDBCellMenu:
+		return m.databaseCellMenuPick(id), true
 	case pickerKindDBExecMode:
 		return m.databaseExecModeSet(id), true
 	case pickerKindDBExecAsk:

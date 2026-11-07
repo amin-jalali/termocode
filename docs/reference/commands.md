@@ -210,10 +210,12 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Cancel Query | `db-cancel` |   |   |
 | Databases: Cancel Session Query… | `db-cancel-session` |   |   |
 | Databases: Choose Execution Mode… | `db-exec-mode` |   |   |
+| Databases: Clear Inline Results | `db-inline-clear` |   |   |
 | Databases: Commit | `db-commit` |   |   |
 | Databases: Compare Schemas… | `db-compare-schemas` |   |   |
 | Databases: Configure | `db-configure` |   |   |
 | Databases: Connect Selected | `db-connect` |   |   |
+| Databases: Copy Result Columns as CREATE TABLE | `db-result-create-table` |   |   |
 | Databases: Count Rows | `db-count-rows` |   |   |
 | Databases: Delete Redis Key… | `redis-delete-key` |   |   |
 | Databases: Describe Table | `db-describe` |   |   |
@@ -240,6 +242,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Pin Result Tab | `db-result-pin` |   |   |
 | Databases: Refresh | `db-refresh` |   |   |
 | Databases: Refresh Selected Object | `db-refresh-object` |   |   |
+| Databases: Result Cell Menu… | `db-result-cell-menu` |   |   |
 | Databases: Revert Pending Changes… | `db-revert-changes` |   |   |
 | Databases: Roll Back | `db-rollback` |   |   |
 | Databases: Run File | `db-run-file` |   |   |
@@ -258,6 +261,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Show Sessions and Locks | `db-sessions` |   |   |
 | Databases: Submit Pending Changes… | `db-submit-changes` |   |   |
 | Databases: Test Connection | `db-test-connection` |   |   |
+| Databases: Toggle Result Column Types | `db-result-column-types` |   |   |
+| Databases: Toggle Result Row Numbers | `db-result-row-numbers` |   |   |
 | Databases: Transaction Mode… | `db-transaction-mode` |   |   |
 
 ## Debug
