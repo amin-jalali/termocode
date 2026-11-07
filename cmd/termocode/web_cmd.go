@@ -134,10 +134,19 @@ func runWebIn(args []string, out, errw io.Writer, cwd string) int {
 		return webExitOK
 	}
 	var r struct {
-		Port int    `json:"port"`
-		URL  string `json:"url"`
+		Port    int    `json:"port"`
+		URL     string `json:"url"`
+		Already bool   `json:"already"`
 	}
 	_ = json.Unmarshal(res, &r)
+	if r.Already {
+		at := fmt.Sprintf("http://127.0.0.1:%d/", r.Port)
+		if strings.HasPrefix(r.URL, "https://") {
+			at = cleanLine(r.URL)
+		}
+		fmt.Fprintf(out, "The web panel already runs at %s. No new link was opened: use Web: Open in Browser on the laptop, or run termocode web in your own terminal.\n", at)
+		return webExitOK
+	}
 	if strings.HasPrefix(r.URL, "https://") {
 		fmt.Fprintf(out, "The web panel is open at %s for your tailnet devices (the link opened in a browser on this computer).\n", cleanLine(r.URL))
 		return webExitOK

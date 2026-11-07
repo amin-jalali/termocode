@@ -88,8 +88,10 @@ user can open. termocode checks the user of every connection. See
 - **Ask first (card):** run a task or tests, start and steer the debugger,
   evaluate an expression in the debugger, run some palette commands
   (`execute_action`) such as stop, clear or close things, read data from a
-  database (`db_query`, `redis_get`, `redis_command`), and send any other
-  HTTP request (`http_send`).
+  database (`db_query`, `redis_get`, `redis_command`), send any other
+  HTTP request (`http_send`), and save or apply a stash (`git_stash`).
+- **Ask on a Cancel-first card, never "Always allow":** drop or pop a stash.
+  The stash list (`git_stash` list) runs at once.
 
 ### Databases and HTTP
 

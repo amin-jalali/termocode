@@ -469,6 +469,7 @@ missing	git-blame-annotate	Git|S
 missing	git-blame-before	Git|S
 missing	git-blame-commit	Git|S
 missing	git-blame-options	Git|S
+missing	git-block-history	Git|S
 missing	git-branch-delete	Git|S
 missing	git-branch-from	Git|S
 missing	git-branch-rename	Git|S
@@ -493,8 +494,14 @@ missing	git-diff-clipboard	Git|S
 missing	git-diff-merge-parent	Git|S
 missing	git-fetch-all	Git|S
 missing	git-gist	Git|S
+missing	git-gitlab-mr-create	Git|S
+missing	git-gitlab-mrs	Git|S
+missing	git-gitlab-token	Git|S
 missing	git-goto-commit	Git|S
 missing	git-graph-all	Git|S
+missing	git-graph-col-author	Git|S
+missing	git-graph-col-date	Git|S
+missing	git-graph-col-sha	Git|S
 missing	git-graph-head	Git|S
 missing	git-hook-output	Git|S
 missing	git-identity	Git|S
@@ -505,6 +512,7 @@ missing	git-inline-blame	Git|S
 missing	git-issues	Git|S
 missing	git-lfs-files	Git|S
 missing	git-line-history	Git|S
+missing	git-line-lens	Git|S
 missing	git-log-folder	Git|S
 missing	git-log-search	Git|S
 missing	git-merge-ai-resolve	Git|S
@@ -513,6 +521,7 @@ missing	git-merge-resolve-simple	Git|S
 missing	git-merge-status	Git|S
 missing	git-merge-take-all-ours	Git|S
 missing	git-merge-take-all-theirs	Git|S
+missing	git-move-commit	Git|S
 missing	git-outgoing	Git|S
 missing	git-patch-apply-clip	Git|S
 missing	git-patch-apply-file	Git|S
