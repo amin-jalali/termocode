@@ -50,6 +50,8 @@ func settingChoices(id string) []string {
 		return logoChoices
 	case mcpServeRowID: // AH-9 (mcp_settings_serve.go)
 		return mcpServeChoices
+	case aiAttributionRowID: // CMP-100 (ai_commit_attribution.go)
+		return aiAttributionChoices
 	}
 	return workflowSettingChoices(id) // WFX-0 (workflow_settings.go)
 }

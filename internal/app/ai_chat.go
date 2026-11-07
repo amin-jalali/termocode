@@ -178,7 +178,8 @@ func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 // agent_run_start knows how deep it is and the run's budget).
 func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai.Tool {
 	tools := append(ai.WorkspaceTools(ai.Workspace{Root: root}), m.aiEditorTools()...)
-	tools = aiSyncTools(tools, root, call) // the IDE follows file / git changes
+	tools = aiAttributionTools(tools, root) // CMP-100: who is named on git_commit
+	tools = aiSyncTools(tools, root, call)  // the IDE follows file / git changes
 	tools = append(tools, aiIDETools(root, call)...)
 	// Group K2: settings, layout and IDE state.
 	tools = append(tools, aiSettingsTools(root, call)...)
