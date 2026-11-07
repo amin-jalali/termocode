@@ -189,6 +189,7 @@ export const SD = {
   "scm.discard_all": "Discard All Changes",
   "scm.placeholder": "Message ({keys} to commit on '{branch}')",
   "scm.checkout": "Checkout to {branch}",
+  "scm.checkout_remote": "Checkout to {branch} (remote)",
   "scm.graph": "Commits",
   "scm.nothing_staged": "Stage the changes to commit first.",
   "scm.stashes": "Stashes",

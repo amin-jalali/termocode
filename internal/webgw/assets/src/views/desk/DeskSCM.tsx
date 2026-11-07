@@ -72,18 +72,28 @@ export async function syncMenu(x: number, y: number, more: MenuItems = [], branc
     { label: t("git.pop"), run: () => (remoteAsk.value = { op: "git.stash_pop", args: {}, text: t("git.pop_q") }) },
   ];
   let others: string[] = [];
+  let remotes: string[] = [];
   if (branches)
     try {
-      const r = (await link.request("git.branches", {})) as { branches?: unknown };
-      others = (Array.isArray(r?.branches) ? r.branches : []).filter((b): b is string => typeof b === "string" && b !== branch);
+      const r = (await link.request("git.branches", {})) as { branches?: unknown; remotes?: unknown };
+      const names = (v: unknown) => (Array.isArray(v) ? v : []).filter((b): b is string => typeof b === "string");
+      others = names(r?.branches).filter((b) => b !== branch);
+      remotes = names(r?.remotes);
     } catch {
       others = [];
     }
-  if (others.length) {
+  if (others.length || remotes.length) {
     items.push(null);
     for (const b of others.slice(0, 12)) items.push({ label: t("scm.checkout", { branch: b }), run: () => (remoteAsk.value = { op: "git.checkout", args: { branch: b }, text: t("git.checkout_q", { branch: b }) }) });
+    for (const r of remotes.slice(0, 12)) items.push({ label: t("scm.checkout_remote", { branch: r }), run: () => (remoteAsk.value = trackAsk(r)) });
   }
   openMenu(x, y, t("git.remote"), items);
+}
+
+/** trackAsk asks to check out the remote branch r ("origin/x") as a new
+ * local branch x that tracks it. */
+function trackAsk(r: string): RemoteAsk {
+  return { op: "git.checkout", args: { remote: r }, text: t("git.track_q", { branch: r.slice(r.indexOf("/") + 1), remote: r }) };
 }
 
 /** RemoteAskHost shows the laptop question, wherever it was asked. */

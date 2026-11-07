@@ -89,3 +89,24 @@ func TestGitRemoteNotForViewer(t *testing.T) {
 		t.Fatal("a viewer sees the branch and remote button")
 	}
 }
+
+// Remote branches with no local branch are listed under their own title;
+// a tap asks to switch (a new local branch tracks it), then the laptop.
+func TestGitRemoteBranchTracks(t *testing.T) {
+	p, c := openGit(t, Phone, gitSnap())
+	p.TapJS(`document.querySelector(".head-remote")`)
+	reply(t, c, expectOp(t, c, webproto.OpGitBranches, `{}`), webproto.GitBranches{Current: "main", Branches: []string{"main"}, Remotes: []string{"origin/feat/far"}})
+	p.WaitJS(`document.querySelector('.branch-row[data-remote="origin/feat/far"]')?.textContent === "origin/feat/far"`)
+	if n := Eval[int](p, `document.querySelectorAll(".remote .empty").length`); n != 0 {
+		t.Error(`"no other branch" shows while a remote branch is offered`)
+	}
+	if got := Eval[string](p, `[...document.querySelectorAll(".remote .group-title")].map((h) => h.textContent).join("|")`); got != "Switch branch|Remote branches" {
+		t.Errorf("titles %q", got)
+	}
+	p.TapJS(`document.querySelector('.branch-row[data-remote="origin/feat/far"]')`)
+	p.WaitJS(`document.querySelector(".ask-text")?.textContent === "Switch to feat/far? A new local branch tracks origin/feat/far."`)
+	p.WaitJS(`document.querySelector(".ask .arm.is-armed")`)
+	p.TapJS(ButtonByText("Ask the laptop"))
+	reply(t, c, expectOp(t, c, webproto.OpGitCheckout, `{"remote":"origin/feat/far"}`), webproto.AskRef{Card: "card-6"})
+	p.WaitJS(`document.querySelector(".waiting")`)
+}

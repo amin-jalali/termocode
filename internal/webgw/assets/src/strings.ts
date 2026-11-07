@@ -355,6 +355,8 @@ export const S = {
   "git.stash_q": "Stash all changes? Pop brings them back.",
   "git.pop_q": "Bring back the newest stashed changes?",
   "git.checkout_q": "Switch to {branch}? Changed files go with you.",
+  "git.remote_branches": "Remote branches",
+  "git.track_q": "Switch to {branch}? A new local branch tracks {remote}.",
 
   // Search, tasks, runs
   "search.placeholder": "Search in files",
