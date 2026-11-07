@@ -59,6 +59,8 @@ If both files use the same `id`, the project entry wins. Press `e` on a connecti
 | `options.keepAliveSeconds` | Pings the connected session this often (at least 5 s) so idle firewalls do not drop it. |
 | `options.autoReconnect` | `true`: when a ping fails, the session is dropped and connects again after 1 s, 2 s, 4 s … (at most 30 s, 8 tries). The row shows the next try. Pings every 30 s when `keepAliveSeconds` is not set. An open transaction is lost with the connection. Disconnect stops it. |
 
+**Import connections.** **Databases: Import Connections…** offers `~/.pgpass` and `~/.my.cnf` when they exist, or a path you type: a PostgreSQL password file, a MySQL option file (`.cnf` / `.ini`; each `[client…]` group is one connection) or a file with one connection URL per line. A card lists what it found (id, driver, address, and whether a password comes with it; never the password itself) with **Cancel** first. **Import** adds them to your own connections file; each password goes into the secret store as `${secret:db.<id>}`. Ids that are taken get a number. Lines with a wildcard host are skipped.
+
 A row with a problem shows the reason, for example `literal password in project config`, `duplicate connection id` or `sqlite path is outside the workspace`. Fix the file and press `R`.
 
 ## Suggestions

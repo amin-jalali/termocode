@@ -382,6 +382,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-sessions":                  aiNever("SQL runs require the database query tool and its guard"),
 	"db-server-info":               aiNever("SQL runs require the database query tool and its guard"),
 	"db-cancel-session":            aiNever("stops another session's work; only the user can choose it"),
+	"db-import-connections":        aiNever("reads the user's password files and writes their connections; only the user can choose it"),
 	"db-dump":                      aiNever("runs the server's dump tool with the user's password; only the user can choose it"),
 	"db-restore":                   aiNever("replaces tables and rows on the server; only the user can choose it"),
 	"db-roles":                     aiNever("SQL runs require the database query tool and its guard"),

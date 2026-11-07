@@ -231,6 +231,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Grant Privileges… | `db-grant` |   |   |
 | Databases: History… | `db-history` |   |   |
 | Databases: Import CSV into Table… | `db-import-csv` |   |   |
+| Databases: Import Connections… | `db-import-connections` |   |   |
 | Databases: New Console | `db-new-console` |   |   |
 | Databases: Open Guide | `db-guide` |   |   |
 | Databases: Open Table Data | `db-data` |   |   |

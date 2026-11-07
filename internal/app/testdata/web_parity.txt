@@ -468,6 +468,7 @@ missing	db-format-file	Databases|S
 missing	db-generate-data	Databases|M
 missing	db-goto-definition	Databases|S
 missing	db-grant	Databases|S
+missing	db-import-connections	Databases|S
 missing	db-open-sessions	Databases|S
 missing	db-restore	Databases|M
 missing	db-revoke	Databases|S

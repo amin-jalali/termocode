@@ -892,6 +892,9 @@ func (s *dbConsoleState) stop(conn string) {
 }
 
 func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
+	if cmd, ok := m.databaseImportConnConfirm(id); ok {
+		return cmd, true
+	}
 	if cmd, ok := m.databaseDumpConfirm(id); ok {
 		return cmd, true
 	}
@@ -927,6 +930,9 @@ func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
 }
 
 func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
+	if cmd, ok := m.databaseImportConnPick(id); ok {
+		return cmd, true
+	}
 	if cmd, ok := m.databaseRolesPick(id); ok {
 		return cmd, true
 	}

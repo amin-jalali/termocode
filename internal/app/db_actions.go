@@ -72,6 +72,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-grant", Title: "Databases: Grant Privileges…"},
 		{ID: "db-revoke", Title: "Databases: Revoke Privileges…"},
 		{ID: "db-dump", Title: "Databases: Dump Database…"},
+		{ID: "db-import-connections", Title: "Databases: Import Connections…"},
 		{ID: "db-restore", Title: "Databases: Restore Database…"},
 		{ID: "db-er-diagram", Title: "Databases: Export ER Diagram…"},
 		{ID: "db-guide", Title: "Databases: Open Guide"},
@@ -144,6 +145,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseStopSessionPrompt(false), true
 	case "db-end-session":
 		return m.databaseStopSessionPrompt(true), true
+	case "db-import-connections":
+		return m.databaseImportConnStart(), true
 	case "db-dump":
 		return m.databaseDumpStart(false), true
 	case "db-restore":

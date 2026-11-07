@@ -89,6 +89,7 @@ type dbState struct {
 	menuRow             dbTreeRow
 	pendingDisconnectID string
 	closeSessionKey     string                  // the session Databases: Sessions… asks to close
+	importConns         []dbclient.ImportedConn // Import Connections…: found, waiting for the card (db_importconn.go)
 	keepAlive           map[string]*dbKeepAlive // connection -> its keep-alive / reconnect (db_keepalive.go)
 	sessions            map[string]dbclient.Session
 	passwords           map[string]string
