@@ -217,6 +217,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `web_max_hours` | int | `12` | The web panel stops this many hours after it started, in use or not (1..24). |
 | `web_open_browser` | bool | `true` | Open the one-time link in the browser of this computer when the panel starts. false: only Web: Copy Link. |
 | `web_max_viewers` | int | `4` | How many browsers may be connected at once (1..8). One more is turned away. |
+| `web_phone` | enum | `off` | on: a paired phone or tablet that has the panel open keeps it running, even with its screen off, as long as its link answers. Guests and the one-time link do not. It still stops after web_max_hours, with Web: Stop Panel, or when termocode closes. off: only real use counts (web_idle_minutes). |
 
 ## Appearance (file only)
 

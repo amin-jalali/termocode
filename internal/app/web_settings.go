@@ -21,6 +21,7 @@ type webConfig struct {
 	MaxViewers  int
 	Tailnet     bool     // web_listen: "tailnet" (WEB-31)
 	RequireTOTP bool     // web_require_totp (WEB-48)
+	PhoneWatch  bool     // web_phone: "on": a paired phone that watches keeps the panel up (MOB-31)
 	Problems    []string // one line per bad value, for a warning toast
 }
 
@@ -43,6 +44,13 @@ func webSettings() webConfig {
 		c.Tailnet = true
 	default:
 		c.Problems = append(c.Problems, fmt.Sprintf("web_listen %q: use \"loopback\" or \"tailnet\"", s.WebListen))
+	}
+	switch strings.ToLower(strings.TrimSpace(s.WebPhone)) {
+	case "", "off":
+	case "on":
+		c.PhoneWatch = true
+	default:
+		c.Problems = append(c.Problems, fmt.Sprintf("web_phone %q: use \"on\" or \"off\"", s.WebPhone))
 	}
 	intIn := func(key string, v *int, lo, hi int, dst *int) {
 		if v == nil {
