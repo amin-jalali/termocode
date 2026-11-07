@@ -169,6 +169,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Show Image History | `containers-image-history` |   |   |
 | Containers: Show Resolved Compose Config | `services-compose-config` |   |   |
 | Containers: Show Service Logs… | `services-logs` |   |   |
+| Containers: Show System Page | `containers-system` |   |   |
 | Containers: Sign Out of Registry… | `containers-registry-signout` |   |   |
 | Containers: Start All Services | `services-start-all` |   |   |
 | Containers: Start Project | `containers-compose-up` |   |   |

@@ -460,6 +460,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"containers-volume-remove":     aiNever("removing is the user's; nothing is offered to the model"),
 	"containers-volume-prune":      aiNever("pruning volumes is the user's; nothing is offered to the model"),
 	"containers-volume-disk-usage": aiNever("disk usage is the user's; nothing is offered to the model"),
+	"containers-system":            aiAuto(), // CTX-25: read-only System page
 
 	// ── Tasks ──
 	"tasks-run":            aiNever(aiNoPicker),

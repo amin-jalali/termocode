@@ -213,6 +213,20 @@ the engine's own error. Every prune has a two minute limit.
 The AI cannot prune: there is no tool, and every prune palette command is
 closed to it.
 
+## System page
+
+**Containers: Show System Page** opens a read-only page about the engine:
+
+- the engine: version, OS, kernel, CPUs, memory, storage driver, runtime
+  and cgroup, with the container and image counts and the engine's warnings;
+- the disk summary of `docker system df` (images, containers, volumes,
+  build cache, and what can be reclaimed);
+- the recent events (newest first, up to 50) seen while the view was open;
+- the action log: every container action of this session (start, stop,
+  remove, prune, tag …) with its time and whether it worked.
+
+The page only reads. The AI may open it.
+
 ## Registries
 
 REGISTRIES lists the registry hosts from your engine's own login file:

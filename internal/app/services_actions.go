@@ -1425,7 +1425,7 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "services-configure", Title: "Containers: Configure Services (services.json)"},
 		{ID: "services-open-compose", Title: "Containers: Open Compose File"},
 		{ID: "services-trust", Title: "AI: Services Trust…"},
-	}, composeExtrasPaletteItems()...)
+	}, append(composeExtrasPaletteItems(), containersExtraPaletteItems()...)...)
 }
 
 func containerAITargetRequired(id string) bool {
@@ -1603,6 +1603,9 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 	}
 	if id == "containers-engine-config" {
 		return m.openEngineConfig(), true
+	}
+	if cmd, ok := m.dispatchContainersExtra(id); ok { // containers_system.go
+		return cmd, true
 	}
 	if id == "containers-open-databases" {
 		open := m.revealServicesView(false)

@@ -2040,6 +2040,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-start` | Containers: Start Selected | confirm (always asks) |   |
 | `containers-stats` | Containers: Follow Stats | auto |   |
 | `containers-stop` | Containers: Stop Selected | confirm (always asks) |   |
+| `containers-system` | Containers: Show System Page | auto |   |
 | `containers-system-prune` | Containers: Prune System… | never | pruning the system is the user's; nothing is offered to the model |
 | `containers-volume-create` | Containers: Create Volume… | confirm (always asks) |   |
 | `containers-volume-disk-usage` | Containers: Read Volume Disk Usage | never | disk usage is the user's; nothing is offered to the model |
