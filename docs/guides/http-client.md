@@ -135,6 +135,10 @@ would commit it).
 | HTTP: Import from curl… | `-X`, `-H`, `-d`, `--json`, `-u`, `-G` … become a new `###` block |
 | HTTP: Import OpenAPI… | an OpenAPI 3.x or Swagger 2.0 file (YAML or JSON) becomes `<title>.http` next to it: one `###` block per operation with example bodies; `{{baseUrl}}` goes into a new `http-client.env.json`; put `token` / `apiKey` / `basicAuth` in the private env file |
 | HTTP: New .http File… | a file with two example requests |
+| HTTP: Fetch GraphQL Schema | sends the introspection query to the GraphQL request at the cursor (same URL and headers) and keeps the schema for this session |
+| HTTP: Complete GraphQL Field… | the fields that fit at the cursor, with their types; Enter types the rest of the name. Fetches the schema first when there is none |
+| HTTP: Validate GraphQL Query | checks every field of the query against the schema and that the braces match |
+| HTTP: GraphQL Schema Docs… | the schema's types (root types first); Enter opens one as read-only SDL |
 
 Settings: `http_timeout`, `http_max_redirects`, `http_max_body_mb`,
 `http_cookie_jar`, `http_history_max`, `http_tls_insecure`,

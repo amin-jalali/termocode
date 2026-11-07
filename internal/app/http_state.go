@@ -225,6 +225,12 @@ type httpState struct {
 	bufCache    *httpBufCache
 	fields      httpFieldsState // the params and headers table (http_fields.go)
 
+	// GraphQL (http_graphql.go): schemas per request URL, the name typed
+	// before the completion picker, the schema the docs picker lists.
+	gqlSchemas map[string]*httpclient.GQLSchema
+	gqlPrefix  string
+	gqlDocs    *httpclient.GQLSchema
+
 	// The web's request (one at a time) and the hosts the laptop allowed
 	// the web to send to in this session (web_http.go).
 	webRun    *httpRun
@@ -548,6 +554,8 @@ func (m *Model) handleHTTPMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.httpFinish(msg.run), true
 	case httpAppendMsg:
 		return m.httpPageAppend(msg), true
+	case httpGQLSchemaMsg:
+		return m.onHTTPGQLSchema(msg), true
 	case httpPrivateEnvCheckMsg:
 		title := "Secrets file not git-ignored"
 		if msg.state == httpGitTracked {

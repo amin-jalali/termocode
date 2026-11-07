@@ -68,7 +68,7 @@ const (
 
 // httpPaletteItems are the palette's "HTTP: …" commands.
 func httpPaletteItems() []picker.Item {
-	return []picker.Item{
+	return append([]picker.Item{
 		{ID: "http-send", Title: "HTTP: Send Request at Cursor", Hint: "Ctrl+Alt+R"},
 		{ID: "http-send-pick", Title: "HTTP: Send Request…"},
 		{ID: "http-quick", Title: "HTTP: Quick Request…"},
@@ -89,13 +89,16 @@ func httpPaletteItems() []picker.Item {
 		{ID: "http-save-body", Title: "HTTP: Save Response Body…"},
 		{ID: "http-fields", Title: "HTTP: Edit Params and Headers…"},
 		{ID: "http-api-docs", Title: "HTTP: Open API Docs"},
-	}
+	}, httpGQLPaletteItems()...)
 }
 
 // dispatchHTTPPalette runs an "http-…" palette id. ok=false: not ours.
 func (m *Model) dispatchHTTPPalette(id string) (tea.Cmd, bool) {
 	if !strings.HasPrefix(id, "http-") {
 		return nil, false
+	}
+	if cmd, ok := m.dispatchHTTPGQL(id); ok {
+		return cmd, true
 	}
 	switch id {
 	case "http-send":
@@ -449,6 +452,9 @@ func (m *Model) handleHTTPPickerSelect(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.httpCookiesPickerSelect(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.httpGQLPickerSelect(id); ok {
 		return cmd, true
 	}
 	s := m.httpS()

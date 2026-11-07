@@ -574,6 +574,10 @@ missing	http-api-docs	HTTP|S
 missing	http-cookies	HTTP|S
 missing	http-copy-snippet	HTTP|S
 missing	http-fields	HTTP|S
+missing	http-gql-complete	HTTP|S
+missing	http-gql-docs	HTTP|S
+missing	http-gql-schema	HTTP|S
+missing	http-gql-validate	HTTP|S
 missing	http-import-openapi	HTTP|S
 missing	kubernetes-snippet	Kubernetes|S
 missing	local-history	Git|S

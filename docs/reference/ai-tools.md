@@ -2314,6 +2314,10 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `http-env-open-private` | HTTP: Open Private Environment File | never | opens the file that holds the user's secrets |
 | `http-env-select` | HTTP: Select Environment… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_set_environment) |
 | `http-fields` | HTTP: Edit Params and Headers… | never | opens a picker or prompt that only the user can answer; use a typed tool (read_file, write_file) |
+| `http-gql-complete` | HTTP: Complete GraphQL Field… | never | opens a picker or prompt that only the user can answer; use a typed tool (read_file, write_file) |
+| `http-gql-docs` | HTTP: GraphQL Schema Docs… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_send with the introspection query) |
+| `http-gql-schema` | HTTP: Fetch GraphQL Schema | never | sends a network request; use http_send with the introspection query |
+| `http-gql-validate` | HTTP: Validate GraphQL Query | never | may fetch the schema over the network; use http_send |
 | `http-history` | HTTP: History… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_history) |
 | `http-import-curl` | HTTP: Import from curl… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_save_request) |
 | `http-import-openapi` | HTTP: Import OpenAPI… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_save_request) |

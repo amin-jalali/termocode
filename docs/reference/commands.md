@@ -539,10 +539,13 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | HTTP: Cancel Request | `http-cancel` |   |   |
+| HTTP: Complete GraphQL Field… | `http-gql-complete` |   |   |
 | HTTP: Cookies… | `http-cookies` |   |   |
 | HTTP: Copy as Code… | `http-copy-snippet` |   |   |
 | HTTP: Copy as curl | `http-copy-curl` |   |   |
 | HTTP: Edit Params and Headers… | `http-fields` |   |   |
+| HTTP: Fetch GraphQL Schema | `http-gql-schema` |   |   |
+| HTTP: GraphQL Schema Docs… | `http-gql-docs` |   |   |
 | HTTP: History… | `http-history` |   |   |
 | HTTP: Import OpenAPI… | `http-import-openapi` |   |   |
 | HTTP: Import from curl… | `http-import-curl` |   |   |
@@ -558,6 +561,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | HTTP: Send Request at Cursor | `http-send` | `Ctrl+Alt+R` / `Ctrl+Enter` | `Ctrl+Alt+R / Ctrl+Enter` |
 | HTTP: Send Request… | `http-send-pick` |   |   |
 | HTTP: Show Last Response | `http-last-response` |   |   |
+| HTTP: Validate GraphQL Query | `http-gql-validate` |   |   |
 
 ## Help
 
