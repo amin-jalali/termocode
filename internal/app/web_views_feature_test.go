@@ -162,11 +162,11 @@ func TestFeatureViewLogsRedacted(t *testing.T) {
 			return nil
 		},
 	})
-	b, err := webTestView(t, &m, c, blocks.ViewSpec{View: feature.ViewLogsContainer, Args: map[string]string{"id": "db"}})
+	b, err := webTestView(t, &m, c, blocks.ViewSpec{View: feature.ViewLogsContainer, Args: map[string]string{"id": "0123456789ab"}}) // a container id is 12-64 hex
 	if err != nil {
 		t.Fatal(err)
 	}
-	if gotID != "db" || b.Kind != blocks.KindText || b.MD == nil {
+	if gotID != "0123456789ab" || b.Kind != blocks.KindText || b.MD == nil {
 		t.Fatalf("id %q block %+v", gotID, b)
 	}
 	text := b.MD.C[0].Text

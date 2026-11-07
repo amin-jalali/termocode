@@ -24,6 +24,9 @@ type doorFake struct {
 func doorRig(t *testing.T, known ...string) (*webFilesRig, *doorFake) {
 	t.Helper()
 	r, _ := webWorkspaceRig(t)
+	if r.m.output == nil {
+		r.m.output = newOutputStore() // the audit lines
+	}
 	f := &doorFake{running: map[string]bool{}, service: map[string]bool{}}
 	oldPS, oldRead, oldDoor, oldSelf := projectSessions, webProjectsRead, webDoor, webDoorSelf
 	t.Cleanup(func() {
@@ -122,9 +125,8 @@ func TestWebProjectOpenRefusals(t *testing.T) {
 	if c := webErrCode(res); c != "limit" || !strings.Contains(webTestMsg(res), "1 of 1") {
 		t.Errorf("cap: %v", res)
 	}
-	v := r.conn("v-1", webproto.RoleViewer)
-	if c := webErrCode(r.callOn(v, webproto.OpProjectOpen, &webproto.ProjectArgs{WS: session.Key(blog)})); c != "forbidden" {
-		t.Errorf("viewer: %s", c)
+	if webproto.Allowed(webproto.RoleViewer, webproto.OpProjectOpen) { // the conn refuses a viewer before the hub (web_call.go)
+		t.Error("a viewer may open a project")
 	}
 	projectSessions = ProjectSessions{}
 	if c := webErrCode(open(session.Key(blog))); c != "forbidden" {

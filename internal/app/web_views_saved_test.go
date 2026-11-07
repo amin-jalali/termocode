@@ -36,7 +36,10 @@ func TestWebSavedViews(t *testing.T) {
 	}
 
 	var list webproto.SavedViewList
-	webResData(t, r.call(webproto.OpViewList, &webproto.EmptyArgs{}), &list)
+	// fresh empties list before each answer is read into it: JSON fills
+	// the old items in place, so a false (omitted) pin would stay true.
+	fresh := func() *webproto.SavedViewList { list = webproto.SavedViewList{}; return &list }
+	webResData(t, r.call(webproto.OpViewList, &webproto.EmptyArgs{}), fresh())
 	if list.Max != webproto.MaxSavedViews || list.MaxPinned != webproto.MaxPinnedViews || len(list.Items) != 2 {
 		t.Fatalf("list %+v", list)
 	}
@@ -47,16 +50,16 @@ func TestWebSavedViews(t *testing.T) {
 		t.Error("no save time")
 	}
 
-	webResData(t, r.call(webproto.OpViewPin, &webproto.ViewPinArgs{ID: ci, On: true, Order: 1}), &list)
+	webResData(t, r.call(webproto.OpViewPin, &webproto.ViewPinArgs{ID: ci, On: true, Order: 1}), fresh())
 	if list.Items[0].ID != ci || list.Items[0].Order != 1 || list.Items[1].ID != prs || list.Items[1].Order != 2 {
 		t.Errorf("pin at 1 did not move it first: %+v", list.Items)
 	}
-	webResData(t, r.call(webproto.OpViewPin, &webproto.ViewPinArgs{ID: ci, On: false}), &list)
+	webResData(t, r.call(webproto.OpViewPin, &webproto.ViewPinArgs{ID: ci, On: false}), fresh())
 	if list.Items[0].ID != prs || list.Items[0].Order != 1 || list.Items[1].Pinned || list.Items[1].Order != 0 {
 		t.Errorf("after unpin %+v", list.Items)
 	}
 
-	webResData(t, r.call(webproto.OpViewRename, &webproto.ViewRenameArgs{ID: ci, Name: "CI · shop"}), &list)
+	webResData(t, r.call(webproto.OpViewRename, &webproto.ViewRenameArgs{ID: ci, Name: "CI · shop"}), fresh())
 	if list.Items[1].Name != "CI · shop" {
 		t.Errorf("rename %+v", list.Items)
 	}
@@ -64,7 +67,7 @@ func TestWebSavedViews(t *testing.T) {
 		t.Errorf("rename onto another view's name: %v", f)
 	}
 
-	webResData(t, r.call(webproto.OpViewDelete, &webproto.ViewRefArgs{ID: ci}), &list)
+	webResData(t, r.call(webproto.OpViewDelete, &webproto.ViewRefArgs{ID: ci}), fresh())
 	if len(list.Items) != 1 || list.Items[0].ID != prs {
 		t.Errorf("after delete %+v", list.Items)
 	}
@@ -84,8 +87,8 @@ func TestWebSavedViews(t *testing.T) {
 // 0600; a broken entry is dropped on load, never run.
 func TestWebSavedViewsFile(t *testing.T) {
 	cfg := t.TempDir()
-	t.Setenv("XDG_CONFIG_HOME", cfg)
 	r := newWebFilesRig(t)
+	t.Setenv("XDG_CONFIG_HOME", cfg) // after the rig: its model sets a config dir of its own
 	webResData(t, r.call(webproto.OpViewSave, &webproto.ViewSaveArgs{Spec: savedViewSpec("pr.list"), Name: "PRs", Pin: true}), &webproto.ViewSaved{})
 
 	path := filepath.Join(cfg, "termocode", "views.json")
@@ -103,8 +106,9 @@ func TestWebSavedViewsFile(t *testing.T) {
 	}
 
 	r2 := newWebFilesRig(t)
+	t.Setenv("XDG_CONFIG_HOME", cfg) // the same laptop config after the restart
 	var list webproto.SavedViewList
-	webResData(t, r2.call(webproto.OpViewList, &webproto.EmptyArgs{}), &list)
+	webResData(t, r2.call(webproto.OpViewList, &webproto.EmptyArgs{}), freshList(&list))
 	if len(list.Items) != 1 || list.Items[0].Name != "PRs" || !list.Items[0].Pinned {
 		t.Fatalf("after a restart %+v", list.Items)
 	}
@@ -117,7 +121,7 @@ func TestWebSavedViewsFile(t *testing.T) {
 	if err := os.WriteFile(path, []byte(broken), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	webResData(t, r2.call(webproto.OpViewList, &webproto.EmptyArgs{}), &list)
+	webResData(t, r2.call(webproto.OpViewList, &webproto.EmptyArgs{}), freshList(&list))
 	if len(list.Items) != 1 || list.Items[0].ID != "v1" || list.Items[0].Name != "ok" {
 		t.Errorf("broken entries were kept: %+v", list.Items)
 	}
@@ -189,4 +193,11 @@ func TestWebSavedViewsShared(t *testing.T) {
 	if !webproto.Allowed(webproto.RoleViewer, webproto.OpViewList) || webproto.Allowed(webproto.RoleViewer, webproto.OpViewSave) {
 		t.Error("a viewer lists saved views but never changes them")
 	}
+}
+
+// freshList empties *l before an answer is read into it (JSON fills old
+// items in place).
+func freshList(l *webproto.SavedViewList) *webproto.SavedViewList {
+	*l = webproto.SavedViewList{}
+	return l
 }
