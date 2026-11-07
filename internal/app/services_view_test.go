@@ -342,8 +342,16 @@ func TestServicesDockerDownOneBanner(t *testing.T) {
 	if n := strings.Count(all, "Docker is not running"); n != 1 {
 		t.Errorf("banner appears %d times: %s", n, all)
 	}
-	if n := strings.Count(all, "Retry"); n != 1 {
-		t.Errorf("Retry appears %d times: %s", n, all)
+	// Count Retry BUTTONS: the CTX-42 hint "y copies it, then Retry"
+	// names the button but is not one.
+	retries := 0
+	for _, r := range st.rows() {
+		if r.kind == svcRowRetry {
+			retries++
+		}
+	}
+	if retries != 1 {
+		t.Errorf("Retry button appears %d times: %s", retries, all)
 	}
 	for _, a := range st.actionLayout(29) {
 		if (a.id == "start-all" || a.id == "stop-all") != a.disabled {
