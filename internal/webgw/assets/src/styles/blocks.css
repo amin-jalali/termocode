@@ -155,3 +155,6 @@
 @media (prefers-reduced-motion: reduce) {
   .blk-board { scroll-behavior: auto; }
 }
+/* ↩ to chat on blocks, items and rows (MOBUX-19) */
+.blk-head .tochat { margin-inline-start: auto; }
+.blk-td.is-act { width: var(--tap); padding: 0; vertical-align: middle; }

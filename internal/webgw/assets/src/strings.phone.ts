@@ -25,6 +25,14 @@ export const SP = {
   "blk.raw": "Raw data",
   "blk.form_send": "Send to the laptop",
   "blk.form_laptop": "Fill this in on the laptop",
+
+  // "↩ to chat" on rows and blocks (MOBUX-19)
+  "tochat.add": "Add {name} to the message",
+  "tochat.remove": "Remove {name} from the message",
+  "tochat.list": "{n} references go with the message",
+  "tochat.secret": "This file may hold secrets. It stays on the laptop.",
+  "tochat.full": "A message takes up to 8 references. Remove one first.",
+  "tochat.bad": "This cannot go into the chat.",
 } as const;
 
 addStrings(SP);
