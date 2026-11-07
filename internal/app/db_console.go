@@ -899,6 +899,9 @@ func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
 	if cmd, ok := m.databaseSourceConfirm(id); ok { // db_objsource.go
 		return cmd, true
 	}
+	if cmd, ok := m.databaseObjActionConfirm(id); ok { // db_objactions.go
+		return cmd, true
+	}
 	switch m.confirmKind {
 	case confirmKindDBExplain:
 		return m.databaseExplainConfirm(id), true
@@ -947,6 +950,9 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseSourcePicker(id); ok { // db_objsource.go
+		return cmd, true
+	}
+	if cmd, ok := m.databaseObjActionPicker(id); ok { // db_objactions.go
 		return cmd, true
 	}
 	switch m.pickerKind {

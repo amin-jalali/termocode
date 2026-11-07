@@ -70,6 +70,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-er-diagram", Title: "Databases: Export ER Diagram…"},
 		{ID: "db-virtual-objects", Title: "Databases: Edit Virtual Objects…"},
 		{ID: "db-edit-source", Title: "Databases: Edit Object Source"},
+		{ID: "db-object-actions", Title: "Databases: Object Actions…"},
 		{ID: "db-submit-source", Title: "Databases: Submit Object Source…"},
 		{ID: "db-pending-sources", Title: "Databases: Pending Source Changes…"},
 		{ID: "db-guide", Title: "Databases: Open Guide"},
@@ -130,6 +131,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseERStart(), true
 	case "db-edit-source":
 		return tea.Batch(m.revealDatabasesView(false), m.databaseEditSourceStart()), true
+	case "db-object-actions":
+		return tea.Batch(m.revealDatabasesView(false), m.databaseObjectActions()), true
 	case "db-submit-source":
 		return m.databaseSubmitSourceStart(), true
 	case "db-pending-sources":
@@ -354,6 +357,8 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.databaseQuickDocTree()
 	case "E":
 		return m, m.databaseEditSourceStart()
+	case "A":
+		return m, m.databaseObjectActions()
 	case "i":
 		return m, m.databaseImportStart()
 	case "?":
@@ -993,6 +998,7 @@ func dbTreeKeyRows() []confirm.KeyRow {
 		[]string{"i", "import a CSV file"},
 		[]string{"y", "copy the name"},
 		[]string{"K", "quick documentation (columns, keys; also on a column or routine)"},
+		[]string{"A", "object actions: drop (shows dependents), truncate, copy table, create schema or database, make PK from a column"},
 		[]string{"On a view, routine or trigger"},
 		[]string{"E", "edit its source in a buffer (submit with Databases: Submit Object Source…)"},
 		[]string{"On a virtual view"},

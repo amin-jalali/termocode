@@ -404,6 +404,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-compare-schemas":           aiNever(aiNoPicker),
 	"db-er-diagram":                aiNever(aiNoPicker),
 	"db-edit-source":               aiAuto(),
+	"db-object-actions":            aiNever("drops, empties or creates database objects; only the user can confirm the card"),
 	"db-submit-source":             aiNever("changes a database object; only the user can confirm the card"),
 	"db-pending-sources":           aiNever(aiNoPicker),
 	"db-virtual-objects":           aiNever("opens the user's virtual objects file for the user to edit"),
