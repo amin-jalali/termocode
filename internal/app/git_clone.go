@@ -44,6 +44,7 @@ type cloneState struct {
 	url     string
 	dest    string
 	running bool
+	depth   int // > 0: a shallow clone (Git: Clone Repository (Shallow)…, gitx_leftovers.go)
 }
 
 // openCloneURLPrompt starts the flow.
@@ -53,6 +54,7 @@ func (m *Model) openCloneURLPrompt() tea.Cmd {
 		m.toast, cmd = m.toast.Push(toast.Info, "A clone is already running")
 		return cmd
 	}
+	m.clone.depth = 0
 	m.prompt = prompt.New("Clone Repository", "Repository URL (https:// or git@…):", m.clone.url)
 	m.prompt.SetSize(m.w, m.h)
 	m.promptOpen = true
@@ -134,12 +136,12 @@ func (m *Model) openCloneTokenPrompt() {
 // for its first message.
 func (m *Model) startClone(user, token string) tea.Cmd {
 	m.clone.running = true
-	url, dest := m.clone.url, m.clone.dest
+	url, dest, depth := m.clone.url, m.clone.dest, m.clone.depth
 	ch := make(chan tea.Msg, 8)
 	crash.Go("git clone", func() {
 		var last time.Time
 		err := git.Clone(git.CloneOptions{
-			URL: url, Dest: dest, Username: user, Token: token,
+			URL: url, Dest: dest, Username: user, Token: token, Depth: depth,
 			OnProgress: func(p git.CloneProgress) {
 				// Throttle: the toast doesn't need more than ~5 updates/s.
 				if now := time.Now(); now.Sub(last) >= 200*time.Millisecond || p.Percent == 100 {

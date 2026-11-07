@@ -15,7 +15,8 @@ import type { AICompletion, AINextEdit, LspCompletion, LspHover, LspLocations } 
 import type { HlRow } from "../editor/api";
 import { esc, md } from "./mdtext";
 import type { AiAt, AiKind, CursorOp, EditAct, FrameBlame, FrameGlyph, FrameHint, FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, NavKind, ToFrame } from "./protocol";
-import { Vim, type VimMode } from "./vim";
+import type { Vim, VimMapDef, VimMode } from "./vim";
+import type * as VimModule from "./vim";
 import "./frame.css";
 
 // The small part of the editor's API this file uses.
@@ -127,6 +128,10 @@ interface Editor {
   getSelections(): IRange[] | null;
   getAction(id: string): { isSupported(): boolean; run(): Promise<void> } | null;
   getContainerDomNode(): HTMLElement;
+  trigger(source: string, handlerId: string, payload: unknown): void;
+  setScrollTop(top: number): void;
+  getTopForLineNumber(line: number): number;
+  getLayoutInfo(): { height: number };
 }
 interface LineChange {
   originalStartLineNumber: number;
@@ -819,8 +824,26 @@ let chordUntil = 0;
 let vim: Vim | null = null;
 let vimShown = "";
 
+/** vimWant is the page's choice; the keymap is its own file
+ * (monaco-vim.js), loaded the first time Vim mode is on. */
+let vimWant = false;
+/** vimMaps are the user's mappings (the page's; [] until it has them). */
+let vimMaps: { maps: VimMapDef[]; timeout: number } = { maps: [], timeout: -1 };
+let vimLoading: Promise<typeof VimModule> | null = null;
+
+function loadVim(): Promise<typeof VimModule> {
+  if (!vimLoading) {
+    vimLoading = import("/assets/monaco-vim.js").catch((e: unknown) => {
+      vimLoading = null; // a later toggle tries again
+      throw e;
+    });
+  }
+  return vimLoading;
+}
+
 /** vimOn turns Vim mode on or off; the page hears the mode (none: off). */
 function vimOn(on: boolean): void {
+  vimWant = on;
   if (!ed || on === (vim !== null)) return;
   if (!on) {
     vim = null;
@@ -828,9 +851,19 @@ function vimOn(on: boolean): void {
     vimShow(null, "");
     return;
   }
+  loadVim().then(
+    (m) => {
+      if (vimWant && !vim) vimStart(m);
+    },
+    () => vimShow(null, ""),
+  );
+}
+
+function vimStart(mod: typeof VimModule): void {
+  if (!ed) return;
   const e = ed;
   const at = (off: number): Pos => (model ? model.getPositionAt(off) : { lineNumber: 1, column: 1 });
-  vim = new Vim({
+  vim = new mod.Vim({
     doc: () => cur,
     caret: () => {
       const p = e.getPosition();
@@ -864,18 +897,59 @@ function vimOn(on: boolean): void {
     undo: () => undoRedo(false),
     redo: () => undoRedo(true),
     readOnly: () => readOnly,
-    show: (mode, pending) => vimShow(mode, pending),
+    typeKey: (tok) => {
+      if (tok.length === 1) return e.trigger("keyboard", "type", { text: tok });
+      const cmd = VIM_TYPE[tok];
+      if (cmd === "\n" || cmd === "\t") e.trigger("keyboard", "type", { text: cmd });
+      else if (cmd) e.trigger("keyboard", cmd, null);
+    },
+    show: (mode, pending, rec, msg) => vimShow(mode, pending, rec, msg),
+    save: () => post({ t: "save" }),
+    close: () => post({ t: "vimQuit" }),
+    indent: () => (spaces ? " ".repeat(tabWidth) : "\t"),
+    view: () => {
+      const r = e.getVisibleRanges();
+      return r.length ? { top: r[0].startLineNumber, bottom: r[r.length - 1].endLineNumber } : { top: 1, bottom: 1 };
+    },
+    reveal: (off, where) => {
+      const p = at(off);
+      if (where === "center") e.revealLineInCenter(p.lineNumber);
+      else {
+        const top = e.getTopForLineNumber(p.lineNumber);
+        const row = e.getTopForLineNumber(p.lineNumber + 1) - top;
+        e.setScrollTop(Math.max(0, where === "top" ? top : top + row - e.getLayoutInfo().height));
+      }
+    },
+    copied: (text) => post({ t: "copied", text }),
   });
+  vim.setMaps(vimMaps.maps, vimMaps.timeout);
 }
 
-function vimShow(mode: VimMode | null, pending: string): void {
+/** VIM_TYPE are the editor's commands for the special keys Vim types in
+ * insert mode (a macro, the . repeat). */
+const VIM_TYPE: Record<string, string> = {
+  "<CR>": "\n",
+  "<Tab>": "\t",
+  "<BS>": "deleteLeft",
+  "<Del>": "deleteRight",
+  "<Left>": "cursorLeft",
+  "<Right>": "cursorRight",
+  "<Up>": "cursorUp",
+  "<Down>": "cursorDown",
+  "<Home>": "cursorHome",
+  "<End>": "cursorEnd",
+};
+
+function vimShow(mode: VimMode | null, pending: string, rec = "", msg = ""): void {
   ed?.updateOptions({ cursorStyle: mode === null || mode === "insert" ? "line" : "block" });
-  const key = (mode ?? "") + "\x00" + pending;
+  const key = (mode ?? "") + "\x00" + pending + "\x00" + rec + "\x00" + msg;
   if (key === vimShown) return;
   vimShown = key;
-  post({ t: "vim", mode: mode ?? "", pending });
+  post({ t: "vim", mode: mode ?? "", pending, rec, msg });
 }
 let tabWidth = 4;
+/** spaces: the file indents with spaces (Vim's > and <). */
+let spaces = false;
 
 function sendText(user: boolean): void {
   post({ t: "text", text: cur.toString(), v, user, canUndo: hist.canUndo(), canRedo: hist.canRedo() });
@@ -1017,9 +1091,13 @@ function setOpts(o: FrameOpts): void {
   }
   if (o.wrap !== undefined) u.wordWrap = o.wrap ? "on" : "off";
   if (o.tabSize !== undefined && o.tabSize > 0) u.tabSize = tabWidth = o.tabSize;
-  if (o.insertSpaces !== undefined) u.insertSpaces = o.insertSpaces;
+  if (o.insertSpaces !== undefined) u.insertSpaces = spaces = o.insertSpaces;
   if (o.ai) setAI(o.ai);
   ed.updateOptions(u);
+  if (o.vimMaps) {
+    vimMaps = { maps: o.vimMaps, timeout: o.vimTimeout ?? -1 };
+    vim?.setMaps(vimMaps.maps, vimMaps.timeout);
+  }
   if (o.vim !== undefined) vimOn(o.vim);
 }
 
@@ -1053,7 +1131,7 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
     readOnly: m.readOnly === true,
     wordWrap: m.wrap ? "on" : "off",
     tabSize: (tabWidth = m.tabSize && m.tabSize > 0 ? m.tabSize : 4),
-    insertSpaces: m.insertSpaces === true,
+    insertSpaces: (spaces = m.insertSpaces === true),
     detectIndentation: false,
     automaticLayout: true,
     minimap: { enabled: true },

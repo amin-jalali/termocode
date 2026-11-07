@@ -45,9 +45,24 @@ func (m *Model) webStashOnShow(call *webCall, ref string) (git.StashEntry, bool)
 	return m.gitStashes[i], true
 }
 
+// webStashRepo is the stash commands of the open workspace: git in the
+// container or on the remote host through its Host Exec, or on this
+// machine (as the laptop's STASHES section runs them).
+func (m *Model) webStashRepo(call *webCall) (git.StashRepo, bool) {
+	if _, ok := m.webGitRoot(call); !ok {
+		return git.StashRepo{}, false
+	}
+	repo, err := m.gitStashRepo()
+	if err != nil {
+		call.fail(webproto.CodeConflict, "This workspace cannot run git commands here.")
+		return git.StashRepo{}, false
+	}
+	return repo, true
+}
+
 func (m *Model) webGitStashShow(call *webCall) tea.Cmd {
 	a := call.args.(*webproto.GitStashShowArgs)
-	root, ok := m.webGitRoot(call)
+	repo, ok := m.webStashRepo(call)
 	if !ok {
 		return nil
 	}
@@ -56,7 +71,7 @@ func (m *Model) webGitStashShow(call *webCall) tea.Cmd {
 	}
 	call.later()
 	return func() tea.Msg {
-		out, err := git.StashDiff(root, a.Ref)
+		out, err := repo.Diff(a.Ref)
 		if err != nil {
 			call.fail(webproto.CodeNotFound, "That stash entry is not here.")
 			return nil
@@ -74,7 +89,8 @@ func (m *Model) webGitStashShow(call *webCall) tea.Cmd {
 
 func (m *Model) webGitStashAct(call *webCall) *webAsk {
 	a := call.args.(*webproto.GitStashActArgs)
-	if _, ok := m.webGitRoot(call); !ok {
+	repo, ok := m.webStashRepo(call)
+	if !ok {
 		return nil
 	}
 	e, ok := m.webStashOnShow(call, a.Ref)
@@ -84,38 +100,38 @@ func (m *Model) webGitStashAct(call *webCall) *webAsk {
 	ref, want, branch := e.Ref, e.Message, a.Branch
 	name := ref + " (" + webName(want) + ")"
 	ask := &webAsk{summary: ref}
-	var run func(cwd string) error
+	var run func() error
 	var running, fail, done string
 	switch a.Do {
 	case webproto.StashApply:
 		ask.title, ask.action = "Apply the stash?", "Apply"
 		ask.body = "Apply " + name + " to the working files? The entry stays in the stash."
-		run, running, fail, done = func(cwd string) error { return git.StashApply(cwd, ref) }, "Applying the stash…", "Stash apply failed", "Applied "+ref
+		run, running, fail, done = func() error { return repo.Apply(ref) }, "Applying the stash…", "Stash apply failed", "Applied "+ref
 	case webproto.StashPop:
 		ask.title, ask.action = "Pop the stash?", "Pop"
 		ask.body = "Apply " + name + " to the working files, then drop it from the stash?"
-		run, running, fail, done = func(cwd string) error { return git.StashAt(cwd, nil).Pop(ref) }, "Popping the stash…", "Pop failed", "Popped "+ref
+		run, running, fail, done = func() error { return repo.Pop(ref) }, "Popping the stash…", "Pop failed", "Popped "+ref
 	case webproto.StashDrop:
 		ask.title, ask.action = "Drop the stash?", "Drop"
 		ask.body = "Delete " + name + " from the stash? Its commit stays in git for a while, so it can still be brought back."
-		run, running, fail, done = func(cwd string) error { return git.StashDrop(cwd, ref) }, "Dropping the stash…", "Drop failed", "Dropped "+ref
+		run, running, fail, done = func() error { return repo.Drop(ref) }, "Dropping the stash…", "Drop failed", "Dropped "+ref
 	case webproto.StashBranch:
 		ask.title, ask.action = "Branch from the stash?", "Create Branch"
 		ask.summary = ref + " " + branch
 		ask.body = "Create the branch " + branch + " from the commit " + name + " was made on, switch to it, apply the entry there and drop it?"
-		run, running, fail, done = func(cwd string) error { return git.StashBranch(cwd, branch, ref) }, "Creating the branch…", "Branch from stash failed", "Created "+branch+" from "+ref
+		run, running, fail, done = func() error { return repo.Branch(branch, ref) }, "Creating the branch…", "Branch from stash failed", "Created "+branch+" from "+ref
 	default:
 		call.fail(webproto.CodeBadRequest, "Unknown stash action.")
 		return nil
 	}
 	ask.run = webGitLaptopRun(func(m *Model) tea.Cmd {
-		return m.gitRemoteOp(running, func(cwd string) gitRemoteDoneMsg {
-			now, err := git.StashList(cwd)
+		return m.gitRemoteOp(running, func(string) gitRemoteDoneMsg {
+			now, err := repo.List()
 			if err == nil && !slices.ContainsFunc(now, func(e git.StashEntry) bool { return e.Ref == ref && e.Message == want }) {
 				err = errors.New(ref + " is another entry now. Look at the list again.")
 			}
 			if err == nil {
-				err = run(cwd)
+				err = run()
 			}
 			return gitRemoteDoneMsg{failTitle: fail, okText: done, err: err, reload: true}
 		})
