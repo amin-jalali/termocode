@@ -409,3 +409,12 @@ button.ph-tile:active { background: var(--bg-hover); }
   font: 600 var(--p-fs-body) / var(--p-lh-body) var(--p-font);
 }
 .ph-composer-send[aria-disabled="true"] { background: var(--p-surface-2); color: var(--p-muted); }
+
+/* Spec chip under a view the AI built (MOBUX-17): what was built, tap
+   opens the customizer. One line, cut with an ellipsis; 44 px tall. */
+.ph-tool-blocks { display: flex; flex-direction: column; gap: var(--p-s2); }
+.ph-tool-block { display: flex; flex-direction: column; gap: var(--p-s1); }
+.ph-spec-chip { align-self: flex-start; max-width: 100%; }
+.ph-spec-chip-mark { color: var(--p-muted); }
+.ph-spec-chip-lead { color: var(--p-muted); }
+.ph-spec-chip-what { overflow: hidden; text-overflow: ellipsis; min-width: 0; }

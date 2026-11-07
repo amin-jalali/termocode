@@ -25,6 +25,9 @@ export const SP = {
   "blk.raw": "Raw data",
   "blk.form_send": "Send to the laptop",
   "blk.form_laptop": "Fill this in on the laptop",
+  // A view the AI built from a chat command (MOBUX-17)
+  "ph.spec.built": "Built",
+  "ph.spec.open": "Built {what}. Change it",
 } as const;
 
 addStrings(SP);

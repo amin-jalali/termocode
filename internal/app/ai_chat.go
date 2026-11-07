@@ -171,6 +171,7 @@ func (m *Model) aiChatHistoryN(system string, n int) []ai.Message {
 func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	tools := m.aiChatToolsBy(root, call, aiRunCaller{})
 	tools = append(tools, aiTodoTools(call)...) // OMX-7: the chat's todo list (not in run steps)
+	tools = append(tools, aiViewShowTools(m.viewRun)...) // MOBUX-17: views built from a chat command (ai_view_show_tool.go)
 	return append(tools, m.aiSessionTools()...) // OMX-21: old chats, read only
 }
 

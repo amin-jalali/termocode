@@ -10,3 +10,6 @@ export { Row, Rows } from "./Row";
 export { PhoneSheet, safeFirst, type SheetAction } from "./Sheet";
 export { StatusMark } from "./Mark";
 export { BOARD_ORDER, STATUS, type Status, type StatusLook } from "./status";
+export { SpecChip } from "./SpecChip";
+export { labelsOf, specSummary } from "./specsummary";
+export { customizing, phoneToolBlocks, type Customizing } from "./toolblocks";
