@@ -308,6 +308,8 @@ func run(argv []string) int {
 			return runMCPTop(args[1:])
 		case "agent":
 			return runAgent(args[1:])
+		case "acp":
+			return runACP(args[1:])
 		case "worktree":
 			return runWorktree(args[1:])
 		case "task", "tasks":
@@ -418,7 +420,7 @@ func tuiCommand(args []string) bool {
 		return true
 	}
 	switch args[0] {
-	case serverArg, "sessions", "ssh", "mcp", "http", "db", "service", "attach", "kill", "setup", "-h", "--help", "help":
+	case serverArg, "sessions", "ssh", "mcp", "acp", "http", "db", "service", "attach", "kill", "setup", "-h", "--help", "help":
 		return false
 	}
 	return !isVersionArg(args[0])
@@ -443,6 +445,7 @@ func printUsage() {
 	fmt.Println("                             manage MCP servers without the UI (mcp add --help)")
 	fmt.Println("  termocode agent list|prompt|wait|report")
 	fmt.Println("                             drive the agents in termocode's terminal tabs")
+	fmt.Println("  termocode acp              be the AI agent of another editor (ACP on stdio)")
 	fmt.Println("  termocode worktree list|note|status|link")
 	fmt.Println("                             notes and status for the worktree you are in")
 	fmt.Println("  termocode task list|add|show|claim|status|note")
