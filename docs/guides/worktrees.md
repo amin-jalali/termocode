@@ -54,6 +54,13 @@ them), **Branch** (made from the name; type to change it), **Agent** and
 **Task**. **Issue** is optional: give an issue number or URL and leave
 the name empty, and the branch is made from its title
 (`412-pinned-row-in-worktrees`); the new worktree is linked to it.
+Type only a **Task** and the name and the branch come from its first
+line: `Please fix the login timeout on Safari` gives the name `Fix the
+login timeout on Safari` and the branch `fix/login-timeout-safari`.
+Polite words and small words are dropped, at most five words stay, and a
+first verb such as fix, add, refactor, document or test gives the
+`fix/`, `feat/`, `refactor/`, `docs/` or `test/` prefix. The card shows
+both before anything is made; a typed name, branch or issue always wins.
 Nothing is made until you press **Create**; **Cancel** comes
 first. The worktree goes to `<repo>.worktrees/<branch>` next to the
 repository (setting `worktree_dir`). When git refuses (the branch or the
@@ -75,9 +82,13 @@ A repository can list files for each new worktree in
 {
   "include": [".env", ".env.local"], // copied
   "shared": ["node_modules"],        // linked to the main checkout's folder
-  "setup": ["pnpm install"]          // run in the new worktree
+  "setup": ["pnpm install"],         // run in the new worktree
+  "branch_prefix": "amin/"           // starts a branch made from the task
 }
 ```
+
+- **branch_prefix** is used for a branch made from the task, in place
+  of the `fix/` or `feat/` prefix (`amin/fix-login-timeout`).
 
 - **include** files are copied (at most 20 MB each). **shared** files and
   folders are links, so both worktrees see each other's writes.
