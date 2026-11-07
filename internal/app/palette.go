@@ -466,6 +466,7 @@ func paletteItems() []picker.Item {
 	items = append(items, gitxPaletteItems()...)       // GITX features (gitx_hub.go)
 	// RC-6: where a container workspace's language servers run (container_lsp.go).
 	items = append(items, containerLSPPaletteItems()...)
+	items = append(items, codebaseSearchPaletteItems()...) // CMP-69 (codebase_search.go)
 	// Group A — AI commands (ai_state.go).
 	for _, e := range aiPaletteItems() {
 		items = append(items, picker.Item{ID: e.id, Title: e.title, Hint: e.hint})
@@ -961,6 +962,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 			return cmd
 		}
 		if cmd, ok := m.dispatchContainerLSPPalette(id); ok { // container_lsp.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchCodebaseSearchPalette(id); ok { // CMP-69 (codebase_search.go)
 			return cmd
 		}
 		if cmd, ok := m.dispatchImportPalette(id); ok { // import_editor.go

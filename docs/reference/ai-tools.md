@@ -151,6 +151,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`db_history`](#db_history) | auto | no | List recent SQL runs (the user's and yours), newest first. |
 | [`db_ddl`](#db_ddl) | auto | yes | Show the DDL (CREATE statement) of a table, with its indexes and foreign keys. |
 | [`ast_grep`](#ast_grep) | search: auto<br>with rewrite: confirm (review), or confirm (fileWrite) when AI file changes are not reviewed | no | Structural code search with ast-grep: pattern is code with $VAR wildcards ("fmt.Println($A)"). |
+| [`codebase_search`](#codebase_search) | auto | no | Find code by meaning: describe what it does in plain words ("where the password is checked") and get the best matching places as file:line with a score, best first. |
 | [`look_at`](#look_at) | auto<br>an image is sent to the main model in one extra request (a PDF is read locally) | no | Look at an image file (png, jpg, gif, webp) and answer a question about it, or read the text of a PDF file. |
 | [`proof_screenshot`](#proof_screenshot) | a localhost page or an HTML file in the workspace: auto<br>any other address: confirm (run)<br>the shot is sent to the main model when it takes images | no | Take a screenshot of a web page in a headless browser as proof of a UI change: the local dev server (http://localhost:<port>/…) or an HTML file in the workspace. |
 | [`todo_write`](#todo_write) | auto | no | Write the todo list of this chat (the whole list each time; it replaces the old one). |
@@ -1861,6 +1862,19 @@ Structural code search with ast-grep: pattern is code with $VAR wildcards ("fmt.
 | `path` | string |   | folder or file to search, relative to the workspace (default: root) |
 | `rewrite` | string |   | replacement for each match, may use the pattern's $VARs (optional) |
 
+### codebase_search
+
+Find code by meaning: describe what it does in plain words ("where the password is checked") and get the best matching places as file:line with a score, best first. A local index of the git-tracked files (related words count too; secret files are left out). Use search for exact text, lsp tools for symbols.
+
+**Gate:** auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `query` | string | yes | what the code does, in plain words |
+| `max` | integer |   | number of results (default 10, max 15) |
+
 ### look_at
 
 Look at an image file (png, jpg, gif, webp) and answer a question about it, or read the text of a PDF file. For an image this sends one extra request to the model. Use read_file for text files.
@@ -2219,6 +2233,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `close-split` | Editor: Close Split | auto |   |
 | `code-action-apply-preferred` | Edit: Apply Preferred Quick Fix | never | applies an edit chosen by the language server; the AI uses lsp tools instead |
 | `code-actions` | Edit: Quick Fix... | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `codebase-search` | Search: Codebase by Meaning… | never | opens a picker or prompt that only the user can answer; use a typed tool (codebase_search) |
 | `config-commands` | Open Config: User Commands | confirm (ide) |   |
 | `config-theme` | Open Config: Theme | confirm (ide) |   |
 | `containers-attach` | Containers: Attach | never | opens a picker or prompt that only the user can answer; use a typed tool (container attach) |

@@ -218,6 +218,7 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 	tools = append(tools, m.aiHTTPTools(root, call, tools)...) // HC-9: HTTP client
 	tools = append(tools, aiDBTools(root, call)...)            // DB-5: the Databases view (ai_db_tools.go)
 	tools = append(tools, m.aiAstGrepTool(root, call))         // OMX-28: structural search / rewrite
+	tools = append(tools, codebaseSearchTool(root))            // CMP-69: search by meaning (codebase_search.go)
 	tools = append(tools, aiSkillTools(root)...)               // OM-4: only when a skill is offered
 	tools = append(tools, m.aiLookTool(root))                  // OMX-32: images (one extra request) and PDFs
 	tools = append(tools, aiProofTool(root))                   // CMP-52: headless-browser screenshots as proof of work
