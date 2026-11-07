@@ -660,7 +660,7 @@ func (m *Model) databaseExpand(path string) tea.Cmd {
 		req.Database = ""
 	}
 	if n.kind == dbNodeDatabase {
-		if c, ok := s.connection(n.conn); ok && (c.Driver == "mysql" || c.Driver == "clickhouse") {
+		if c, ok := s.connection(n.conn); ok && (c.Driver == "mysql" || c.Driver == "clickhouse" || dbclient.IsHTTPEngine(c.Driver)) {
 			req.Database, req.Schema = n.name, n.name
 		} else if ok && c.Driver == "sqlite" {
 			// One file, one session: main and attached databases share it.
@@ -799,6 +799,10 @@ func dbTypePickerItems(remote bool) []picker.Item {
 	if remote {
 		items = []picker.Item{items[0], items[1], items[3]}
 	}
+	// The servers reached over their own HTTP API (DBX-68..71).
+	for _, e := range dbclient.HTTPEngines() {
+		items = append(items, picker.Item{ID: "engine:" + e.ID, Title: e.Title, Hint: e.Hint})
+	}
 	for _, p := range dbclient.MySQLPresets() {
 		items = append(items, picker.Item{ID: "preset:" + p.ID, Title: p.Title, Hint: p.Hint})
 	}
@@ -836,6 +840,16 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 	}
 	s.pendingConn = dbclient.Conn{Source: dbclient.SourceUser}
 	s.pendingPassword = ""
+	if id, ok := strings.CutPrefix(kind, "engine:"); ok {
+		e, found := dbclient.HTTPEngineByID(id)
+		if !found {
+			return nil
+		}
+		s.addFromURL = false
+		s.remoteAdd, s.remoteNext = s.remoteNext, false
+		s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.Database = e.ID, e.Port, e.Database
+		return m.databaseAddPrompt(promptKindDBHost, e.Title+": server address", "Host name or address:", "localhost", false)
+	}
 	s.addFromURL = kind == "url"
 	s.remoteAdd, s.remoteNext = s.remoteNext && kind != "sqlite" && kind != "url", false
 	switch kind {
@@ -1399,6 +1413,11 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 			return m.pushToastDetail(toast.Warn, "That port is not valid", "Enter a number from 1 to 65535.")
 		}
 		s.pendingConn.Port = port
+		if dbclient.IsHTTPEngine(s.pendingConn.Driver) {
+			cmd := m.databaseAddPrompt(promptKindDBUser, "User", "User name (empty: no sign-in):", s.pendingConn.User, false)
+			m.prompt.SetAllowEmpty(true)
+			return cmd
+		}
 		if s.pendingConn.Driver == "redis" {
 			cmd := m.databaseAddPrompt(promptKindDBUser, "ACL user", "User name (empty: the default user):", s.pendingConn.User, false)
 			m.prompt.SetAllowEmpty(true)
@@ -1407,6 +1426,12 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 		return m.databaseAddPrompt(promptKindDBUser, "Database user", "User name:", s.pendingConn.User, false)
 	case promptKindDBUser:
 		s.pendingConn.User = strings.TrimSpace(value)
+		if dbclient.IsHTTPEngine(s.pendingConn.Driver) {
+			// No database prompt: the tree lists them after connect.
+			s.pendingConn.ID = dbConnectionID(s.pendingConn)
+			s.pendingConn.Name = s.pendingConn.ID
+			return m.databasePromptPasswordForPending()
+		}
 		if s.pendingConn.Driver == "redis" {
 			return m.databaseAddPrompt(promptKindDBName, "Database index", "Database index (0-15 on most servers):", strconv.Itoa(s.pendingConn.DB), false)
 		}

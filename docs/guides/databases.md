@@ -79,7 +79,7 @@ With no connections yet, the view lists the suggestions and offers **a add** and
 
 ## Add a connection
 
-Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, or **From a URL**.
+Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, **From a URL**, or one of the [servers reached over HTTP](#servers-over-http).
 
 The MySQL family has presets on the MySQL driver: MariaDB, TiDB (port 4000), PlanetScale / Vitess and Amazon Aurora (MySQL) (both with TLS), and SingleStore. A preset fills the port, user and SSL mode, shows a short note on what differs from MySQL, and is saved as `"preset"` in the connection; the tree shows its name next to the host.
 
@@ -317,6 +317,12 @@ Expanding a connection lists its databases (`db0 (1234 keys)`). Expanding a data
 On the value page, `e` edits the value or the field under the cursor, `+` adds a field, item, member or entry, `-` deletes the one under the cursor, `t` sets the TTL (seconds or `30m`, `2h`, `1d`; empty removes it) and `D` deletes the key. Every change shows a card with the exact command, such as `HSET session:ab12 plan pro`, before it runs. On a production connection the card says so; on a read-only connection it asks **Run anyway?**. In the tree, `t`, `D` and `y` (copy the key) work on a key row. `D` on a namespace row deletes every key under it: the keys are found with `SCAN`, a card shows how many and a few of their names, and they are removed in batches with `UNLINK` (`DEL` on servers older than 4.0). If a namespace has more keys than one scan loads, run it again for the rest.
 
 Press `n` on a Redis connection to open its console, a `.redis` file that starts with `# @conn <id>`. Write one command per line and press the send key on a line (or select several lines). Read commands run at once; other commands show a card first. Commands that can wipe data, stop the server or run code (`FLUSHALL`, `FLUSHDB`, `CONFIG SET`, `SHUTDOWN`, `DEBUG`, `MODULE`, `EVAL`, `FCALL`, `MIGRATE`, `REPLICAOF`, `ACL SETUSER`, …) show a strong warning card. `MONITOR`, `SUBSCRIBE`, `SELECT` and `MULTI` are not sent. `KEYS pattern` runs as `SCAN` with a note. An `AUTH` line is masked in the card, the page and the history. Console runs go to the same history as SQL.
+
+## Servers over HTTP
+
+Some servers are not SQL databases. Termocode talks to them over their own HTTP API, with no extra driver. Add one with `a` (host, port, an optional user, then the password), from a URL, or in the JSON file with its `"driver"`. `"tls": true` (or the URL scheme that ends in `s`) turns on HTTPS; `"ssl"` and SSH tunnels work as for the other servers. Passwords go to the secret store. They have no transactions: each request commits on its own.
+
+- **Couchbase** (`"driver": "couchbase"`, `couchbase://` or `couchbases://`): N1QL (SQL++) on the query service, port 8093 (18093 with TLS). Buckets are the databases and `scope.collection` the tables. A collection's columns are the top-level keys of its first 20 documents; its indexes come from `system:indexes`. Documents show as rows: nested objects and arrays as compact JSON. Writes (`INSERT`, `UPSERT`, `UPDATE`, `DELETE`, `MERGE`) show a card first. A read-only connection and the AI send `readonly=true`, so the server itself refuses writes.
 
 ## AI tools and their rules
 

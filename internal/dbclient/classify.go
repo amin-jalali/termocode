@@ -37,6 +37,15 @@ var simpleSelectTable = lazyre.New(`(?i)\bFROM\s+([\w."` + "`" + `]+)`)
 // timeout are the real guard; callers must not use this result as a security
 // boundary. Unknown dialects and syntax are treated as writes when uncertain.
 func Classify(sql string, dialectName string) (Kind, []Statement) {
+	if f := engineClassify(dialectName); f != nil {
+		// A non-SQL engine judges its own requests (DBX-68..71).
+		text := strings.TrimSpace(sql)
+		if text == "" {
+			return KindUnknown, nil
+		}
+		k := f(text)
+		return k, []Statement{{SQL: text, Kind: k}}
+	}
 	dialect := dialectArg([]string{dialectName})
 	sqls, splitErr := Split(sql, string(dialect))
 	if splitErr != nil {

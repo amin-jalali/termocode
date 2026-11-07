@@ -21,6 +21,7 @@ func ParseURL(raw string) (Conn, error) {
 		}
 	}
 	u, e := url.Parse(raw)
+	var e2 error
 	if e != nil {
 		return Conn{}, e
 	}
@@ -63,6 +64,30 @@ func ParseURL(raw string) (Conn, error) {
 		}
 		return c, nil
 	default:
+		if e, tls, ok := engineForScheme(u.Scheme); ok {
+			// An HTTP engine (DBX-68..71): the address, user and
+			// password (kept as a secret) come out of the URL; the
+			// session builds its own base from the fields.
+			c = Conn{Driver: e.ID, Host: u.Hostname(), TLS: tls, Database: strings.Trim(u.Path, "/"), Params: map[string]string{}}
+			if u.User != nil {
+				c.User = u.User.Username()
+				c.Password, _ = u.User.Password()
+			}
+			if u.Port() != "" {
+				if c.Port, e2 = strconv.Atoi(u.Port()); e2 != nil {
+					return Conn{}, fmt.Errorf("invalid port")
+				}
+			} else {
+				c.Port = httpEngineDefaultPort(e.ID, tls)
+			}
+			if c.Database == "" {
+				c.Database = e.Database
+			}
+			if e.FixURL != nil {
+				e.FixURL(&c)
+			}
+			return c, nil
+		}
 		if !isPreset {
 			return Conn{}, fmt.Errorf("unsupported database URL scheme %q", u.Scheme)
 		}

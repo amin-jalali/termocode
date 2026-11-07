@@ -166,7 +166,7 @@ func defaultPort(d string) int {
 	case "cassandra":
 		return 9042
 	}
-	return 0
+	return httpEngineDefaultPort(d, false)
 }
 func normDriver(d string) string {
 	switch d {
