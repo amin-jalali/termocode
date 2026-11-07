@@ -13,5 +13,5 @@ func (m *Model) aiLookTool(root string) ai.Tool {
 			p, model, vision = sl.p, sl.cfg.Model, ai.SupportsImages(sl.p)
 		}
 	}
-	return ai.LookAtTool(ai.Workspace{Root: root}, func() (ai.Provider, string, bool) { return p, model, vision })
+	return ai.LookAtTool(m.aiWorkspaceAt(root), func() (ai.Provider, string, bool) { return p, model, vision })
 }

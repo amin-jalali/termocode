@@ -21,11 +21,19 @@ const serveStopWait = 3 * time.Second
 // UI). Without --bg its config is removed when it ends, so the panel's
 // https name exists only while the gateway runs.
 func StartTailscaleServe(target string) (ServeProc, error) {
+	return StartTailscaleServeOn(TailnetPort, target)
+}
+
+// StartTailscaleServeOn is StartTailscaleServe on another https port: a
+// port preview (WEB-54) gets its own port, so its own origin. It lives
+// as long as the process: Stop removes it from Tailscale. Funnel (the
+// internet) is never asked for.
+func StartTailscaleServeOn(httpsPort int, target string) (ServeProc, error) {
 	bin, err := tailscaleBin()
 	if err != nil {
 		return nil, err
 	}
-	cmd := spawn.Command(bin, "serve", "--https="+strconv.Itoa(TailnetPort), target)
+	cmd := spawn.Command(bin, "serve", "--https="+strconv.Itoa(httpsPort), target)
 	out := &tailBuf{max: 4 << 10}
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, out, out
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}

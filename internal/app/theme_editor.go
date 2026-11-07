@@ -73,13 +73,18 @@ func (m *Model) applyThemeColor(value string) tea.Cmd {
 		entries = map[string]string{}
 	}
 	entries[m.themePromptKey] = value
-	if err := theme.SaveUserOverrides(entries); err != nil {
+	note, err := theme.SaveUserOverridesNote(entries)
+	if err != nil {
 		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Theme error", err.Error())
 		return toastCmd
 	}
 	// Apply right away so the user sees the change without re-launching.
 	m.applyTheme(theme.UserThemeID)
-	m.toast, toastCmd = m.toast.PushDetail(toast.Info, m.themePromptKey, value)
+	if note != "" { // SCN-30: a broken hand-edited file was kept aside
+		m.toast, toastCmd = m.toast.PushDetail(toast.Warn, m.themePromptKey+" "+value, note)
+	} else {
+		m.toast, toastCmd = m.toast.PushDetail(toast.Info, m.themePromptKey, value)
+	}
 	m.themePromptKey = ""
 	return toastCmd
 }

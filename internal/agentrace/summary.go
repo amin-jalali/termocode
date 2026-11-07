@@ -20,6 +20,13 @@ func SummaryPrompt(r Race, diffs map[string]string, max int, redact func(string)
 			lanes = append(lanes, l)
 		}
 	}
+	return SummarySystem, lanesBody(r, lanes, diffs, max, redact)
+}
+
+// lanesBody is the task and each lane's numbers and fenced diff (the
+// diffs together cut to max bytes, each lane its share; redact runs on
+// every diff).
+func lanesBody(r Race, lanes []Lane, diffs map[string]string, max int, redact func(string) string) string {
 	share := max
 	if len(lanes) > 0 {
 		share = max / len(lanes)
@@ -44,7 +51,7 @@ func SummaryPrompt(r Race, diffs map[string]string, max int, redact func(string)
 		}
 		b.WriteString("```\n")
 	}
-	return SummarySystem, b.String()
+	return b.String()
 }
 
 func verifyWord(v Verify) string {

@@ -16,7 +16,9 @@ import (
 	"github.com/amin-jalali/termocode/internal/blocks"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/search"
+	"github.com/amin-jalali/termocode/internal/services"
 	"github.com/amin-jalali/termocode/internal/spawn"
+	"github.com/amin-jalali/termocode/internal/workspace"
 )
 
 // Tool is one capability the agent can call. Port of mobocode's AiTool:
@@ -245,6 +247,14 @@ func strParam(desc string) map[string]any {
 type Workspace struct {
 	Root       string
 	RunTimeout time.Duration
+	// FS and Exec reach a workspace that is not on this machine (a
+	// container, ADR 0018); nil for a local folder. With FS set every
+	// file, search, git and run tool goes through them (tools_host.go)
+	// and never touches the local disk.
+	FS   workspace.FS
+	Exec services.Exec
+	// HostLabel names that host in tool results ("api-1").
+	HostLabel string
 }
 
 // ErrOutsideWorkspace is returned for paths escaping the root.
@@ -253,6 +263,9 @@ var ErrOutsideWorkspace = errors.New("path is outside the workspace")
 // Resolve maps a tool path (relative or absolute) to an absolute path
 // inside the workspace root.
 func (w Workspace) Resolve(p string) (string, error) {
+	if w.FS != nil {
+		return w.resolveOnHost(p)
+	}
 	root, err := filepath.Abs(w.Root)
 	if err != nil {
 		return "", err
@@ -350,8 +363,17 @@ func capOut(s string, n int) string {
 }
 
 // WorkspaceTools returns the filesystem / search / git / run tools — the
-// app adds editor-backed (LSP) tools on top.
+// app adds editor-backed (LSP) tools on top. A workspace on another host
+// (w.FS set) gets the same tools, run through that host.
 func WorkspaceTools(w Workspace) []Tool {
+	tools := localWorkspaceTools(w)
+	if w.FS != nil {
+		return onHost(w, tools)
+	}
+	return tools
+}
+
+func localWorkspaceTools(w Workspace) []Tool {
 	path := func(args map[string]any) string { return ArgString(args, "path") }
 	inside := w.argsInside("path")
 	return []Tool{
@@ -426,6 +448,9 @@ func WorkspaceTools(w Workspace) []Tool {
 					return "", errors.New("query is empty")
 				}
 				opts := search.Options{MaxResults: 50, Regex: ArgBool(a, "regex")}
+				if w.FS != nil {
+					opts.FS = w.FS // the container's files, not the local disk
+				}
 				if opts.Regex {
 					if _, err := regexp.Compile(q); err != nil {
 						return "", fmt.Errorf("bad regex: %v", err)

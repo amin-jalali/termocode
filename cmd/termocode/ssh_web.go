@@ -56,6 +56,7 @@ type webForward struct {
 	open    func(path string) error
 	ready   func(port int, d time.Duration) bool
 	backoff func(try int) time.Duration
+	free    func() (int, error)
 
 	queue chan session.WebHandoff
 	done  chan struct{}
@@ -67,13 +68,15 @@ type webForward struct {
 	closed bool
 	notes  []string
 	pages  []string
+	ports  map[string]*portFwd // port previews by the far UI's id (WEB-54)
 }
 
 func newWebForward(ssh string, args []string, dir string) *webForward {
 	f := &webForward{ssh: ssh, args: args, dir: dir,
 		start: startFwdProc, open: openInBrowser, ready: portAnswers,
 		backoff: func(try int) time.Duration { return time.Duration(try) * time.Second },
-		queue:   make(chan session.WebHandoff, 8), done: make(chan struct{})}
+		free:    freeLocalPort, ports: map[string]*portFwd{},
+		queue: make(chan session.WebHandoff, 8), done: make(chan struct{})}
 	crash.Go("termocode ssh --web: the hand-offs", f.run)
 	return f
 }
@@ -101,6 +104,10 @@ func (f *webForward) run() {
 }
 
 func (f *webForward) handle(h session.WebHandoff) {
+	if h.Fwd != nil {
+		f.handlePort(*h.Fwd)
+		return
+	}
 	if h.Err != "" {
 		f.note("termocode: no web panel: " + h.Err)
 		return
@@ -204,6 +211,10 @@ func (f *webForward) Close() []string {
 	if f.proc != nil {
 		f.proc.Kill()
 		f.proc = nil
+	}
+	for id, p := range f.ports {
+		p.proc.Kill()
+		delete(f.ports, id)
 	}
 	for _, p := range f.pages {
 		_ = os.Remove(p)

@@ -62,13 +62,27 @@ If ghost text shows at the cursor, `Tab` accepts the ghost text first.
    tries again up to 3 times). When no text comes for 90 s (or 30 s in
    the middle of an answer) it turns yellow: `no answer for 35 s — Esc
    to stop`. A running tool never shows this warning.
+   When the connection to the model breaks in the middle of an answer,
+   the text that came stays and a red line says `answer stopped in the
+   middle, not complete`. termocode does not send it again by itself:
+   send the message again to retry.
 4. Press `Esc` to go back to the editor. `F6` also moves focus.
 
 The header shows the profile chip, then `⌁ N MCP` (the services the chat
-can use) and `usage` when there is room. In a narrow window a chip that
-does not fit becomes `⋯`: a click opens a small menu with Profile…,
-Services, Usage and Agents, so nothing is only in the palette. Hover a chip
-for its label and key.
+can use), the context chip and `usage` when there is room. In a narrow
+window a chip that does not fit becomes `⋯`: a click opens a small menu
+with Profile…, Services, Usage and Agents, so nothing is only in the
+palette. Hover a chip for its label and key.
+
+The context chip `ctx ▰▰▱▱▱ 42%` shows how full the model's context
+window was on the newest turn of this chat (the biggest prompt of the
+turn; for a run, its newest step). It is green, amber from 70 % and red
+from 90 %; from 80 % the chat summarises older messages (`ai_compact`).
+Hover it for the token counts; a click opens **AI: Usage**. It appears
+after the first turn of a chat whose model has a known window (set more
+windows with `ai_context_windows`), and each chat has its own. The `⋯`
+menu's Usage row names the same number, and the web chat shows it next
+to the composer.
 
 To give the AI context, open a file or select code, then run
 **AI: Add File / Selection to Chat**.

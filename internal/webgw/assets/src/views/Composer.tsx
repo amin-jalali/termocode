@@ -12,6 +12,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { getDraft, pendingDraft, setDraft, takePending } from "../lib/drafts";
 import { attachLabel, clearAttaches, getAttaches, removeAttach } from "../lib/attach";
 import { layout } from "../lib/layout";
+import { ctxTone } from "../state/chat";
 import { OfflineError, ReqError } from "../net/link";
 import { link, live } from "../session";
 import { t, type StringKey } from "../strings";
@@ -26,6 +27,7 @@ export function Composer({
   busy,
   profile = "",
   model = "",
+  ctx,
   onSent,
   placeholder,
 }: {
@@ -33,6 +35,7 @@ export function Composer({
   busy: boolean;
   profile?: string;
   model?: string;
+  ctx?: { pct: number; tokens: number; window: number };
   onSent?: () => void;
   /** placeholder replaces the box's hint (the phone's Home asks "What do you want?"). */
   placeholder?: string;
@@ -148,6 +151,14 @@ export function Composer({
           ) : (
             <span class="chat-chip" title={t("chat.agent")}>
               <Cod name="sparkle" /> {[profile || t("chat.default_profile"), model].filter(Boolean).join(" · ")}
+            </span>
+          )}
+          {ctx && ctx.pct > 0 && (
+            <span class={"chat-chip ctx-chip ctx-" + ctxTone(ctx.pct)} title={t("chat.ctx_title", { tokens: ctx.tokens, window: ctx.window, pct: ctx.pct })}>
+              <span class="ctx-bar" aria-hidden="true">
+                <span style={{ width: Math.min(ctx.pct, 100) + "%" }} />
+              </span>
+              {t("chat.ctx", { pct: ctx.pct })}
             </span>
           )}
           <span class={busy ? "stop" : "send"}>

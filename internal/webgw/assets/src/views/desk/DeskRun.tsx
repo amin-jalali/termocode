@@ -3,7 +3,8 @@
 // state's icon (running, done, failed, not run yet), where it comes from
 // and when it ran; on hover Run or Stop and Show Output (its terminal in
 // the panel). AI RUNS lists the agent runs with their state, step, time
-// and cost; on hover Pause, Resume and Stop. Running and stopping ask in
+// and cost, as a tree: a run the AI started from another run sits under
+// it (CMP-10); on hover Pause, Resume and Stop. Running and stopping ask in
 // the view first (Cancel first and focused). No command line is sent:
 // "Use the terminal for a command."
 import { Fragment, h } from "preact";
@@ -135,10 +136,10 @@ function RunRows({ runs, canAct }: { runs: RunView[]; canAct: boolean }) {
         return (
           <Fragment key={r.key}>
             <Row
-              level={0}
+              level={r.depth}
               icon={runIcon(r)}
               label={r.title}
-              desc={desc}
+              desc={r.kids > 0 ? `${desc} · ${t(r.kids === 1 ? "runs.subrun" : "runs.subruns", { n: r.kids })}` : desc}
               title={[r.title, r.chat, r.stepTitle, r.why].filter(Boolean).join(" — ")}
               data={{ key: r.key, state: r.state }}
               onClick={() => go({ tab: "chat", rest: "", query: {} })}

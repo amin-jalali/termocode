@@ -82,6 +82,8 @@ func (m *Model) raceAct(a raceview.ActionMsg) tea.Cmd {
 		return m.raceVerify(r)
 	case raceview.ActSummary:
 		return m.raceSummary(r)
+	case raceview.ActJudge:
+		return m.raceJudge(r)
 	}
 	return nil
 }
@@ -344,6 +346,10 @@ func (m *Model) answerRaceCard(kind confirmKindEnum, id string) tea.Cmd {
 		if l := r.Lane(t[1]); l != nil && l.Finished() {
 			return raceDiscardCmd(root, r.ID, []string{l.ID}, false)
 		}
+	case kind == confirmKindRaceJudgePick && id == "merge":
+		if l := r.Lane(t[1]); l != nil && l.Finished() && r.Judge != nil && r.Judge.Pick == l.ID {
+			return raceMergeCmd(root, r.ID, l.ID, false)
+		}
 	case kind == confirmKindRaceOthers && id == "discard":
 		var ids []string
 		for _, l := range r.Finished() {
@@ -518,6 +524,8 @@ func (m *Model) handleRaceCompareMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onRaceDiscarded(msg), true
 	case raceSummaryMsg:
 		return m.onRaceSummary(msg), true
+	case raceJudgeMsg:
+		return m.onRaceJudge(msg), true
 	}
 	return nil, false
 }

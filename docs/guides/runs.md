@@ -38,6 +38,23 @@ its log name the chat that asked (see
 [Let the AI start a run](ai-profiles.md#let-the-ai-start-a-run)). Type
 `by AI` in the filter to see only those.
 
+### The run tree
+
+A step of a run can start more runs (sub-runs). Runs shows each sub-run
+under the run that started it, one step to the right, with a branch line:
+
+```
+◉ fix the toast flicker          $0.009
+  review ●─◉ Fixer · 41 s
+  └ ✓ why does the toast …         done
+      review ●─● 58 s
+```
+
+A family stays together in the group of its most urgent run. A finished
+run with a sub-run that still goes is in **NOW**. Press `t` for the flat
+list by time; press `t` again for the tree. The filter keeps the tree for
+the runs it shows.
+
 Colour is state only:
 
 | Colour | Means |
@@ -81,6 +98,9 @@ a known price adds nothing.
 - **BUDGET**: the run against its profile's `budget_usd`, and today
   against your day budget (below).
 - **WHAT HAPPENED**: when each step started and ended.
+- **RUN TREE** (only for a run with a parent or sub-runs): the run that
+  started it (`↑`), this run, and its sub-runs (`└`). Click a row to open
+  that run's page.
 
 The numbers move once a second while a run goes and Runs is on screen.
 Nothing ticks when no run goes.
@@ -112,6 +132,7 @@ profile still has the same steps. Otherwise send the message again.
 | `x` `p` `r` `c` | Stop, Pause, Resume, Open in chat |
 | `a` `u` `i` `y` | AGENTS, usage by model, the profile in Itermoc, copy the run id |
 | `/` | Filter by task, profile or chat title |
+| `t` | The run tree on or off (sub-runs under their parent) |
 | `?` | The keys card |
 
 ## Day budget

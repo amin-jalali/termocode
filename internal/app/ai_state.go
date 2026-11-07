@@ -206,6 +206,9 @@ type aiState struct {
 	// usageGen changes with it.
 	usageLog []aiUsageEntry
 	usageGen int
+	// ctxUse is the context use of the open chat's newest turn, for the
+	// header's context chip (CMP-7, ai_context_chip.go).
+	ctxUse aiCtxUse
 
 	// inline ghost text
 	inlineCancel context.CancelFunc
@@ -277,6 +280,9 @@ type aiState struct {
 	// mcpUntrustTool is the tool the Reset trust card is about ("" = the
 	// whole server; ai_mcp_untrust.go).
 	mcpUntrustTool string
+	// mcpAccountsOut are the servers the Signed-in Services card would
+	// sign out (mcp_accounts.go).
+	mcpAccountsOut []string
 	// mcpLogServer is the server the MCP log shows ("" = all; ai_mcp_log.go).
 	mcpLogServer string
 
@@ -609,6 +615,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-mcp-updates", "AI: MCP: Check for Updates (catalog servers)", ""},
 		{"ai-mcp-bundle", "AI: MCP: Install Bundle (.mcpb)…", ""},
 		{"ai-mcp-profile", "AI: MCP: Switch Profile… (servers and tools for this chat)", ""},
+		{"ai-mcp-accounts", "AI: MCP: Signed-in Services… (one list, sign out)", ""},
 		{"ai-mcp-log", "AI: MCP: Show Log", ""},
 		{"ai-mcp-reconnect-all", "AI: MCP: Reconnect All Servers", ""},
 		{"ai-mcp-reset-cache", "AI: MCP: Reset Tool Lists", ""},
@@ -632,7 +639,7 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 	case "ai-configure", "ai-sign-in-claude", "ai-sign-out-claude", "ai-credentials",
 		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
 		"ai-history-rename", "ai-history-delete", "ai-history-clear", "ai-fork-chat", aiHistorySearchID,
-		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reconnect-all", "ai-mcp-profile", "ai-mcp-catalog", "ai-mcp-bundle", "ai-mcp-updates", "ai-mcp-reset-cache",
+		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reconnect-all", "ai-mcp-profile", "ai-mcp-accounts", "ai-mcp-catalog", "ai-mcp-bundle", "ai-mcp-updates", "ai-mcp-reset-cache",
 		"ai-agent-hooks", "ai-agent-packs": // agent CLI files need no provider
 	default:
 		if c, ok := m.aiReady(); !ok {
@@ -720,6 +727,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openMCPInsertPicker(), true
 	case "ai-mcp-profile":
 		return m.openMCPProfiles(), true
+	case "ai-mcp-accounts": // mcp_accounts.go
+		return m.openMCPAccounts(), true
 	case "ai-mcp-catalog":
 		return m.openMCPCatalog(), true
 	case "ai-mcp-bundle":

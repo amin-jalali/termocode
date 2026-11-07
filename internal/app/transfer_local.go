@@ -124,7 +124,7 @@ func tildePath(p string) string {
 func (m *Model) startLocalDownload(path string, size int64) tea.Cmd {
 	ctx, cancel := context.WithCancel(context.Background())
 	name := filepath.Base(path)
-	run := &xferRun{name: name, cancel: cancel, ch: make(chan tea.Msg, 16)}
+	run := &xferRun{name: name, method: transfer.Local, cancel: cancel, ch: make(chan tea.Msg, 16)}
 	m.xfer = run
 	crash.Go("the download", func() {
 		var last time.Time
@@ -210,7 +210,7 @@ func (m *Model) revealLast() tea.Cmd {
 // localUpload opens the desktop's file chooser for files to copy into
 // dir; without one it asks for a path in the app.
 func (m *Model) localUpload(dir string) tea.Cmd {
-	title := "Upload to " + filepath.Base(dir)
+	title := "Upload to " + m.xferDirLabel(dir)
 	if h := localHooks(); h != nil {
 		if h.Choose == nil {
 			return m.openLocalUploadPrompt(dir)
@@ -260,7 +260,7 @@ func runChooser(ch transfer.Chooser) ([]string, error) {
 // completes the path).
 func (m *Model) openLocalUploadPrompt(dir string) tea.Cmd {
 	m.extras.xfer = xferPending{path: dir, upload: true, method: transfer.Local}
-	m.prompt = prompt.New("Upload to "+filepath.Base(dir), "File or folder to copy here (Tab completes):", "~/")
+	m.prompt = prompt.New("Upload to "+m.xferDirLabel(dir), "File or folder to copy here (Tab completes):", "~/")
 	m.prompt.SetCompleter(prompt.CompletePath)
 	m.prompt.SetSize(m.w, m.h)
 	m.promptOpen = true

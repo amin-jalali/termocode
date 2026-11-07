@@ -148,6 +148,14 @@ add `$HOME/go/bin` to your `PATH`. This needs Go 1.26 or newer. No X11
 headers are needed: the Android build leaves the X11 clipboard library
 out.
 
+**Clipboard.** In Termux, copy and paste go through `termux-clipboard-set`
+and `termux-clipboard-get` (package `termux-api`). If those fail, termocode
+falls back to OSC 52. An app shell that has no Termux:API can give
+termocode its own clipboard bridge: it sets `TERMOCODE_APK_CLIP` to the
+absolute path of a small program. `<bridge> set` puts stdin on the Android
+clipboard, and `<bridge> get` prints it. termocode tries the bridge first,
+then `termux-clipboard-*`, then OSC 52.
+
 **Language servers.** Most install from the language server manager as
 on Linux (`gopls` needs `pkg install golang`, the npm ones need
 `pkg install nodejs`, the pip ones need `pkg install python`). A few

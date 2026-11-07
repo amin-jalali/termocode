@@ -81,6 +81,11 @@ type runsItem struct {
 	stall     int // seconds without output (runsStalled)
 	cur       int // the step where the run is now (-1: none)
 	why       string
+	// The run tree (CMP-10, runsNest): depth 0 for a top-level row, the
+	// parent row's key and the number of sub-runs listed under it.
+	depth  int
+	parent string
+	kids   int
 }
 
 // runsStep is one step's live numbers.

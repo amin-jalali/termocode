@@ -193,8 +193,71 @@ second message
 | `# @subscribe a/#, b` | topic filters to listen to; with no body and no `@subscribe`, the URL's topic |
 | `# @listen 5s` | how long to listen (default 3 s, at most 60 s) |
 | `# @retain`, `# @client-id x` | publish as retained; a fixed client ID |
+| `MQTT ws://host[:port]/path#topic` | MQTT over WebSocket (port 80, path `/mqtt`); `wss://` is TLS on 443. The topic comes after `#`; the query stays on the WebSocket URL and is not shown |
 
-Messages use QoS 0 and MQTT 3.1.1.
+Messages use QoS 0 and MQTT 3.1.1. A plain `ws://` URL without the
+`MQTT` method is still a WebSocket request.
+
+## Socket.IO
+
+The send key on a `SOCKETIO` request joins a Socket.IO namespace, emits
+the body events and listens, then shows the session as a read-only page.
+
+```http
+### chat
+# @auth {"token": "{{chatToken}}"}
+# @listen 5s
+SOCKETIO http://localhost:3000/chat
+
+chat {"text": "hi"}
+===
+["typing", true, 2]
+```
+
+| Part | Meaning |
+|---|---|
+| `http(s)://host[:port]/namespace` | the server; the path is the namespace (none = `/`). `ws://` and `wss://` work too. The query is sent with the handshake |
+| body | events to emit, split by `===` lines: `event` plus one JSON argument (other text is sent as a string), or a JSON array `["event", arg1, arg2]` |
+| `# @auth {…}` | the namespace CONNECT payload (a JSON object) |
+| `# @ack` | wait up to 5 s for each emit's ack and show it |
+| `# @path /io/` | the server's Socket.IO path (default `/socket.io/`) |
+| `# @listen 5s` | how long to listen (default 3 s, at most 60 s) |
+| headers | sent with the WebSocket handshake |
+
+termocode speaks Socket.IO v3/v4 (Engine.IO v4) over the WebSocket
+transport only. It answers the server's pings and acks; binary
+attachments are not shown. Secret variables are hidden on the page.
+
+## gRPC
+
+The send key on a `GRPC` request calls the method and shows the call as
+a read-only page: each request, the reply header, each reply, the status
+and the trailer.
+
+```http
+### say hello
+# @proto ./proto/greeter.proto
+GRPC grpc://localhost:50051/helloworld.Greeter/SayHello
+authorization: Bearer {{token}}
+
+{"name": "ann"}
+```
+
+| Part | Meaning |
+|---|---|
+| `grpc://host:port/package.Service/Method` | plain HTTP/2 (port 80 when left out); `grpcs://` is TLS on 443 (`http_tls_insecure` skips the certificate check). A line with no scheme, like `localhost:50051/…`, is plain |
+| headers | sent as gRPC metadata (`Content-Type` is left to gRPC) |
+| body | the request message as JSON (proto field names or their JSON names); empty sends an empty message. A client-streaming method takes several messages split by `===` lines |
+| `# @proto a.proto, b.proto` | the .proto files that describe the service, next to the .http file or absolute; their imports are looked up in `# @proto-path dir` folders, then next to the importing file. `google/protobuf/*.proto` is built in |
+| no `@proto` | the server's reflection service describes the method (v1, then v1alpha) |
+
+Unary, server-streaming, client-streaming and bidi methods all work: all
+messages are sent first, then every reply is read until the server ends
+the call (at most 1000 replies are shown). The HTTP timeout setting is
+the deadline. Secrets from the private env file are hidden on the page.
+The .proto reader covers proto2 and proto3 messages, enums, maps,
+oneofs, `optional` and services; options are skipped, editions and
+groups are not supported.
 
 ## More commands
 
@@ -217,6 +280,7 @@ Messages use QoS 0 and MQTT 3.1.1.
 | HTTP: Validate GraphQL Query | checks every field of the query against the schema and that the braces match |
 | HTTP: Set Request Proxy… | writes `# @proxy URL` above the request at the cursor (`http://`, `https://`, `socks5://`, or `none` to go direct); empty removes it. The title shows the proxy the request uses now |
 | HTTP: GraphQL Schema Docs… | the schema's types (root types first); Enter opens one as read-only SDL |
+| HTTP: Describe gRPC Services | the services of the gRPC request at the cursor (only its service when the URL names one), with every method and the fields of its request and reply, as a read-only page; from the `@proto` files, else from server reflection |
 | HTTP: Start Mock Server | serves the open .http or OpenAPI file on a random `127.0.0.1` port (the toast shows the URL). In a .http file each `###` block answers with `# @mock-status` (default 200), `# @mock-type` and `# @mock-body`; `{{var}}` and `:var` path segments match anything. An OpenAPI file answers each operation with its first 2xx response example. A new Start replaces the old server |
 | HTTP: Stop Mock Server | ends the mock server (quitting ends it too) |
 

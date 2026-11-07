@@ -199,3 +199,9 @@ func (m *Model) aiToolRunSend(ctx context.Context, id, step, text string) (strin
 	}
 	return "Sent to step " + target + " of run " + id + ": it reads it after its current tool call.", nil, nil
 }
+
+// aiTeamNoteCheck refuses a team_send note that looks like a secret
+// (OMX-40): notes go into other steps' model requests.
+func aiTeamNoteCheck(text string) error {
+	return aiArgsSecretError(map[string]any{"message": text})
+}

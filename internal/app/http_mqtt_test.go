@@ -50,3 +50,17 @@ func TestHTTPMQTTPlan(t *testing.T) {
 		t.Error("bad @listen: no error")
 	}
 }
+
+// MQTT ws:// and wss:// URLs: the topic is the #fragment.
+func TestHTTPMQTTPlanWebSocket(t *testing.T) {
+	p, err := httpMQTTPlanFor(httpMQTTResolved("wss://b/mqtt#room/1", "on", nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !p.target.WS || p.target.Topic != "room/1" || strings.Join(p.publish, "|") != "on" {
+		t.Fatalf("plan = %+v", p)
+	}
+	if _, err := httpMQTTPlanFor(httpMQTTResolved("ws://b/mqtt", "on", nil)); err == nil || !strings.Contains(err.Error(), "after #") {
+		t.Errorf("ws publish without a topic: err = %v", err)
+	}
+}

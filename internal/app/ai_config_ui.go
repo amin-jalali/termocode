@@ -130,6 +130,8 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onAIKeyEntered(value), true
 	case promptKindAgentNames: // agent_names.go
 		return m.onAgentNamesTask(value), true
+	case promptKindWebForwardTo: // web_forward.go
+		return m.onWebForwardPort(value), true
 	case promptKindWTBgTask: // worktrees_bgtask.go
 		return m.onWTBgTask(value), true
 	case promptKindBugspecTitle: // bugspec_ui.go
@@ -211,6 +213,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerMCPRemove(id), true
 	case confirmKindMCPUntrust: // ai_mcp_untrust.go
 		return m.answerMCPUntrust(id), true
+	case confirmKindMCPAccountSignOut: // mcp_accounts.go
+		return m.answerMCPAccountSignOut(id), true
 	case confirmKindMCPDisable:
 		return m.answerMCPDisable(id), true
 	case confirmKindMCPShareStop: // mcp_share.go
@@ -285,7 +289,7 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAgentPackUndo(id), true
 	case confirmKindAIPowerInstall, confirmKindAIPowerRemove: // ai_powers.go
 		return m.answerAIPowerCard(m.confirmKind, id), true
-	case confirmKindRaceConflict, confirmKindRaceOthers, confirmKindRaceDiscard: // agent_race_compare.go
+	case confirmKindRaceConflict, confirmKindRaceOthers, confirmKindRaceDiscard, confirmKindRaceJudgePick: // agent_race_compare.go, agent_race_judge.go
 		return m.answerRaceCard(m.confirmKind, id), true
 	case confirmKindWorkflowGate: // workflow_gate.go
 		return m.answerWorkflowGate(id), true
@@ -370,6 +374,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerMCPRemove("keep")
 	case confirmKindMCPUntrust:
 		return m.answerMCPUntrust("cancel")
+	case confirmKindMCPAccountSignOut:
+		return m.answerMCPAccountSignOut("cancel")
 	case confirmKindMCPDisable:
 		return m.answerMCPDisable("keep")
 	case confirmKindMCPShareStop:

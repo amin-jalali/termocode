@@ -25,8 +25,11 @@ type containerOpen struct {
 // The parts of the container open flow tests replace.
 var (
 	containerEngine services.Exec = services.SpawnExec{}
-	setWorkspace                  = app.SetWorkspace
-	pushContainerWorkspace        = app.PushContainerWorkspace
+	// containerPipe starts the shellmux of a remote engine (nil = the
+	// real one).
+	containerPipe          containerhost.Piper
+	setWorkspace           = app.SetWorkspace
+	pushContainerWorkspace = app.PushContainerWorkspace
 )
 
 // flagValue reads "--flag v" or "--flag=v" at args[i]. ok is false when
@@ -96,16 +99,22 @@ func parseContainerOpen(args []string) (containerOpen, []string, error) {
 // runContainer opens o and starts the UI on it. It runs without a
 // persistent session: sessions serve local folders only for now.
 func runContainer(o containerOpen) int {
+	// Phase 8: over a remote engine (ssh://, tcp://) every engine call is
+	// slow, so the short file operations share one long `exec -i sh`.
+	remote := containerhost.RemoteEndpoint(containerhost.Endpoint(context.Background(), containerEngine, "", o.Context))
 	h, err := containerhost.New(context.Background(), containerhost.Config{
 		Context:   o.Context,
 		Container: o.Name,
 		Root:      o.Root,
 		X:         containerEngine,
+		Mux:       remote,
+		Pipe:      containerPipe,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "termocode: cannot open %s:%s: %v\n", o.Name, o.Root, err)
 		return 1
 	}
+	defer func() { _ = h.Close() }()
 	setWorkspace(h.Workspace())
 	pushContainerWorkspace(o.Context, o.Name, o.Root) // recents: ▣ api-1 /app
 	startTUI()

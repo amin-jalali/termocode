@@ -178,6 +178,11 @@ type Options struct {
 	// PlanReviewRounds times; then the last plan goes on.
 	PlanReview       func(ctx context.Context, plan string) (approve bool, reasons string, usage *ai.Usage, err error)
 	PlanReviewRounds int
+	// Team (OMX-40; team.go) gives every agent step the team tools when
+	// more than one step runs at a time: notes between steps and a shared
+	// claim list. TeamCheck (optional) refuses a note (secrets).
+	Team      bool
+	TeamCheck func(text string) error
 }
 
 // Handle is a started run.
@@ -210,6 +215,8 @@ type Handle struct {
 	// mail holds the messages Send queued for the running agents
 	// (send.go).
 	mail mailbox
+	// team is the run's claim list (team.go, OMX-40).
+	team team
 	// stops are the running nodes' own cancels and stopped the nodes
 	// the user stopped (StopNode); under mu.
 	stops   map[string]context.CancelFunc
@@ -489,6 +496,7 @@ func (h *Handle) loop(runCtx context.Context) {
 		h.mail.closeNode(res.id, func(text string) {
 			h.emit(Event{NodeID: res.id, Kind: NodeMessage, Output: text, Err: "the step ended before it read the message"})
 		})
+		h.releaseAll(res.id) // OMX-40: an ended step holds no claims
 		total = total.Add(res.usage)
 		if res.usage != nil && h.o.Cost != nil {
 			if c, ok := h.o.Cost(*h.node(res.id), *res.usage); ok {
@@ -756,6 +764,7 @@ func (h *Handle) runNode(ctx context.Context, n agentdag.Node, input string, out
 		agent.MaxSteps = n.Input.MaxSteps
 	}
 	agent.Inbox = h.inbox(n.ID, agent.Inbox)
+	history = h.withTeam(n, agent, history) // OMX-40
 	if g, ask := h.o.Review, agent.Confirm; g != nil && ask != nil {
 		// The confirm queue: one card at a time over all nodes; a node
 		// that waits for its turn stops with the run.

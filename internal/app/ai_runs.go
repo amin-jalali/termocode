@@ -378,6 +378,8 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 		Acts:       acts,
 		StallAfter: s.settings.StepStall(), // OMX-23
 		Escalate:   escalate,               // OMX-16
+		Team:       s.settings.TeamMode(),  // OMX-40
+		TeamCheck:  aiTeamNoteCheck,
 		Cost: func(n agentdag.Node, u ai.Usage) (float64, bool) {
 			if n.CLI != "" {
 				return 0, false // the subscription: no price, not in the budget
@@ -869,6 +871,7 @@ func (m *Model) aiStepFinished(st *ai.StoredStep, ev agentrun.Event) {
 			if pct, ok := ai.ContextPercent(c, w); ok {
 				st.ContextPct = &pct
 			}
+			s.noteContext(c, w) // CMP-7: the newest step is the chat's context chip
 		}
 		m.output.Append(aiAuditChannel, clock.Now().Format("15:04:05")+"  usage  step "+st.ID+" · "+
 			aiUsageText(kind, c, ai.NewPricing(s.settings.Prices), ai.NewContextWindows(s.settings.ContextWindows)))

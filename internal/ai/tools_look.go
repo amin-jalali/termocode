@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -68,7 +67,7 @@ func LookAtTool(w Workspace, see func() (Provider, string, bool)) Tool {
 			if mt == "" && !isPDF {
 				return "", errors.New("look_at reads images (png, jpg, gif, webp) and PDF files; use read_file for " + rel)
 			}
-			fi, err := os.Stat(abs)
+			fi, err := w.statFile(ctx, abs)
 			if err != nil {
 				return "", err
 			}
@@ -76,7 +75,7 @@ func LookAtTool(w Workspace, see func() (Provider, string, bool)) Tool {
 				if fi.Size() > lookMaxPDF {
 					return "", fmt.Errorf("%s is too big (%d MB; at most %d MB)", rel, fi.Size()>>20, lookMaxPDF>>20)
 				}
-				b, err := os.ReadFile(abs)
+				b, err := w.readFile(ctx, abs)
 				if err != nil {
 					return "", err
 				}
@@ -96,7 +95,7 @@ func LookAtTool(w Workspace, see func() (Provider, string, bool)) Tool {
 			if fi.Size() > lookMaxImage {
 				return "", fmt.Errorf("%s is too big for the model (%d MB; at most 5 MB)", rel, fi.Size()>>20)
 			}
-			b, err := os.ReadFile(abs)
+			b, err := w.readFile(ctx, abs)
 			if err != nil {
 				return "", err
 			}
