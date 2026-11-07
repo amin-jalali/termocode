@@ -368,11 +368,16 @@ func (m *Model) databaseEditKey(key string, row, col int) tea.Cmd {
 		s.cursorNewRow = true
 		return tea.Batch(m.databaseShowPage(), m.pushToastDetail(toast.Info, "New row added", "e sets a value; empty cells get their default."))
 	}
+	if key == "P" && s.trans {
+		return m.pushToastDetail(toast.Info, "Paste rows in the grid", "t goes back to the grid.")
+	}
 	pos, ok := m.databaseEditPos(t, row, col)
 	if !ok {
 		return m.pushToastDetail(toast.Info, "Move to a row first", "The cursor is not on a cell of the grid.")
 	}
 	switch key {
+	case "P":
+		return m.databasePasteRows(t, tg, row, pos.col)
 	case "-":
 		if t.edits == nil {
 			t.edits = newDBEdits()
@@ -398,7 +403,7 @@ func (m *Model) databaseEditKey(key string, row, col int) tea.Cmd {
 		if has && cur.Kind == "binary" {
 			return m.pushToastDetail(toast.Info, "Binary values cannot be edited here", "Use an UPDATE in the console.")
 		}
-		s.editAt, s.editTab = pos, t
+		s.editAt, s.editTab, s.editMore = pos, t, nil
 		name := dbOneLine(t.run.result.Columns[pos.col].Name)
 		text := cur.Text
 		if !has {
@@ -440,46 +445,19 @@ func (m *Model) databaseSetCell(value string, fromBuffer bool) tea.Cmd {
 	if fromBuffer && s.redisEdit != nil {
 		return m.databaseRedisBufferDone(value)
 	}
-	t, pos := s.editTab, s.editAt
-	s.editTab = nil
+	t, pos, more := s.editTab, s.editAt, s.editMore
+	s.editTab, s.editMore = nil, nil
 	if fromBuffer && m.nvim != nil {
 		_ = m.nvim.ExecLua(`_G._termocode_db_edit_close()`)
 	}
 	if t == nil || t.run == nil || s.tabIndex(t) < 0 {
 		return nil
 	}
-	if t.edits == nil {
-		t.edits = newDBEdits()
+	if !dbSetCellValue(t, pos, value, fromBuffer) {
+		return nil
 	}
-	t.edits.note = ""
-	cell := dbclient.Cell{Text: value}
-	if value == `\N` {
-		cell = dbclient.Cell{Null: true}
-	}
-	if pos.added >= 0 {
-		if pos.added >= len(t.edits.added) {
-			return nil
-		}
-		if value == "" && !fromBuffer {
-			delete(t.edits.added[pos.added].set, pos.col)
-		} else {
-			t.edits.added[pos.added].set[pos.col] = cell
-		}
-	} else {
-		if pos.orig >= len(t.run.result.Rows) {
-			return nil
-		}
-		ref := dbCellRef{pos.orig, pos.col}
-		old := dbclient.Cell{Null: true}
-		if row := t.run.result.Rows[pos.orig]; pos.col < len(row) {
-			old = row[pos.col]
-		}
-		cell.Kind = old.Kind
-		if old.Null == cell.Null && old.Text == cell.Text {
-			delete(t.edits.cells, ref) // back to the loaded value
-		} else {
-			t.edits.cells[ref] = cell
-		}
+	for _, p := range more {
+		dbSetCellValue(t, p, value, fromBuffer)
 	}
 	s.keepCursor = true
 	if idx := s.tabIndex(t); idx != s.tab {

@@ -94,7 +94,8 @@ type dbConsoleState struct {
 	// editing (db_edit.go)
 	editTab                         *dbTab
 	editAt                          dbEditPos
-	pendingKey                      string // an edit key waiting for the key lookup
+	editMore                        []dbEditPos // V then e: the other cells that get the same value
+	pendingKey                      string      // an edit key waiting for the key lookup
 	pendingRow, pendingCol          int
 	submitTab, submitting, staleTab *dbTab
 	submitStmts                     []dbclient.EditStatement
