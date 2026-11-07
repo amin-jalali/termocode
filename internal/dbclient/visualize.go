@@ -194,12 +194,12 @@ type geom struct {
 	parts []geom
 }
 
-type wkbReader struct {
+type geoWKBReader struct {
 	b     []byte
 	depth int
 }
 
-func (r *wkbReader) take(n int) ([]byte, bool) {
+func (r *geoWKBReader) take(n int) ([]byte, bool) {
 	if n < 0 || len(r.b) < n {
 		return nil, false
 	}
@@ -208,7 +208,7 @@ func (r *wkbReader) take(n int) ([]byte, bool) {
 	return out, true
 }
 
-func (r *wkbReader) geom() (geom, bool) {
+func (r *geoWKBReader) geom() (geom, bool) {
 	var g geom
 	if r.depth++; r.depth > 8 {
 		return g, false
@@ -323,7 +323,7 @@ func decodeGeo(s string) (geom, bool) {
 	if err != nil {
 		return geom{}, false
 	}
-	r := &wkbReader{b: b}
+	r := &geoWKBReader{b: b}
 	g, ok := r.geom()
 	if !ok || len(r.b) != 0 {
 		return geom{}, false
