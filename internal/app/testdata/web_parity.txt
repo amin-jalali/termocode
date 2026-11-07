@@ -548,6 +548,7 @@ missing	db-search-data	Databases|M
 missing	db-savepoint	Databases|S
 missing	db-sql-outline	Databases|S
 missing	db-switch-connection	Databases|S
+missing	db-sql-intentions	Databases|S
 missing	db-rollback-savepoint	Databases|S
 missing	db-open-csv	Databases|S
 missing	db-pgtap-run	Databases|S

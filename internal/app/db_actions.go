@@ -40,6 +40,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-switch-connection", Title: "Databases: Switch File Connection…"},
 		{ID: "db-format", Title: "Databases: Format Statement or Selection"},
 		{ID: "db-format-file", Title: "Databases: Format File"},
+		{ID: "db-sql-intentions", Title: "Databases: SQL Intentions…"},
 		{ID: "db-explain-analyze", Title: "Databases: Explain Analyze Statement…"},
 		{ID: "db-history", Title: "Databases: History…"},
 		{ID: "db-history-connection", Title: "Databases: History of This Connection…"},
@@ -162,6 +163,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseFormat(false), true
 	case "db-format-file":
 		return m.databaseFormat(true), true
+	case "db-sql-intentions":
+		return m.databaseSQLIntentions(), true
 	case "db-explain-analyze":
 		return m.databaseExplainKey(true), true
 	case "db-history":
