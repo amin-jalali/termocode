@@ -122,6 +122,13 @@ func (n *Node) Load() error {
 	n.Children = make([]*Node, len(entries))
 	for i, e := range entries {
 		nodes[i] = Node{Name: e.Name(), Path: dir + e.Name(), IsDir: e.IsDir(), fsys: n.fsys}
+		if n.fsys == nil && e.Type()&os.ModeSymlink != 0 {
+			// A link to a folder opens like a folder (SCN-18). Only links
+			// are stat'ed; a dangling link stays a file row.
+			if fi, err := os.Stat(nodes[i].Path); err == nil {
+				nodes[i].IsDir = fi.IsDir()
+			}
+		}
 		n.Children[i] = &nodes[i]
 	}
 	slices.SortFunc(n.Children, func(a, b *Node) int {
