@@ -865,6 +865,7 @@ func aiSettingsCategories(cats map[string]string) map[string]string {
 	updateSettingsCategories(cats)   // G-UPD (update_settings.go)
 	workflowSettingsCategories(cats) // WFX-0 (workflow_settings.go)
 	gitxSettingsCategories(cats)     // GITX-12 (gitx_autofetch_setting.go)
+	wtAutoSettingsCategories(cats)   // CMP-16 (worktrees_autoclean.go)
 	for _, id := range []string{"setting-ai-inline", "setting-ai-next-edit", "setting-ai-provider", "setting-ai-model", "setting-ai-base-url",
 		"setting-ai-until-done-rounds", "setting-ai-until-done-budget"} {
 		cats[id] = "AI"
@@ -890,6 +891,9 @@ func aiSettingValue(id string) (string, bool) {
 		return v, true
 	}
 	if v, ok := gitxSettingValue(id); ok { // GITX-12 (gitx_autofetch_setting.go)
+		return v, true
+	}
+	if v, ok := wtAutoSettingValue(id); ok { // CMP-16 (worktrees_autoclean.go)
 		return v, true
 	}
 	path, _ := ai.ConfigPath()
@@ -948,6 +952,9 @@ func (m *Model) applyAISetting(id, value string) (tea.Cmd, bool) {
 		return c, true
 	}
 	if c, ok := m.applyGitxSetting(id, value); ok { // GITX-12 (gitx_autofetch_setting.go)
+		return c, true
+	}
+	if c, ok := m.applyWTAutoSetting(id, value); ok { // CMP-16 (worktrees_autoclean.go)
 		return c, true
 	}
 	path, err := ai.ConfigPath()

@@ -2795,4 +2795,6 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `workflows_missed_grace_min` | confirm (settings) |   |
 | `workflows_parallel_max` | confirm (settings) |   |
 | `workflows_wait_hours` | confirm (settings) |   |
+| `worktree_auto_archive_days` | never | archives worktree folders by itself; only the user turns it on |
 | `worktree_dir` | never | where new worktrees go on disk; a file-only switch the user edits in config.json |
+| `worktree_max` | never | archives worktree folders by itself; only the user turns it on |
