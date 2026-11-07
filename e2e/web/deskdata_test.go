@@ -85,7 +85,9 @@ func TestDeskDBTreeGridAndQuery(t *testing.T) {
 	p.Do(chromedp.KeyEvent("SELECT count(*) FROM users"))
 	p.WaitJS(qdoc + `.querySelector(".view-lines .mtk1, .view-lines span")`)
 	p.Do(chromedp.KeyEvent(kb.Enter, modKey()))
-	p.WaitJS(`document.querySelector('[data-view="db-query"] .pv-ask')?.textContent.includes("Run this read on local?") && document.activeElement?.textContent === "Cancel"`)
+	// WEBP-10: the page does not know if the SQL only reads (the laptop
+	// decides), so its question says "query": it said "read" for an INSERT.
+	p.WaitJS(`document.querySelector('[data-view="db-query"] .pv-ask')?.textContent.includes("Run this query on local?") && document.activeElement?.textContent === "Cancel"`)
 	p.Key(kb.Enter) // Cancel
 	p.WaitJS(`!document.querySelector('[data-view="db-query"] .pv-ask')`)
 	c.Quiet(t, 200*time.Millisecond)
