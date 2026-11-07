@@ -58,6 +58,10 @@ type Card struct {
 	ReadOnly bool         `json:"read_only,omitempty"` // answer it on the laptop
 	File     string       `json:"file,omitempty"`      // review: the file (workspace-relative)
 	Diff     *CardDiff    `json:"diff,omitempty"`      // review
+	// Destructive marks a tool card whose call cannot be undone (no
+	// "Always allow" class, or a database write): the phone's approval
+	// sheet offers only "Approve on laptop" for it (MOBUX-12).
+	Destructive bool `json:"destructive,omitempty"`
 }
 
 // CardChoice is one answer of a card.

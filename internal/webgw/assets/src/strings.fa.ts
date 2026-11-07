@@ -153,6 +153,8 @@ export const FA: Record<StringKey, string> = {
   "card.later": "بعداً",
   "card.cancelled": "لغو شد. چیزی فرستاده نشد.",
   "card.answer_laptop": "پاسخ روی لپ‌تاپ",
+  "card.approve_laptop": "تأیید روی لپ‌تاپ",
+  "card.destructive": "این کار برنمی‌گردد. آن را روی لپ‌تاپ تأیید کنید.",
   "card.hint": "Enter  رد · Esc  بعداً",
   "card.hint_touch": "کشیدن به پایین  بعداً",
   "card.arming": "چند لحظه دیگر آماده است…",

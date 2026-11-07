@@ -5293,6 +5293,9 @@
           },
           "type": "array"
         },
+        "destructive": {
+          "type": "boolean"
+        },
         "diff": {
           "$ref": "#/defs/CardDiff"
         },
