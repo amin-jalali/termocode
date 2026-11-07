@@ -394,16 +394,25 @@ func (m *Model) databaseSelectInConsole() tea.Cmd {
 	if m.nvim == nil {
 		return nil
 	}
+	stmt := fmt.Sprintf("SELECT *%s FROM %s LIMIT %d;", m.databaseVirtualSelectList(t), t.qualified(), loadDBConsoleSettings().pageRows())
+	return m.databaseConsoleRun(t.conn, t.driver, t.sessKey, stmt)
+}
+
+// databaseConsoleRun appends the read-only stmt to conn's console and
+// runs it (pressed twice: the line already there runs again).
+func (m *Model) databaseConsoleRun(conn, driver, sessKey, stmt string) tea.Cmd {
+	if m.nvim == nil {
+		return nil
+	}
 	s := m.dbConsole()
 	if s.running != nil {
 		return m.pushToastDetail(toast.Warn, "A query is running", "Esc cancels it.")
 	}
-	path, err := m.databaseConsoleFile(t.conn)
+	path, err := m.databaseConsoleFile(conn)
 	if err != nil {
 		return m.dbConsoleError(err)
 	}
-	stmt := fmt.Sprintf("SELECT * FROM %s LIMIT %d;", t.qualified(), loadDBConsoleSettings().pageRows())
-	if err := dbReadOnlyCheck(t.driver, stmt); err != nil {
+	if err := dbReadOnlyCheck(driver, stmt); err != nil {
 		return m.dbConsoleError(err)
 	}
 	m.ensureDBLua()
@@ -425,7 +434,7 @@ pcall(vim.cmd,'silent write')
 vim.api.nvim_win_set_cursor(0,{at,0})
 return at`, &line, path, stmt)
 	m.focus = FocusEditor
-	r := &dbRun{conn: t.conn, file: path, sql: stmt, line: max(line, 1), by: "user", statements: []string{stmt}, sessKey: t.sessKey}
+	r := &dbRun{conn: conn, file: path, sql: stmt, line: max(line, 1), by: "user", statements: []string{stmt}, sessKey: sessKey}
 	return tea.Batch(m.fetchStateCmd(), m.databaseReviewRun(r))
 }
 

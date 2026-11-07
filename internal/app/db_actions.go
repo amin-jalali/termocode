@@ -68,6 +68,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-cancel-session", Title: "Databases: Cancel Session Query…"},
 		{ID: "db-end-session", Title: "Databases: End Session…"},
 		{ID: "db-er-diagram", Title: "Databases: Export ER Diagram…"},
+		{ID: "db-virtual-objects", Title: "Databases: Edit Virtual Objects…"},
 		{ID: "db-guide", Title: "Databases: Open Guide"},
 		{ID: "redis-set-ttl", Title: "Databases: Set Redis Key TTL…"},
 		{ID: "redis-delete-key", Title: "Databases: Delete Redis Key…"},
@@ -124,6 +125,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseCompareStart(), true
 	case "db-er-diagram":
 		return m.databaseERStart(), true
+	case "db-virtual-objects":
+		return tea.Batch(m.revealDatabasesView(false), m.databaseEditVirtual()), true
 	case "db-guide":
 		return m.openHelp(help.Loc{Page: databasesGuidePage}), true
 	case "db-goto-definition":
@@ -220,6 +223,12 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	if have {
 		if cmd, ok := m.databaseRedisSidebarKey(k.String(), row); ok {
 			return m, cmd
+		}
+	}
+	if have && row.kind == dbNodeVirtualView {
+		switch k.String() {
+		case "right", "l", "enter", " ", "o", "s":
+			return m, m.databaseOpenVirtualView(row)
 		}
 	}
 	switch k.String() {
@@ -973,6 +982,8 @@ func dbTreeKeyRows() []confirm.KeyRow {
 		[]string{"i", "import a CSV file"},
 		[]string{"y", "copy the name"},
 		[]string{"K", "quick documentation (columns, keys; also on a column or routine)"},
+		[]string{"On a virtual view"},
+		[]string{"Enter", "run its saved SELECT in the console"},
 	)
 }
 
@@ -1311,9 +1322,11 @@ func (m *Model) onDBIntrospect(msg dbIntrospectMsg) tea.Cmd {
 		return m.pushToastDetail(toast.Errr, "Could not load database schema", dbErrorText(msg.err))
 	}
 	msg.result = sanitizeDBIntrospection(msg.result)
+	msg.result = m.databaseWithVirtual(msg.path, msg.result) // db_virtual.go
 	s.addIntrospection(msg.path, msg.result)
+	cmd := m.databaseVirtualOnConnection(msg.path)
 	m.databaseSchemaChanged()
-	return nil
+	return cmd
 }
 
 func sanitizeDBIntrospection(in dbclient.IntrospectionResult) dbclient.IntrospectionResult {

@@ -2096,6 +2096,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-submit-changes` | Databases: Submit Pending Changes… | never | the user's pending edits; use the database query tool |
 | `db-test-connection` | Databases: Test Connection | auto |   |
 | `db-transaction-mode` | Databases: Transaction Mode… | never | AI provider, credentials and approvals stay with the user |
+| `db-virtual-objects` | Databases: Edit Virtual Objects… | never | opens the user's virtual objects file for the user to edit |
 | `debug-add-watch` | Debug: Add Watch Expression... | never | opens a picker or prompt that only the user can answer; use a typed tool (debug_evaluate; debug_state shows the watches) |
 | `debug-clear-bps` | Debug: Remove All Breakpoints | confirm (ide) |   |
 | `debug-conditional-bp` | Debug: Add Conditional Breakpoint... | never | opens a picker or prompt that only the user can answer; use a typed tool (debug_breakpoint with condition) |

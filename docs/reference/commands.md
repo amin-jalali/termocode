@@ -213,6 +213,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Delete Redis Key… | `redis-delete-key` |   |   |
 | Databases: Describe Table | `db-describe` |   |   |
 | Databases: Disconnect Selected… | `db-disconnect` |   |   |
+| Databases: Edit Virtual Objects… | `db-virtual-objects` |   |   |
 | Databases: End Session… | `db-end-session` |   |   |
 | Databases: Explain Analyze Statement… | `db-explain-analyze` |   |   |
 | Databases: Explain Statement | `db-explain` |   |   |

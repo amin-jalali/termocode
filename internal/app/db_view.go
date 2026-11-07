@@ -351,6 +351,8 @@ func dbNodeGlyph(kind dbNodeKind) string {
 			return "\uf0e7" // a bolt
 		case dbNodeExtension:
 			return "\uf12e" // a puzzle piece
+		case dbNodeVirtualView:
+			return "\uf06e" // an eye
 		case dbNodeColumn, dbNodeDetail:
 			return "\uf0f6"
 		case dbNodeSuggestion:
@@ -387,6 +389,8 @@ func dbNodeGlyph(kind dbNodeKind) string {
 			return "!"
 		case dbNodeExtension:
 			return "x"
+		case dbNodeVirtualView:
+			return "v"
 		case dbNodeColumn:
 			return "."
 		case dbNodeDetail:
@@ -424,6 +428,8 @@ func dbNodeGlyph(kind dbNodeKind) string {
 		return "↯"
 	case dbNodeExtension:
 		return "∗"
+	case dbNodeVirtualView:
+		return "◇"
 	case dbNodeColumn:
 		return "·"
 	case dbNodeDetail:
@@ -493,6 +499,8 @@ func dbRowFooter(kind dbNodeKind) string {
 		return "Enter expand · h fold"
 	case dbNodeCode:
 		return "y copy command"
+	case dbNodeVirtualView:
+		return "Enter run the saved SELECT · virtual"
 	default:
 		return "Enter expand · ? help"
 	}

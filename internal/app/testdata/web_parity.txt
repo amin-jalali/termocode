@@ -471,6 +471,7 @@ missing	db-open-sessions	Databases|S
 missing	db-quick-doc	Databases|S
 missing	db-server-info	Databases|S
 missing	db-sessions	Databases|S
+missing	db-virtual-objects	Databases|S
 missing	git-ai-changelog	Git|S
 missing	git-ai-commit-msg	Git|S
 missing	git-ai-compose	Git|S
