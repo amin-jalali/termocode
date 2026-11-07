@@ -47,6 +47,8 @@ type aiChatDoneMsg struct {
 	gen uint64
 	// run is the final event of a pipeline run (nil for a plain turn).
 	run *agentrun.Event
+	// stop is the reason a stop hook gives to go on ("" for none, CMP-59).
+	stop string
 }
 
 // aiPendingConfirm is a tool call waiting for the user.
@@ -322,6 +324,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	}
 
 	auto := s.autoApproveSet()
+	hooks, out := aiActiveHooks(root), m.output // CMP-59: every hook event of this turn
 	ctx, cancel := context.WithCancel(context.Background())
 	s.chatCancel = cancel
 	s.streaming = true
@@ -335,7 +338,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	}
 	agent := &ai.Agent{
 		Provider:    slot.p,
-		Tools:       m.aiRecallTurn(root, text).wrap(aiWithHooks(root, tools, m.output)), // OMX-12, OMX-18
+		Tools:       m.aiRecallTurn(root, text).wrap(aiWithHookList(root, hooks, tools, out)), // OMX-12, OMX-18
 		Native:      native,
 		AutoApprove: auto,
 		MaxSteps:    s.settings.MaxSteps, // 0: ai.DefaultMaxSteps
@@ -343,8 +346,9 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		Confirm:     aiChatConfirmFunc(gen, ch, auto, ""),
 		Reasoning:   s.reasoningFor(step.Slot, slot.cfg, s.turnThink),
 		Name:        aiSlotLabel(step.Slot, slot.cfg),
-		Fallbacks:   s.aiFallbacks(step.Slot), // OMX-4
-		Compact:     m.aiCompactor(slot),      // OMX-3
+		Fallbacks:   s.aiFallbacks(step.Slot),                                  // OMX-4
+		Compact:     aiWithCompactHooks(root, hooks, out, m.aiCompactor(slot)), // OMX-3, CMP-59
+		PreTool:     aiPreToolHooks(root, hooks, out),                          // CMP-59
 		// OMX-25: tool results are cut to what still fits the window.
 		ContextWindow: aiContextWindow(s.settings, slot.cfg.Model),
 	}
@@ -356,7 +360,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		defer cancel()
 		if mcpTools != nil {
 			if extra := aiFilterTools(mcpTools(ctx), step.Tools); len(extra) > 0 {
-				agent.Tools = append(agent.Tools, extra...)
+				agent.Tools = append(agent.Tools, aiWithHookList(root, hooks, extra, out)...) // CMP-59: MCP matchers
 				b := base
 				if mcpLines != "" {
 					b += "\nConnected services (MCP tools mcp__<server>__*):\n" + mcpLines
@@ -374,7 +378,11 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 			emit(ev)
 		}
 		agent.Run(ctx, history, emit)
-		ch <- aiChatDoneMsg{gen: gen}
+		stop := ""
+		if ctx.Err() == nil { // a turn the user stopped is not asked to go on
+			stop = aiRunStopHooks(root, hooks, out)
+		}
+		ch <- aiChatDoneMsg{gen: gen, stop: stop}
 		close(ch)
 	}, func() { // the chat turn ends instead of waiting for ever
 		ch <- aiChatDoneMsg{gen: gen}
@@ -687,7 +695,9 @@ func (m *Model) onAIChatDone(msg aiChatDoneMsg) tea.Cmd {
 	}
 	var more tea.Cmd
 	if msg.run == nil {
-		more = m.aiKeepGoingNext() // OMX-7: open todos, keep going on
+		if more = m.aiOnStopHook(msg.stop); more == nil { // CMP-59: a stop hook first
+			more = m.aiKeepGoingNext() // OMX-7: open todos, keep going on
+		}
 	}
 	return tea.Batch(cmd, mem, m.notifyOS("AI run ended"), queued, more, m.aiShipOnChatDone()) // OMX-15: ship mode
 }

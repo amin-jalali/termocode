@@ -111,11 +111,14 @@ type aiState struct {
 	// skillsTrust is the open project-skills card (ai_skills.go).
 	skillsTrust *aiSkillsTrustPending
 	hooksTrust  *aiHooksTrustPending // the open project-hooks card (ai_hooks.go)
-	webPreset   string               // the server the open add card is for (ai_web_presets.go)
-	recall      *aiRecallState       // lesson recall per chat (ai_recall.go)
-	ship        *aiShip              // the running ship loop (ai_ship.go)
-	ctl         *agentCtlState       // the agent control socket's UI side (agent_ctl.go)
-	diffNotes   *diffNotesState      // diff comments → agent (diff_comments.go, CMP-51)
+	// stopHookPushes counts the turns in a row a stop hook sent the
+	// agent on (CMP-59, ai_hooks.go).
+	stopHookPushes int
+	webPreset      string          // the server the open add card is for (ai_web_presets.go)
+	recall         *aiRecallState  // lesson recall per chat (ai_recall.go)
+	ship           *aiShip         // the running ship loop (ai_ship.go)
+	ctl            *agentCtlState  // the agent control socket's UI side (agent_ctl.go)
+	diffNotes      *diffNotesState // diff comments → agent (diff_comments.go, CMP-51)
 	// agentHooksPlan is the change the open state-hooks card shows (agent_hooks_ui.go).
 	agentHooksPlan *agenthooks.Plan
 	// packs is the open agent-pack flow (agent_packs_ui.go).
