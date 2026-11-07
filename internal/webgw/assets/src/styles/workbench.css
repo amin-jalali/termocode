@@ -590,7 +590,12 @@ kbd {
 /* The panel right of the editor, or filling the editor area. */
 .wb.is-panel-right .wb-center { flex-direction: row; }
 .wb.is-panel-right .wb-panel { width: var(--panel-w); max-width: calc(100% - 220px); height: auto; border-top: 0; border-inline-start: 1px solid var(--wb-panel-border); }
-.wb.is-panel-max .wb-editor, .wb.is-panel-max .wb-center > .sash { display: none; }
+.wb.is-panel-max .wb-center > .sash, .wb.is-panel-max .ed-groups { display: none; }
+/* The editor hides under a maximized panel, but its layers (the command
+   list, the asks, the menus) still show over the panel. */
+.wb.is-panel-max .wb-center { position: relative; }
+.wb.is-panel-max .wb-editor { position: absolute; inset: 0; z-index: var(--z-sheet); background: none; pointer-events: none; }
+.wb.is-panel-max .wb-editor > * { pointer-events: auto; }
 .wb.is-panel-max .wb-panel { flex: 1 1 auto; width: auto; height: auto; border-top: 0; border-inline-start: 0; }
 .wb-panel-title {
   display: inline-flex;

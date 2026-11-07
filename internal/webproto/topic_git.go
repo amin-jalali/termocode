@@ -18,6 +18,7 @@ func init() {
 const (
 	MaxGitFiles    = 2000      // files in the git topic; More counts the rest
 	MaxGitLog      = 50        // commits in the git topic, newest first
+	MaxGitStashes  = 100       // stash entries in the git topic, newest first
 	MaxGitDiff     = 512 << 10 // bytes of git's text read for one diff or show; more is cut
 	MaxGitDiffPage = 64 << 10  // bytes of row text in one page of a diff
 	MaxGitDiffRows = 2000      // rows in one page of a diff
@@ -33,6 +34,9 @@ type GitSnap struct {
 	Files   []GitFile   `json:"files"`                            // as git status lists them
 	More    int         `json:"more,omitempty"`                   // changed files past MaxGitFiles, not listed
 	Log     []GitCommit `json:"log"`                              // the last commits of HEAD, newest first
+	// Stashes is the stash list, newest first, at most MaxGitStashes
+	// (the STASHES section of Source Control, GITX-10).
+	Stashes []GitStashEntry `json:"stashes,omitempty"`
 }
 
 // GitBranch is the checked-out branch.

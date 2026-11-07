@@ -35,7 +35,7 @@ func (m *Model) gitFixupIntoCmd(full string) tea.Cmd {
 	if staged, _ := m.gitFileCounts(); staged == 0 {
 		return m.nothingStagedToast()
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -124,7 +124,7 @@ func (m *Model) onFixupConfirm(id string) tea.Cmd {
 	if target == "" || (id != "fixup" && id != "fixup-stash") {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}

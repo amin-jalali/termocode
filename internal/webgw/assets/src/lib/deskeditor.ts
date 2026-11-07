@@ -9,12 +9,13 @@ import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
 import { FRAME_PATH, type AiAct, type AiAt, type AiKind, type EditAct, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameHint, type FrameLines, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type NavKind, type ToFrame, type CursorOp } from "../monaco/protocol";
 import { dict } from "../state/dict";
 import type { Mark } from "./gutter";
-import { cursorAt, escapeKey, focusSlot, noteClip, quick, vimMode } from "./workbench";
+import { activeFile, closeTab, cursorAt, escapeKey, focusSlot, noteClip, quick, vimMode } from "./workbench";
 import { prefs } from "./prefs";
 import { editorMenu } from "./editormenu";
 import { aiSnap } from "./ai";
 import { toast } from "./toasts";
 import { t } from "../strings";
+import { vimMaps } from "./vimmaps";
 
 /** COLOR_TOKENS are the workbench colours the frame paints with. */
 const COLOR_TOKENS = [
@@ -193,6 +194,7 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         ready = true;
         const c = frameColors(parent);
         frame.contentWindow?.postMessage({ t: "init", doc: text, label: host.label, path: host.path, diff: host.diff, lang: host.lang, comment: host.comment, lsp: host.lsp, refsLabel: host.refsLabel, ai: host.ai, readOnly: host.readOnly, wrap: host.wrap, tabSize: host.tabSize, insertSpaces: host.insertSpaces, vim: prefs.peek().vim, ...c } satisfies ToFrame, location.origin);
+        if (prefs.peek().vim) sendMaps();
         for (const q of queue.splice(0)) {
           // A focus asked before the frame was ready does not take the
           // keyboard from something the user went to meanwhile.
@@ -271,8 +273,14 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         if (typeof m.text === "string") noteClip(m.text);
         return;
       case "vim":
-        if ((host.slot ?? "g0") === focusSlot.peek()) vimMode.value = { mode: m.mode, pending: m.pending };
+        if ((host.slot ?? "g0") === focusSlot.peek()) vimMode.value = { mode: m.mode, pending: m.pending, rec: typeof m.rec === "string" ? m.rec : "", msg: typeof m.msg === "string" ? m.msg : "" };
         return;
+      case "vimQuit": {
+        // :q closes the editor's tab (as File: Close Editor does).
+        const f = activeFile.peek();
+        if ((host.slot ?? "g0") === focusSlot.peek() && f) closeTab(f);
+        return;
+      }
       case "key":
         // The workbench's keys work while the editor has the focus.
         dispatchEvent(new KeyboardEvent("keydown", { key: m.key, code: m.code, ctrlKey: m.ctrl, metaKey: m.meta, shiftKey: m.shift, altKey: m.alt, bubbles: true, cancelable: true }));
@@ -287,7 +295,15 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     if (on === vimWas) return;
     vimWas = on;
     send({ t: "opts", vim: on });
+    if (on) sendMaps();
   });
+
+  /** sendMaps gives the frame the user's own mappings (asked once). */
+  function sendMaps(): void {
+    void vimMaps().then((l) => {
+      if (l && Array.isArray(l.items)) send({ t: "opts", vimMaps: l.items, vimTimeout: typeof l.timeout === "number" && l.timeout > 0 ? l.timeout : 1000 });
+    });
+  }
 
   return {
     text: () => text,
