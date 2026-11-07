@@ -206,6 +206,37 @@ second **Replace** card. Nothing is written in the container without a card.
 Logs, shell, attach, stats and pulls run in terminal tabs, so you see
 progress and can type.
 
+The right-click menu of a container also has **Duplicate…** and
+**Recreate (pull, same settings)…**. Both read the container's settings
+(`inspect`: image, name, ports, volumes, network, restart policy, user,
+workdir, labels, entrypoint, command and env) and show a card with
+**Cancel** first and the exact command. Duplicate starts a copy named
+`<name>-copy`. Recreate pulls the image again, removes the container
+(`rm -f`; volumes stay) and starts a new one with the same settings. Env
+values are never in the command: it names them (`-e NAME`) and the
+terminal tab's environment carries the values.
+
+## Compose extras
+
+The palette has more compose commands for this folder's project:
+
+- **Containers: Show Resolved Compose Config** opens `compose config` (the
+  project with variables, extends and profiles applied) in a read-only page.
+- **Containers: Run One-Off Command in Service…** asks for
+  `service command args…` and runs `compose run --rm` in a terminal tab.
+- **Containers: Watch Project (Rebuild on Change)** runs `compose watch` in
+  a tab (the `develop.watch` rules of the compose file).
+- **Containers: Choose Compose Env File…** picks `.env`, `.env.*` or
+  `*.env` for `--env-file`, for this session only.
+- **Containers: Deploy Stack from Git…** asks for a repository URL
+  (`https://`, `ssh://` or `user@host:path`; add `#branch` or `#tag`). A
+  card with **Cancel** first shows the exact commands: a shallow
+  `git clone` into `~/.local/share/termocode/stacks/<name>` (or a
+  fast-forward `git pull` when it is already there), then
+  `compose up -d` in it. **Deploy** runs them in a terminal tab. The compose
+  file of that repository decides what runs, so deploy only repositories you
+  trust. The AI cannot start it.
+
 ## Live CPU and memory
 
 While the Containers view is on screen and the CONTAINERS section is open,
@@ -233,7 +264,10 @@ separate `<none> dangling` group. A repository count includes the number of
 images and, when applicable, how many containers use them. On a tag, `u`
 pulls, `P` asks before pushing, `t` asks for a new tag, `Enter` asks for a
 container name, ports, and environment entries, then shows the full run
-command before opening a terminal tab. `h` opens image history, `i` opens
+command before opening a terminal tab. **More options…** on that card takes
+`volume=SRC:DST`, `network=`, `restart=`, `user=`, `workdir=`, `hostname=`,
+`platform=`, `label=KEY=value`, `entrypoint=`, `detach`, `no-rm`, then `--`
+and the command, and shows the new command (env values passed by name only). `h` opens image history, `i` opens
 read-only image details, and `D` removes an image only when no container uses
 it. `z` on the IMAGES heading asks before pruning dangling images; it never
 removes tagged images.
@@ -465,6 +499,52 @@ How termocode asks the registry:
   logged or saved.
 - Hiding the view stops a request that is still running.
 
+### Private tags, catalog and deleting a tag
+
+When a repository needs a login and termocode has a token saved for that
+host (**Connect registry…** with **Remember**, stored as
+`registry.<host>`), a card asks first: **Cancel** or **Use saved token**.
+After **Use saved token** termocode sends that token, for this session
+only, to the token server the registry names (HTTPS, as HTTP Basic) and
+lists the private tags. It is never shown or logged, and the AI never gets
+it. Without a saved token the row keeps `needs sign-in; pull by name still
+works`.
+
+**Containers: Browse Registry Catalog…** (or **Browse catalog…** in a
+registry row's menu) asks for a host and lists its repositories
+(`/v2/_catalog`, at most 500) in a picker. Pick one to list its tags.
+Docker Hub has no catalog: use search.
+
+`D` on a remote tag (or **Delete tag from registry…** in its menu) reads
+the tag's manifest digest with your saved token and shows a card with
+**Cancel** first. The registry deletes by digest, so every tag on that
+manifest goes too. Local images stay. Many registries turn deletes off;
+then the card's action says so.
+
+### Image updates
+
+**Containers: Check Running Images for Updates** asks, for each tag a
+running container uses (at most 20, digest-pinned images skipped), the
+registry's digest of that tag and compares it with the local image's repo
+digest. It runs only when you ask. Images with a newer version are named in
+a notice, and their containers show `update available` in the footer.
+Nothing is pulled or restarted: `u` on the image pulls it, and
+**Recreate (pull, same settings)…** in the container menu restarts with it.
+Local-only and private images (without an opted-in saved token) are
+counted as not checked.
+
+### Cloud registries
+
+**Connect registry…** also lists **AWS ECR…**, **Azure Container
+Registry…** and **Google Artifact Registry…**. These sign in with their own
+CLI, so the card shows the command to run in a terminal (`aws ecr
+get-login-password … | docker login …`, `az acr login --name …`,
+`gcloud auth configure-docker …`) with **Copy command**. termocode never
+runs a cloud CLI. Typing such a host (`*.dkr.ecr.*.amazonaws.com`,
+`*.azurecr.io`, `*-docker.pkg.dev`, `gcr.io`) shows the same card with
+your host filled in, and **Use a token instead…** goes on to the normal
+sign-in. For `ghcr.io` the user prompt says which GitHub token to use.
+
 ### Search Docker Hub
 
 `s` in REGISTRIES (or **Containers: Search Docker Hub…**) asks for a word
@@ -474,10 +554,6 @@ The results open in a picker with the stars and the description. Pick one
 for a card: **Pull…** opens the pull prompt with its name, **Browse tags**
 lists its remote tags in REGISTRIES. The word may use letters, digits and
 `. _ - / :`.
-
-termocode does not keep registry tokens itself yet. A "remember in
-termocode" option needs the locked, encrypted secret store, which is not
-built yet.
 
 The AI cannot sign in or out: there is no tool for it, and both palette
 commands are closed to it.

@@ -248,9 +248,13 @@ func (m *Model) loadRemoteTags(ref string) tea.Cmd {
 		old()
 	}
 	st.containerCancels[key] = cancel
-	gen, repo, api := st.containerGen, rt.repo, newRegistryAPI()
+	gen, repo, mk := st.containerGen, rt.repo, m.registryAPIFor(rt.repo.Host)
 	return func() tea.Msg {
 		defer cancel()
+		api, err := mk()
+		if err != nil {
+			return remoteTagsMsg{gen: gen, ref: ref, err: err}
+		}
 		list, err := api.Tags(ctx, repo)
 		return remoteTagsMsg{gen: gen, ref: ref, list: list, err: err}
 	}
@@ -282,6 +286,11 @@ func (m *Model) onRemoteTags(msg remoteTagsMsg) tea.Cmd {
 		rt.tags, rt.truncated = msg.list.Tags, msg.list.Truncated
 	case errors.Is(msg.err, containers.ErrNeedsSignIn):
 		rt.err = containers.ErrNeedsSignIn.Error()
+		if host := rt.repo.Host; st.regAuthOK[host] == "" && m.registryHasSavedToken(host) { // CTX-35
+			st.touch()
+			ref := msg.ref
+			return m.askRegistryAuth(host, st.registryUsers[host], func(m *Model) tea.Cmd { return m.loadRemoteTags(ref) })
+		}
 	case errors.Is(msg.err, containers.ErrRepoNotFound):
 		rt.err = "not found on " + rt.repo.Host
 	default:
@@ -505,6 +514,10 @@ func (m *Model) remoteRowKey(key string, r svcRow) (tea.Cmd, bool) {
 		case "u":
 			m.askImagePull(r.imageRef)
 			return nil, true
+		case "D":
+			if r.host == hostRemoteTag { // containers_registry_more.go
+				return m.registryDeleteStart(r), true
+			}
 		case "y":
 			m.copyToClipboard(r.imageRef)
 			return m.servicesToast(toast.Info, "Copied", sanitizeOutputLine(r.imageRef)), true
@@ -553,6 +566,9 @@ func (m *Model) remoteRowKey(key string, r svcRow) (tea.Cmd, bool) {
 func (m *Model) openRemoteMenu(r svcRow, x, y int) {
 	m.services.menuRow = r
 	items := []menu.Item{{ID: "pull", Title: "Pull…", Hint: "u"}, {ID: "copy", Title: "Copy reference", Hint: "y"}}
+	if r.host == hostRemoteTag {
+		items = append(items, menu.Item{Sep: true}, menu.Item{ID: "delete-tag", Title: "Delete tag from registry…", Hint: "D"})
+	}
 	if r.host == hostRemoteRepo {
 		items = append([]menu.Item{{ID: "reload", Title: "Reload tags", Hint: "r"}}, items...)
 		if r.hostSectionID() == "registries" {
@@ -578,6 +594,8 @@ func (m *Model) handleRemoteMenuSelect(id string, r svcRow) tea.Cmd {
 		}
 	case "forget":
 		m.forgetRemote(r.imageRef)
+	case "delete-tag":
+		return m.registryDeleteStart(r)
 	}
 	return nil
 }

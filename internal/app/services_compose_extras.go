@@ -23,6 +23,7 @@ func composeExtrasPaletteItems() []picker.Item {
 		{ID: "services-compose-run", Title: "Containers: Run One-Off Command in Service…"},
 		{ID: "services-compose-watch", Title: "Containers: Watch Project (Rebuild on Change)"},
 		{ID: "services-env-file", Title: "Containers: Choose Compose Env File…"},
+		{ID: "services-deploy-git", Title: "Containers: Deploy Stack from Git…"},
 	}
 }
 
@@ -41,6 +42,8 @@ func (m *Model) dispatchComposeExtras(id string, open tea.Cmd) (tea.Cmd, bool) {
 		return m.servicesAfterLoad(open, func(m *Model) tea.Cmd { return m.askComposeRun() }), true
 	case "services-compose-watch":
 		return m.servicesAfterLoad(open, func(m *Model) tea.Cmd { return m.composeWatch() }), true
+	case "services-deploy-git":
+		return tea.Batch(open, m.askDeployGit()), true
 	case "services-env-file":
 		return m.servicesAfterLoad(open, func(m *Model) tea.Cmd { return m.openComposeEnvFilePicker() }), true
 	}

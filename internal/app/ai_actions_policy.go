@@ -352,6 +352,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"services-compose-run":    aiNever(aiNoPicker + " (services tools)"),
 	"services-compose-watch":  aiNever("starts a long-running watch that rebuilds services; the user's"),
 	"services-env-file":       aiNever(aiNoPicker),
+	"services-deploy-git":     aiNever("runs a compose project from a remote repository; the user's choice"),
 	"services-trust":          aiNever(aiNoAIConfig),
 
 	// ── Databases (DB-3: connection management only) ──
@@ -440,6 +441,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"containers-registry-signout":       aiNever("signing out of a registry is the user's"),
 	"containers-search":                 aiNever(aiNoPicker + "; it asks Docker Hub on the user's behalf"),
 	"containers-browse-tags":            aiNever(aiNoPicker + "; it asks a registry over the network on the user's behalf"),
+	"containers-registry-catalog":       aiNever(aiNoPicker + "; it asks a registry over the network, maybe with the user's saved token"),
+	"containers-check-updates":          aiNever("asks every registry of the running images over the network on the user's behalf"),
 	"containers-filter":                 aiNever("the filter is typed by the user; the AI uses containers_list / images_list"),
 	"containers-refresh":                aiAuto(),
 	"containers-sort":                   aiNever(aiNoPicker + "; the sort is the user's view setting"),

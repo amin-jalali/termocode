@@ -1020,6 +1020,9 @@ func (st *servicesState) hostFooter(r svcRow) (string, string) {
 			if r.idx < len(st.containerRows) {
 				c := st.containerRows[r.idx]
 				l1 := c.Image
+				if st.imageUpdates[c.Image] { // CTX-36
+					l1 += " · update available"
+				}
 				if p := strings.ReplaceAll(c.PortsText, "->", "→"); p != "" {
 					l1 += " · " + p
 				}

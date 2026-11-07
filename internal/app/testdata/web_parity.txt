@@ -459,6 +459,7 @@ missing	containers-build-cache-prune	Containers|S
 missing	containers-build-check	Containers|S
 missing	containers-build-detail	Containers|S
 missing	containers-builds	Containers|S
+missing	containers-check-updates	Containers|S
 missing	containers-commit	Containers|S
 missing	containers-context-create	Containers|S
 missing	containers-context-inspect	Containers|S
@@ -481,6 +482,7 @@ missing	containers-logs-options	Containers|S
 missing	containers-network-connect	Containers|S
 missing	containers-network-create-options	Containers|S
 missing	containers-network-disconnect	Containers|S
+missing	containers-registry-catalog	Containers|S
 missing	containers-rename	Containers|S
 missing	containers-resources	Containers|S
 missing	containers-restart-policy	Containers|S
@@ -655,6 +657,7 @@ missing	local-history-label	Git|S
 missing	services-compose-config	Containers|S
 missing	services-compose-run	Containers|S
 missing	services-compose-watch	Containers|S
+missing	services-deploy-git	Containers|S
 missing	services-env-file	Containers|S
 missing	workflow-dry-run	Workflows|S
 missing	workflow-history	Workflows|S

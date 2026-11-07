@@ -170,6 +170,28 @@ type servicesState struct {
 
 	// CTX-33: the --env-file picked for this session ("" = compose's .env).
 	envFile string
+
+	// CTX-33: the deploy-from-git card's command line and stack name.
+	deployGitLine, deployGitName string
+
+	// CTX-34: env values of the run card (More options) and the
+	// Duplicate / Recreate plan; never in argv.
+	runEnv       map[string]string
+	clonePending clonePending
+
+	// CTX-35 (containers_registry_more.go): hosts the user opted in to
+	// use the saved token for (host -> user; never the token), and the
+	// open cards' state.
+	regAuthOK      map[string]string
+	regAuth        regAuthPending
+	regDelete      regDeletePending
+	regCatalogHost string
+	regHint        string // the cloud hint card's command
+	regHintHost    string
+	regHostNote    string // a note for the next user prompt
+
+	// CTX-36: image ref -> a newer image is on the registry (last check).
+	imageUpdates map[string]bool
 }
 
 func newServicesState() *servicesState {
@@ -627,6 +649,16 @@ func (m *Model) handleServicesMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onContextManageDone(msg), true
 	case contextInspectMsg:
 		return m.onContextInspect(msg), true
+	case imageUpdatesMsg: // containers_image_updates.go
+		return m.onImageUpdates(msg), true
+	case registryCatalogMsg:
+		return m.onRegistryCatalog(msg), true
+	case registryDigestMsg:
+		return m.onRegistryDigest(msg), true
+	case registryDeleteDoneMsg:
+		return m.onRegistryDeleteDone(msg), true
+	case containerCloneMsg:
+		return m.onContainerClone(msg), true
 	case composeConfigMsg:
 		return m.onComposeConfig(msg), true
 	case hostActionDoneMsg:

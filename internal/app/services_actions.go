@@ -94,6 +94,16 @@ func (m *Model) servicesRunCommand(c services.Command, key string) error {
 	if strings.HasPrefix(key, containerTabPrefix) && m.services != nil {
 		job.Env = m.services.contextEnv() // the session's DOCKER_CONTEXT
 	}
+	if len(c.Env) > 0 { // values named by -e NAME in argv (CTX-34)
+		env := map[string]any{}
+		for k, v := range job.Env {
+			env[k] = v
+		}
+		for k, v := range c.Env {
+			env[k] = v
+		}
+		job.Env = env
+	}
 	_, err := m.spawnTerminalJob(job)
 	return err
 }
@@ -460,12 +470,25 @@ func (m *Model) handleServicesConfirm(id string) (tea.Cmd, bool) {
 		}
 		return m.imagePush(ref), true
 	case confirmKindContainerHostAction:
+		if id == "run-options" && m.pendingHostOperation == "run-image" { // containers_clone.go
+			return m.askRunOptions(), true
+		}
 		if id != "run" && id != "remove" && id != "prune" && id != "create" && id != "use" && id != "signout" && id != "tag" {
 			return m.runHostAction("cancel"), true
 		}
 		return m.runHostAction(id), true
 	case confirmKindServicesQuit:
 		return m.answerServicesQuit(id), true
+	case confirmKindRegistryAuth: // containers_registry_more.go
+		return m.answerRegistryAuth(id), true
+	case confirmKindRegistryDeleteTag:
+		return m.answerRegistryDeleteTag(id), true
+	case confirmKindRegistryCloudHint:
+		return m.answerCloudHint(id), true
+	case confirmKindContainerClone: // containers_clone.go
+		return m.answerContainerClone(id), true
+	case confirmKindServicesDeployGit: // services_deploy_git.go
+		return m.answerDeployGit(id), true
 	case confirmKindServicesDownVolumes: // services_compose_more.go
 		return m.answerDownVolumes(id), true
 	case confirmKindContainerSearchResult:
@@ -1453,6 +1476,8 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "containers-registry-signout", Title: "Containers: Sign Out of Registry…"},
 		{ID: "containers-search", Title: "Containers: Search Docker Hub…"},
 		{ID: "containers-browse-tags", Title: "Containers: Browse Remote Tags…"},
+		{ID: "containers-registry-catalog", Title: "Containers: Browse Registry Catalog…"},
+		{ID: "containers-check-updates", Title: "Containers: Check Running Images for Updates"},
 		{ID: "containers-filter", Title: "Containers: Filter Rows…"},
 		{ID: "containers-sort", Title: "Containers: Sort Containers…"},
 		{ID: "containers-toggle-size", Title: "Containers: Show or Hide the Size Column"},
@@ -1749,6 +1774,10 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 				return nil
 			case "containers-toggle-size":
 				return m.onContainerSortPicked("list-size", "toggle")
+			case "containers-registry-catalog": // containers_registry_more.go
+				return m.catalogFromPalette()
+			case "containers-check-updates": // containers_image_updates.go
+				return m.checkImageUpdates()
 			case "containers-filter":
 				m.focus = FocusExplorer
 				m.services.filterTyping = true

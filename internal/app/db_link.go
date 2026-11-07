@@ -360,6 +360,9 @@ func (m *Model) openContainerMenu(r svcRow, x, y int) {
 		{ID: "logs", Title: "Logs", Hint: "enter", Icon: "≡"},
 		{Sep: true},
 		{ID: "copy-id", Title: "Copy ID", Hint: "y", Icon: "⎘"},
+		{Sep: true},
+		{ID: "duplicate", Title: "Duplicate…", Icon: "⧉"},
+		{ID: "recreate", Title: "Recreate (pull, same settings)…", Icon: "↻"},
 	}
 	if _, ok := m.dbTargetFromRow(r); ok {
 		items = append(items, menu.Item{ID: "databases", Title: dbOpenInDatabasesTitle, Icon: theme.IconDatabases.String()})
@@ -392,6 +395,8 @@ func (m *Model) handleContainerRowMenuSelect(id string, r svcRow) tea.Cmd {
 		return m.servicesToast(toast.Info, "Copied container id", shortImageID(c.ID))
 	case "databases":
 		return m.databaseOpenFromRow(r)
+	case "duplicate", "recreate": // containers_clone.go
+		return m.containerCloneStart(id, c)
 	}
 	return nil
 }

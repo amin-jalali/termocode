@@ -25,11 +25,12 @@ import (
 // token exchange.
 //
 // Security rules:
-//   - Anonymous tokens only. Nothing here reads the engine's credential
-//     store, a credential helper or the auth blobs of config.json, and the
-//     token request carries no credentials. A private repository answers
-//     ErrNeedsSignIn ("needs sign-in; pull by name still works": the
-//     engine's own `pull` uses the user's login).
+//   - Anonymous tokens by default. Nothing here reads the engine's
+//     credential store, a credential helper or the auth blobs of
+//     config.json. A private repository answers ErrNeedsSignIn ("needs
+//     sign-in; pull by name still works"). Only when the user opts in for
+//     a host does RegistryAPI.Login (their token saved in termocode's
+//     secret store) go to the token server, as HTTP Basic (CTX-35).
 //   - HTTPS only. Plain http is tried only for a loopback registry
 //     (localhost:5000, 127.0.0.1, [::1]) and only after its https answer
 //     was "an HTTP response to an HTTPS client" (a local `registry:2`).
@@ -82,6 +83,16 @@ type RegistryAPI struct {
 	MaxBody        int64          // per answer (0 = 1 MiB)
 	MaxPages       int            // 0 = 20
 	RootCAs        *x509.CertPool // nil = the system roots (tests set it)
+	// Login is the user's own login, opted in per host (CTX-35): it goes
+	// only to the token server the registry names (HTTP Basic, https) or
+	// to the registry on a Basic challenge. nil = anonymous.
+	Login *RegistryLogin
+}
+
+// RegistryLogin is a user name and token. It is never logged, returned
+// or put into an error.
+type RegistryLogin struct {
+	User, Secret string
 }
 
 var (
@@ -248,7 +259,11 @@ type tagSession struct {
 	repo   RemoteRepo
 	scope  string // the token scope when the challenge names none ("" = pull of repo)
 	token  string
-	asked  bool // the token exchange ran
+	asked  bool        // the token exchange ran
+	method string      // "" = GET
+	accept string      // "" = application/json
+	basic  bool        // send the Login as HTTP Basic (a Basic challenge)
+	header http.Header // the last answer's headers
 }
 
 // Tags lists the repository's tags (in the registry's order).
@@ -351,21 +366,29 @@ func (s *tagSession) get(ctx context.Context, u string) ([]byte, string, error) 
 		drain(resp)
 		s.asked = true
 		scheme, params := parseChallenge(challenge)
-		if scheme != "bearer" {
+		switch {
+		case scheme == "basic" && s.api.Login != nil:
+			s.basic = true
+		case scheme != "bearer":
 			return nil, "", ErrNeedsSignIn
+		default:
+			tok, err := s.fetchToken(ctx, params)
+			if err != nil {
+				return nil, "", err
+			}
+			s.token = tok
 		}
-		tok, err := s.fetchToken(ctx, params)
-		if err != nil {
-			return nil, "", err
-		}
-		s.token = tok
 		if resp, err = s.do(ctx, u, s.token); err != nil {
 			return nil, "", err
 		}
 	}
 	defer drain(resp)
+	s.header = resp.Header
 	switch code := resp.StatusCode; {
 	case code == http.StatusOK:
+	case code == http.StatusAccepted && s.method == http.MethodDelete:
+	case code == http.StatusMethodNotAllowed && s.method == http.MethodDelete:
+		return nil, "", errors.New("this registry does not allow deleting")
 	case code == http.StatusUnauthorized || code == http.StatusForbidden:
 		return nil, "", ErrNeedsSignIn
 	case code == http.StatusNotFound:
@@ -383,13 +406,37 @@ func (s *tagSession) get(ctx context.Context, u string) ([]byte, string, error) 
 }
 
 func (s *tagSession) do(ctx context.Context, u, token string) (*http.Response, error) {
+	method, accept := s.method, s.accept
+	if method == "" {
+		method = http.MethodGet
+	}
+	if accept == "" {
+		accept = "application/json"
+	}
+	req, err := http.NewRequestWithContext(ctx, method, u, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", accept)
+	switch {
+	case token != "":
+		req.Header.Set("Authorization", "Bearer "+token)
+	case s.basic && s.api.Login != nil:
+		req.SetBasicAuth(s.api.Login.User, s.api.Login.Secret)
+	}
+	return s.client.Do(req)
+}
+
+// doToken is the token request: GET, with the Login as HTTP Basic when
+// the user opted in (the realm is https, or http on loopback).
+func (s *tagSession) doToken(ctx context.Context, u string) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
+	if l := s.api.Login; l != nil {
+		req.SetBasicAuth(l.User, l.Secret)
 	}
 	return s.client.Do(req)
 }
@@ -420,7 +467,7 @@ func (s *tagSession) fetchToken(ctx context.Context, params map[string]string) (
 	}
 	q.Set("scope", scope)
 	u.RawQuery = q.Encode()
-	resp, err := s.do(ctx, u.String(), "")
+	resp, err := s.doToken(ctx, u.String())
 	if err != nil {
 		return "", err
 	}
