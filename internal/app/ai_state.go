@@ -180,6 +180,9 @@ type aiState struct {
 	runQueue      []aiQueuedRun
 	runInline     map[string]ai.Profile
 	runNotStarted map[string]string
+	// taskList is the open card of AI: Run Task List in Waves… (CMP-76,
+	// ai_task_list.go).
+	taskList *aiTaskListPending
 	// bgRuns are the AI-started runs that run beside the chat (OMX-6,
 	// ai_bg_runs.go).
 	bgRuns []*aiBgRun
@@ -563,6 +566,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-agents", "AI: Toggle Agents Panel", "Alt+Shift+A"},
 		{"ai-worktrees", "AI: Agent Worktrees…", ""},
 		{"ai-worktrees-toggle", "AI: Toggle Agent Worktrees", ""},
+		{aiTaskListPaletteID, "AI: Run Task List in Waves…", ""},
 		{"ai-usage", "AI: Usage", ""},
 		{"ai-runs", "AI: Runs", ""},
 		{"ai-profile-edit", "AI: Edit Profiles", ""},
@@ -632,6 +636,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIHistory(), true
 	case "ai-worktrees": // G-WT (ai_worktree_list.go)
 		return m.openAIWorktrees(), true
+	case aiTaskListPaletteID: // CMP-76 (ai_task_list.go)
+		return m.aiRunTaskList(), true
 	case "ai-worktrees-toggle":
 		return m.toggleAIWorktrees(), true
 	case "ai-history-rename":
