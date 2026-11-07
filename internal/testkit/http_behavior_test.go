@@ -825,3 +825,53 @@ func TestHTTPImportOpenAPI(t *testing.T) {
 		t.Fatalf("no pet-store-2.http:\n%s", screen(d))
 	}
 }
+
+// A chunked JSON answer streams live: its tail is one long line with cut
+// brackets. The live page turns the matching-bracket highlight off (else
+// matchparen searched that line until its 300 ms timeout on every
+// progress update and nvim answered nothing meanwhile); the finished
+// page has it back.
+func TestHTTPLivePageHasNoBracketMatch(t *testing.T) {
+	var sb strings.Builder
+	sb.WriteString(`{"items":[`)
+	for i := 0; sb.Len() < 200_000; i++ {
+		if i > 0 {
+			sb.WriteString(",")
+		}
+		sb.WriteString(`{"id":` + strconv.Itoa(i) + `,"tags":["a","b"]}`)
+	}
+	sb.WriteString("]}")
+	big := sb.String()
+	release := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, big[:100_000])
+		w.(http.Flusher).Flush()
+		<-release
+		_, _ = io.WriteString(w, big[100_000:])
+	}))
+	t.Cleanup(srv.Close)
+	var once bool
+	t.Cleanup(func() {
+		if !once {
+			close(release)
+		}
+	})
+	d := httpPerfDriver(t, srv.URL)
+	httpCursor(d, 6)
+	d.deliver(app.DevActionMsg{ID: "palette:http-send"})
+	pairs := `local b = vim.g.termocode_http_buf
+if not (b and vim.api.nvim_buf_is_valid(b)) then return 'none' end
+return vim.api.nvim_buf_line_count(b) .. '|' .. vim.bo[b].matchpairs`
+	if !d.WaitFor(func() bool { return strings.HasSuffix(lua(d, pairs), "|") }, 10*time.Second) {
+		t.Fatalf("live page: %s, want matchpairs off", lua(d, pairs))
+	}
+	once = true
+	close(release)
+	want := lua(d, `return vim.go.matchpairs`)
+	if !d.WaitFor(func() bool {
+		return strings.HasSuffix(lua(d, pairs), "|"+want) && !strings.HasPrefix(lua(d, pairs), "4|")
+	}, 10*time.Second) {
+		t.Fatalf("finished page: %s, want matchpairs %q", lua(d, pairs), want)
+	}
+}

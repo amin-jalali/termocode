@@ -59,6 +59,15 @@ local function apply_syntax(b)
   vim.bo[b].synmaxcol = 200
 end
 
+-- brackets: the matching-bracket highlight on (a finished answer) or off
+-- (a live stream). A stream's tail is often one long line with brackets
+-- cut off; matchparen then searches it on every text change and cursor
+-- move until its 300 ms timeout, and nvim answers nothing meanwhile.
+local function brackets(b, on)
+  local want = on and vim.go.matchpairs or ''
+  if vim.bo[b].matchpairs ~= want then vim.bo[b].matchpairs = want end
+end
+
 -- folds turns the page windows' indent folds on, or off (manual) while
 -- the batches of a big body arrive: nvim then works the folds out once,
 -- not again for every batch.
@@ -90,6 +99,7 @@ function _G._termocode_http_open(tmp, split, h, lines, rows, more)
   H.rows = {}
   add_rows(rows)
   folds(b, false)
+  brackets(b, true)
   put(b, 0, -1, lines)
   if fresh then vim.bo[b].filetype = 'httpresponse' end
   apply_syntax(b)
@@ -135,6 +145,7 @@ function _G._termocode_http_live(h, lines)
   end
   H.head = h
   H.rows = {}
+  brackets(b, false)
   put(b, 0, -1, lines)
   apply_syntax(b)
   local last = api.nvim_buf_line_count(b)

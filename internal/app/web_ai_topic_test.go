@@ -1,6 +1,7 @@
 package app
 
 import (
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -75,6 +76,16 @@ func TestWebAIReplayGolden(t *testing.T) {
 	golden, err := filepath.Abs(webReplayPath("ai", "profile")) // before the model's test folder becomes the cwd
 	if err != nil {
 		t.Fatal(err)
+	}
+	// The race agents come from the laptop's PATH; pin them so the golden
+	// is the same on every machine (CI has no agent installed).
+	old := agentLookPath
+	t.Cleanup(func() { agentLookPath = old })
+	agentLookPath = func(bin string) (string, error) {
+		if bin == "claude" || bin == "codex" {
+			return "/usr/bin/" + bin, nil
+		}
+		return "", exec.ErrNotFound
 	}
 	m := webAITopicModel(t)
 	m.ai.cfg.Model = "claude-test-1"
