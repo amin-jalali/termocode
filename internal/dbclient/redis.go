@@ -49,6 +49,9 @@ type RedisSession struct {
 	sentinels []string
 	readonly  bool
 	closed    bool
+	// noCluster: the server said it has no cluster support (DBX-69),
+	// so the key list scans only this node.
+	noCluster bool
 
 	cmu    sync.Mutex
 	cancel context.CancelFunc
@@ -123,12 +126,9 @@ func (s *RedisSession) tlsConfig() (*tls.Config, error) {
 	return &tls.Config{ServerName: s.target.host, MinVersion: tls.VersionTLS12}, nil
 }
 
-// connect dials a new connection (the caller holds mu or owns s).
-func (s *RedisSession) connect(ctx context.Context) error {
-	if s.conn != nil {
-		_ = s.conn.Close()
-		s.conn = nil
-	}
+// dialFunc is the session's dialer (none set: plain TCP without
+// keepalive).
+func (s *RedisSession) dialFunc() RedisDialFunc {
 	dial := s.dial
 	if dial == nil && s.cfg.Dial != nil {
 		dial = RedisDialFunc(s.cfg.Dial)
@@ -137,7 +137,13 @@ func (s *RedisSession) connect(ctx context.Context) error {
 		d := &net.Dialer{Timeout: 10 * time.Second, KeepAlive: -1}
 		dial = d.DialContext
 	}
-	opts := []redis.DialOption{redis.DialContextFunc(dial), redis.DialDatabase(s.target.db)}
+	return dial
+}
+
+// dialOptions are the dial options of a connection to database db: the
+// dialer, the user and password, and TLS.
+func (s *RedisSession) dialOptions(db int) ([]redis.DialOption, error) {
+	opts := []redis.DialOption{redis.DialContextFunc(s.dialFunc()), redis.DialDatabase(db)}
 	if s.password != "" {
 		opts = append(opts, redis.DialPassword(s.password))
 		if s.target.user != "" {
@@ -146,10 +152,24 @@ func (s *RedisSession) connect(ctx context.Context) error {
 	}
 	cfg, err := s.tlsConfig()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if cfg != nil {
 		opts = append(opts, redis.DialUseTLS(true), redis.DialTLSConfig(cfg))
+	}
+	return opts, nil
+}
+
+// connect dials a new connection (the caller holds mu or owns s).
+func (s *RedisSession) connect(ctx context.Context) error {
+	if s.conn != nil {
+		_ = s.conn.Close()
+		s.conn = nil
+	}
+	dial := s.dialFunc()
+	opts, err := s.dialOptions(s.target.db)
+	if err != nil {
+		return err
 	}
 	if name := s.cfg.Params["sentinel"]; name != "" {
 		// Sentinel (DBX-69): ask the sentinels for the master's address
@@ -436,46 +456,143 @@ func RedisGlobEscape(s string) string {
 }
 
 // ScanKeys runs SCAN … MATCH pattern COUNT 1000 on db until the cursor is
-// back at 0 or max keys are found (more: the cap stopped it).
+// back at 0 or max keys are found (more: the cap stopped it). On a Redis
+// Cluster node (DBX-69) it scans every master of the cluster, so the
+// list is the whole key space; max counts the keys of all nodes.
 func (s *RedisSession) ScanKeys(ctx context.Context, db int, pattern string, max int) (keys []string, more bool, err error) {
 	if max <= 0 {
 		max = 10000
 	}
 	err = s.op(ctx, db, func(ctx context.Context, c redis.Conn) error {
-		cursor := "0"
 		seen := map[string]bool{}
-		for {
-			reply, err := redis.Values(s.do(ctx, c, []string{"SCAN", cursor, "MATCH", pattern, "COUNT", strconv.Itoa(RedisScanCount)}))
-			if err != nil {
-				return err
-			}
-			if len(reply) != 2 {
-				return errors.New("unexpected SCAN reply")
-			}
-			cursor, _ = redis.String(reply[0], nil)
-			batch, _ := redis.Strings(reply[1], nil)
-			for _, k := range batch {
-				if seen[k] { // SCAN may return a key twice
-					continue
+		masters := s.clusterMasters(ctx, c)
+		if len(masters) == 0 {
+			var e error
+			keys, more, e = s.scanNode(ctx, c, pattern, max, seen, nil)
+			return e
+		}
+		for _, addr := range masters {
+			nc := c
+			var e error
+			if addr != s.target.addr {
+				if nc, e = s.dialNode(ctx, addr); e != nil {
+					return fmt.Errorf("cluster node %s: %w", addr, e)
 				}
-				if len(keys) == max {
-					more = true
-					return nil
-				}
-				seen[k] = true
-				keys = append(keys, k)
 			}
-			if cursor == "0" {
-				return nil
+			keys, more, e = s.scanNode(ctx, nc, pattern, max, seen, keys)
+			if nc != c {
+				_ = nc.Close()
 			}
-			if len(keys) == max {
-				more = true
+			if e != nil {
+				return fmt.Errorf("cluster node %s: %w", addr, e)
+			}
+			if more {
 				return nil
 			}
 		}
+		return nil
 	})
 	sort.Strings(keys)
 	return keys, more, err
+}
+
+// scanNode runs the SCAN loop on one connection, adding to keys the keys
+// not in seen, until the cursor is back at 0 or keys holds max.
+func (s *RedisSession) scanNode(ctx context.Context, c redis.Conn, pattern string, max int, seen map[string]bool, keys []string) ([]string, bool, error) {
+	cursor := "0"
+	for {
+		reply, err := redis.Values(s.do(ctx, c, []string{"SCAN", cursor, "MATCH", pattern, "COUNT", strconv.Itoa(RedisScanCount)}))
+		if err != nil {
+			return keys, false, err
+		}
+		if len(reply) != 2 {
+			return keys, false, errors.New("unexpected SCAN reply")
+		}
+		cursor, _ = redis.String(reply[0], nil)
+		batch, _ := redis.Strings(reply[1], nil)
+		for _, k := range batch {
+			if seen[k] { // SCAN may return a key twice
+				continue
+			}
+			if len(keys) == max {
+				return keys, true, nil
+			}
+			seen[k] = true
+			keys = append(keys, k)
+		}
+		if cursor == "0" {
+			return keys, false, nil
+		}
+		if len(keys) == max {
+			return keys, true, nil
+		}
+	}
+}
+
+// clusterMasters is the address of every master of the cluster c belongs
+// to, or nil on a server without cluster support. The answer "no
+// cluster" is kept for the session, so a plain server is asked once.
+func (s *RedisSession) clusterMasters(ctx context.Context, c redis.Conn) []string {
+	if s.noCluster {
+		return nil
+	}
+	text, err := redis.String(redis.DoContext(c, ctx, "CLUSTER", "NODES"))
+	if err != nil {
+		var re redis.Error
+		if errors.As(err, &re) { // the server said no (cluster support disabled, unknown command, no permission)
+			s.noCluster = true
+		}
+		return nil
+	}
+	host, _, _ := net.SplitHostPort(s.target.addr)
+	return redisClusterMasters(text, host)
+}
+
+// redisClusterMasters reads the masters of a CLUSTER NODES reply. A
+// master without an IP (an older server's own line) gets host; failed,
+// handshake and address-less nodes are skipped.
+func redisClusterMasters(nodes, host string) []string {
+	var out []string
+	for _, line := range strings.Split(nodes, "\n") {
+		f := strings.Fields(line)
+		if len(f) < 3 {
+			continue
+		}
+		flags := "," + f[2] + ","
+		if !strings.Contains(flags, ",master,") {
+			continue
+		}
+		if strings.Contains(flags, ",fail,") || strings.Contains(flags, ",fail?,") || strings.Contains(flags, ",noaddr,") || strings.Contains(flags, ",handshake,") {
+			continue
+		}
+		addr := f[1]
+		if i := strings.IndexAny(addr, "@,"); i >= 0 {
+			addr = addr[:i]
+		}
+		h, p, err := net.SplitHostPort(addr)
+		if err != nil || p == "" || p == "0" {
+			continue
+		}
+		if h == "" {
+			h = host
+		}
+		out = append(out, net.JoinHostPort(h, p))
+	}
+	return out
+}
+
+// dialNode opens a second connection to another cluster node with the
+// session's user, password and TLS (database 0: a cluster has no other).
+func (s *RedisSession) dialNode(ctx context.Context, addr string) (redis.Conn, error) {
+	opts, err := s.dialOptions(0)
+	if err != nil {
+		return nil, err
+	}
+	conn, err := redis.DialContext(ctx, "tcp", addr, opts...)
+	if err != nil {
+		return nil, redisError(err, s.password)
+	}
+	return conn, nil
 }
 
 // RedisDeleteBatch is the number of keys one UNLINK / DEL sends.
