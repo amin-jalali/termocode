@@ -50,7 +50,11 @@ const (
 	promptKindContainerRunEnv
 	promptKindContainerStorageName
 	promptKindContainerPull
-	promptKindExtNew // Extensions: New Extension…
+	promptKindContainerBuildTag      // CTX-7 (containers_build.go)
+	promptKindContainerBuildArgs     // CTX-7
+	promptKindContainerBuildTarget   // CTX-7
+	promptKindContainerBuildPlatform // CTX-7
+	promptKindExtNew                 // Extensions: New Extension…
 	// Group D — watch / conditional breakpoint / logpoint (dap.go).
 	promptKindDebugWatch
 	promptKindDebugCondition
@@ -295,6 +299,8 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 		return m.extNewSubmit(value)
 	case promptKindContainerTag, promptKindContainerRunName, promptKindContainerRunPorts, promptKindContainerRunEnv, promptKindContainerStorageName, promptKindContainerPull:
 		return m.onContainerImagePrompt(m.promptKind, value)
+	case promptKindContainerBuildTag, promptKindContainerBuildArgs, promptKindContainerBuildTarget, promptKindContainerBuildPlatform: // containers_build.go
+		return m.onContainerBuildPrompt(m.promptKind, value)
 	case promptKindRegistryHost, promptKindRegistryUser, promptKindRegistryToken: // containers_registries.go
 		return m.onRegistryPrompt(m.promptKind, value)
 	case promptKindContainerSearch, promptKindContainerBrowse: // containers_remote.go

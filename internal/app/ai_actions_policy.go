@@ -427,6 +427,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"containers-open-port":         aiAuto(),
 	"containers-open-databases":    aiNever(aiNoPicker + " (db_connections)"),
 	"containers-image-pull":        aiDestructive(),
+	"containers-image-build":       aiNever("building an image is the user's; nothing is offered to the model"),
 	"containers-image-push":        aiNever("pushing an image is the user's; nothing is offered to the model"),
 	"containers-image-tag":         aiNever("tagging an image is the user's; nothing is offered to the model"),
 	"containers-image-run":         aiNever("running an image is the user's; nothing is offered to the model (containers_control starts existing containers)"),

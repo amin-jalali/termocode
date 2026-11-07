@@ -1373,6 +1373,7 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "containers-open-databases", Title: "Containers: Open in Databases"},
 		{ID: "containers-open-port", Title: "Containers: Open Published Port"},
 		{ID: "containers-image-pull", Title: "Containers: Pull Image…"},
+		{ID: "containers-image-build", Title: "Containers: Build Image from Dockerfile…"},
 		{ID: "containers-image-push", Title: "Containers: Push Selected Image…"},
 		{ID: "containers-image-tag", Title: "Containers: Tag Selected Image…"},
 		{ID: "containers-image-run", Title: "Containers: Run Selected Image…"},
@@ -1620,6 +1621,8 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 				m.services.filterTyping = true
 				m.services.touch()
 				return nil
+			case "containers-image-build":
+				return m.buildDockerfileFromPalette()
 			case "containers-image-pull":
 				if _, ref, ok := m.selectedImage(); ok {
 					m.askImagePull(ref)

@@ -2011,6 +2011,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-filter` | Containers: Filter Rows… | never | the filter is typed by the user; the AI uses containers_list / images_list |
 | `containers-focus` | Containers: Focus | auto |   |
 | `containers-help` | Containers: Open Guide | auto |   |
+| `containers-image-build` | Containers: Build Image from Dockerfile… | never | building an image is the user's; nothing is offered to the model |
 | `containers-image-history` | Containers: Show Image History | auto |   |
 | `containers-image-inspect` | Containers: Inspect Image | auto |   |
 | `containers-image-prune` | Containers: Prune Dangling Images… | never | pruning images is the user's; nothing is offered to the model |

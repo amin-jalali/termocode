@@ -123,6 +123,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | Containers: Attach | `containers-attach` |   |   |
 | Containers: Browse Remote Tags… | `containers-browse-tags` |   |   |
+| Containers: Build Image from Dockerfile… | `containers-image-build` |   |   |
 | Containers: Configure Services (services.json) | `services-configure` |   |   |
 | Containers: Connect Registry… | `containers-registry-connect` |   |   |
 | Containers: Copy ID | `containers-copy-id` |   |   |
