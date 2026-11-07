@@ -5360,6 +5360,12 @@
         "added": {
           "type": "integer"
         },
+        "hunks": {
+          "items": {
+            "$ref": "#/defs/CardHunk"
+          },
+          "type": "array"
+        },
         "removed": {
           "type": "integer"
         },
@@ -5380,11 +5386,33 @@
       ],
       "additionalProperties": true
     },
+    "CardHunk": {
+      "type": "object",
+      "properties": {
+        "end": {
+          "type": "integer"
+        },
+        "first": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "first",
+        "end"
+      ],
+      "additionalProperties": true
+    },
     "CardsAnswerArgs": {
       "type": "object",
       "properties": {
         "choice": {
           "type": "string"
+        },
+        "hunks": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
         },
         "id": {
           "type": "string"

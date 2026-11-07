@@ -175,6 +175,28 @@ local ok, e = pcall(api.nvim_buf_set_text, b, sr, sc, er, ec, lines)
 if not ok then return { err = 'failed', msg = tostring(e) } end
 return { tick = api.nvim_buf_get_changedtick(b), dirty = vim.bo[b].modified }`
 
+// webLuaEditMark shows the laptop where a browser just edited (WEB-F4):
+// one mark per buffer, on the last row the edit wrote, with a sign and
+// the device's name at the line's end. The next web edit moves it; it
+// goes away by itself after 30 s without a web edit.
+const webLuaEditMark = `
+local b, row, device = ...
+local api = vim.api
+if not api.nvim_buf_is_valid(b) then return end
+local ns = api.nvim_create_namespace('termocode_web_edit')
+api.nvim_buf_clear_namespace(b, ns, 0, -1)
+local n = api.nvim_buf_line_count(b)
+if row >= n then row = n - 1 end
+if row < 0 then return end
+local id = api.nvim_buf_set_extmark(b, ns, row, 0, {
+  sign_text = '▍', sign_hl_group = 'DiagnosticInfo',
+  virt_text = { { '✎ ' .. device, 'Comment' } }, virt_text_pos = 'eol',
+  priority = 15,
+})
+vim.defer_fn(function()
+  if api.nvim_buf_is_valid(b) then pcall(api.nvim_buf_del_extmark, b, ns, id) end
+end, 30000)`
+
 // webLuaSave writes buffer b the way :write on the laptop does (its
 // BufWrite hooks run: format on save, EditorConfig). A file changed on
 // disk since it was read is not overwritten: checktime first, and the

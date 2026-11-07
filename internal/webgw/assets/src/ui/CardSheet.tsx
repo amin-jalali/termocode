@@ -55,13 +55,34 @@ export function errText(e: unknown): string {
   return t(key);
 }
 
-function CardDiff({ c }: { c: CardData }) {
-  const rows = c.diff?.rows ?? [];
+/** CardDiff draws the rows; with two or more changes (diff.hunks) each
+ * change gets a "Keep" box, all on, so Accept may keep only some (WEB-F4). */
+function CardDiff({ c, drop, setDrop }: { c: CardData; drop: Set<number>; setDrop: (d: Set<number>) => void }) {
+  const rows = (c.diff?.rows ?? []).slice(0, MAX_DIFF_ROWS);
+  const hunks = rows.length === c.diff?.rows.length ? (c.diff?.hunks ?? []) : [];
+  const row = (r: (typeof rows)[number], i: number) => <DiffRow key={i} kind={r.k === "add" || r.k === "del" ? r.k : "ctx"} a={r.old} b={r.new} text={r.text} />;
   return (
     <div class="card-diff">
-      {rows.slice(0, MAX_DIFF_ROWS).map((r, i) => (
-        <DiffRow key={i} kind={r.k === "add" || r.k === "del" ? r.k : "ctx"} a={r.old} b={r.new} text={r.text} />
-      ))}
+      {rows.map((r, i) => {
+        const k = hunks.findIndex((x) => x.first === i);
+        if (k < 0) return row(r, i);
+        const keep = !drop.has(k);
+        return [
+          <label key={`k${k}`} class="card-keep">
+            <input
+              type="checkbox"
+              checked={keep}
+              onChange={() => {
+                const d = new Set(drop);
+                keep ? d.add(k) : d.delete(k);
+                setDrop(d);
+              }}
+            />
+            {t("card.keep_change", { n: k + 1 })}
+          </label>,
+          row(r, i),
+        ];
+      })}
     </div>
   );
 }
@@ -73,6 +94,7 @@ export function CardSheet({ id }: { id: string }) {
   const shown = card ?? last.current;
   const [gone, setGone] = useState(false);
   const [sending, setSending] = useState(false);
+  const [drop, setDrop] = useState<Set<number>>(new Set());
   const loaded = store.topic("cards").value !== undefined;
   const by = answeredBy.value.get(id);
 
@@ -98,9 +120,15 @@ export function CardSheet({ id }: { id: string }) {
   const answer = (which: "safe" | "risky") => {
     const choice = which === "safe" ? safeChoice(shown) : riskyChoice(shown);
     if (!choice || sending) return;
-    setSending(true);
     const review = shown.kind === "review";
-    link.request("cards.answer", { id, choice: choice.id }).then(
+    const all = which === "risky" && review ? (shown.diff?.hunks ?? []) : [];
+    const hunks = drop.size > 0 ? all.map((_, k) => k).filter((k) => !drop.has(k)) : [];
+    if (all.length > 0 && drop.size >= all.length) {
+      toast("info", t("card.keep_none"));
+      return;
+    }
+    setSending(true);
+    link.request("cards.answer", hunks.length > 0 ? { id, choice: choice.id, hunks } : { id, choice: choice.id }).then(
       () => {
         setSending(false);
         if (which === "safe") toast("info", t(review ? "toast.rejected" : "toast.denied"));
@@ -135,7 +163,7 @@ export function CardSheet({ id }: { id: string }) {
         onLaptop={closeCard}
       >
         {shown.body && <p class="card-text">{shown.body}</p>}
-        {shown.diff && state !== "long" && <CardDiff c={shown} />}
+        {shown.diff && state !== "long" && <CardDiff c={shown} drop={drop} setDrop={setDrop} />}
         {shown.kind === "review" && shown.diff && !shown.diff.truncated && shown.file && layout.value === "desktop" && !shown.id.includes(":") && (
           <button
             type="button"

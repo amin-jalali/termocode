@@ -81,6 +81,14 @@ termocode.
 On a phone the tabs are at the bottom. On a wider screen the files and
 the chat sit side by side.
 
+An AI change card with more than one change has a **Keep change** box on
+each change. Clear the boxes of the changes you do not want, then press
+**Accept**: only the kept changes are written.
+
+When you change a file in the page, the laptop shows a mark (**▍**) on
+that line with **✎** and your device's name. It moves with your next
+change and goes away after 30 seconds.
+
 ## Use it from a remote machine: `termocode ssh --web`
 
 When termocode runs on a server, open its panel on your own computer:
@@ -275,6 +283,34 @@ In simple words:
   type `termocode web` either.
 - **A record.** termocode keeps an audit log of web starts, stops and
   logins in its config folder (`web-audit.jsonl`).
+
+## Check it with a screen reader
+
+The page is checked by axe on every view, in both themes, on the phone
+and the desktop. A tool cannot hear the page, so this list is for a
+person with a real screen reader: VoiceOver on a Mac or an iPhone,
+TalkBack on Android, NVDA on Windows or Orca on Linux. Tick each line
+once in English and once in Persian (**More → Language**).
+
+- [ ] The first Tab stop says **Skip to content**. Enter moves to the view.
+- [ ] The tabs say their names: **Chat**, **Files**, **Term**, **Git**, **More**, and which one is selected.
+- [ ] In the chat, a new answer is read when it ends, not word by word.
+- [ ] Every icon button says what it does (no "button" with no name).
+- [ ] An AI card is read as a group (on a phone, a dialog) with its title first.
+- [ ] On a phone card, the safe choice (**Deny**, **Later**) has the focus first.
+- [ ] The risky choice first says **Ready in a moment…** and only then can be used.
+- [ ] A terminal does not read every new row by itself.
+- [ ] Tab to the hidden button **Read the last 20 rows** in a terminal. Enter reads them once.
+- [ ] A toast is read once, politely, without moving the focus.
+- [ ] When the connection drops, the reader says **Connection lost. Trying again.** once, not each second.
+- [ ] A save error or an edit conflict is read at once (an alert).
+- [ ] In Files, each row says its name, and a folder says if it is open or closed.
+- [ ] A sheet keeps the focus inside it. Closing a row menu puts the focus back on its row.
+- [ ] In Persian, the reader uses the Persian voice and reads right to left.
+- [ ] With reduced motion on, nothing on the page keeps moving.
+
+If a line fails, note the reader, the browser and the view, and open an
+issue.
 
 ## Limits
 

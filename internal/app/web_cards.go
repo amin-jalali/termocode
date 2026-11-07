@@ -340,6 +340,11 @@ func (p *webCardsPub) diff(it *aiReviewItem, d *textdiff.Diff) *webproto.CardDif
 			}
 			out.Rows = append(out.Rows, webproto.DiffRow{K: k, Text: ai.RedactSecrets(r.Text), Old: r.OldLine, New: r.NewLine})
 		}
+		if !out.Truncated && len(d.Hunks) >= 2 && len(d.Hunks) <= webproto.MaxCardHunks {
+			for _, h := range d.Hunks {
+				out.Hunks = append(out.Hunks, webproto.CardHunk{First: h.First, End: h.End})
+			}
+		}
 	}
 	p.diffs[it] = &webCardDif{diff: out}
 	return out
