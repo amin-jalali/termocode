@@ -12,6 +12,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Add File / Selection to Chat | `ai-attach` |   |   |
 | AI: Add Model Slot… | `ai-model-slot-add` |   |   |
 | AI: Agent Auto-Approve… | `ai-auto-approve` |   |   |
+| AI: Agent Board… | `ai-board` |   |   |
 | AI: Agent Worktrees… | `ai-worktrees` |   |   |
 | AI: Agents & Connections | `itermoc-open-ai` |   |   |
 | AI: Apply Last Code Block to File | `ai-apply-code` |   |   |

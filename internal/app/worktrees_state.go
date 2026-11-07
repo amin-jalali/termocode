@@ -137,6 +137,7 @@ type wtLoadMsg struct {
 	gen     uint64
 	jump    bool // Worktree: Jump… asked: apply it and open the picker
 	web     bool // the page asked (web_worktrees.go): apply it, no poll tick
+	board   bool // AI: Agent Board… asked (agent_board.go): apply it and open the board
 	root    string
 	common  string
 	list    []git.Worktree
@@ -172,7 +173,7 @@ func (m *Model) worktreesLoadFor(jump bool) tea.Cmd {
 
 func (m *Model) onWTLoad(msg wtLoadMsg) tea.Cmd {
 	st := m.wt
-	if st == nil || (!msg.jump && !msg.web && (msg.gen != st.gen || !st.polling)) {
+	if st == nil || (!msg.jump && !msg.web && !msg.board && (msg.gen != st.gen || !st.polling)) {
 		return nil
 	}
 	if msg.web && m.web != nil {
@@ -202,6 +203,8 @@ func (m *Model) onWTLoad(msg wtLoadMsg) tea.Cmd {
 	switch {
 	case msg.jump:
 		cmds = append(cmds, m.openWorktreeJump()) // the poll chain (if any) keeps its own tick
+	case msg.board:
+		cmds = append(cmds, m.openAgentBoard()) // the poll chain (if any) keeps its own tick
 	case msg.web: // the page's read: the poll chain (if any) keeps its own tick
 	default:
 		cmds = append(cmds, wtTick(st.gen))

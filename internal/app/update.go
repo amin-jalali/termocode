@@ -2485,6 +2485,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.openWorkspace(msg.ID)
 	case pickerKindWorktreeJump: // worktrees_jump.go
 		return m.onWorktreeJumpPicked(msg.ID)
+	case pickerKindAgentBoard: // agent_board.go (CMP-2)
+		return m.onAgentBoardPicked(msg.ID)
 	case pickerKindWTCleanup: // worktrees_cleanup.go: a row ticks, the first row goes on
 		return m.onWTCleanupPicked(msg.ID)
 	case pickerKindWTRef: // worktrees_new.go: back to the dialog with the start point
