@@ -175,6 +175,7 @@ func (m *Model) httpSendRequest(file string, vars []httpclient.Var, req httpclie
 		return m.pushToastDetail(toast.Warn, "A request is still running", "Esc on the response page, or HTTP: Cancel Request")
 	}
 	rv := httpResolver(file, vars, env)
+	rv.Responses = s.chainSource(file)
 	rr, un := rv.Resolve(req)
 	label := req.Label()
 	run := &httpRun{rr: rr, file: file, line: req.Line, label: label, env: rv.Env}
@@ -1028,6 +1029,7 @@ func (m *Model) httpCopyCurlAction() tea.Cmd {
 			return m.pushToastDetail(toast.Warn, "HTTP: "+err.Error(), "")
 		}
 		rv := httpResolver(file, pf.Vars, "")
+		rv.Responses = m.httpS().chainSource(file)
 		rr, _ := rv.Resolve(*req)
 		return m.httpCopyCurl(&httpRun{rr: rr, file: file, label: req.Label()})
 	}

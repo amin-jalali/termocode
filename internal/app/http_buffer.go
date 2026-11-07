@@ -252,6 +252,7 @@ func (m *Model) httpRefreshBuf(buf int) string {
 	m.ensureHTTPLua()
 	rv := httpResolver(name, f.Vars, "")
 	s := m.httpS()
+	rv.Responses = s.chainSource(name)
 	rows := httpBufRows(f, lines, rv.Known, func(r *httpclient.Request) [][]string {
 		label := r.Label()
 		sending := s.running != nil && s.running.file == name && s.running.label == label

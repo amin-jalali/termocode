@@ -296,6 +296,21 @@ func (s *httpState) findRun(id int) *httpRun {
 	return nil
 }
 
+// chainSource answers {{name.response...}} for requests in file: the
+// newest run of the request called name there that got an answer (a
+// failed send does not count). Only call it on the Update goroutine.
+func (s *httpState) chainSource(file string) func(string) (*httpclient.Response, bool) {
+	return func(name string) (*httpclient.Response, bool) {
+		for i := len(s.ring) - 1; i >= 0; i-- {
+			r := s.ring[i]
+			if r.file == file && r.rr.Template.Name == name && r.resp != nil && r.resp.Err == "" {
+				return r.resp, true
+			}
+		}
+		return nil, false
+	}
+}
+
 // ── resolving ───────────────────────────────────────────────────────────
 
 // httpRootFor is the workspace root that holds path (the cwd when none).
