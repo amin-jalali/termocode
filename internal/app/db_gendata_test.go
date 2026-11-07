@@ -13,7 +13,7 @@ import (
 type genSession struct{ *metaSession }
 
 func (s genSession) ReadOnlySession() (dbclient.Session, error) { return s, nil }
-func (s genSession) Close() error                              { return nil }
+func (s genSession) Close() error                               { return nil }
 
 // DBX-20: the script fills a table by its columns, takes foreign key
 // values that exist in the referenced table (read-only sample) and leaves
@@ -26,7 +26,7 @@ func TestDBBuildTestDataUsesColumnsAndForeignKeys(t *testing.T) {
 			ForeignKeys: []dbclient.SchemaForeignKey{{Name: "fk_team", Column: "team_id", RefTable: "teams", RefColumn: "id"}},
 		},
 		rows: map[string][][]string{
-			"information_schema.columns": {{"id", "integer", "NO", "nextval('users_id_seq'::regclass)"}, {"email", "text", "NO", "<null>"}, {"team_id", "integer", "NO", "<null>"}},
+			"information_schema.columns":                 {{"id", "integer", "NO", "nextval('users_id_seq'::regclass)"}, {"email", "text", "NO", "<null>"}, {"team_id", "integer", "NO", "<null>"}},
 			`SELECT DISTINCT "id" FROM "public"."teams"`: {{"4"}, {"8"}},
 		},
 	}
