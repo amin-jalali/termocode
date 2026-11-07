@@ -467,6 +467,8 @@ func (m *Model) databaseTransferPicker(id string) (tea.Cmd, bool) {
 		return m.databaseImportPicker(id), true
 	case pickerKindDBSearchHits:
 		return m.databaseSearchOpenHit(id), true
+	case pickerKindDBChart:
+		return m.databaseChartPicked(id), true
 	}
 	return nil, false
 }

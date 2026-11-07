@@ -415,5 +415,10 @@ hi('TermocodeDbChanged',       { fg = c.git_mod })
 hi('TermocodeDbAdded',         { fg = c.git_add })
 hi('TermocodeDbDeleted',       { fg = c.git_del, strikethrough = true })
 hi('TermocodeDbAltRow',        { bg = c.bg_panel })
+hi('TermocodeDbHeat0',         { fg = c.info })
+hi('TermocodeDbHeat1',         { fg = c.hint })
+hi('TermocodeDbHeat2',         { fg = c.git_add })
+hi('TermocodeDbHeat3',         { fg = c.warn })
+hi('TermocodeDbHeat4',         { fg = c.error_, bold = true })
 if _G.termocode_bracket_hl then _G.termocode_bracket_hl() end
 `

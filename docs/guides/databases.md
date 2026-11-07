@@ -162,12 +162,14 @@ The result opens as the **SQL Result** page, in a split on the right when the ed
 | `]` / `[` | next / previous page |
 | `o` | sort by a column (choose it again to reverse) |
 | `f` | show only rows that contain a text |
-| `v` or `Enter` | open the cell under the cursor; `q` goes back. JSON and XML are pretty-printed, long text wraps, a binary value is a hex dump (the first 16 KB), and a PNG, JPEG, GIF or WebP image says its kind and size |
+| `v` or `Enter` | open the cell under the cursor; `q` goes back. JSON and XML are pretty-printed, long text wraps, a binary value is a hex dump (the first 16 KB), a PNG, JPEG, GIF or WebP image says its kind and size, and a geometry value (WKB or EWKB hex, as PostGIS prints it) is shown as WKT and GeoJSON text |
 | `=` | count, sum, avg, min and max of the column under the cursor on this page; select rows with `V` first to sum up only those. Text columns show count, min and max |
 | `y` | copy the cell |
 | `Y` | copy the column, one value per line |
 | `c` / `C` | copy the loaded rows as CSV / JSON |
 | `S` | export the rows to a file (CSV, TSV, JSON, SQL INSERTs, Markdown or HTML) |
+| `M` | heatmap on / off: every column with only numbers gets a colour per cell, from cool (lowest) to hot (highest) on the page. Also **Databases: Toggle Result Heatmap** |
+| `B` | chart: pick a number column, then a bar chart (one bar per row, labelled by the first text column) or a line chart (braille dots, the rows in order) opens in a read-only buffer; `q` goes back. Up to 500 loaded rows. Also **Databases: Chart Result…** |
 | `r` | run again (writes ask again) |
 | `1` … `9` | show result tab 1 … 9 |
 | `p` | pin the result tab (again: unpin) |

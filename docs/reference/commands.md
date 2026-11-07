@@ -205,6 +205,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Add SSH Tunnel… | `db-add-tunnel` |   |   |
 | Databases: Cancel Query | `db-cancel` |   |   |
 | Databases: Cancel Session Query… | `db-cancel-session` |   |   |
+| Databases: Chart Result… | `db-chart` |   |   |
 | Databases: Commit | `db-commit` |   |   |
 | Databases: Compare Schemas… | `db-compare-schemas` |   |   |
 | Databases: Configure | `db-configure` |   |   |
@@ -246,6 +247,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Show Sessions and Locks | `db-sessions` |   |   |
 | Databases: Submit Pending Changes… | `db-submit-changes` |   |   |
 | Databases: Test Connection | `db-test-connection` |   |   |
+| Databases: Toggle Result Heatmap | `db-heatmap` |   |   |
 | Databases: Transaction Mode… | `db-transaction-mode` |   |   |
 
 ## Debug

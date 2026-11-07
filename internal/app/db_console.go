@@ -95,6 +95,7 @@ type dbConsoleState struct {
 	// then the last search's hits (the hit picker opens them).
 	search *dbSearchTarget
 	hits   *dbSearchResult
+	heat   bool // M: the grid colours numeric cells by value (db_visualize.go)
 
 	tabs         []*dbTab // result tabs (db_tabs.go)
 	tab          int      // the tab on the page
