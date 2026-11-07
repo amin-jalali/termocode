@@ -3,6 +3,7 @@
 package webgw
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -29,6 +30,23 @@ func goldenArgs(t *testing.T, op string) string {
 		t.Fatal(err)
 	}
 	return string(r.Args)
+}
+
+// hubArgs are args that take op to the hub. The push goldens are of kind
+// unifiedpush, which the gateway keeps (MOB-32, tested on their own);
+// the walk sends kind webpush, which goes to the hub (MOB-30).
+func hubArgs(t *testing.T, op, args string) string {
+	t.Helper()
+	if !isUnifiedPushOp(&webproto.Req{Op: op, Args: json.RawMessage(args)}) {
+		return args
+	}
+	if op == webproto.OpPushUnsubscribe {
+		return `{"kind":"webpush"}`
+	}
+	key := make([]byte, 65)
+	key[0] = 4
+	b64 := base64.RawURLEncoding
+	return `{"kind":"webpush","endpoint":"https://fcm.googleapis.com/fcm/send/abc","p256dh":"` + b64.EncodeToString(key) + `","auth":"` + b64.EncodeToString(make([]byte, 16)) + `"}`
 }
 
 // walkConn is one browser in the walk with its own request ids.
@@ -74,7 +92,7 @@ func TestPolicyTableEnforcedInGateway(t *testing.T) {
 	cc, cp := r.connect()
 	viewer, ctrl := &walkConn{c: vc, p: vp}, &walkConn{c: cc, p: cp}
 	for _, p := range webproto.Ops() {
-		args := goldenArgs(t, p.Op)
+		args := hubArgs(t, p.Op, goldenArgs(t, p.Op))
 		if p.LaptopCard && (p.Role == webproto.RoleViewer || p.Audit != webproto.AuditYes || p.Rate.Per/time.Duration(p.Rate.N) < time.Second) {
 			t.Errorf("%s: a laptop-card row must be a controller op, audited, at most 1/s: %+v", p.Op, p)
 		}
