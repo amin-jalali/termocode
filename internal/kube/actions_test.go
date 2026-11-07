@@ -68,3 +68,66 @@ func TestLogsTail(t *testing.T) {
 		t.Errorf("calls = %v", got)
 	}
 }
+
+func TestYAMLReturnsText(t *testing.T) {
+	f, c := fakeClient(t)
+	f.Set(t, "deployment.yaml", "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: api\nspec:\n  replicas: 2\n")
+	text, err := c.YAML(context.Background(), "deployment", "api")
+	if err != nil || !strings.Contains(text, "replicas: 2") {
+		t.Fatalf("yaml = %q, %v", text, err)
+	}
+	if got := f.Calls(); len(got) != 1 || got[0] != "get deployment api -o yaml --context dev --namespace shop" {
+		t.Errorf("calls = %v", got)
+	}
+}
+
+// secretYAML is a Secret as `kubectl get secret -o yaml` prints it. The
+// values are fake ("sk-"+"test" style) so no scanner flags them.
+const secretYAML = "apiVersion: v1\n" +
+	"data:\n" +
+	"  password: " + "c2stdGVzdA" + "==\n" +
+	"  token: " + "dG9rLXRlc3Q" + "=\n" +
+	"kind: Secret\n" +
+	"metadata:\n" +
+	"  annotations:\n" +
+	"    kubectl.kubernetes.io/last-applied-configuration: |\n" +
+	"      {\"data\":{\"password\":\"" + "c2stdGVzdA" + "==\"}}\n" +
+	"    team: shop\n" +
+	"  name: db\n" +
+	"stringData:\n" +
+	"  note: |\n" +
+	"    line-one-" + "plain\n" +
+	"    line-two\n" +
+	"type: Opaque\n"
+
+func TestYAMLMasksSecretData(t *testing.T) {
+	f, c := fakeClient(t)
+	f.Set(t, "secret.yaml", secretYAML)
+	text, err := c.YAML(context.Background(), "secret", "db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, leak := range []string{"c2stdGVzdA", "dG9rLXRlc3Q", "line-one-plain", "line-two"} {
+		if strings.Contains(text, leak) {
+			t.Errorf("secret value %q leaked:\n%s", leak, text)
+		}
+	}
+	// Key names and the rest of the object stay readable.
+	for _, keep := range []string{"  password: '***'", "  token: '***'", "  note: '***'", "kubectl.kubernetes.io/last-applied-configuration: '***'", "    team: shop", "  name: db", "type: Opaque"} {
+		if !strings.Contains(text, keep) {
+			t.Errorf("missing %q:\n%s", keep, text)
+		}
+	}
+}
+
+func TestMaskSecretYAMLByKindLine(t *testing.T) {
+	// Masked even when the caller names the kind another way.
+	got := kube.MaskSecretYAML("", secretYAML)
+	if strings.Contains(got, "c2stdGVzdA") {
+		t.Errorf("leaked:\n%s", got)
+	}
+	plain := "apiVersion: v1\ndata:\n  color: blue\nkind: ConfigMap\n"
+	if got := kube.MaskSecretYAML("configmap", plain); got != plain {
+		t.Errorf("configmap changed:\n%s", got)
+	}
+}

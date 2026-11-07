@@ -57,6 +57,7 @@ kubeconfig, so other terminals keep their context.
 | `/` | Filter the rows by name. `Enter` keeps the filter, `Esc` clears it. |
 | `Enter` / `l` | Pod: follow its logs. Other rows: describe. |
 | `i` | Describe the row (a read-only page). |
+| `v` | Show the row as YAML (a read-only page; Secret values are masked). |
 | `e` | Pod: open a shell in it. |
 | `f` | Pod: start or stop a port-forward. |
 | `y` | Copy the name. |

@@ -13,6 +13,7 @@
 //	                     services, jobs, namespaces, statefulsets, …)
 //	<kind>.txt           answer of `get <kind>` when a template is used
 //	                     (secrets: names and key names only)
+//	<kind>.yaml          answer of `get <kind> <name> -o yaml`
 //	<kind>.err           `get <kind>` fails with this stderr (exit 1)
 //	<kind>.sleep         `get <kind>` sleeps this many seconds first
 //	all.err              every call fails with this stderr (exit 1)
@@ -54,9 +55,10 @@ const script = `#!/bin/sh
 D='@DATA@'
 printf '%s\n' "$*" >> "$D/argv.log"
 printf '%s|%s\n' "${KUBECONFIG-}" "$*" >> "$D/env.log"
-ctx=""; prev=""
+ctx=""; prev=""; out=""
 for a in "$@"; do
   if [ "$prev" = "--context" ]; then ctx="$a"; fi
+  if [ "$prev" = "-o" ]; then out="$a"; fi
   case "$a" in --context=*) ctx="${a#--context=}" ;; esac
   prev="$a"; last="$a"
 done
@@ -76,6 +78,7 @@ get)
   kind="$2"
   if [ -f "$D/$kind.sleep" ]; then sleep "$(cat "$D/$kind.sleep")"; fi
   if [ -f "$D/$kind.err" ]; then cat "$D/$kind.err" >&2; exit 1; fi
+  if [ "$out" = "yaml" ]; then cat "$D/$kind.yaml" 2>/dev/null; exit 0; fi
   if [ -f "$D/$kind.txt" ]; then cat "$D/$kind.txt"; exit 0; fi
   cat "$D/$kind.json" 2>/dev/null; exit 0 ;;
 describe) cat "$D/describe.txt" 2>/dev/null; exit 0 ;;
