@@ -51,7 +51,7 @@ func (m *Model) openBisect() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -96,7 +96,7 @@ func (m *Model) onBisectState(st git.BisectState) tea.Cmd {
 }
 
 func (m *Model) openBisectSteps(st git.BisectState) tea.Cmd {
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -130,7 +130,7 @@ func (m *Model) openBisectSteps(st git.BisectState) tea.Cmd {
 }
 
 func (m *Model) gitxBisectReset() tea.Cmd {
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -166,7 +166,7 @@ func (m *Model) openBisectTaskPicker() tea.Cmd {
 						if id != "run" {
 							return nil
 						}
-						cwd, err := m.rootDir()
+						cwd, err := m.gitRootDir()
 						if err != nil {
 							return nil
 						}
@@ -210,7 +210,7 @@ func (m *Model) openCompareBranches() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}

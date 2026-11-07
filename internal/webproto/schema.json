@@ -1934,6 +1934,20 @@
       "phase": "v2"
     },
     {
+      "op": "editor.vim_buf_maps",
+      "args": "BufArgs",
+      "result": "VimMapList",
+      "role": "viewer",
+      "rate": {
+        "n": 10,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "workflows.stop",
       "args": "WorkflowRunArgs",
       "role": "controller",
@@ -3313,6 +3327,34 @@
     {
       "op": "git.stash_apply",
       "args": "GitStashRefArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.stash_show",
+      "args": "GitStashShowArgs",
+      "result": "GitDiff",
+      "role": "viewer",
+      "rate": {
+        "n": 10,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "git.stash_act",
+      "args": "GitStashActArgs",
       "result": "AskRef",
       "role": "controller",
       "rate": {
@@ -8790,6 +8832,12 @@
         },
         "repo": {
           "type": "boolean"
+        },
+        "stashes": {
+          "items": {
+            "$ref": "#/defs/GitStashEntry"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -8799,6 +8847,30 @@
         "log"
       ],
       "additionalProperties": true
+    },
+    "GitStashActArgs": {
+      "type": "object",
+      "properties": {
+        "branch": {
+          "type": "string"
+        },
+        "do": {
+          "enum": [
+            "apply",
+            "pop",
+            "drop",
+            "branch"
+          ]
+        },
+        "ref": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref",
+        "do"
+      ],
+      "additionalProperties": false
     },
     "GitStashArgs": {
       "type": "object",
@@ -8844,6 +8916,21 @@
     "GitStashRefArgs": {
       "type": "object",
       "properties": {
+        "ref": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref"
+      ],
+      "additionalProperties": false
+    },
+    "GitStashShowArgs": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "integer"
+        },
         "ref": {
           "type": "string"
         }

@@ -110,6 +110,7 @@ interface Editor {
   revealPositionInCenter(p: Pos): void;
   setPosition(p: Pos): void;
   setSelection(s: { selectionStartLineNumber: number; selectionStartColumn: number; positionLineNumber: number; positionColumn: number }): void;
+  setSelections(s: { selectionStartLineNumber: number; selectionStartColumn: number; positionLineNumber: number; positionColumn: number }[]): void;
   revealPosition(p: Pos): void;
   getPosition(): Pos | null;
   addAction(a: { id: string; label: string; keybindings?: number[]; contextMenuGroupId?: string; contextMenuOrder?: number; run: () => void }): unknown;
@@ -829,6 +830,8 @@ let vimShown = "";
 let vimWant = false;
 /** vimMaps are the user's mappings (the page's; [] until it has them). */
 let vimMaps: { maps: VimMapDef[]; timeout: number } = { maps: [], timeout: -1 };
+/** vimBufMaps are this file's own mappings (the page's; [] until then). */
+let vimBufMaps: VimMapDef[] = [];
 let vimLoading: Promise<typeof VimModule> | null = null;
 
 function loadVim(): Promise<typeof VimModule> {
@@ -878,6 +881,14 @@ function vimStart(mod: typeof VimModule): void {
       const pa = at(a), ph = at(h);
       e.setSelection({ selectionStartLineNumber: pa.lineNumber, selectionStartColumn: pa.column, positionLineNumber: ph.lineNumber, positionColumn: ph.column });
       e.revealPosition(ph);
+    },
+    selectBlock: (sels, head) => {
+      const list = sels.map((r) => {
+        const a = at(r.from), b = at(r.to);
+        return { selectionStartLineNumber: a.lineNumber, selectionStartColumn: a.column, positionLineNumber: b.lineNumber, positionColumn: b.column };
+      });
+      if (list.length) e.setSelections(list);
+      e.revealPosition(at(head));
     },
     edit: (from, to, insert, caret) => {
       if (!model) return;
@@ -931,6 +942,7 @@ function vimStart(mod: typeof VimModule): void {
     copied: (text) => post({ t: "copied", text }),
   });
   vim.setMaps(vimMaps.maps, vimMaps.timeout);
+  vim.setBufMaps(vimBufMaps);
 }
 
 /** VIM_TYPE are the editor's commands for the special keys Vim types in
@@ -1105,6 +1117,10 @@ function setOpts(o: FrameOpts): void {
   if (o.vimMaps) {
     vimMaps = { maps: o.vimMaps, timeout: o.vimTimeout ?? -1 };
     vim?.setMaps(vimMaps.maps, vimMaps.timeout);
+  }
+  if (o.vimBufMaps) {
+    vimBufMaps = o.vimBufMaps;
+    vim?.setBufMaps(vimBufMaps);
   }
   if (o.vim !== undefined) vimOn(o.vim);
 }

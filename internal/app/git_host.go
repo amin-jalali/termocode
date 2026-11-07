@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/workspace"
@@ -21,7 +22,7 @@ type gitReader struct {
 var errNoHostExec = errors.New("the workspace host cannot run commands")
 
 func gitReaderOf(ws workspace.Workspace) (gitReader, error) {
-	dir, err := rootOf(ws)
+	dir, err := gitRootOf(ws) // the active repository (gitx_multirepo.go)
 	if err != nil {
 		return gitReader{}, err
 	}
@@ -66,13 +67,44 @@ func (r gitReader) rebase() git.RebaseState {
 	return git.RebaseStatus(r.dir)
 }
 
-// stashes is the stash list (read again only when it changed). Like
-// rebase, a container workspace shows none for now.
+// stashes is the stash list (read again only when it changed). A
+// container workspace reads it in the container each time; a host that
+// cannot run commands shows none.
 func (r gitReader) stashes() []git.StashEntry {
-	if r.remote {
+	if !r.remote {
+		return git.StashListCached(r.dir)
+	}
+	s, err := r.stash()
+	if err != nil {
 		return nil
 	}
-	return git.StashListCached(r.dir)
+	es, err := s.List()
+	if err != nil {
+		return nil
+	}
+	return es
+}
+
+// stash is the stash commands where the workspace lives: git in the
+// container through the Host Exec for a container workspace, never the
+// local disk.
+func (r gitReader) stash() (git.StashRepo, error) {
+	if !r.remote {
+		return git.StashAt(r.dir, nil), nil
+	}
+	if r.x == nil {
+		return git.StashRepo{}, errNoHostExec
+	}
+	return git.StashAt(r.dir, r.x), nil
+}
+
+// gitStashRepo is the stash commands of the Model's workspace.
+func (m Model) gitStashRepo() (git.StashRepo, error) {
+	rd, err := gitReaderOf(m.workspace())
+	if err != nil {
+		return git.StashRepo{}, err
+	}
+	return rd.stash()
 }
 
 // stopped is the stopped merge, cherry-pick or revert, if any. Like
@@ -82,4 +114,19 @@ func (r gitReader) stopped() string {
 		return ""
 	}
 	return git.StoppedOp(r.dir)
+}
+
+// submodules is the submodule list, read again only when HEAD or the
+// changed files moved (a submodule at another commit shows there). Like
+// rebase, a container workspace shows none for now.
+func (r gitReader) submodules(st git.BranchStatus) []git.Submodule {
+	if r.remote {
+		return nil
+	}
+	var key strings.Builder
+	key.WriteString(st.OID)
+	for _, f := range st.Files {
+		key.WriteString("\x00" + f.Code + f.Path)
+	}
+	return git.SubmodulesCached(r.dir, key.String())
 }

@@ -371,11 +371,11 @@ export function HTTPPanel() {
         <span class={r.running ? "" : ok ? "c-ok" : "c-err"}>
           <Cod name={r.running ? "loading" : ok ? "pass-filled" : "error"} />
         </span>
-        <span class="http-status">{r.running ? t("live.sending") : r.err || `${r.status ?? ""} ${r.status_text ?? ""}`}</span>
-        <span class="http-what" title={`${r.method} ${r.url}`}>
+        <span class="http-status" dir={r.running ? "auto" : "ltr"}>{r.running ? t("live.sending") : r.err || `${r.status ?? ""} ${r.status_text ?? ""}`}</span>
+        <span class="http-what" dir="ltr" title={`${r.method} ${r.url}`}>
           {r.method} {r.url}
         </span>
-        {!r.running && <span class="tr-age">{`${r.elapsed_ms ?? 0} ms · ${r.size ?? 0} B`}</span>}
+        {!r.running && <span class="tr-age" dir="ltr">{`${r.elapsed_ms ?? 0} ms · ${r.size ?? 0} B`}</span>}
         <span class="http-acts">
           {r.running && can && <Act icon="stop-circle" act="cancel" label={t("http.cancel")} onClick={() => ask("http.cancel")} />}
           <Act icon="copy" act="curl" label={t("http.curl")} onClick={() => curl({ run: r.run })} />
