@@ -1098,7 +1098,7 @@ end })`)
 		if m.nvim != nil {
 			text, _ := m.nvim.EvalLuaString(`local s = vim.trim(vim.fn.execute('messages')); return s:match('[^\n]*$') or ''`)
 			if text = strings.TrimSpace(text); text != "" {
-				m.toast, cmd = m.toast.Push(toast.Warn, text)
+				m.toast, cmd = m.toast.Push(nvimPromptToast(text))
 			}
 			cmd = tea.Batch(m.nvim.Next(), cmd)
 		}
