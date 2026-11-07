@@ -144,6 +144,13 @@ func (p *anthropicProvider) run(ctx context.Context, req Request, ch chan<- Chun
 	if !p.Configured() {
 		return Chunk{Done: true, Err: ErrNotConfigured}
 	}
+	if isCloudClaude(p.cfg.Kind) { // CMP-85 (cloud.go)
+		model := req.Model
+		if model == "" {
+			model = p.cfg.Model
+		}
+		return p.runCloud(ctx, req, model, ch)
+	}
 	oauth := p.cfg.Kind == KindClaudeOAuth
 	var token string
 	if oauth {
