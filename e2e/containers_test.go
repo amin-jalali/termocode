@@ -26,6 +26,7 @@ case "$1" in
   network) cat "$D/network-ls.json" ;;
   volume) cat "$D/volume-ls.json" ;;
   context) cat "$D/context-ls.json" ;;
+  stats) [ -f "$D/stats-e2e.json" ] && cat "$D/stats-e2e.json" ;;
   events)
     echo $$ > "$D/events.pid"
     touch "$D/events.log"
