@@ -285,6 +285,20 @@ func TestWideTextKeepsLongLinesWhole(t *testing.T) {
 	}
 }
 
+// A plain scroll card breaks between words too: a branch or file name
+// stays whole.
+func TestScrollTextBreaksBetweenWords(t *testing.T) {
+	m := New("Submit", "aaaaa bbbbb ccccc ddddd eeeee fffff ggggg hhhhh iiiii jjjjj kkkkk", []Button{{ID: "ok", Title: "OK"}}).WithScrollText()
+	m.SetSize(50, 24)
+	for _, l := range m.fullTextLines() {
+		for _, w := range strings.Fields(l) {
+			if len(w) != 5 {
+				t.Fatalf("a word was cut: %q in %q", w, m.fullTextLines())
+			}
+		}
+	}
+}
+
 func TestWideTextBreaksBetweenWords(t *testing.T) {
 	m := New("Submit", "aaaa bbbb cccc dddd eeee ffff gggg hhhh iiii jjjj kkkk llll mmmm nnnn oooo pppp qqqq rrrr", []Button{{ID: "ok", Title: "OK"}}).WithScrollText().WithWideText()
 	m.SetSize(50, 24)
