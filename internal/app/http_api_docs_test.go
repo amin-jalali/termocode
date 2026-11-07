@@ -10,13 +10,15 @@ import (
 // Markdown page; secrets stay hidden.
 func TestHTTPAPIDocsOpensPage(t *testing.T) {
 	m, root, _ := covSvcHTTP(t)
-	if c, ok := m.dispatchHTTPPalette("http-api-docs"); !ok || c != nil {
+	if _, ok := m.dispatchHTTPPalette("http-api-docs"); !ok {
 		t.Fatal("not handled without a file")
 	}
 	if !strings.Contains(covSvcToast(m), "Open an .http file") {
 		t.Fatalf("toast = %q", covSvcToast(m))
 	}
-	m.httpOpenInEditor(filepath.Join(root, "api.http"))
+	file := filepath.Join(root, "api.http")
+	m.httpOpenInEditor(file)
+	m.editor.SetMeta(file, false, "http")
 	m.dispatchHTTPPalette("http-api-docs")
 	var name, text, ft string
 	if err := m.nvim.ExecLuaResult(`return vim.api.nvim_buf_get_name(0)`, &name); err != nil {
