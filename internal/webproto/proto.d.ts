@@ -554,6 +554,19 @@ export interface AIWorktreeArgs {
   id: string;
 }
 
+export interface AIWorktreeNotesArgs {
+  id: string;
+  chat_id?: string;
+  notes: ReviewNote[];
+}
+
+export interface ReviewNote {
+  path: string;
+  line: number;
+  side: "new" | "old";
+  text: string;
+}
+
 export interface AIMCPProfileArgs {
   name?: string;
   all?: boolean;
@@ -3109,6 +3122,7 @@ export interface OpArgs {
   "ai.worktree_text": AIWorktreeTextArgs;
   "ai.worktree_merge": AIWorktreeArgs;
   "ai.worktree_discard": AIWorktreeArgs;
+  "ai.worktree_notes": AIWorktreeNotesArgs;
   "ai.mcp_profiles": EmptyArgs;
   "ai.use_mcp_profile": AIMCPProfileArgs;
   "chat.rename": ChatRenameArgs;
@@ -3378,6 +3392,7 @@ export interface OpResult {
   "ai.worktree_text": AIWorktreeText;
   "ai.worktree_merge": AskRef;
   "ai.worktree_discard": AskRef;
+  "ai.worktree_notes": ChatRef;
   "ai.mcp_profiles": MCPProfiles;
   "ai.use_mcp_profile": AskRef;
   "chat.fork": ChatRef;

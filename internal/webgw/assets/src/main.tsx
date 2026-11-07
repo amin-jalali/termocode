@@ -12,6 +12,7 @@ import "./styles/chat.css";
 import "./styles/git.css";
 import "./styles/more.css";
 import "./styles/moreviews.css";
+import "./styles/review.css"; // the phone review (phone.js may not import a style sheet)
 import "./styles/files.css";
 import "./styles/fonts.css";
 import "./styles/hl.css";

@@ -2531,6 +2531,20 @@
       "phase": "v2"
     },
     {
+      "op": "ai.worktree_notes",
+      "args": "AIWorktreeNotesArgs",
+      "result": "ChatRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 2000
+      },
+      "max_bytes": 24576,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "ai.mcp_profiles",
       "args": "EmptyArgs",
       "result": "MCPProfiles",
@@ -4735,6 +4749,28 @@
       "required": [
         "id",
         "path"
+      ],
+      "additionalProperties": false
+    },
+    "AIWorktreeNotesArgs": {
+      "type": "object",
+      "properties": {
+        "chat_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "notes": {
+          "items": {
+            "$ref": "#/defs/ReviewNote"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "notes"
       ],
       "additionalProperties": false
     },
@@ -12122,6 +12158,33 @@
         "topic"
       ],
       "additionalProperties": true
+    },
+    "ReviewNote": {
+      "type": "object",
+      "properties": {
+        "line": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        },
+        "side": {
+          "enum": [
+            "new",
+            "old"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "line",
+        "side",
+        "text"
+      ],
+      "additionalProperties": false
     },
     "RunItem": {
       "type": "object",
