@@ -231,11 +231,8 @@ func (m *Model) databaseNewConsole(id string) tea.Cmd {
 	if path == "" {
 		return nil
 	}
-	header, filetype := "-- @conn "+id+"\n\n", "sql"
-	if c.Driver == "redis" {
-		path = strings.TrimSuffix(path, ".sql") + ".redis"
-		header, filetype = "# @conn "+id+"\n# One command per line; the send key runs the line at the cursor.\n\n", "redis"
-	}
+	ext, header, filetype := dbConsoleFile(c.Driver, id)
+	path = strings.TrimSuffix(path, ".sql") + ext
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return m.dbConsoleError(err)
 	}
@@ -260,6 +257,30 @@ func (m *Model) databaseNewConsole(id string) tea.Cmd {
 	return m.fetchStateCmd()
 }
 
+// dbConsoleFile is the extension, first lines and Neovim filetype of a
+// new console for a connection of driver: .redis for Redis, .cql for
+// Cassandra / ScyllaDB (CQL has SQL's comments, so the sql filetype
+// colors it), else .sql.
+func dbConsoleFile(driver, id string) (ext, header, filetype string) {
+	switch driver {
+	case "redis":
+		return ".redis", "# @conn " + id + "\n# One command per line; the send key runs the line at the cursor.\n\n", "redis"
+	case "cassandra":
+		return ".cql", "-- @conn " + id + "\n-- CQL: the send key runs the statement at the cursor; results come a page at a time.\n\n", "sql"
+	}
+	return ".sql", "-- @conn " + id + "\n\n", "sql"
+}
+
+// isDBConsoleExt reports a file the database send key runs: .sql, .cql
+// or .redis.
+func isDBConsoleExt(p string) bool {
+	switch strings.ToLower(lastExt(p)) {
+	case ".sql", ".cql", ".redis":
+		return true
+	}
+	return false
+}
+
 // databaseConsolePath is db/consoles/<workspace hash>/<connection hash>.sql
 // in the user config ("" when there is no config directory).
 func (m *Model) databaseConsolePath(id string) string {
@@ -278,6 +299,8 @@ func (m *Model) databaseConsoleCrumbs(path string) ([]string, bool) {
 	kind := "SQL console"
 	if strings.HasSuffix(path, ".redis") {
 		kind = "Redis console"
+	} else if strings.HasSuffix(path, ".cql") {
+		kind = "CQL console"
 	}
 	base := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 	if m.databases != nil {
@@ -415,7 +438,8 @@ func (m *Model) databaseSendMode(all bool, plan *dbPlanRun) tea.Cmd {
 	m.ensureDBLua()
 	file, lines, ok := m.httpBufText(0)
 	redisFile := ok && strings.EqualFold(lastExt(file), ".redis")
-	if !ok || !strings.EqualFold(lastExt(file), ".sql") && !redisFile {
+	cqlFile := ok && strings.EqualFold(lastExt(file), ".cql")
+	if !ok || !isDBConsoleExt(file) {
 		return m.pushToastDetail(toast.Info, "Open a SQL file", "Press n on a database connection to open its console.")
 	}
 	if redisFile && plan != nil {
@@ -448,7 +472,7 @@ func (m *Model) databaseSendMode(all bool, plan *dbPlanRun) tea.Cmd {
 	if r.conn == "" {
 		var items []picker.Item
 		for _, c := range m.databases.conns {
-			if (c.Driver == "redis") == redisFile && c.Problem == "" {
+			if (c.Driver == "redis") == redisFile && (!cqlFile || c.Driver == "cassandra") && c.Problem == "" {
 				items = append(items, picker.Item{ID: c.ID, Title: sanitizeDBText(dbConnName(c)), Hint: c.Driver})
 			}
 		}

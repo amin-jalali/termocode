@@ -794,6 +794,7 @@ func dbTypePickerItems(remote bool) []picker.Item {
 		{ID: "mysql", Title: "MySQL / MariaDB", Hint: "default port 3306"},
 		{ID: "sqlite", Title: "SQLite", Hint: "a file on this computer"},
 		{ID: "redis", Title: "Redis / Valkey", Hint: "default port 6379"},
+		{ID: "cassandra", Title: "Cassandra / ScyllaDB", Hint: "CQL, default port 9042"},
 		{ID: "clickhouse", Title: "ClickHouse", Hint: "HTTP interface, default port 8123"},
 		{ID: "libsql", Title: "libSQL / Turso", Hint: "a remote libsql:// server"},
 		{ID: "url", Title: "From a URL", Hint: "paste a connection URL"},
@@ -864,6 +865,9 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 	case "redis":
 		s.pendingConn.Driver, s.pendingConn.Port = "redis", 6379
 		return m.databaseAddPrompt(promptKindDBHost, "Server address", "Host name or address:", "localhost", false)
+	case "cassandra":
+		s.pendingConn.Driver, s.pendingConn.Port = "cassandra", 9042
+		return m.databaseAddPrompt(promptKindDBHost, "Cassandra / ScyllaDB node", "Contact point (host name or address):", "localhost", false)
 	case "clickhouse":
 		s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.User, s.pendingConn.Database = "clickhouse", 8123, "default", "default"
 		return m.databaseAddPrompt(promptKindDBHost, "ClickHouse server", "Host name or address:", "localhost", false)
@@ -1420,11 +1424,21 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 			m.prompt.SetAllowEmpty(true)
 			return cmd
 		}
+		if s.pendingConn.Driver == "cassandra" {
+			cmd := m.databaseAddPrompt(promptKindDBUser, "Database user", "User name (empty: no login):", s.pendingConn.User, false)
+			m.prompt.SetAllowEmpty(true)
+			return cmd
+		}
 		return m.databaseAddPrompt(promptKindDBUser, "Database user", "User name:", s.pendingConn.User, false)
 	case promptKindDBUser:
 		s.pendingConn.User = strings.TrimSpace(value)
 		if s.pendingConn.Driver == "redis" {
 			return m.databaseAddPrompt(promptKindDBName, "Database index", "Database index (0-15 on most servers):", strconv.Itoa(s.pendingConn.DB), false)
+		}
+		if s.pendingConn.Driver == "cassandra" {
+			cmd := m.databaseAddPrompt(promptKindDBName, "Keyspace", "Keyspace (empty: list them all):", s.pendingConn.Database, false)
+			m.prompt.SetAllowEmpty(true)
+			return cmd
 		}
 		return m.databaseAddPrompt(promptKindDBName, "Database name", "Database:", s.pendingConn.Database, false)
 	case promptKindDBName:
@@ -1439,7 +1453,7 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 			return m.databasePromptPasswordForPending()
 		}
 		s.pendingConn.Database = strings.TrimSpace(value)
-		if s.pendingConn.Database == "" {
+		if s.pendingConn.Database == "" && s.pendingConn.Driver != "cassandra" {
 			return m.pushToastDetail(toast.Warn, "Database name is needed", "Enter the database to connect to.")
 		}
 		s.pendingConn.ID = dbConnectionID(s.pendingConn)

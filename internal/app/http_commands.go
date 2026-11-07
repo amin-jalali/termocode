@@ -168,7 +168,7 @@ func (m *Model) sendKeyBuffer() bool {
 	}
 	p := m.editor.Path()
 	base := filepath.Base(p)
-	return isHTTPPath(p) || strings.EqualFold(filepath.Ext(p), ".sql") || strings.EqualFold(filepath.Ext(p), ".redis") || isDBResultPath(p) || base == "HTTP Response"
+	return isHTTPPath(p) || isDBConsoleExt(p) || isDBResultPath(p) || base == "HTTP Response"
 }
 
 // httpSendAction is the send key (Ctrl+Alt+R, Ctrl+Enter), dispatched by
@@ -178,7 +178,7 @@ func (m *Model) sendKeyBuffer() bool {
 func (m *Model) httpSendAction() tea.Cmd {
 	p := m.editor.Path()
 	switch {
-	case strings.EqualFold(filepath.Ext(p), ".sql"), strings.EqualFold(filepath.Ext(p), ".redis"):
+	case isDBConsoleExt(p):
 		return m.databaseSend(false)
 	case isDBResultPath(p):
 		return m.databaseRerun()
