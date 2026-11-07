@@ -310,6 +310,7 @@ func (m *Model) onExtLoaded(msg extLoadedMsg) tea.Cmd {
 	s.keys = keymap.LoadExtBindings("")
 	// Merge with the process extensions; one activity-bar item per panel.
 	m.extRebuild()
+	m.refreshOpenPalette() // an open palette gets the Ext: rows
 	s.gen++
 	cmds = append(cmds, m.extPollCmd())
 	if m.extNeedsHeartbeat() {
