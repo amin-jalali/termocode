@@ -101,6 +101,9 @@ func dbDriverTitle(driver string) string {
 	case "presto":
 		return "Presto"
 	}
+	if e, ok := dbclient.ExtraSQLEngineByID(driver); ok {
+		return e.Title // DBX-71
+	}
 	return driver
 }
 

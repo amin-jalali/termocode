@@ -33,5 +33,5 @@ func DialectFor(driver string) Dialect {
 	case "trino", "presto":
 		return TrinoDialect{}
 	}
-	return nil
+	return extraSQLDialect(driver) // DBX-71: Firebird, Vertica, Exasol, SAP HANA
 }

@@ -53,6 +53,9 @@ func ParseURL(raw string) (Conn, error) {
 		u.Scheme = "sqlite"
 		raw = "sqlite" + strings.TrimPrefix(raw, "sqlcipher")
 		c.URL = ""
+	case "firebird", "firebirdsql", "vertica", "hdb", "hana", "saphana", "exasol", "exa":
+		// DBX-71: c.Driver is the engine id (normDriver); the database is
+		// the path (Firebird: a server path or alias; Exasol: the schema).
 	case "libsql":
 		// A remote libSQL server; the token moves from ?authToken= into
 		// the password (kept as a secret, never in the saved URL).
@@ -162,6 +165,9 @@ func ParseURL(raw string) (Conn, error) {
 		return c, nil
 	}
 	c.Database = strings.TrimPrefix(u.Path, "/")
+	if c.Driver == "firebird" && strings.Contains(c.Database, "/") {
+		c.Database = u.Path // an absolute server path keeps its first slash
+	}
 	if c.Driver == "redis" && c.Database != "" {
 		c.DB, e = strconv.Atoi(c.Database)
 		if e != nil {

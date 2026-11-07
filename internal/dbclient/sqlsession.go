@@ -55,10 +55,12 @@ func NewSQLSession(ctx context.Context, conn Conn, password string) (*SQLSession
 	case "oracle":
 		dialect = OracleDialect{}
 	default:
-		if err := DriverMissing(driver); err != nil {
-			return nil, err
+		if dialect = extraSQLDialect(driver); dialect == nil { // DBX-71
+			if err := DriverMissing(driver); err != nil {
+				return nil, err
+			}
+			return nil, fmt.Errorf("unsupported SQL driver %q", conn.Driver)
 		}
-		return nil, fmt.Errorf("unsupported SQL driver %q", conn.Driver)
 	}
 	db, release, err := openSQLDB(conn, password)
 	if err != nil {
@@ -113,6 +115,9 @@ func newSQLSession(db *sql.DB, dialect Dialect, name string, conn Conn, readonly
 // registration; call it after db.Close.
 func openSQLDB(conn Conn, password string) (*sql.DB, func(), error) {
 	noop := func() {}
+	if IsExtraSQL(conn.Driver) {
+		return openExtraSQLDB(conn, password) // extra_sql.go (DBX-71)
+	}
 	switch normDriver(conn.Driver) {
 	case "postgres":
 		cfg, err := pgx.ParseConfig(pgDSN(conn, password))
@@ -353,6 +358,9 @@ func (s *SQLSession) Run(ctx context.Context, statement string, opts RunOptions)
 // Explain runs an explain form and guarantees that ANALYZE side effects are
 // rolled back when the analyzed statement is not read-only.
 func (s *SQLSession) Explain(ctx context.Context, statement string, analyze bool) Result {
+	if s.dialect.Explain(statement, analyze) == "" {
+		return Result{Err: errNoExplain(s.conn.EngineLabel())} // DBX-71: no SQL form
+	}
 	if p, ok := s.conn.PGPreset(); analyze && ok && p.Quirks.NoExplainAnalyze {
 		analyze = false // DBX-60: Redshift has no EXPLAIN ANALYZE
 	}
@@ -437,6 +445,12 @@ func (s *SQLSession) runOne(ctx context.Context, query string, kind Kind, maxRow
 			_, err = conn.ExecContext(ctx, s.dialect.ReadOnlyBegin())
 			if err == nil {
 				_, err = conn.ExecContext(ctx, "SET LOCK_TIMEOUT 30000")
+			}
+		} else if IsExtraSQL(s.name) {
+			// DBX-71: the engine's own read-only begin, no PostgreSQL
+			// statement_timeout (Exasol has no read-only transaction).
+			if begin := s.dialect.ReadOnlyBegin(); begin != "" {
+				_, err = conn.ExecContext(ctx, begin)
 			}
 		} else {
 			_, err = conn.ExecContext(ctx, s.dialect.ReadOnlyBegin())
@@ -766,7 +780,11 @@ func (s *SQLSession) Introspect(ctx context.Context, req IntrospectionRequest) (
 	}
 	result := IntrospectionResult{}
 	if req.Object != "" && req.Schema == "" {
-		if err := s.readCatalog(ctx, currentSchemaQuery(s.name), &result.Schemas); err != nil {
+		currentSchema := currentSchemaQuery(s.name)
+		if q, ok := s.dialect.(currentSchemaQuerier); ok {
+			currentSchema = q.CurrentSchemaQuery() // DBX-71
+		}
+		if err := s.readCatalog(ctx, currentSchema, &result.Schemas); err != nil {
 			return result, err
 		}
 		if len(result.Schemas) > 0 {

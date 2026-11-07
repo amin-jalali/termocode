@@ -1105,6 +1105,10 @@ func dbTypePickerItems(remote bool) []picker.Item {
 	for _, p := range dbclient.MySQLPresets() {
 		items = append(items, picker.Item{ID: "preset:" + p.ID, Title: p.Title, Hint: p.Hint})
 	}
+	// Firebird, Vertica, Exasol, SAP HANA (DBX-71), also over SSH.
+	for _, e := range dbclient.ExtraSQLEngines() {
+		items = append(items, picker.Item{ID: "engine:" + e.ID, Title: e.Title, Hint: e.Hint})
+	}
 	return items
 }
 
@@ -1144,6 +1148,15 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 	s.pendingConn = dbclient.Conn{Source: dbclient.SourceUser}
 	s.pendingPassword = ""
 	if id, ok := strings.CutPrefix(kind, "engine:"); ok {
+		if e, known := dbclient.ExtraSQLEngineByID(id); known {
+			// Firebird, Vertica, Exasol, SAP HANA (DBX-71).
+			s.addFromURL = false
+			s.remoteAdd, s.remoteNext = s.remoteNext, false
+			s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.User = e.ID, e.Port, e.User
+			cmd := m.databaseAddPrompt(promptKindDBHost, e.Title+": server address", "Host name or address:", "localhost", false)
+			m.prompt.SetNote(e.Hint)
+			return cmd
+		}
 		e, found := dbclient.HTTPEngineByID(id)
 		if !found {
 			return nil
@@ -1883,6 +1896,11 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 		if d := s.pendingConn.Driver; d == "trino" || d == "presto" {
 			return m.databaseAddPrompt(promptKindDBName, "Catalog", "Catalog (for example hive or iceberg):", s.pendingConn.Database, false)
 		}
+		if e, ok := dbclient.ExtraSQLEngineByID(s.pendingConn.Driver); ok { // DBX-71
+			cmd := m.databaseAddPrompt(promptKindDBName, e.Title+": database", e.DBLabel, s.pendingConn.Database, false)
+			m.prompt.SetAllowEmpty(e.DBOptional)
+			return cmd
+		}
 		return m.databaseAddPrompt(promptKindDBName, "Database name", "Database:", s.pendingConn.Database, false)
 	case promptKindDBName:
 		if s.pendingConn.Driver == "redis" {
@@ -1896,6 +1914,11 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 			return m.databasePromptPasswordForPending()
 		}
 		s.pendingConn.Database = strings.TrimSpace(value)
+		if e, ok := dbclient.ExtraSQLEngineByID(s.pendingConn.Driver); ok && e.DBOptional && s.pendingConn.Database == "" {
+			s.pendingConn.ID = dbConnectionID(s.pendingConn)
+			s.pendingConn.Name = s.pendingConn.ID
+			return m.databasePromptPasswordForPending()
+		}
 		if s.pendingConn.Database == "" && s.pendingConn.Driver != "cassandra" {
 			return m.pushToastDetail(toast.Warn, "Database name is needed", "Enter the database to connect to.")
 		}

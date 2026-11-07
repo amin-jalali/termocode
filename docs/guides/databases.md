@@ -44,7 +44,7 @@ If both files use the same `id`, the project entry wins. Press `e` on a connecti
 | --- | --- |
 | `id` | Required. Lower-case letters, digits, `_` and `-`. |
 | `name` | Label in the tree. |
-| `driver` | `postgres`, `mysql` (also `mariadb`), `sqlite` or `redis`. |
+| `driver` | `postgres`, `mysql` (also `mariadb`), `sqlite`, `redis`, `firebird`, `vertica`, `exasol` or `hana` (SAP HANA). |
 | `host`, `port`, `user`, `database` | Network connections. The port defaults to 5432, 3306 or 6379. |
 | `path` | SQLite file. In a project file it must stay inside the workspace. |
 | `preset` | Server family, for example `tidb`. On `sqlite`, `"preset": "sqlcipher"` opens an encrypted file (see [Encrypted SQLite](#encrypted-sqlite-sqlcipher)). |
@@ -108,7 +108,7 @@ With no connections yet, the view lists the suggestions and offers **a add** and
 
 ## Add a connection
 
-Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, SQL Server / Azure SQL, Oracle Database, Trino, Presto, DuckDB, Cassandra / ScyllaDB, ClickHouse, libSQL / Turso, MongoDB, or **From a URL**.
+Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, SQL Server / Azure SQL, Oracle Database, Trino, Presto, DuckDB, Cassandra / ScyllaDB, ClickHouse, libSQL / Turso, MongoDB, Firebird, Vertica, Exasol, SAP HANA, or **From a URL**.
 
 The MySQL family has presets on the MySQL driver: MariaDB, TiDB (port 4000), PlanetScale / Vitess and Amazon Aurora (MySQL) (both with TLS), and SingleStore. A preset fills the port, user and SSL mode, shows a short note on what differs from MySQL, and is saved as `"preset"` in the connection; the tree shows its name next to the host.
 
@@ -134,7 +134,7 @@ For Oracle (port 1521; `ora` works too) the database is the service name. `"para
 - **libSQL / Turso** asks for a `libsql://` server URL (for Turso: `libsql://<db>-<org>.turso.io`), then a masked auth token kept in the secret store. A token in the URL (`?authToken=`) is taken out the same way. Add `?tls=0` for a local server without TLS.
 - **DuckDB** asks for a database file, like SQLite. It runs the `duckdb` command line client (install it and put it on `PATH`); each run stands alone, so there are no transactions and `:memory:` keeps nothing between runs. Read-only runs use `-readonly`. The tree shows the schemas of the file.
 - **Trino** and **Presto** use the coordinator's REST protocol (port 8080). The database step asks for the **catalog** (for example `hive`); the tree shows its schemas. A password is sent only over TLS. `USE` changes the catalog and schema for the next runs, transactions use `START TRANSACTION`, and read-only runs use `START TRANSACTION READ ONLY`.
-- **From a URL** asks you to paste one, for example `postgres://app@localhost:5432/app`. Schemes `postgres`, `postgresql`, `mysql`, `mariadb`, `redis`, `rediss`, `mongodb`, `mongodb+srv`, `sqlite`, `sqlcipher` and `file` work. A password in the URL is taken out and stored as a secret. If the URL has none, you are asked for it.
+- **From a URL** asks you to paste one, for example `postgres://app@localhost:5432/app`. Schemes `postgres`, `postgresql`, `mysql`, `mariadb`, `redis`, `rediss`, `mongodb`, `mongodb+srv`, `sqlite`, `sqlcipher`, `file`, `firebird`, `vertica`, `exasol` and `hdb` (SAP HANA) work. A password in the URL is taken out and stored as a secret. If the URL has none, you are asked for it.
 
 Termocode tests the connection first. If the test works, choose **Save to project** (no password in the file) or **Save for me only**. If it fails, a list offers **Set password…**, **Use an SSH tunnel…**, **SSL settings…**, **Test again** or **Cancel**.
 
@@ -622,6 +622,24 @@ Press `n` to open the console. It is a SQL console file that holds shell command
 Reads run at once. A write, an index change or an `aggregate` with `$out` or `$merge` shows a card first, like SQL. A read-only connection and the AI tools send reads only. Add `.explain()` (or `.explain("executionStats")`) to see the plan as JSON; the server plans an explained write but never applies it.
 
 Documents show as rows: `_id` first, then every top-level field in the order first seen; nested objects and arrays as compact JSON, an ObjectId as `ObjectId("…")` so you can paste it into a filter. One batch is read (up to `db_max_rows` documents, or your `limit`); when the server has more, the page says so and the cursor is closed. `bulkWrite` and `renameCollection` are not supported in the console. There are no SQL transactions: each command commits on its own.
+
+## Firebird, Vertica, Exasol and SAP HANA
+
+These four engines use the SQL console, result pages, tree, history and exports like PostgreSQL. Their drivers are built in (pure Go). IBM Db2 is not available: its only driver needs C libraries.
+
+| Engine | `driver` | Port | `database` means | URL |
+| --- | --- | --- | --- | --- |
+| Firebird 3+ | `firebird` | 3050 | a path on the server (`/var/lib/firebird/data/app.fdb`) or an alias (`employee`) | `firebird://SYSDBA@host/employee` |
+| Vertica | `vertica` | 5433 | the database | `vertica://dbadmin@host:5433/vmart` |
+| Exasol | `exasol` | 8563 | the schema to open (optional) | `exasol://sys@host:8563/RETAIL` |
+| SAP HANA | `hana` | 39017 | the default schema (optional); the tenant is `params.databaseName` | `hdb://SYSTEM@host:39017?databaseName=HXE` |
+
+- **Tree.** Schemas, tables and views, columns, primary keys, foreign keys, and (where the engine has them) indexes, routines, sequences and triggers. Firebird has no schemas, so it shows one schema named `default`. Firebird, Exasol and SAP HANA have no SQL function for a table's CREATE statement: termocode builds a simple one from the columns. Vertica asks the server (`EXPORT_TABLES`).
+- **EXPLAIN.** Only Vertica: `EXPLAIN`, and ANALYZE runs `PROFILE` (a write is rolled back). The other three say they have no EXPLAIN statement.
+- **TLS.** Vertica and SAP HANA use the `ssl` block like PostgreSQL. Exasol encrypts by default; `ssl.mode` `disable` turns it off, `require` does not check the server, and a pinned certificate goes in `params.certificatefingerprint` (a CA file is not supported). Firebird has no TLS: its `wire_crypt` (on by default since Firebird 3) encrypts the link, and an `ssl` block is refused.
+- **SSH tunnels** work for all four. For Firebird, Vertica and Exasol, termocode opens a local port on `127.0.0.1` that only forwards to the tunnel. With Exasol's server check on, use `params.certificatefingerprint` over a tunnel, because the host name is `127.0.0.1`.
+- **Options.** `options.schema` sets the search path (Vertica), `OPEN SCHEMA` (Exasol) or `SET SCHEMA` (SAP HANA); `options.timeZone` works on Vertica, Exasol and Firebird 4+; `options.isolation` works on Vertica. The init SQL runs on every new connection.
+- **Read-only.** A read-only session opens a read-only transaction on Firebird, Vertica and SAP HANA. Exasol has none, so its read-only session only checks each statement before it runs, and the AI tools do not work on Exasol connections.
 
 ## AI tools and their rules
 

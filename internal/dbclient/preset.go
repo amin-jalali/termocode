@@ -152,6 +152,9 @@ func (c Conn) EngineLabel() string {
 	case "oracle":
 		return "Oracle"
 	}
+	if e, ok := ExtraSQLEngineByID(c.Driver); ok {
+		return e.Title
+	}
 	return c.Driver
 }
 

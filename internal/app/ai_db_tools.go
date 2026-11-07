@@ -76,7 +76,11 @@ func dbAIConn(root, id string) (dbclient.Conn, error) {
 				return c, fmt.Errorf("connection %s has a problem: %s", id, dbRedact(dbFriendlyProblem(c.Problem)))
 			case c.Driver == "redis":
 				return c, fmt.Errorf("connection %s is Redis: use redis_keys, redis_get or redis_command", id)
-			case c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite":
+			case c.Driver == "exasol":
+				// DBX-71: Exasol has no read-only transaction, so the AI's
+				// read-only guarantee would rest on the parser alone.
+				return c, fmt.Errorf("connection %s is Exasol: AI tools need a read-only transaction, which Exasol does not have", id)
+			case c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && !dbclient.IsExtraSQL(c.Driver):
 				return c, fmt.Errorf("connection %s (%s) does not use SQL", id, c.Driver)
 			}
 			return c, nil
@@ -380,6 +384,9 @@ func dbAIDialect(driver string) dbclient.Dialect {
 		return dbclient.SQLiteDialect{}
 	case "sqlserver":
 		return dbclient.SQLServerDialect{}
+	}
+	if dbclient.IsExtraSQL(driver) {
+		return dbclient.DialectFor(driver) // DBX-71
 	}
 	return dbclient.PostgresDialect{}
 }
@@ -775,6 +782,9 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 			err := r.err
 			if err == nil && strings.EqualFold(firstSQLWord(dbStripComments(r.sql)), "EXPLAIN") {
 				err = errors.New("pass the statement without EXPLAIN; ANALYZE is not available to the AI")
+			}
+			if err == nil && dbAIDialect(r.conn.Driver).Explain(r.sql, false) == "" {
+				err = fmt.Errorf("%s has no EXPLAIN statement", r.conn.EngineLabel()) // DBX-71
 			}
 			return err
 		},

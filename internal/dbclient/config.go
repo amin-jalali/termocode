@@ -115,7 +115,7 @@ func ParseConfig(data []byte, source, file, root string) ([]Conn, error) {
 		if source == SourceUser && (literalPassword(c.Password) || urlHasPassword(c.URL)) {
 			c.Warning = "literal password in user config; use the secret store"
 		}
-		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "clickhouse" && c.Driver != "cassandra" && c.Driver != "libsql" && c.Driver != "sqlserver" && c.Driver != "oracle" && c.Driver != "duckdb" && c.Driver != "trino" && c.Driver != "presto" && c.Driver != "mongodb" && !IsHTTPEngine(c.Driver) {
+		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "clickhouse" && c.Driver != "cassandra" && c.Driver != "libsql" && c.Driver != "sqlserver" && c.Driver != "oracle" && c.Driver != "duckdb" && c.Driver != "trino" && c.Driver != "presto" && c.Driver != "mongodb" && !IsHTTPEngine(c.Driver) && !IsExtraSQL(c.Driver) {
 			c.Problem = "unsupported database driver"
 		}
 		if c.Options != nil && c.Problem == "" {
@@ -189,7 +189,7 @@ func Validate(c Conn) error {
 		return fmt.Errorf("invalid connection id")
 	}
 	driver := normDriver(c.Driver)
-	if driver != "postgres" && driver != "mysql" && driver != "sqlite" && driver != "redis" && driver != "clickhouse" && driver != "cassandra" && driver != "libsql" && driver != "sqlserver" && driver != "oracle" && driver != "duckdb" && driver != "trino" && driver != "presto" && driver != "mongodb" && !IsHTTPEngine(driver) {
+	if driver != "postgres" && driver != "mysql" && driver != "sqlite" && driver != "redis" && driver != "clickhouse" && driver != "cassandra" && driver != "libsql" && driver != "sqlserver" && driver != "oracle" && driver != "duckdb" && driver != "trino" && driver != "presto" && driver != "mongodb" && !IsHTTPEngine(driver) && !IsExtraSQL(driver) {
 		return fmt.Errorf("unsupported database driver")
 	}
 	if driver == "mongodb" {
