@@ -80,7 +80,7 @@ func TestDBColumnsHideMoveFreezeScroll(t *testing.T) {
 	if got := strings.Join(dbHeader(t, m), " "); got != "d a" {
 		t.Fatalf("unfrozen scroll: %q", got)
 	}
-	m.databasePageKey("=", 0, 0) // reset
+	m.databasePageKey("R", 0, 0) // reset
 	if got := strings.Join(dbHeader(t, m), " "); got != "a b c d" {
 		t.Fatalf("reset: %q", got)
 	}

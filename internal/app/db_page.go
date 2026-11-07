@@ -83,13 +83,15 @@ func init() {
 	registerNotifyHandler("termocode_db_key", func(m *Model, args []any) tea.Cmd {
 		key, row, col := notifyArgString(args, 0), notifyArgInt(args, 1), notifyArgInt(args, 2)
 		if key == "=" {
-			to := -1 // = in normal mode: the whole page
-			if len(args) > 3 {
-				to = notifyArgInt(args, 3)
-			} else {
-				row = 0
+			if len(args) > 3 { // = in visual mode: the selected rows
+				return m.databaseAggregate(row, col, notifyArgInt(args, 3))
 			}
-			return m.databaseAggregate(row, col, to)
+			// = in normal mode: on table data it shows only the rows with
+			// this cell's value (databasePageKey); elsewhere it sums up
+			// the column on the whole page.
+			if sh := m.dbConsole().shown; sh == nil || sh.tv == nil {
+				return m.databaseAggregate(0, col, -1)
+			}
 		}
 		return m.databasePageKey(key, row, col)
 	})
