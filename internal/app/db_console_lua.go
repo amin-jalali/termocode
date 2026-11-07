@@ -334,7 +334,10 @@ func (m *Model) ensureDBLua() {
 }
 
 // databaseRefreshLens records the status of the statement that ran (shown
-// in its lens) and redraws the lenses of the file's visible buffers.
+// in its lens) and redraws the lenses of the file's loaded buffers. Not
+// only the visible ones: on a narrow editor the result page takes the
+// query's window, so the query buffer is hidden when its run ends, and
+// its inline result (DBX-26) must still be there when it comes back.
 func (m *Model) databaseRefreshLens(file, sql, text string) {
 	s := m.dbConsole()
 	if file != "" && sql != "" {
@@ -348,7 +351,7 @@ func (m *Model) databaseRefreshLens(file, sql, text string) {
 		return
 	}
 	var bufs []int
-	_ = m.nvim.ExecLuaResult(`local f,run=...;_G._termocode_sql.running=run;local out={};for _,b in ipairs(vim.api.nvim_list_bufs()) do if vim.api.nvim_buf_get_name(b)==f and #vim.fn.win_findbuf(b)>0 then out[#out+1]=b end end;return out`, &bufs, file, s.running != nil)
+	_ = m.nvim.ExecLuaResult(`local f,run=...;_G._termocode_sql.running=run;local out={};for _,b in ipairs(vim.api.nvim_list_bufs()) do if vim.api.nvim_buf_get_name(b)==f and vim.api.nvim_buf_is_loaded(b) then out[#out+1]=b end end;return out`, &bufs, file, s.running != nil)
 	for _, b := range bufs {
 		m.databaseBufferLens(b)
 	}
