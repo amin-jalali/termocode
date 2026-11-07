@@ -1,0 +1,1 @@
+{"t":"req","id":971,"op":"mcp.view_run","args":{"view":"mcp.github.list_issues","args":[{"id":"repo","value":"amin/termocode"}],"compact":true}}
