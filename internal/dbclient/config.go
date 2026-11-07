@@ -76,6 +76,11 @@ func ParseConfig(data []byte, source, file, root string) ([]Conn, error) {
 		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" {
 			c.Problem = "unsupported database driver"
 		}
+		if c.Options != nil && c.Problem == "" {
+			if e := c.Options.Check(c.Driver); e != nil {
+				c.Problem = "invalid options: " + e.Error()
+			}
+		}
 		if c.Driver == "sqlite" && c.Path != "" {
 			p := c.Path
 			if !filepath.IsAbs(p) {
@@ -136,7 +141,13 @@ func Validate(c Conn) error {
 	if driver == "sqlite" && c.Path == "" {
 		return fmt.Errorf("sqlite path is required")
 	}
-	if c.Driver != "sqlite" && (c.Host == "" || c.Port < 1 || c.Port > 65535) {
+	if c.Options != nil {
+		if e := c.Options.Check(driver); e != nil {
+			return fmt.Errorf("invalid options: %v", e)
+		}
+	}
+	socket := c.Options != nil && c.Options.Socket != ""
+	if c.Driver != "sqlite" && !socket && (c.Host == "" || c.Port < 1 || c.Port > 65535) {
 		return fmt.Errorf("host and valid port are required")
 	}
 	if c.Source == SourceProject && (literalPassword(c.Password) || urlHasPassword(c.URL)) {

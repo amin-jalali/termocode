@@ -32,6 +32,7 @@ type Conn struct {
 	SSH         *SSHConfig        `json:"ssh,omitempty"`
 	SSL         *SSLConfig        `json:"ssl,omitempty"`
 	TLS         bool              `json:"tls,omitempty"`
+	Options     *ConnOptions      `json:"options,omitempty"`
 	// Folder groups the connection in the tree ("team/prod"); Color is
 	// one of ConnColors (DBX-21).
 	Folder  string `json:"folder,omitempty"`
@@ -82,6 +83,9 @@ func (c Conn) DSN(password string) string {
 		cfg.Passwd = password
 		cfg.Net = "tcp"
 		cfg.Addr = net.JoinHostPort(c.Host, strconv.Itoa(c.Port))
+		if c.Options != nil && c.Options.Socket != "" {
+			cfg.Net, cfg.Addr = "unix", c.Options.Socket
+		}
 		cfg.DBName = c.Database
 		cfg.Params = c.Params
 		return cfg.FormatDSN()
@@ -109,6 +113,11 @@ func (c Conn) DSN(password string) string {
 		return u.String()
 	}
 	u := url.URL{Scheme: "postgres", Host: netHost(c.Host, c.Port), Path: "/" + c.Database}
+	if c.Options != nil && c.Options.Socket != "" {
+		// A socket directory goes in the host param; the URL host stays empty.
+		u.Host = ""
+		u.RawQuery = url.Values{"host": {c.Options.Socket}}.Encode()
+	}
 	if c.User != "" {
 		if password != "" {
 			u.User = url.UserPassword(c.User, password)
