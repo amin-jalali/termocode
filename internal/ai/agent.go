@@ -431,6 +431,18 @@ func StepLimitText(steps int) string {
 		"The work is not finished. Reply \"continue\" and I will go on from here.", steps)
 }
 
+// CallTool runs one call through the turn's gate (Validate, PreTool,
+// Policy, auto-approve, Confirm) as a reply's tool call does, and
+// returns the result text. A CLI step's MCP server calls it, so a
+// Codex step's call is as safe as a model step's. emit (nil: none)
+// gets the call's start and result events.
+func (a *Agent) CallTool(ctx context.Context, call ToolCall, emit func(Event)) string {
+	if emit == nil {
+		emit = func(Event) {}
+	}
+	return a.runTool(ctx, call, emit)
+}
+
 // runTool executes one call through the confirm gate and returns the text
 // fed back to the model.
 func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (result string) {

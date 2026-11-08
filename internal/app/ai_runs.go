@@ -408,10 +408,32 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 				wt, _ := wts.get(n.ID)
 				nodeTools, nodeBase = wtTools, aiWorktreePrompt(base, root, wt)
 			}
-			ts := aiFilterTools(nodeTools, n.Tools)
+			spec := clistep.Spec{CLI: n.CLI, Model: n.Model, Write: n.Tools.Preset == agentdag.PresetAll, Dir: dir, OSSandbox: agentOSSandboxOn()}
+			// The step's termocode tools, behind a model step's gate, on
+			// its own MCP server (none: no server).
+			var served []ai.Tool
+			if ts := aiFilterTools(nodeTools, n.Tools); n.Tools.Preset != agentdag.PresetNone && len(ts) > 0 {
+				own := map[string]bool{}
+				for _, c := range auto {
+					if aiAutoApproveSaved(c) { // containers: session only (CP-9)
+						own[c] = true
+					}
+				}
+				hooks := aiActiveHooks(dir)
+				agent := &ai.Agent{Tools: aiWithHookList(dir, hooks, ts, out), AutoApprove: own, Policy: policy,
+					PreTool: aiPreToolHooks(dir, hooks, out), Confirm: aiChatConfirmFunc(gen, ch, own, n.Title)}
+				srv, err := aiStartStepMCP(dir, agent, emit)
+				switch {
+				case err != nil:
+					recordError("[ai] step " + n.ID + ": its termocode tools did not start: " + err.Error())
+				case srv != nil:
+					defer srv.Close()
+					spec.MCP, served = srv.spec, ts
+				}
+			}
 			// termocode's context first, then the step (CS-1 got only the step)
-			prompt := aiCLIPrompt(ctx, dir, aiWithToolGuide(nodeBase, ts, true)+sys, input+wts.othersNote(n.ID), handoff)
-			res, err := aiCLIRun(ctx, clistep.Spec{CLI: n.CLI, Model: n.Model, Write: n.Tools.Preset == agentdag.PresetAll, Dir: dir, OSSandbox: agentOSSandboxOn()}, prompt, emit)
+			prompt := aiCLIPrompt(ctx, dir, aiWithToolGuide(nodeBase, served, true)+sys, input+wts.othersNote(n.ID), handoff)
+			res, err := aiCLIRun(ctx, spec, prompt, emit)
 			return res.Text, res.Usage, err
 		},
 		Build: func(ctx context.Context, n agentdag.Node, input string) (*ai.Agent, []ai.Message, error) {
