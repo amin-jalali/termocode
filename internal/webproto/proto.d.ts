@@ -882,6 +882,11 @@ export interface DBTxArgs {
   verb: "commit" | "rollback" | "manual" | "auto";
 }
 
+export interface DBTrustArgs {
+  conn: string;
+  fingerprint: string;
+}
+
 export interface GitLinesArgs {
   path: string;
   from: number;
@@ -4057,6 +4062,7 @@ export interface OpArgs {
   "db.ssl": DBSSLArgs;
   "db.disconnect": DBConnArgs;
   "db.tx": DBTxArgs;
+  "db.trust_host": DBTrustArgs;
   "ci.fix_prompt": EmptyArgs;
   "git.stage_lines": GitLinesArgs;
   "git.unstage_lines": GitLinesArgs;
@@ -4373,6 +4379,7 @@ export interface OpResult {
   "db.ssl": AskRef;
   "db.disconnect": AskRef;
   "db.tx": AskRef;
+  "db.trust_host": DBDone;
   "ci.fix_prompt": CIFixPrompt;
   "git.discard_lines": AskRef;
   "git.discard_hunk": AskRef;

@@ -211,9 +211,22 @@ func (m *Model) databaseSSHSecrets(c dbclient.Conn, pending bool) dbSSHSecrets {
 	if c.SSH == nil || m.databases == nil {
 		return sec
 	}
-	if pending {
-		sec = m.databases.pendingSSH
-	} else if store := databaseSecretStore(); store != nil {
+	if !pending {
+		return dbStoredSSHSecrets(c)
+	}
+	sec = m.databases.pendingSSH
+	dbRegisterSSHSecrets(sec)
+	return sec
+}
+
+// dbStoredSSHSecrets reads the tunnel secrets of a saved connection from
+// the secret store (missing ones are not an error: the tunnel asks).
+func dbStoredSSHSecrets(c dbclient.Conn) dbSSHSecrets {
+	var sec dbSSHSecrets
+	if c.SSH == nil {
+		return sec
+	}
+	if store := databaseSecretStore(); store != nil {
 		switch dbSSHAuth(c) {
 		case dbclient.SSHAuthPassword:
 			sec.password, _, _ = store.Get(dbSSHSecretName(c.ID, "password"))
@@ -222,13 +235,18 @@ func (m *Model) databaseSSHSecrets(c dbclient.Conn, pending bool) dbSSHSecrets {
 			sec.passphrase, _, _ = store.Get(dbSSHSecretName(c.ID, "passphrase"))
 		}
 	}
+	dbRegisterSSHSecrets(sec)
+	return sec
+}
+
+// dbRegisterSSHSecrets keeps sec out of every text.
+func dbRegisterSSHSecrets(sec dbSSHSecrets) {
 	if sec.password != "" {
 		ai.RegisterSecret(sec.password)
 	}
 	if sec.passphrase != "" {
 		ai.RegisterSecret(sec.passphrase)
 	}
-	return sec
 }
 
 // databaseTunnelError handles the errors that need the user: an unknown

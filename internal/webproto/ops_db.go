@@ -19,6 +19,10 @@ import "strings"
 // tunnel, SSL settings, a disconnect, commit, roll back and the
 // transaction mode of the laptop's console. No arg carries a password,
 // a passphrase or a URL: decoding refuses unknown fields.
+//
+// A read that needs the user first fails as a conflict whose data is a
+// DBNeed: an unknown SSH host key (db.trust_host saves the one the page
+// showed, named by its fingerprint, to known_hosts).
 
 // Database op names (web parity).
 const (
@@ -40,6 +44,7 @@ const (
 	OpDBSSL        = "db.ssl"
 	OpDBDisconnect = "db.disconnect"
 	OpDBTx         = "db.tx"
+	OpDBTrustHost  = "db.trust_host"
 )
 
 var opDBRows = []Policy{
@@ -61,6 +66,7 @@ var opDBRows = []Policy{
 	{Op: OpDBSSL, New: newOf[DBSSLArgs](), Role: RoleController, Rate: slow, MaxBytes: 4 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpDBDisconnect, New: newOf[DBConnArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpDBTx, New: newOf[DBTxArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpDBTrustHost, New: newOf[DBTrustArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV2},
 }
 
 var _ = func() bool { opTable = append(opTable, opDBRows...); return true }()
@@ -76,6 +82,7 @@ func init() {
 	registerResult(OpDBConnect, DBDone{})
 	registerResult(OpDBConfig, DBConfigFile{})
 	registerResult(OpRedisKeys, RedisKeys{})
+	registerResult(OpDBTrustHost, DBDone{})
 	for _, op := range []string{OpDBEdit, OpDBImport, OpRedisKey, OpDBAdd, OpDBSSH, OpDBSSL, OpDBDisconnect, OpDBTx} {
 		registerResult(op, AskRef{})
 	}
@@ -101,6 +108,7 @@ const (
 	MaxDBLaptopPath  = 1024
 	MaxDBDatabase    = 128
 	MaxDBEnvironment = 32
+	MaxDBFingerprint = 100 // "SHA256:" and the key's hash
 )
 
 // ── Args ────────────────────────────────────────────────────────────────
@@ -217,6 +225,14 @@ type DBSSLArgs struct {
 	CA   string `json:"ca,omitempty"`
 	Cert string `json:"cert,omitempty"`
 	Key  string `json:"key,omitempty"` // the client key's file
+}
+
+// DBTrustArgs saves the SSH host key the page was asked about (a
+// DBNeed "host_key") to known_hosts; Fingerprint names it, so only the
+// key the page showed is saved.
+type DBTrustArgs struct {
+	Conn        string `json:"conn"`
+	Fingerprint string `json:"fingerprint"`
 }
 
 // DBTxArgs ends the laptop console's transaction or sets its mode.
@@ -401,6 +417,14 @@ func (a *DBSSLArgs) validate(int) error {
 	return nil
 }
 
+func (a *DBTrustArgs) validate(int) error {
+	hash, ok := strings.CutPrefix(a.Fingerprint, "SHA256:")
+	if !validName(a.Conn, MaxID) || !ok || hash == "" || len(a.Fingerprint) > MaxDBFingerprint || strings.ContainsAny(hash, " \t") || hasControl(hash) {
+		return invalid("bad connection or fingerprint")
+	}
+	return nil
+}
+
 func (a *DBTxArgs) validate(int) error {
 	if !validName(a.Conn, MaxID) {
 		return invalid("bad connection")
@@ -414,6 +438,18 @@ func (a *DBTxArgs) validate(int) error {
 }
 
 // ── Results ─────────────────────────────────────────────────────────────
+
+// DBNeed is the data of a database op's conflict that the user can
+// clear from the page. Need "host_key": the SSH server (Jump: a jump
+// host on the way) is not in known_hosts yet; Host, KeyType and
+// Fingerprint are what to check before db.trust_host.
+type DBNeed struct {
+	Need        string `json:"need"`
+	Host        string `json:"host,omitempty"`
+	KeyType     string `json:"key_type,omitempty"`
+	Fingerprint string `json:"fingerprint,omitempty"`
+	Jump        bool   `json:"jump,omitempty"`
+}
 
 // DBText answers db.ddl.
 type DBText struct {

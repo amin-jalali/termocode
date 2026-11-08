@@ -75,6 +75,7 @@ type webHub struct {
 	ai       webAICalls                 // Update only: the page's AI calls (web_ai.go)
 	views    webViewsState              // Update only: the live views (web_views.go)
 	ups      webUploads                 // staged uploads (web_transfer.go; own lock)
+	dbNet    webDBNet                   // the page's SSH tunnels and asked host keys (web_db_net.go; own lock)
 	push     webPushState               // Update only: pushes to paired phones (web_push.go)
 	wake     webPushWakeState           // Update only: phones' UnifiedPush wakes (web_push_wake.go, MOB-32)
 	races    webRacesPub                // Update only: what the races topic sent (web_races.go)
@@ -143,6 +144,7 @@ func (h *webHub) stop() {
 		h.mu.Unlock()
 		h.wg.Wait()
 		h.ups.dropAll()
+		h.dbNet.closeAll()
 	})
 }
 

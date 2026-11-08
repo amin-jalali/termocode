@@ -23,7 +23,8 @@ import { Cod } from "../../ui/icons";
 import { Act, PaneView, Row, Tree } from "../../ui/pane";
 import type { RedisKeys } from "../../../../../webproto/proto";
 import { DBFormView } from "./DBForms";
-import { canAct, conns, dbErr, dbFilter, dbForm, loadConns, type Load } from "./dbstate";
+import { DBNeedAsk } from "./DBNeed";
+import { canAct, conns, dbErr, dbFilter, dbForm, dbNeed, loadConns, type Load } from "./dbstate";
 
 type Tables = ReturnType<typeof readDBTables>;
 
@@ -43,8 +44,17 @@ function loadChildren(c: DBConnView): void {
   const redis = c.driver === "redis";
   link.request(redis ? "redis.keys" : "db.tables", { conn: c.id }).then(
     (r) => set({ s: "ok", v: redis ? (r as RedisKeys) : readDBTables(r) }),
-    (e: unknown) => set({ s: "err", msg: dbErr(e) }),
+    (e: unknown) => set({ s: "err", msg: dbErr(e), need: dbNeed(e) }),
   );
+}
+
+/** dropNeed keeps the reason of conn's failed read and drops its question. */
+function dropNeed(id: string): void {
+  const l = tables.peek().get(id);
+  if (l?.s !== "err") return;
+  const n = new Map(tables.peek());
+  n.set(id, { s: "err", msg: l.msg });
+  tables.value = n;
 }
 
 function refresh(): void {
@@ -57,7 +67,7 @@ function flip(key: string, c?: DBConnView): void {
   if (n.has(key)) n.delete(key);
   else {
     n.add(key);
-    if (c && !tables.peek().has(c.id)) loadChildren(c);
+    if (c && (!tables.peek().has(c.id) || tables.peek().get(c.id)?.s === "err")) loadChildren(c); // a failed read is tried again
   }
   open.value = n;
 }
@@ -161,7 +171,7 @@ function ConnRows({ c }: { c: DBConnView }) {
         }
       />
       {isOpen && (!tl || tl.s === "loading") && <p class="tr-note">{t("loading")}</p>}
-      {isOpen && tl?.s === "err" && <p class="tr-note is-err">{tl.msg}</p>}
+      {isOpen && tl?.s === "err" && (tl.need ? <DBNeedAsk conn={c.id} need={tl.need} onDone={() => loadChildren(c)} onNo={() => dropNeed(c.id)} /> : <p class="tr-note is-err">{tl.msg}</p>)}
       {isOpen && tl?.s === "ok" && ("keys" in tl.v ? <KeyRows c={c} v={tl.v} /> : <SchemaRows c={c} v={tl.v} />)}
     </>
   );

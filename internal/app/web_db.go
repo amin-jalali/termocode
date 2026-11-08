@@ -130,6 +130,11 @@ type webDBConn struct {
 	root string
 	c    dbclient.Conn
 	snap dbAISnapshot
+	// The page's own SSH tunnel (web_db_net.go): tunnel is set when c
+	// needs one and the laptop has none open; sec are its secrets.
+	net    *webDBNet
+	tunnel bool
+	sec    dbSSHSecrets
 }
 
 func (m *Model) webDBFind(call *webCall, id string) (webDBConn, bool) {
@@ -155,13 +160,14 @@ func (m *Model) webDBFind(call *webCall, id string) (webDBConn, bool) {
 			out.snap.dial, _ = d.dbDialFor(c)
 		}
 	}
+	m.webDBRoute(&out)
 	return out, true
 }
 
 // open is a read-only session of the connection (the caller closes it).
-// Its error is the driver's: w.fail tells the page why.
+// Its error is the driver's or the tunnel's: w.fail tells the page why.
 func (w *webDBConn) open(ctx context.Context) (dbclient.Session, error) {
-	return dbAIOpen(ctx, w.root, w.c, &w.snap, true)
+	return w.session(ctx, true)
 }
 
 // webDBSchema is the schema whose tables the page lists.
@@ -380,7 +386,7 @@ func (m *Model) webDBExec(call *webCall) *webAsk {
 			return func() tea.Msg {
 				ctx, cancel := context.WithTimeout(context.Background(), loadDBConsoleSettings().timeout())
 				defer cancel()
-				s, err := dbAIOpen(ctx, fresh.root, fresh.c, &fresh.snap, false)
+				s, err := fresh.session(ctx, false)
 				var r dbclient.Result
 				if err == nil {
 					r = s.Run(ctx, sql, dbclient.RunOptions{MaxRows: 1})
@@ -415,6 +421,7 @@ func (m *Model) webDBFindQuiet(id string) (webDBConn, bool) {
 			out.snap.dial, _ = d.dbDialFor(c)
 		}
 	}
+	m.webDBRoute(&out)
 	return out, true
 }
 

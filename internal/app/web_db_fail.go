@@ -36,7 +36,12 @@ func webDBReason(err error, password string) string {
 	return text
 }
 
-// fail answers call with why err happened on w's connection.
+// fail answers call with why err happened on w's connection, and what
+// the page can ask the user for (a DBNeed) when there is something.
 func (w *webDBConn) fail(call *webCall, err error) {
+	if need, msg := w.needOf(err); need != nil {
+		webFailData(call, webproto.CodeConflict, msg, need)
+		return
+	}
 	call.fail(webproto.CodeConflict, webDBReason(err, w.snap.password))
 }

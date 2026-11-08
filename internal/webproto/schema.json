@@ -3734,6 +3734,20 @@
       "phase": "v2"
     },
     {
+      "op": "db.trust_host",
+      "args": "DBTrustArgs",
+      "result": "DBDone",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "ci.fix_prompt",
       "args": "EmptyArgs",
       "result": "CIFixPrompt",
@@ -8975,6 +8989,22 @@
         "text"
       ],
       "additionalProperties": true
+    },
+    "DBTrustArgs": {
+      "type": "object",
+      "properties": {
+        "conn": {
+          "type": "string"
+        },
+        "fingerprint": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "conn",
+        "fingerprint"
+      ],
+      "additionalProperties": false
     },
     "DBTxArgs": {
       "type": "object",

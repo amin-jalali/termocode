@@ -8,7 +8,26 @@ import { readDBConns, type DBConnView } from "../../state/more";
 import { t } from "../../strings";
 import { errText } from "../../ui/CardSheet";
 
-export type Load<T> = { s: "loading" } | { s: "ok"; v: T } | { s: "err"; msg: string };
+export type Load<T> = { s: "loading" } | { s: "ok"; v: T } | { s: "err"; msg: string; need?: DBNeed };
+
+/** DBNeed is what a failed database read asks the user for (the
+ * laptop's err data, webproto.DBNeed): an unknown SSH host key to check
+ * and trust. */
+export interface DBNeed {
+  need: "host_key";
+  host: string;
+  key_type?: string;
+  fingerprint: string;
+  jump?: boolean;
+}
+
+/** dbNeed is the DBNeed of a failed request (undefined: none). */
+export function dbNeed(e: unknown): DBNeed | undefined {
+  if (!(e instanceof ReqError) || e.code !== "conflict") return undefined;
+  const d = e.data as Partial<DBNeed> | null | undefined;
+  if (d?.need === "host_key" && typeof d.host === "string" && typeof d.fingerprint === "string") return d as DBNeed;
+  return undefined;
+}
 
 export const conns = signal<Load<DBConnView[]> | null>(null);
 

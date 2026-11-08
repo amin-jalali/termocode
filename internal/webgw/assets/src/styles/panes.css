@@ -291,6 +291,8 @@
 .dbf-sel option { background: var(--wb-side-bg); color: var(--wb-side-fg); }
 .dbf-check { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
 .dbf-note { margin: 4px 0; color: var(--wb-desc); font-size: 11px; }
+.db-need-key code { overflow-wrap: anywhere; }
+.db-need-note { color: var(--wb-desc); font-size: 11px; }
 .dbf .pv-ask-row { margin-top: 6px; }
 .dbf-filter { margin: 2px 12px 6px 20px; }
 .db-on { display: inline-block; width: 7px; height: 7px; margin-inline-end: 4px; border-radius: 50%; background: var(--wb-ok); }

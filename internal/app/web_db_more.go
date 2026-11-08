@@ -457,6 +457,7 @@ func (m *Model) webRedisFind(call *webCall, id string) (webDBConn, bool) {
 			w.snap.dial, _ = d.dbDialFor(c)
 		}
 	}
+	m.webDBRoute(&w)
 	return w, true
 }
 
@@ -482,6 +483,10 @@ func (m *Model) webRedisKeys(call *webCall) tea.Cmd {
 	call.later()
 	return func() tea.Msg {
 		defer stop()
+		if err := w.route(ctx); err != nil {
+			w.fail(call, err)
+			return nil
+		}
 		s, err := webRedisOpen(ctx, w.root, w.c, &w.snap, true)
 		if err != nil {
 			w.fail(call, err)
@@ -686,7 +691,7 @@ func (m *Model) webDBEdit(call *webCall, open func(*webAsk) tea.Msg) tea.Cmd {
 				return func() tea.Msg {
 					ctx, cancel := context.WithTimeout(context.Background(), loadDBConsoleSettings().timeout())
 					defer cancel()
-					s, err := dbAIOpen(ctx, fresh.root, fresh.c, &fresh.snap, false)
+					s, err := fresh.session(ctx, false)
 					var out dbclient.EditOutcome
 					if err == nil {
 						out = dbclient.ApplyEdits(ctx, s, stmts, false)
@@ -808,7 +813,7 @@ func (m *Model) webDBImport(call *webCall, open func(*webAsk) tea.Msg) tea.Cmd {
 				return func() tea.Msg {
 					ctx, cancel := context.WithTimeout(context.Background(), 10*loadDBConsoleSettings().timeout())
 					defer cancel()
-					s, err := dbAIOpen(ctx, fresh.root, fresh.c, &fresh.snap, false)
+					s, err := fresh.session(ctx, false)
 					var res dbclient.ImportResult
 					if err == nil {
 						res = dbclient.ImportCSV(ctx, s, spec, nil)
