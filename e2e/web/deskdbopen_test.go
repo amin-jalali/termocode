@@ -4,6 +4,7 @@ package web
 
 import (
 	"testing"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
@@ -45,4 +46,32 @@ func TestDeskDBFailureSaysWhy(t *testing.T) {
 	if Eval[bool](p, `document.body.textContent.includes("Something failed inside termocode")`) {
 		t.Error("the generic internal text is shown")
 	}
+}
+
+// An unknown SSH host: the page asks with the host and its key (Cancel
+// first and focused); Trust and save asks the laptop to save the key,
+// then the tables load. Cancel sends nothing and keeps the reason.
+func TestDeskDBTrustsSSHHost(t *testing.T) {
+	p, c := dbOpenView(t)
+	const ask = dbxSide + `.querySelector('.db-need')`
+	need := map[string]any{"need": "host_key", "host": "bastion.example.com", "fingerprint": "SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8", "key_type": "ED25519"}
+
+	p.TapJS(dbxSide + `.querySelector('.tr[data-conn="prod"]')`)
+	dbFail(t, c, expectOp(t, c, webproto.OpDBTables, `{"conn":"prod"}`), "Unknown SSH host bastion.example.com.", need)
+	p.WaitJS(ask + `?.textContent.includes("bastion.example.com") && ` + ask + `.textContent.includes("SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8") && ` + ask + `.textContent.includes("ED25519")`)
+	if got := Eval[string](p, `[...`+ask+`.querySelectorAll("button")].map((b) => b.textContent).join("|")`); got != "Cancel|Trust and save" {
+		t.Errorf("buttons %q, want Cancel first", got)
+	}
+	p.WaitJS(`document.activeElement?.textContent === "Cancel"`)
+	p.TapJS(`[...` + ask + `.querySelectorAll("button")].find((b) => b.textContent === "Cancel")`)
+	p.WaitJS(`!` + ask + ` && ` + dbxSide + `.querySelector('.tr-note.is-err')?.textContent === "Unknown SSH host bastion.example.com."`)
+	c.Quiet(t, 200*time.Millisecond)
+
+	p.TapJS(dbxSide + `.querySelector('.tr[data-conn="local"]')`)
+	dbFail(t, c, expectOp(t, c, webproto.OpDBTables, `{"conn":"local"}`), "Unknown SSH jump host gw.example.net.", map[string]any{"need": "host_key", "host": "gw.example.net", "fingerprint": "SHA256:gw", "key_type": "ED25519", "jump": true})
+	p.WaitJS(ask + `?.textContent.includes("jump host gw.example.net")`)
+	p.TapJS(`[...` + ask + `.querySelectorAll("button")].find((b) => b.textContent === "Trust and save")`)
+	reply(t, c, expectOp(t, c, "db.trust_host", `{"conn":"local","fingerprint":"SHA256:gw"}`), webproto.DBDone{Text: "Host key saved."})
+	reply(t, c, expectOp(t, c, webproto.OpDBTables, `{"conn":"local"}`), webproto.DBTables{Conn: "local", Schema: "public", Tables: []webproto.DBTable{{Name: "users"}}})
+	p.WaitJS(dbxSide + `.querySelector('.tr[data-table="users"]') && !` + ask)
 }
