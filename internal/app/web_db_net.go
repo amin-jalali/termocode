@@ -7,10 +7,12 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/dbclient"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
@@ -46,12 +48,27 @@ func webDBTunnelKey(c dbclient.Conn) string {
 }
 
 // dial is the dialer of c's open tunnel, opened first when there is none.
+// A connection of a container on the server finds the container's IP by
+// its name again on every read, as the laptop does on every connect (a
+// recreated container has a new one).
 func (n *webDBNet) dial(ctx context.Context, c dbclient.Conn, root string, sec dbSSHSecrets) (dbclient.DialFunc, error) {
+	t, err := n.tunnel(ctx, c, root, sec)
+	if err != nil {
+		return nil, err
+	}
+	if err := dbResolveContainer(ctx, c, t); err != nil {
+		return nil, err
+	}
+	return t.DialContext, nil
+}
+
+// tunnel is c's open tunnel, opened first when there is none.
+func (n *webDBNet) tunnel(ctx context.Context, c dbclient.Conn, root string, sec dbSSHSecrets) (*dbclient.Tunnel, error) {
 	key := webDBTunnelKey(c)
 	n.mu.Lock()
 	if t := n.tunnels[key]; t.Alive() {
 		n.mu.Unlock()
-		return t.DialContext, nil
+		return t, nil
 	}
 	n.mu.Unlock()
 	t, err := dbOpenTunnel(ctx, dbResolveConnPaths(c, root, dbSSHHome()), sec)
@@ -62,7 +79,7 @@ func (n *webDBNet) dial(ctx context.Context, c dbclient.Conn, root string, sec d
 	defer n.mu.Unlock()
 	if old := n.tunnels[key]; old.Alive() { // another read was quicker
 		_ = t.Close()
-		return old.DialContext, nil
+		return old, nil
 	} else if old != nil {
 		_ = old.Close()
 	}
@@ -70,7 +87,7 @@ func (n *webDBNet) dial(ctx context.Context, c dbclient.Conn, root string, sec d
 		n.tunnels = map[string]*dbclient.Tunnel{}
 	}
 	n.tunnels[key] = t
-	return t.DialContext, nil
+	return t, nil
 }
 
 // closeAll closes every tunnel (the hub stops).
@@ -142,11 +159,51 @@ func (w *webDBConn) route(ctx context.Context) error {
 
 // session is a session of w's connection (read-only or a plain
 // auto-commit one) through the laptop's or the page's tunnel.
+//
+// Opening it is bounded as the laptop's connect is (dbOpenBounded): the
+// answer comes by dbTestTimeout + dbConnectGrace, so the page never
+// stays on Loading… when a driver or the server ignores the deadline.
 func (w *webDBConn) session(ctx context.Context, readOnly bool) (dbclient.Session, error) {
-	if err := w.route(ctx); err != nil {
-		return nil, err
+	octx, cancel := context.WithTimeout(ctx, dbTestTimeout)
+	type opened struct {
+		snap dbAISnapshot
+		sess dbclient.Session
+		err  error
+		ok   bool
 	}
-	return dbAIOpen(ctx, w.root, w.c, &w.snap, readOnly)
+	done := make(chan opened, 1)
+	cp := *w // the open works on its own copy: a late one touches nothing
+	crash.GoWith("the database read", func() {
+		err := cp.route(octx)
+		var sess dbclient.Session
+		if err == nil {
+			sess, err = dbAIOpen(octx, cp.root, cp.c, &cp.snap, readOnly)
+		}
+		done <- opened{snap: cp.snap, sess: sess, err: err, ok: true}
+	}, func() {
+		done <- opened{err: errors.New("the read stopped on an internal error (a crash report was saved)")}
+	})
+	give := time.NewTimer(dbTestTimeout + dbConnectGrace)
+	defer give.Stop()
+	select {
+	case r := <-done:
+		cancel()
+		if r.ok {
+			w.snap = r.snap
+		}
+		if r.err != nil && ctx.Err() == nil && errors.Is(octx.Err(), context.DeadlineExceeded) && dbclient.ReachText(r.err) == "" {
+			r.err = dbNoAnswer(w.c, w.c.SSH != nil) // the database said nothing in time
+		}
+		return r.sess, r.err
+	case <-give.C:
+		cancel()
+		crash.Go("the database read", func() {
+			if r := <-done; r.sess != nil {
+				_ = r.sess.Close()
+			}
+		})
+		return nil, dbNoAnswer(w.c, false)
+	}
 }
 
 // webDBNeedOf is what err asks the user for (nil: nothing the page can
