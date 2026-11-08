@@ -29,6 +29,9 @@ type SSHServer struct {
 	// Exec answers an "exec" session (the command as the client sent
 	// it): its stdout and exit status. nil: sessions are refused.
 	Exec func(cmd string) (stdout string, exit int)
+	// Latency delays every packet this long each way (a slow link; 0:
+	// none).
+	Latency time.Duration
 
 	logins   atomic.Int32 // successful logins
 	attempts atomic.Int32 // auth attempts of any kind
@@ -106,6 +109,9 @@ func (s *SSHServer) Dial(_ context.Context, _, _ string) (net.Conn, error) {
 		return nil, errors.New("connection refused")
 	}
 	client, server := BufferedPipe()
+	if s.Latency > 0 {
+		client, server = Delayed(client, s.Latency), Delayed(server, s.Latency)
+	}
 	s.conns = append(s.conns, server)
 	s.wg.Add(1)
 	s.open.Add(1)
