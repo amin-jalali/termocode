@@ -73,6 +73,11 @@ func (m *Model) databaseDiscover() tea.Cmd {
 	targets := append([]dbProbeTarget(nil), dbProbeTargets...)
 	host, timeout, list := dbProbeHost, dbProbeTimeout, dbListContainers
 	listCtx, listRemote := dbListContexts, dbListContextContainers
+	if st := m.services; st != nil && st.hostLoaded["contexts"] && len(st.contextRows) > 0 {
+		// One host list: the Containers view's contexts (db_servers.go).
+		known := append([]containers.Context(nil), st.contextRows...)
+		listCtx = func(context.Context, string) ([]containers.Context, error) { return known, nil }
+	}
 	return func() tea.Msg {
 		msg := dbDiscoverMsg{generation: generation}
 		var wg sync.WaitGroup

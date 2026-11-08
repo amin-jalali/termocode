@@ -81,7 +81,7 @@ func (m Model) renderDatabasesSidebarRows(w, h int, focused bool, rows []dbTreeR
 	for i := start; i < len(rows) && len(lines) < 4+available; i++ {
 		r := rows[i]
 		if r.kind == dbNodeSuggestionsHeader {
-			lines = append(lines, testsPad(theme.FgBg(theme.TextSecondary, theme.BgSidebar).Bold(true).Render("  SUGGESTED"), w))
+			lines = append(lines, testsPad(theme.FgBg(theme.TextSecondary, theme.BgSidebar).Bold(true).Render("  "+r.name), w))
 			continue
 		}
 		if r.kind == dbNodeFolderHeader {
@@ -89,7 +89,8 @@ func (m Model) renderDatabasesSidebarRows(w, h int, focused bool, rows []dbTreeR
 			if s.folded[r.path] && s.filter == "" {
 				icon = theme.IconFolderClosed
 			}
-			head := "  " + icon.String() + " " + runewidth.Truncate(sanitizeDBText(r.name), max(w-5, 1), "…")
+			pad := strings.Repeat(" ", min(r.depth*2, max(w/2, 0))) // a project under a host (db_servers.go)
+			head := "  " + pad + icon.String() + " " + runewidth.Truncate(sanitizeDBText(r.name), max(w-5-len(pad), 1), "…")
 			fg, bg := theme.TextSecondary, theme.BgSidebar
 			if i == s.cursor && focused {
 				fg, bg = theme.TextPrimary, theme.BgSelection
@@ -382,7 +383,7 @@ func dbNodeGlyph(kind dbNodeKind) string {
 			return "\uf007" // a user
 		case dbNodeColumn, dbNodeDetail:
 			return "\uf0f6"
-		case dbNodeSuggestion:
+		case dbNodeSuggestion, dbNodeAddServer:
 			return "\uf067"
 		case dbNodeCode:
 			return "$"
@@ -424,7 +425,7 @@ func dbNodeGlyph(kind dbNodeKind) string {
 			return "."
 		case dbNodeDetail:
 			return "f"
-		case dbNodeSuggestion:
+		case dbNodeSuggestion, dbNodeAddServer:
 			return "+"
 		case dbNodeRedisNS:
 			return "n"
@@ -465,7 +466,7 @@ func dbNodeGlyph(kind dbNodeKind) string {
 		return "·"
 	case dbNodeDetail:
 		return theme.GlyphMore.String()
-	case dbNodeSuggestion:
+	case dbNodeSuggestion, dbNodeAddServer:
 		return "+"
 	case dbNodeSuggestionsHeader:
 		return " "
@@ -524,6 +525,8 @@ func dbRowFooter(kind dbNodeKind) string {
 		return "Enter connect · n console · e edit · x disconnect"
 	case dbNodeSuggestion:
 		return "a add suggestion · x hide"
+	case dbNodeAddServer:
+		return "Enter add a server (ssh://user@host)"
 	case dbNodeTable, dbNodeView:
 		return "Enter expand · ? help"
 	case dbNodeDatabase, dbNodeSchema, dbNodeGroup:
@@ -597,6 +600,9 @@ func (m Model) handleDatabasesSidebarMouse(x, y int, t tea.MouseEventType) (Mode
 			m.databases.lastClickAt = time.Time{}
 		}
 		return m, nil
+	}
+	if t == tea.MouseLeft && rows[index].kind == dbNodeAddServer {
+		return m, m.databaseAddServer() // db_servers.go
 	}
 	if t == tea.MouseLeft {
 		m.databases.lastClickPath, m.databases.lastClickAt = rows[index].path, time.Now()

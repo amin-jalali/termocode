@@ -483,6 +483,9 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if row.kind == dbNodeSuggestion {
 			return m, m.databaseAddSuggestion(row.path)
 		}
+		if row.kind == dbNodeAddServer {
+			return m, m.databaseAddServer() // db_servers.go
+		}
 		if row.kind == dbNodeConnection {
 			if _, ok := s.sessions[row.conn]; !ok {
 				return m, m.databaseConnect(row.conn)

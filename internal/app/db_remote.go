@@ -296,7 +296,7 @@ func (s *dbState) addRemoteSuggestions() {
 			}
 			path := dbRemoteSuggestionPath(f.host.context, name)
 			s.remoteTargets[path] = t
-			s.nodes[path] = dbNode{kind: dbNodeSuggestion, name: sanitizeDBText(name) + " (" + sanitizeDBText(f.host.context) + ")", path: path, conn: path,
+			s.nodes[path] = dbNode{kind: dbNodeSuggestion, name: sanitizeDBText(name), path: path, conn: path,
 				detail: driver + "  " + dbSSHLabel(cfg), driver: driver, host: name, port: conn.Port}
 		}
 	}

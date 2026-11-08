@@ -48,6 +48,7 @@ const (
 	dbNodeRole         // a user or role of the server (DBX-13)
 	dbNodeFolderHeader // a connection folder heading (DBX-21); not a node
 	dbNodeVirtualView  // a saved SELECT under a connection's Virtual Views (db_virtual.go)
+	dbNodeAddServer    // the "+ Add Server…" row of SERVERS (db_servers.go); not a node
 )
 
 type dbNode struct {
@@ -240,7 +241,7 @@ func (s *dbState) rows() []dbTreeRow {
 	}
 	var suggestionPaths []string
 	for path, n := range s.nodes {
-		if n.kind == dbNodeSuggestion && !s.hidden[path] {
+		if n.kind == dbNodeSuggestion && !s.hidden[path] && !strings.HasPrefix(path, "suggest-remote-") {
 			suggestionPaths = append(suggestionPaths, path)
 		}
 	}
@@ -251,6 +252,7 @@ func (s *dbState) rows() []dbTreeRow {
 	for _, path := range suggestionPaths {
 		walk(path, 0)
 	}
+	out = append(out, s.serverTreeRows()...) // the ssh:// hosts (db_servers.go)
 	if len(out) == 0 && !s.loaded {
 		out = append(out, dbTreeRow{kind: dbNodeLoading, name: "Loading database connections…"})
 	}
