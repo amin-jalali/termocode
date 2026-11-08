@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/chromedp/chromedp"
+	"github.com/chromedp/chromedp/kb"
+
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -74,4 +77,38 @@ func TestDeskDBTrustsSSHHost(t *testing.T) {
 	reply(t, c, expectOp(t, c, "db.trust_host", `{"conn":"local","fingerprint":"SHA256:gw"}`), webproto.DBDone{Text: "Host key saved."})
 	reply(t, c, expectOp(t, c, webproto.OpDBTables, `{"conn":"local"}`), webproto.DBTables{Conn: "local", Schema: "public", Tables: []webproto.DBTable{{Name: "users"}}})
 	p.WaitJS(dbxSide + `.querySelector('.tr[data-table="users"]') && !` + ask)
+}
+
+// A password the laptop does not have: the page asks for it in a masked
+// field (Cancel first), sends it once to the laptop's secret store and
+// reads again; an SSH key's passphrase is asked by the key's name.
+func TestDeskDBAsksPassword(t *testing.T) {
+	p, c := dbOpenView(t)
+	const ask = dbxSide + `.querySelector('.db-need')`
+	const field = ask + `?.querySelector('input[type="password"]')`
+
+	p.TapJS(dbxSide + `.querySelector('.tr[data-conn="prod"]')`)
+	dbFail(t, c, expectOp(t, c, webproto.OpDBTables, `{"conn":"prod"}`), "Wrong passphrase for the SSH key id_ed25519.", map[string]any{"need": "ssh_passphrase", "key": "id_ed25519", "wrong": true})
+	p.WaitJS(field + ` && ` + ask + `.textContent.includes("Passphrase for id_ed25519") && ` + ask + `.textContent.includes("Wrong passphrase")`)
+	p.TapJS(`[...` + ask + `.querySelectorAll("button")].find((b) => b.textContent === "Cancel")`)
+	p.WaitJS(`!` + ask)
+	c.Quiet(t, 200*time.Millisecond)
+
+	p.TapJS(dbxSide + `.querySelector('.tr[data-conn="local"]')`)
+	dbFail(t, c, expectOp(t, c, webproto.OpDBTables, `{"conn":"local"}`), "The database needs a password.", map[string]any{"need": "password"})
+	p.WaitJS(field + ` && document.activeElement === ` + field + ` && ` + ask + `.textContent.includes("Database password")`)
+	if got := Eval[string](p, `[...`+ask+`.querySelectorAll("button")].map((b) => b.textContent).join("|")`); got != "Cancel|Save and connect" {
+		t.Errorf("buttons %q, want Cancel first", got)
+	}
+	if ac := Eval[string](p, field+`.autocomplete`); ac != "off" && ac != "new-password" {
+		t.Errorf("autocomplete %q", ac)
+	}
+	p.Do(chromedp.KeyEvent("s3cret ä"))
+	p.Key(kb.Enter)
+	reply(t, c, expectOp(t, c, "db.secret", `{"conn":"local","kind":"password","value":"s3cret ä"}`), webproto.DBDone{Text: "Saved."})
+	reply(t, c, expectOp(t, c, webproto.OpDBTables, `{"conn":"local"}`), webproto.DBTables{Conn: "local", Schema: "public", Tables: []webproto.DBTable{{Name: "users"}}})
+	p.WaitJS(dbxSide + `.querySelector('.tr[data-table="users"]') && !` + ask)
+	if Eval[bool](p, `document.body.innerHTML.includes("s3cret")`) {
+		t.Error("the password stayed in the page")
+	}
 }
