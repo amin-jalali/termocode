@@ -369,6 +369,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 		})
 		return wt.Dir(), ts, err
 	}
+	cliBase := base // the CLI steps read this copy: Build adds the MCP lines to base on its own goroutine
 	opts := agentrun.Options{
 		Parallel:   parallel,
 		User:       user,
@@ -404,10 +405,10 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 			if err != nil {
 				return "", nil, err
 			}
-			nodeTools, nodeBase := tools, base
+			nodeTools, nodeBase := tools, cliBase
 			if wtTools != nil {
 				wt, _ := wts.get(n.ID)
-				nodeTools, nodeBase = wtTools, aiWorktreePrompt(base, root, wt)
+				nodeTools, nodeBase = wtTools, aiWorktreePrompt(cliBase, root, wt)
 			}
 			spec := clistep.Spec{CLI: n.CLI, Model: n.Model, Write: n.Tools.Preset == agentdag.PresetAll, Dir: dir, OSSandbox: agentOSSandboxOn(),
 				Reasoning: cliReasoning}
@@ -424,7 +425,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 				hooks := aiActiveHooks(dir)
 				agent := &ai.Agent{Tools: aiWithHookList(dir, hooks, ts, out), AutoApprove: own, Policy: policy,
 					PreTool: aiPreToolHooks(dir, hooks, out), Confirm: aiChatConfirmFunc(gen, ch, own, n.Title)}
-				srv, err := aiStartStepMCP(dir, agent, emit)
+				srv, err := aiStartStepMCP(root, agent, emit) // the socket sits in the workspace's session folder
 				switch {
 				case err != nil:
 					recordError("[ai] step " + n.ID + ": its termocode tools did not start: " + err.Error())
