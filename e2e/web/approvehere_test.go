@@ -93,3 +93,28 @@ func TestDeskApprovesHere(t *testing.T) {
 		Eval[bool](p, scmRow("changes", "src/a.go")+`.querySelector('[aria-label="Discard Changes"]').click() ?? true`)
 	}, `"src/a.go"`)
 }
+
+// Whichever view sent the request (a palette command, a sheet's action,
+// a view without its own question), the page shows the hub's card from
+// the ask ev, Cancel first, and answers it itself; on the phone and on
+// the desktop.
+func TestApproveHereFromAnyView(t *testing.T) {
+	for _, vp := range []Viewport{Phone, Desktop} {
+		t.Run(vp.Name, func(t *testing.T) {
+			s := StartServer(t)
+			p := NewPage(t, s, vp)
+			p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+			c := p.LoginMeta(hereMeta("c-any"))
+			const body = "Run on baaytona (deploy@65.109.212.14):\n\nssh -p 22 -- deploy@65.109.212.14"
+			c.Send(t, &webproto.Event{T: webproto.KindEv, Kind: webproto.EventAsk, Data: raw(webproto.AskCard{ID: "ask-9", Title: "Open a terminal?", Body: body, Action: "Open"})})
+			p.WaitJS(`document.querySelector(".ask-text")?.textContent === ` + jsq(body) + ` && document.activeElement?.textContent === "Cancel"`)
+			p.WaitJS(`document.querySelector(".ask .arm.is-armed")?.textContent === "Open"`)
+			p.TapJS(`[...document.querySelectorAll(".ask button")].find((b) => b.textContent === "Open")`)
+			pageAnswers(t, c, "ask-9", "confirm")
+			p.WaitJS(`!document.querySelector(".ask")`)
+			if pr := p.Problems(); len(pr) > 0 {
+				t.Errorf("problems: %q", pr)
+			}
+		})
+	}
+}
