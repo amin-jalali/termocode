@@ -78,6 +78,10 @@ func TestContainersLaptopOps(t *testing.T) {
 	checkRow(t, OpContainersRegistry, RoleController, true, AuditYes)
 	checkArgs(t, OpContainersOpenDB, []string{`{"id":"pg"}`}, []string{`{"id":"9f3c2e1a1234"}`})
 	checkRow(t, OpContainersOpenDB, RoleController, true, AuditYes)
+	// Open Terminal on a host row: ssh to it (or a shell here) after the
+	// laptop's card.
+	checkArgs(t, OpContainersHostTerminal, []string{`{"name":"-x"}`, `{}`}, []string{`{"name":"baaytona"}`})
+	checkRow(t, OpContainersHostTerminal, RoleController, true, AuditYes)
 	checkArgs(t, OpServicesStopAll, nil, []string{`{}`})
 	checkRow(t, OpServicesStopAll, RoleController, true, AuditYes)
 	// No field carries an env value or a password: such args are refused.

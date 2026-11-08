@@ -156,7 +156,7 @@ func TestLaptopCardOps(t *testing.T) {
 		OpDBEdit: true, OpDBImport: true, OpRedisKey: true, OpDBAdd: true, OpDBSSH: true, OpDBSSL: true, OpDBDisconnect: true, OpDBTx: true,
 		OpWorktreesArchive: true, OpWorktreesDelete: true,
 		OpGitDiscardLines: true, OpGitDiscardHunk: true, OpGitCheckoutTag: true, OpGitStashApply: true, OpGitStashAct: true, OpGitUndo: true, OpGitRedo: true, OpGitFixup: true,
-		OpContainersExec: true, OpContainersImage: true, OpContainersPrune: true, OpContainersStorageRemove: true, OpContainersComposeAsk: true, OpContainersContextDefault: true, OpContainersRegistry: true, OpContainersOpenDB: true, OpServicesStopAll: true,
+		OpContainersExec: true, OpContainersImage: true, OpContainersPrune: true, OpContainersStorageRemove: true, OpContainersComposeAsk: true, OpContainersContextDefault: true, OpContainersRegistry: true, OpContainersOpenDB: true, OpContainersHostTerminal: true, OpServicesStopAll: true,
 		OpChatDelete: true, OpChatClear: true, OpAIUseMCPProfile: true, OpAISetAutoApprove: true,
 		OpWorkspaceAddFolder: true, OpWorkspaceRemoveFolder: true, OpWorkspaceOpen: true, OpSearchReplace: true,
 		OpLSPServerAsk: true, OpLayoutDelete: true, OpWorkflowsRun: true, OpWorkflowsSave: true,
