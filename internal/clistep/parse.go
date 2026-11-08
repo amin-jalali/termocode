@@ -351,6 +351,9 @@ func (p *parser) codex(b []byte) {
 				p.emit(ai.Event{Kind: ai.EventToolResult, Tool: "edit", Label: "edit", Detail: c.Kind})
 			}
 		case "mcp_tool_call":
+			if own := mcpName(p.s.MCP); own != "" && it.Server == own {
+				return // termocode's gate showed and audited this call already
+			}
 			name := it.Server + "." + it.Tool
 			if !end {
 				p.emit(ai.Event{Kind: ai.EventToolStart, Tool: name, Label: name, Detail: name})

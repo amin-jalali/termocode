@@ -15,11 +15,13 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -59,6 +61,72 @@ type Spec struct {
 	// Now is the clock for reset times ("try again in 2 hours"); nil:
 	// time.Now.
 	Now func() time.Time
+	// MCP (optional) is termocode's MCP server of this step: the step's
+	// own termocode tools (databases, containers, files, terminal, …)
+	// behind termocode's gate. It goes on the command line only.
+	MCP *MCPServer
+}
+
+// MCPServer is an MCP server the CLI starts for the run (a stdio
+// command).
+type MCPServer struct {
+	Name    string // the server's name ("termocode"); its tools are mcp__<name>__*
+	Command string
+	Args    []string
+}
+
+// MCPToolTimeout is how long (seconds) the CLI waits for one call of the
+// step's MCP server: a change waits for the owner's card.
+const MCPToolTimeout = 900
+
+// mcpName is the server's name when it is safe in a TOML key and a tool
+// name ("" for none).
+func mcpName(m *MCPServer) string {
+	if m == nil || m.Command == "" || m.Name == "" {
+		return ""
+	}
+	for _, r := range m.Name {
+		if (r < 'a' || r > 'z') && (r < '0' || r > '9') && r != '_' && r != '-' {
+			return ""
+		}
+	}
+	return m.Name
+}
+
+// jsonText is v as JSON (no HTML escaping): a valid TOML value for
+// strings and string lists too.
+func jsonText(v any) string {
+	var b bytes.Buffer
+	enc := json.NewEncoder(&b)
+	enc.SetEscapeHTML(false)
+	_ = enc.Encode(v)
+	return strings.TrimRight(b.String(), "\n")
+}
+
+// mcpArgs are the CLI's arguments that give it s.MCP.
+func mcpArgs(s Spec) []string {
+	name := mcpName(s.MCP)
+	if name == "" {
+		return nil
+	}
+	args := s.MCP.Args
+	if args == nil {
+		args = []string{}
+	}
+	switch s.CLI {
+	case ai.CLICodex:
+		k := "mcp_servers." + name
+		return []string{"-c", k + ".command=" + jsonText(s.MCP.Command), "-c", k + ".args=" + jsonText(args),
+			"-c", k + ".tool_timeout_sec=" + strconv.Itoa(MCPToolTimeout)}
+	case ai.CLIClaude:
+		type server struct {
+			Command string   `json:"command"`
+			Args    []string `json:"args"`
+		}
+		cfg := map[string]any{"mcpServers": map[string]server{name: {Command: s.MCP.Command, Args: args}}}
+		return []string{"--mcp-config", jsonText(cfg), "--allowedTools", "mcp__" + name}
+	}
+	return nil
 }
 
 // Result is what a finished CLI step gave.
@@ -82,9 +150,11 @@ func Args(s Spec) []string {
 		}
 		if s.Write {
 			// Edits, but no shell: it cannot run commands.
-			return append(out, "--tools", "Read,Grep,Glob,Edit,Write", "--permission-mode", "acceptEdits")
+			out = append(out, "--tools", "Read,Grep,Glob,Edit,Write", "--permission-mode", "acceptEdits")
+		} else {
+			out = append(out, "--tools", "Read,Grep,Glob")
 		}
-		return append(out, "--tools", "Read,Grep,Glob")
+		return append(out, mcpArgs(s)...)
 	case ai.CLICodex:
 		sandbox := "read-only"
 		if s.Write {
@@ -94,7 +164,9 @@ func Args(s Spec) []string {
 		if model {
 			out = append(out, "-m", s.Model)
 		}
-		return append(out, "--sandbox", sandbox, "-C", s.Dir, "-")
+		out = append(out, "--sandbox", sandbox)
+		out = append(out, mcpArgs(s)...)
+		return append(out, "-C", s.Dir, "-")
 	}
 	return nil
 }
