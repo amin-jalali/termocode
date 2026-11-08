@@ -329,7 +329,7 @@ func (m *Model) aiBgStart(prof ai.Profile, run agentdag.Run, task string, by ai.
 			n = aiCategoryNode(n, cats)
 			ts := aiFilterTools(tools, n.Tools)
 			native := sl.p.SupportsTools()
-			sys := ai.SystemPrompt(base+aiStepPrompt(n, index[n.ID], total)+aiCategoryPrompt(n, cats, escalate != "" && n.Slot != catSlots[escalate])+aiBgStepNote, ts, native)
+			sys := ai.SystemPrompt(aiWithToolGuide(base, ts, false)+aiStepPrompt(n, index[n.ID], total)+aiCategoryPrompt(n, cats, escalate != "" && n.Slot != catSlots[escalate])+aiBgStepNote, ts, native)
 			k := aiBgStepKey(run.ID, n.ID)
 			mail.openKey(k)
 			// No Confirm: a background step never asks; a tool that would

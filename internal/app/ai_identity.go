@@ -1,0 +1,108 @@
+package app
+
+import (
+	"path/filepath"
+	"strings"
+
+	"github.com/amin-jalali/termocode/internal/ai"
+)
+
+// Who the AI is (every step, every provider): the AI inside termocode on
+// the owner's own computer, in this project, with termocode's tools. It
+// opens the system prompt, before the project rules, so a CLI step
+// (Codex, Claude Code) never goes to its own docs or skills to learn
+// what it is, and a question about data goes to the db_* tools, not to
+// guesses from the project files.
+
+// aiIdentityEnd ends the identity paragraph; the tool guide of a step
+// goes right after it (aiWithToolGuide).
+const aiIdentityEnd = "When the owner asks what you can do, answer from this text.\n"
+
+// aiIdentityPrompt is the identity paragraph for the project at root.
+func aiIdentityPrompt(root string) string {
+	name := filepath.Base(filepath.Clean(root))
+	return "You are the AI inside termocode, the owner's IDE, running on the owner's own computer in project " + name +
+		". You talk with the owner in termocode's chat and work through termocode's tools on this machine. " +
+		"Do not read your own docs, skills or config files, and do not search the web, to learn what you are or what you can do: " +
+		"you are termocode's AI and this text says what you can do. " + aiIdentityEnd
+}
+
+// aiToolGroup is one kind of tool in the guide: its names (a name ending
+// in "_" is a prefix) and when to use them.
+type aiToolGroup struct {
+	title string
+	names []string
+	when  string
+}
+
+var aiToolGroups = []aiToolGroup{
+	{"Files", []string{"read_file", "list_dir", "search", "glob", "ast_grep", "write_file", "edit_file", "create_file", "create_dir", "delete", "rename"}, "read and change the project's files"},
+	{"Terminal", []string{"run_command", "terminal_send", "terminal_read", "terminal_tabs", "terminal_keys"}, "run commands, read and use the owner's terminals"},
+	{"Git", []string{"git_"}, "status, diffs, history, branches, commits"},
+	{"Databases", []string{"db_", "redis_"}, "the owner's database connections, on this computer or on a server: tables, schema, data. Use them for every question about a database; never guess from project files"},
+	{"Containers and servers", []string{"contexts_list", "containers_", "images_", "volumes_list", "networks_list", "compose_up", "registries_list", "kube_"}, "Docker here and on the owner's ssh servers (contexts_list shows them); use these, not the docker command"},
+	{"Services", []string{"services_", "service_"}, "the project's dev services: status, logs, start and stop"},
+	{"HTTP", []string{"http_"}, "the owner's .http requests and sending them"},
+	{"Tests and tasks", []string{"tests_", "tasks_"}, "run tests and project tasks and read their results"},
+	{"Debugger", []string{"debug_"}, "breakpoints, start, step, evaluate"},
+	{"Code intelligence", []string{"diagnostics", "lsp_"}, "problems, hover, symbols, definitions"},
+	{"Editor and IDE", []string{"open_file", "get_editor_state", "get_ide_state", "show_panel", "notify", "list_actions", "execute_action", "settings_"}, "open files for the owner, read and drive the IDE"},
+	{"Workflows and agents", []string{"workflow_", "agent_run_"}, "the owner's workflows and background agent runs"},
+	{"Web", []string{"web_fetch", "web_get", "web_search"}, "read a web page or search the web"},
+}
+
+// aiToolMatch reports whether tool name matches a group name or prefix.
+func aiToolMatch(name, pat string) bool {
+	if strings.HasSuffix(pat, "_") {
+		return strings.HasPrefix(name, pat)
+	}
+	return name == pat
+}
+
+// aiToolGuide is the short list of the tools a step has, by kind ("" for
+// none). viaMCP: the step reaches them through termocode's MCP server
+// (a CLI step), so it says where they come from.
+func aiToolGuide(tools []ai.Tool, viaMCP bool) string {
+	var b strings.Builder
+	for _, g := range aiToolGroups {
+		var names []string
+		for _, t := range tools {
+			for _, p := range g.names {
+				if aiToolMatch(t.Name, p) {
+					names = append(names, t.Name)
+					break
+				}
+			}
+		}
+		if len(names) == 0 {
+			continue
+		}
+		if len(names) > 6 {
+			names = append(names[:6], "…")
+		}
+		b.WriteString("- " + g.title + ": " + strings.Join(names, ", ") + ": " + g.when + ".\n")
+	}
+	if b.Len() == 0 {
+		return ""
+	}
+	head := "termocode's tools you have (use them before you guess):\n"
+	if viaMCP {
+		head = "termocode's tools you have come from its MCP server \"termocode\" (use them before you guess; " +
+			"prefer them to your own shell for databases, containers and servers):\n"
+	}
+	return head + b.String() + "Reads run at once. Every change asks the owner on a card first; when a card is declined, do not retry it. Secrets show as [REDACTED].\n"
+}
+
+// aiWithToolGuide puts the tool guide of tools right after the identity
+// paragraph of base (at the end when base has none).
+func aiWithToolGuide(base string, tools []ai.Tool, viaMCP bool) string {
+	g := aiToolGuide(tools, viaMCP)
+	if g == "" {
+		return base
+	}
+	if i := strings.Index(base, aiIdentityEnd); i >= 0 {
+		i += len(aiIdentityEnd)
+		return base[:i] + g + base[i:]
+	}
+	return base + "\n" + g
+}

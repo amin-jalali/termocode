@@ -399,11 +399,18 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 				sys = aiStepPrompt(n, index[n.ID], total)
 			}
 			handoff := n.ID == verifyID || n.ID == fixID || len(agentdag.Deps(run, n.ID)) > 0
-			dir, _, err := inWorktree(ctx, n)
+			dir, wtTools, err := inWorktree(ctx, n)
 			if err != nil {
 				return "", nil, err
 			}
-			prompt := aiCLIPrompt(ctx, dir, sys, input+wts.othersNote(n.ID), handoff)
+			nodeTools, nodeBase := tools, base
+			if wtTools != nil {
+				wt, _ := wts.get(n.ID)
+				nodeTools, nodeBase = wtTools, aiWorktreePrompt(base, root, wt)
+			}
+			ts := aiFilterTools(nodeTools, n.Tools)
+			// termocode's context first, then the step (CS-1 got only the step)
+			prompt := aiCLIPrompt(ctx, dir, aiWithToolGuide(nodeBase, ts, true)+sys, input+wts.othersNote(n.ID), handoff)
 			res, err := aiCLIRun(ctx, clistep.Spec{CLI: n.CLI, Model: n.Model, Write: n.Tools.Preset == agentdag.PresetAll, Dir: dir, OSSandbox: agentOSSandboxOn()}, prompt, emit)
 			return res.Text, res.Usage, err
 		},
@@ -440,7 +447,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 				sys = aiFixStepPrompt + aiStepSystem(n.System)
 			}
 			sys += aiCategoryPrompt(n, cats, escalate != "" && n.Slot != catSlots[escalate] && !n.Plan && n.ID != verifyID && n.ID != fixID)
-			msgs[0] = ai.Message{Role: ai.RoleSystem, Content: ai.SystemPrompt(nodeBase+sys, ts, native)}
+			msgs[0] = ai.Message{Role: ai.RoleSystem, Content: ai.SystemPrompt(aiWithToolGuide(nodeBase, ts, false)+sys, ts, native)}
 			last := msgs[len(msgs)-1]
 			last.Content = input + wts.othersNote(n.ID)
 			msgs[len(msgs)-1] = last

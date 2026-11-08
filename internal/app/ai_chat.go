@@ -70,7 +70,7 @@ func waitAIChat(ch chan tea.Msg) tea.Cmd {
 	}
 }
 
-const aiChatSystemPrompt = "You are termocode's coding assistant, running inside a terminal IDE built on Neovim. Be concise and concrete.\n" +
+const aiChatSystemPrompt = "Be concise and concrete.\n" +
 	"When the user asks you to change the OPEN FILE, reply with the COMPLETE updated file in ONE fenced code block " +
 	"(real code, not json) — the user reviews it in a side-by-side diff and applies it with one click. " +
 	"For questions, answer in prose (short code snippets are fine). " +
@@ -350,7 +350,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		tools, autoRules = append(tools, rt...), aiRulesAutoPrompt(rules)
 	}
 	native := slot.p.SupportsTools()
-	base := m.aiChatBasePrompt(root, rules, memBlock) + autoRules + aiStepSystem(step.System)
+	base := aiWithToolGuide(m.aiChatBasePrompt(root, rules, memBlock), tools, false) + autoRules + aiStepSystem(step.System)
 	history := m.aiChatHistory(ai.SystemPrompt(base, tools, native))
 	mcpTools := m.aiMCPTurn(gen, ch) // MCP servers' tools, built on the goroutine
 	// "@server:uri" words: MCP resources read on the goroutine (MCPX-12).
@@ -465,7 +465,7 @@ func (s *aiState) attachChips() []ai.StoredAttach {
 // the user trusts them); memory is the turn's lessons block (OM-2), after
 // the rules.
 func (m *Model) aiChatBasePrompt(root string, rules ai.Rules, memory string) string {
-	base := aiChatSystemPrompt + "\nWorkspace root: " + root + "\n" + ai.EnvBlock(aiEnvInfo()) + m.aiServicesPromptLine(root) + m.aiContainersPromptLine() + aiDBPromptLine(root) + m.aiWorkflowsPromptLine(root)
+	base := aiIdentityPrompt(root) + aiChatSystemPrompt + "\nWorkspace root: " + root + "\n" + ai.EnvBlock(aiEnvInfo()) + m.aiServicesPromptLine(root) + m.aiContainersPromptLine() + aiDBPromptLine(root) + m.aiWorkflowsPromptLine(root)
 	if p := m.editor.Path(); p != "" {
 		base += "\nThe open file is: " + p
 	}
