@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -48,18 +49,42 @@ func webDBTunnelKey(c dbclient.Conn) string {
 }
 
 // dial is the dialer of c's open tunnel, opened first when there is none.
-// A connection of a container on the server finds the container's IP by
-// its name again on every read, as the laptop does on every connect (a
-// recreated container has a new one).
+// A connection of a container on the server asks for the container's IP
+// by its name once per tunnel (docker inspect is a new SSH session and
+// the docker CLI starting, often a second); a dial that fails later asks
+// again once and dials the new IP (a recreated container has a new one).
 func (n *webDBNet) dial(ctx context.Context, c dbclient.Conn, root string, sec dbSSHSecrets) (dbclient.DialFunc, error) {
 	t, err := n.tunnel(ctx, c, root, sec)
 	if err != nil {
 		return nil, err
 	}
-	if err := dbResolveContainer(ctx, c, t); err != nil {
-		return nil, err
+	if c.Container == nil {
+		return t.DialContext, nil
 	}
-	return t.DialContext, nil
+	if !t.HostMapped(webDBContainerHost(c)) {
+		if err := dbResolveContainer(ctx, c, t); err != nil {
+			return nil, err
+		}
+	}
+	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+		nc, err := t.DialContext(ctx, network, addr)
+		if err == nil || ctx.Err() != nil || !t.Alive() {
+			return nc, err
+		}
+		if rerr := dbResolveContainer(ctx, c, t); rerr != nil {
+			return nil, rerr // the container is gone or stopped: say so
+		}
+		return t.DialContext(ctx, network, addr)
+	}, nil
+}
+
+// webDBContainerHost is the name dials to c's container use (as
+// dbResolveContainer maps it).
+func webDBContainerHost(c dbclient.Conn) string {
+	if c.Host != "" {
+		return c.Host
+	}
+	return c.Container.Name
 }
 
 // tunnel is c's open tunnel, opened first when there is none.

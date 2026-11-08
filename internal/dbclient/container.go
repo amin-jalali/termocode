@@ -144,6 +144,14 @@ func (t *Tunnel) MapHost(host, addr string) {
 	t.hosts[host] = addr
 }
 
+// HostMapped reports a host MapHost pointed somewhere on this tunnel.
+func (t *Tunnel) HostMapped(host string) bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	_, ok := t.hosts[host]
+	return ok
+}
+
 // mapped is addr with its host mapped by MapHost.
 func (t *Tunnel) mapped(addr string) string {
 	host, port, err := net.SplitHostPort(addr)
