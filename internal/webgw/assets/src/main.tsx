@@ -146,6 +146,15 @@ effect(() => {
   html.dir = d === "auto" ? (lang.value === "fa" || RTL_LANGS.test(navigator.language) ? "rtl" : "ltr") : d;
 });
 
+// A sign-in that cannot go on is marked for the phone app, which then
+// shows its own Pair again screen: the page has no way back to it.
+effect(() => {
+  const p = phase.value;
+  const mark = p === "signin" && bookmarkRemoved() ? "removed" : p === "connect" && connect.value === "nolink" ? "none" : "";
+  if (mark) html.dataset.signin = mark;
+  else delete html.dataset.signin;
+});
+
 effect(() => {
   html.dataset.link = link.state.value;
   if (link.finalCode.value === 4001 || link.finalCode.value === 4002) forgetToken();
