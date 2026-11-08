@@ -725,5 +725,6 @@ func (m *Model) databaseUpdateConn(id string, edit func(*dbclient.Conn)) error {
 // TLS) without touching its open session.
 func (m *Model) databaseTestConnection(id string) tea.Cmd { return m.databaseOpen(id, true) }
 
-// dbTestTimeout bounds one test (SSH handshake + database login).
-const dbTestTimeout = 15 * time.Second
+// dbTestTimeout bounds one connect or test (SSH handshake + database
+// login; tests shorten it).
+var dbTestTimeout = 15 * time.Second
