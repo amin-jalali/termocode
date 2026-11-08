@@ -12,10 +12,7 @@ import (
 // Bundle budgets of the page (web design 4.1), gzipped: a phone on a weak
 // link loads the whole UI in one short burst.
 const (
-	// budgetJS: raised from 120 KiB when the phone got the hosts tree
-	// (Containers and Databases) and the questions a database read asks
-	// (trust the SSH host, a password), as the desktop has them.
-	budgetJS    = 124 << 10
+	budgetJS    = 120 << 10
 	budgetCSS   = 20 << 10
 	budgetHTML  = 4 << 10
 	budgetTotal = 150 << 10

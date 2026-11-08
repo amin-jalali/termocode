@@ -14,3 +14,7 @@ export { ReviewView } from "./views/phone/Review";
 export { BoardView } from "./views/board/main";
 // The phone's projects list and project page (MOBUX-6/7, once phone.js).
 export { ProjectPage, ProjectsPage } from "./views/phone/ProjectPage";
+// More › Containers and Databases with their hosts tree and a database
+// read's questions (app.js had them before).
+export { ContainersView } from "./views/more/ContainersView";
+export { DBView } from "./views/more/DBView";

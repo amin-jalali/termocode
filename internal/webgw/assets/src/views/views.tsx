@@ -1,12 +1,12 @@
 // The five views of the shell. Their data views arrive with their own
 // tasks (chat WEB-14, tree WEB-16, files WEB-18, terminal WEB-20, git
 // WEB-23); until then each shows its loading and empty states.
-import { h } from "preact";
+import { Fragment, h, type ComponentChildren } from "preact";
 import { useEffect } from "preact/hooks";
 import { prefs, setPref, type Direction, type Language, type Motion, type Theme } from "../lib/prefs";
 import { go, route } from "../lib/router";
 import { layout } from "../lib/layout";
-import { t } from "../strings";
+import { t, type StringKey } from "../strings";
 import { NotifyField } from "../ui/NotifyField";
 import { BookmarkField } from "../ui/BookmarkField";
 import { Segmented } from "../ui/Segmented";
@@ -21,8 +21,6 @@ import { SettingsView } from "./more/SettingsView";
 import { AgentsView } from "./AgentsView";
 import { ItermocView } from "./ItermocView";
 import { MCPView } from "./more/MCPView";
-import { ContainersView } from "./more/ContainersView";
-import { DBView } from "./more/DBView";
 import { SearchView } from "./more/SearchView";
 import { TasksView } from "./more/TasksView";
 import { NewTaskView } from "./more/NewTaskView";
@@ -91,16 +89,17 @@ function PhoneProject({ id }: { id: string }) {
   );
 }
 
-/** ReviewLazy is #/more/review (MOB-14): the phone views' review, loaded
- * from home.js on first use. */
-function ReviewLazy() {
+/** PhoneLazy is a phone view from home.js, loaded on first use: the
+ * review (#/more/review, MOB-14), Containers and Databases (with their
+ * hosts tree and a database read's questions). */
+function PhoneLazy({ tkey, name, draw }: { tkey: StringKey; name: string; draw: (m: NonNullable<typeof phone.value>) => ComponentChildren }) {
   const m = phone.value;
   useEffect(() => {
     if (!m) loadHome().catch(() => undefined);
   }, [m]);
-  if (m) return <m.ReviewView />;
+  if (m) return <>{draw(m)}</>;
   return (
-    <SubView title={t("pill.review")} name="review">
+    <SubView title={t(tkey)} name={name}>
       {phoneFailed.value ? (
         <button type="button" class="btn btn-neutral" onClick={() => loadHome().catch(() => undefined)}>
           {t("retry")}
@@ -130,14 +129,14 @@ export function MoreView() {
   if (sub === "mcp") return <MCPView />;
   if (sub === "agents") return <AgentsView />;
   if (sub === "itermoc") return <ItermocView />;
-  if (sub === "containers") return <ContainersView />;
-  if (sub === "db" || sub.startsWith("db/")) return <DBView rest={sub} />;
+  if (sub === "containers") return <PhoneLazy tkey="more.containers" name="containers" draw={(m) => <m.ContainersView />} />;
+  if (sub === "db" || sub.startsWith("db/")) return <PhoneLazy tkey="more.db" name="db" draw={(m) => <m.DBView rest={sub} />} />;
   if (sub === "testing") return <TestingView />;
   if (sub === "debug") return <DebugView />;
   if (sub === "services") return <ServicesView />;
   if (sub === "kube") return <KubeView />;
   if (sub === "phone" && layout.value !== "desktop") return <PhoneHost />;
-  if (sub === "review") return <ReviewLazy />;
+  if (sub === "review") return <PhoneLazy tkey="pill.review" name="review" draw={(m) => <m.ReviewView />} />;
   const p = prefs.value;
   // Built on each draw, so a language change shows at once.
   const themes = [
