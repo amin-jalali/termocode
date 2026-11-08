@@ -147,3 +147,24 @@ func TestFormFixMouse(t *testing.T) {
 	}
 	t.Fatal("no Fix target")
 }
+
+// A new step shows Tools: all. Switched to a sign-in AI (Codex) and saved
+// with all left as it is, it must really get all: a CLI step without a
+// preset only reads, so the saved step carries "all" (the owner's GPT
+// profile said all and ran in the read-only sandbox).
+func TestFormCLIStepKeepsToolsAll(t *testing.T) {
+	m := New("gpt", ai.Profile{Steps: []ai.ProfileStep{{ID: "s1", Title: "GPT"}}}, cliCfg(CLIReady, CLIReady))
+	if got := toolPresets[m.steps[0].tools]; got != agentdag.PresetAll {
+		t.Fatalf("a new step shows tools %q, want all", got)
+	}
+	m.steps[0].ch = choice{cli: ai.CLICodex, model: "gpt-6-sol"}
+	st := m.Profile().Steps[0]
+	if got := ai.StepTools(st); got != agentdag.PresetAll {
+		t.Fatalf("saved Codex step gets tools %q (preset %q), want all", got, st.Tools.Preset)
+	}
+	// A model step with all keeps the short form (no preset written).
+	m.steps[0].ch = choice{slot: "main"}
+	if st := m.Profile().Steps[0]; st.Tools.Preset != "" || ai.StepTools(st) != agentdag.PresetAll {
+		t.Errorf("model step %+v", st.Tools)
+	}
+}
