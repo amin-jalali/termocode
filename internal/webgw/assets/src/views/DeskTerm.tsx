@@ -76,11 +76,36 @@ export function newDesk(split: boolean): void {
   }, failed);
 }
 
+/** waiting holds, per shell whose term.send waits for its answer, the
+ * keys typed since. A key goes out at once; the keys typed meanwhile go
+ * together when the answer comes: one request per round trip, not one
+ * per key, so a fast typist never waits behind the request rate. (The
+ * link keeps requests in order, so keys that would make one too big go
+ * at once.) */
+const waiting = new Map<number, string>();
+
 function send(buf: number, text: string): void {
   if (!live.peek() || !text) return;
-  link.request("term.send", { buf, text }).catch((e: unknown) => {
-    if (!(e instanceof OfflineError)) toast("warn", errText(e));
-  });
+  const q = waiting.get(buf);
+  // At most 3 UTF-8 bytes a code unit: 20 000 of them fit one term.send.
+  if (q == null) go(buf, text);
+  else if ((q + text).length < 2e4) waiting.set(buf, q + text);
+  else {
+    if (q) go(buf, q);
+    go(buf, text);
+  }
+}
+
+function go(buf: number, text: string): void {
+  waiting.set(buf, "");
+  link
+    .request("term.send", { buf, text })
+    .catch(failed)
+    .then(() => {
+      const q = waiting.get(buf);
+      waiting.delete(buf);
+      if (q) go(buf, q);
+    });
 }
 
 function copy(text: string): void {
