@@ -30,6 +30,9 @@ type dbRuntimeTarget struct {
 	compose  string // compose service name ("" for a plain container)
 	cont     containers.Container
 	isCont   bool
+	context  string // the engine context of the container ("" = local)
+	endpoint string // where that context points (ssh://user@host…)
+	engine   string // docker or podman
 	running  bool
 	starting bool
 }
@@ -139,7 +142,9 @@ func dbTargetFromContainer(st *servicesState, c containers.Container) (dbRuntime
 		name = strings.TrimPrefix(c.Names[0], "/")
 	}
 	t := dbRuntimeTarget{driver: driver, name: sanitizeDBText(name), port: port, cont: c, isCont: true,
-		running: !dbContainerStopped(c), starting: st.busy[containerBusyPrefix+c.ID] == services.Starting}
+		running: !dbContainerStopped(c), starting: st.busy[containerBusyPrefix+c.ID] == services.Starting,
+		context: st.activeContext(), engine: st.containerEngine.Kind}
+	t.endpoint = st.contextEndpoint(t.context)
 	// A container of a compose project: read the user and database names
 	// from its compose service when this workspace declares it.
 	if svcName := c.Labels["com.docker.compose.service"]; svcName != "" && (st.project == "" || c.Project == "" || c.Project == st.project) {
@@ -314,6 +319,10 @@ func (m *Model) databaseOpenTarget(t dbRuntimeTarget) tea.Cmd {
 
 func (m *Model) databaseOpenTargetRevealed(t dbRuntimeTarget) tea.Cmd {
 	s := m.databases
+	if c, ok := dbRemoteConn(t); ok {
+		// A container on an ssh:// host (db_remote.go).
+		return m.databaseOpenRemote(t, c, "")
+	}
 	if saved, ok := s.databaseSavedMatch(t); ok {
 		s.databaseSelectPath(saved.ID)
 		m.databasesSaveSession()

@@ -5,8 +5,10 @@ import (
 	"errors"
 	"net"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/charmbracelet/x/ansi"
@@ -120,7 +122,7 @@ func TestDBRemoteContainerFindsItsIPAgainOnConnect(t *testing.T) {
 		}
 		_ = conn.Close()
 		dialled = append(dialled, addr)
-		return &fakeDBSession{}, nil
+		return &pingSession{}, nil
 	}
 	t.Cleanup(func() { dbSQLSessionFactory = old })
 
@@ -163,8 +165,11 @@ func TestDBDiscoverListsDatabaseContainersOfSSHContexts(t *testing.T) {
 			{Name: "rentcar", DockerEndpoint: "ssh://ops@rentcar.example.com:2222"}, {Name: "broken", DockerEndpoint: "ssh://me@down.example.com"}}, nil
 	}
 	var asked []string
+	var mu sync.Mutex // the hosts are asked at the same time
 	dbListContextContainers = func(_ context.Context, _ string, name string) ([]containers.Container, error) {
+		mu.Lock()
 		asked = append(asked, name)
+		mu.Unlock()
 		switch name {
 		case "baaytona":
 			return []containers.Container{baaytonaDB, baaytonaRedis, baaytonaApp}, nil
@@ -186,7 +191,8 @@ func TestDBDiscoverListsDatabaseContainersOfSSHContexts(t *testing.T) {
 		t.Fatal("no discovery result")
 	}
 	_ = m.onDBDiscover(msg)
-	if strings.Join(asked, ",") != "baaytona,broken,rentcar" && len(asked) != 3 {
+	sort.Strings(asked)
+	if strings.Join(asked, ",") != "baaytona,broken,rentcar" {
 		t.Fatalf("asked contexts %q, want the three ssh:// ones (not default)", asked)
 	}
 	var found []string
@@ -220,3 +226,8 @@ func TestDBDiscoverListsDatabaseContainersOfSSHContexts(t *testing.T) {
 		t.Fatalf("rentcar: %+v ssh %+v", c, c.SSH)
 	}
 }
+
+// pingSession is a fake session that answers its ping.
+type pingSession struct{ fakeDBSession }
+
+func (*pingSession) Ping(context.Context) error { return nil }

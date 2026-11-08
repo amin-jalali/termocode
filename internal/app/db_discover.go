@@ -46,22 +46,19 @@ var dbListContainers = func(ctx context.Context, dir string) ([]containers.Conta
 }
 
 // dbListContexts reads the engine's contexts (docker contexts or podman
-// connections); tests replace it.
-var dbListContexts = func(ctx context.Context, dir string) ([]containers.Context, error) {
-	return nil, nil
-}
+// connections); tests replace it (db_remote.go sets the real one).
+var dbListContexts func(ctx context.Context, dir string) ([]containers.Context, error)
 
 // dbListContextContainers reads the containers of one context; tests
-// replace it.
-var dbListContextContainers = func(ctx context.Context, dir, name string) ([]containers.Container, error) {
-	return nil, nil
-}
+// replace it (db_remote.go sets the real one).
+var dbListContextContainers func(ctx context.Context, dir, name string) ([]containers.Container, error)
 
 type dbDiscoverMsg struct {
 	generation uint64
 	containers []containers.Container
 	haveList   bool
 	ports      []int
+	remote     []dbRemoteFound // the ssh:// hosts (db_remote.go)
 }
 
 // databaseDiscover starts one discovery in the background. It returns nil
@@ -75,6 +72,7 @@ func (m *Model) databaseDiscover() tea.Cmd {
 	generation, dir := s.generation, s.root
 	targets := append([]dbProbeTarget(nil), dbProbeTargets...)
 	host, timeout, list := dbProbeHost, dbProbeTimeout, dbListContainers
+	listCtx, listRemote := dbListContexts, dbListContextContainers
 	return func() tea.Msg {
 		msg := dbDiscoverMsg{generation: generation}
 		var wg sync.WaitGroup
@@ -103,6 +101,13 @@ func (m *Model) databaseDiscover() tea.Cmd {
 				msg.containers, msg.haveList = rows, true
 			}
 		})
+		wg.Add(1)
+		crash.Go("the database search", func() {
+			defer wg.Done()
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer cancel()
+			msg.remote = dbDiscoverRemote(ctx, dir, listCtx, listRemote)
+		})
 		wg.Wait()
 		sort.Ints(msg.ports)
 		return msg
@@ -120,8 +125,10 @@ func (m *Model) onDBDiscover(msg dbDiscoverMsg) tea.Cmd {
 		s.discovered = msg.containers
 	}
 	s.discoveredPorts = msg.ports
+	s.discoveredRemote = msg.remote
 	s.dropDiscoverySuggestions()
 	s.addRuntimeSuggestions(m.services)
+	s.addRemoteSuggestions()
 	s.fixCursor()
 	s.touch()
 	return nil

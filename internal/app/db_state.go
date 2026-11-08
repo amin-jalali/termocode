@@ -155,9 +155,11 @@ type dbState struct {
 	discoverDone        bool
 	discovered          []containers.Container // the container list it read
 	discoveredPorts     []int                  // local ports that answered
-	uniques             map[string][][]string  // table path -> unique index columns (JOIN hints, DBX-30)
-	docGen              uint64                 // the open quick doc card; late answers for older ones drop
-	docTitle            string                 // the tree doc card the first rows join
+	discoveredRemote    []dbRemoteFound        // the database containers of the ssh:// hosts (db_remote.go)
+	remoteTargets       map[string]dbRuntimeTarget
+	uniques             map[string][][]string // table path -> unique index columns (JOIN hints, DBX-30)
+	docGen              uint64                // the open quick doc card; late answers for older ones drop
+	docTitle            string                // the tree doc card the first rows join
 	docBody             []string
 
 	// Several sessions per connection (db_sessions_multi.go, DBX-40).
@@ -744,9 +746,11 @@ func dbOpenBounded(timeout time.Duration, c dbclient.Conn, root, password string
 		err  error
 	}
 	done := make(chan opened, 1)
-	crash.Go("the database connect", func() {
+	crash.GoWith("the database connect", func() {
 		sess, tun, err := dbOpenSession(ctx, c, root, password, sec)
 		done <- opened{sess, tun, err}
+	}, func() {
+		done <- opened{err: errors.New("the connect stopped on an internal error (a crash report was saved)")}
 	})
 	give := time.NewTimer(timeout + dbConnectGrace)
 	defer give.Stop()
@@ -808,6 +812,11 @@ func dbOpenSession(ctx context.Context, c dbclient.Conn, root, password string, 
 		var err error
 		tun, err = dbOpenTunnel(ctx, c, sec)
 		if err != nil {
+			return nil, nil, err
+		}
+		// A container on the server: its IP, found again by name.
+		if err := dbResolveContainer(ctx, c, tun); err != nil {
+			_ = tun.Close()
 			return nil, nil, err
 		}
 		c.Dial = tun.DialContext

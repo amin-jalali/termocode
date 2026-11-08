@@ -30,8 +30,10 @@ func discoverModel(t *testing.T, root string) *Model {
 func fakeContainers(t *testing.T, rows ...containers.Container) {
 	t.Helper()
 	old := dbListContainers
+	oldCtx := dbListContexts
 	dbListContainers = func(context.Context, string) ([]containers.Container, error) { return rows, nil }
-	t.Cleanup(func() { dbListContainers = old })
+	dbListContexts = func(context.Context, string) ([]containers.Context, error) { return nil, nil } // no ssh:// hosts
+	t.Cleanup(func() { dbListContainers, dbListContexts = old, oldCtx })
 }
 
 func runDiscover(t *testing.T, m *Model) {

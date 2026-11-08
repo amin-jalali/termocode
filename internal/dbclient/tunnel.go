@@ -271,7 +271,8 @@ type Tunnel struct {
 	once    sync.Once
 	closing atomic.Bool
 	mu      sync.Mutex
-	cause   error // why the chain broke (nil: closed, or a single hop)
+	cause   error             // why the chain broke (nil: closed, or a single hop)
+	hosts   map[string]string // MapHost: a container name to its IP
 }
 
 // Target is the resolved endpoint (for the row and the footer).
@@ -385,7 +386,7 @@ func (t *Tunnel) DialContext(ctx context.Context, network, addr string) (net.Con
 	if network != "tcp" && network != "tcp4" && network != "tcp6" {
 		return nil, fmt.Errorf("the SSH tunnel carries TCP only, not %s", network)
 	}
-	c, err := t.client.DialContext(ctx, "tcp", addr)
+	c, err := t.client.DialContext(ctx, "tcp", t.mapped(addr))
 	if err != nil {
 		if !t.Alive() {
 			return nil, t.closedErr()

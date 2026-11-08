@@ -1498,6 +1498,9 @@ func (m *Model) databaseOpenConfig(path string) tea.Cmd {
 func (m *Model) databaseAddSuggestion(path string) tea.Cmd {
 	s := m.databases
 	n := s.nodes[path]
+	if strings.HasPrefix(path, "suggest-remote-") {
+		return m.databaseAddRemoteSuggestion(path) // db_remote.go
+	}
 	if strings.HasPrefix(path, "suggest-env-") {
 		raw, ok := databaseEnvValue(filepath.Join(s.root, ".env"), n.name)
 		if !ok {
