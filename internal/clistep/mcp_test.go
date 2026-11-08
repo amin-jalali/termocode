@@ -35,6 +35,28 @@ func TestArgsMCP(t *testing.T) {
 	}
 }
 
+// A step's reasoning level goes to Codex as model_reasoning_effort (max
+// is Codex's high); an unknown level and Claude Code get nothing.
+func TestArgsReasoning(t *testing.T) {
+	base := []string{"exec", "--json", "--color", "never", "--sandbox", "read-only"}
+	for level, want := range map[string][]string{
+		"low":  {"-c", `model_reasoning_effort="low"`},
+		"high": {"-c", `model_reasoning_effort="high"`},
+		"max":  {"-c", `model_reasoning_effort="high"`},
+		"huge": nil,
+		"":     nil,
+	} {
+		got := Args(Spec{CLI: ai.CLICodex, Dir: "/w", Reasoning: level})
+		w := append(append(append([]string(nil), base...), want...), "-C", "/w", "-")
+		if !reflect.DeepEqual(got, w) {
+			t.Errorf("%q:\n got %q\nwant %q", level, got, w)
+		}
+	}
+	if got := Args(Spec{CLI: ai.CLIClaude, Reasoning: "low"}); len(got) != 6 {
+		t.Errorf("claude: %q", got)
+	}
+}
+
 func TestRunCodexOwnMCPCallsNotTwice(t *testing.T) {
 	root := t.TempDir()
 	f := newFake(t, stream(t,
