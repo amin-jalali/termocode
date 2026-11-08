@@ -201,7 +201,7 @@ func (m *Model) webDBTables(call *webCall) tea.Cmd {
 		}
 		defer s.Close()
 		schema := webDBSchema(w.c)
-		res, err := s.Introspect(ctx, dbclient.IntrospectionRequest{Schema: schema})
+		res, err := s.Introspect(ctx, dbclient.IntrospectionRequest{Schema: schema, Lean: true})
 		if err != nil {
 			w.fail(call, err)
 			return nil
@@ -280,7 +280,9 @@ func (m *Model) webDBRows(call *webCall) tea.Cmd {
 		}
 		if !view {
 			// The key that finds a row: the page edits rows only with it.
-			if ir, err := s.Introspect(ctx, t.request()); err == nil {
+			req := t.request()
+			req.Lean = true // the key only
+			if ir, err := s.Introspect(ctx, req); err == nil {
 				for _, k := range webDBKeyOf(ir) {
 					out.Key = append(out.Key, webName(k))
 				}

@@ -27,6 +27,11 @@ type IntrospectionRequest struct {
 	Schema   string
 	Object   string
 	Kind     string
+	// Lean asks only for what a list needs, each catalog query being a
+	// round trip or more: a schema's objects (no routines, sequences,
+	// triggers …), or an object's key (its primary key, else its indexes).
+	// A session may answer more.
+	Lean bool
 }
 
 type IntrospectionResult struct {

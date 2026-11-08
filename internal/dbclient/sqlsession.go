@@ -846,6 +846,9 @@ func (s *SQLSession) Introspect(ctx context.Context, req IntrospectionRequest) (
 		if err := s.readObjects(ctx, queries["objects"], &result.Objects, req.Schema); err != nil {
 			return result, err
 		}
+		if req.Lean {
+			return result, nil
+		}
 		// TimescaleDB: a database without the extension still shows its tables.
 		var hyper []string
 		if queries["hypertables"] != "" && s.readCatalog(ctx, queries["hypertables"], &hyper, req.Schema) == nil {
@@ -939,6 +942,9 @@ func (s *SQLSession) introspectObject(ctx context.Context, req IntrospectionRequ
 		if q == "" {
 			continue
 		}
+		if req.Lean && (key == "columns" || key == "foreign_keys" || key == "indexes" && len(out.Keys) > 0) {
+			continue // the key only: the indexes when there is no primary key
+		}
 		args := []any{req.Schema, req.Object}
 		r := s.Run(ctx, q, RunOptions{MaxRows: 10000, Args: args})
 		if r.Err != nil {
@@ -971,6 +977,9 @@ func (s *SQLSession) introspectObject(ctx context.Context, req IntrospectionRequ
 				}
 			}
 		}
+	}
+	if req.Lean {
+		return out, nil
 	}
 	if q := queries["partitions"]; q != "" {
 		var parts []string
