@@ -316,3 +316,34 @@ func TestWebDBAddContainerThenTrustPasswordTables(t *testing.T) {
 		t.Errorf("the password is in the connections file:\n%s", b)
 	}
 }
+
+// Spec: the Containers view's CONTEXTS section is the hosts tree:
+// containers.host gives each context "where" (user@host without the
+// scheme, ssh marked, or this machine) and lists the hosts, so a context
+// row opens its containers with containers.server at once.
+func TestWebContainersHostContextsAreTheHostsTree(t *testing.T) {
+	m, c, _ := webServersHub(t)
+	var h struct {
+		Contexts []struct {
+			Name  string `json:"name"`
+			Where string `json:"where"`
+			Local bool   `json:"local"`
+			SSH   bool   `json:"ssh"`
+		} `json:"contexts"`
+	}
+	webTestData(t, webTestCallBg(t, m, c, webproto.OpContainersHost, `{}`), &h)
+	if len(h.Contexts) != 3 {
+		t.Fatalf("contexts %+v", h.Contexts)
+	}
+	if x := h.Contexts[0]; x.Name != "default" || !x.Local || x.Where != "" || x.SSH {
+		t.Errorf("default %+v", x)
+	}
+	if x := h.Contexts[1]; x.Name != "baaytona" || x.Where != "deploy@65.109.212.14" || !x.SSH || x.Local {
+		t.Errorf("baaytona %+v", x)
+	}
+	var hc webTestHostCtrs
+	webTestData(t, webTestCallBg(t, m, c, "containers.server", `{"name":"baaytona"}`), &hc)
+	if len(hc.Containers) != 2 {
+		t.Fatalf("baaytona %+v", hc)
+	}
+}
