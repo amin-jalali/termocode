@@ -40,14 +40,15 @@ export function Button({ kind = "neutral", onClick, children, needsLink, disable
       aria-disabled={off ? "true" : undefined}
       aria-label={label}
       aria-pressed={pressed === undefined ? undefined : pressed ? "true" : "false"}
-      title={title}
+      title={offline && iconOnly ? t("offline.input") : title}
       autoFocus={autoFocus}
       onClick={() => {
         if (!off && onClick) onClick();
       }}
     >
-      {icon && !offline && icon}
-      {offline ? t("offline.input") : icon ? <span class="btn-text">{children}</span> : children}
+      {/* An icon button keeps its icon offline: the word would not fit. */}
+      {icon && (!offline || iconOnly) && icon}
+      {offline ? iconOnly ? <span class="btn-text">{t("offline.input")}</span> : t("offline.input") : icon ? <span class="btn-text">{children}</span> : children}
     </button>
   );
 }
