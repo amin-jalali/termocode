@@ -503,12 +503,22 @@ In simple words:
   and has the focus. `Enter` and `Esc` never do the risky thing, and
   the risky button works only after a short moment on screen. The page
   never offers "Always allow".
-- **Big things ask first, in the page.** Discarding changes, closing a
-  terminal, deleting a file, replacing a file with an upload, push,
-  pull, stash, switching branch, stopping or removing a container, a
-  command on a server and any SQL that may change data ask first. The
-  page shows a card with the exact action (the files, the command, the
-  SQL), **Cancel** first. Only the device that asked can confirm it.
+- **The page asks where the laptop asks.** Discarding changes, closing
+  a terminal, deleting a file, replacing a file with an upload,
+  stopping or removing a container, a command on a server and any SQL
+  that may change data ask first. The page shows a card with the exact
+  action (the files, the command, the SQL), **Cancel** first. Only the
+  device that asked can confirm it. What the laptop does without a
+  question runs at once from the page too: push, pull, stash, switching
+  a branch or a tag, using a model or a profile, opening a shell or a
+  host terminal.
+- **The laptop's next question comes to the page.** When your action
+  leads to one more question on the laptop (Sleep's **Keep running**
+  card, the steps of a worktree **Archive** or **Delete**, a service's
+  first run of its command, a merge that hits your changes), the same
+  question shows in the page. Your yes there presses its main button;
+  **Cancel** its safe one. The page never offers a trust button or
+  "Always". A typed name and passwords stay on the laptop.
   You do not need the laptop: you paired this device, so it can do what
   you can do at the laptop. The laptop shows a short notice of what was
   done, and the audit log keeps who did it, from where, and that it was
