@@ -137,3 +137,22 @@ func aiLimitNote(ev agentrun.Event) string {
 	}
 	return n
 }
+
+// aiCLIReasoning is the reasoning level of run's CLI steps: for a
+// one-step chat profile (no plan, no loop) low, so a short question
+// answers fast; the chat's chosen level replaces it, and a "think" in
+// the message raises it. A pipeline's steps keep the CLI's default
+// unless the chat's level is chosen or the message says think.
+func (s *aiState) aiCLIReasoning(run agentdag.Run, planned bool, think string) string {
+	level := ""
+	if len(run.Nodes) == 1 && run.Loop == nil && !planned {
+		level = ai.ReasoningLow
+	}
+	if chat, chosen := s.chatReasoning(); chosen {
+		level = chat
+	}
+	if think == "" {
+		return level
+	}
+	return ai.MaxReasoning(level, think)
+}

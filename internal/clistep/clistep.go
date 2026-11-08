@@ -65,6 +65,20 @@ type Spec struct {
 	// own termocode tools (databases, containers, files, terminal, …)
 	// behind termocode's gate. It goes on the command line only.
 	MCP *MCPServer
+	// Reasoning is the step's reasoning level (ai.ReasoningLow …; "":
+	// the CLI's own). Codex gets it as model_reasoning_effort.
+	Reasoning string
+}
+
+// codexEffort is Codex's model_reasoning_effort for a level ("": none).
+func codexEffort(level string) string {
+	switch level {
+	case ai.ReasoningLow, ai.ReasoningMedium, ai.ReasoningHigh:
+		return level
+	case ai.ReasoningMax:
+		return ai.ReasoningHigh
+	}
+	return ""
 }
 
 // MCPServer is an MCP server the CLI starts for the run (a stdio
@@ -165,6 +179,9 @@ func Args(s Spec) []string {
 			out = append(out, "-m", s.Model)
 		}
 		out = append(out, "--sandbox", sandbox)
+		if e := codexEffort(s.Reasoning); e != "" {
+			out = append(out, "-c", "model_reasoning_effort="+jsonText(e))
+		}
 		out = append(out, mcpArgs(s)...)
 		return append(out, "-C", s.Dir, "-")
 	}

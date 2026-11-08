@@ -327,6 +327,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 	}
 	pricing := ai.NewPricing(s.settings.Prices)
 	reasoning := s.reasoningFunc(think)                        // OMX-5
+	cliReasoning := s.aiCLIReasoning(run, planned, think)      // a one-step chat answers fast
 	windows := ai.NewContextWindows(s.settings.ContextWindows) // OMX-25
 	windowOf := func(model string) int { w, _ := windows.Lookup(model); return w }
 	fallbacks := map[string][]ai.Fallback{} // OMX-4: resolved now (nodes run on their own goroutines)
@@ -408,7 +409,8 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 				wt, _ := wts.get(n.ID)
 				nodeTools, nodeBase = wtTools, aiWorktreePrompt(base, root, wt)
 			}
-			spec := clistep.Spec{CLI: n.CLI, Model: n.Model, Write: n.Tools.Preset == agentdag.PresetAll, Dir: dir, OSSandbox: agentOSSandboxOn()}
+			spec := clistep.Spec{CLI: n.CLI, Model: n.Model, Write: n.Tools.Preset == agentdag.PresetAll, Dir: dir, OSSandbox: agentOSSandboxOn(),
+				Reasoning: cliReasoning}
 			// The step's termocode tools, behind a model step's gate, on
 			// its own MCP server (none: no server).
 			var served []ai.Tool
