@@ -107,10 +107,12 @@ func (m *Model) webGitStashAct(call *webCall) *webAsk {
 		ask.title, ask.action = "Apply the stash?", "Apply"
 		ask.body = "Apply " + name + " to the working files? The entry stays in the stash."
 		run, running, fail, done = func() error { return repo.Apply(ref) }, "Applying the stash…", "Stash apply failed", "Applied "+ref
+		ask.noAsk = true // the TUI applies without a question
 	case webproto.StashPop:
 		ask.title, ask.action = "Pop the stash?", "Pop"
 		ask.body = "Apply " + name + " to the working files, then drop it from the stash?"
 		run, running, fail, done = func() error { return repo.Pop(ref) }, "Popping the stash…", "Pop failed", "Popped "+ref
+		ask.noAsk = true // the TUI pops without a question
 	case webproto.StashDrop:
 		ask.title, ask.action = "Drop the stash?", "Drop"
 		ask.body = "Delete " + name + " from the stash? Its commit stays in git for a while, so it can still be brought back."

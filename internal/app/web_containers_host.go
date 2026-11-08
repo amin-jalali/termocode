@@ -756,9 +756,11 @@ func (m *Model) webContainersImage(call *webCall) *webAsk {
 			return nil
 		}
 		cmd := h.e.PullCommand(a.Ref)
-		return webCtrAsk("pull "+a.Ref, "Pull image?", "Pull", "Download "+a.Ref+" from its registry in a laptop terminal?", cmd.Argv, func(m *Model) tea.Cmd {
+		ask := webCtrAsk("pull "+a.Ref, "Pull image?", "Pull", "Download "+a.Ref+" from its registry in a laptop terminal?", cmd.Argv, func(m *Model) tea.Cmd {
 			return m.webCtrTermRun(cmd, containerTabPrefix+"pull:"+a.Ref, "Cannot pull image")
 		})
+		ask.noAsk = true // the TUI pulls without a question
+		return ask
 	}
 	seen, ok := m.webHostSeen(call)
 	if !ok {

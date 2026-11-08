@@ -214,6 +214,8 @@ func webAuditBytes(args any) int {
 func (h *webHub) webAuditDecided(a *webAsk, choice, by string) {
 	why := "confirmed_laptop"
 	switch {
+	case a.asker != nil && choice == webproto.ChoiceConfirm && webAskDirect(a):
+		why = "ran_page" // the TUI asks nothing for it: it ran from the page
 	case a.asker != nil && choice == webproto.ChoiceConfirm:
 		why = "confirmed_page" // the page that asked confirmed it
 	case a.asker != nil:

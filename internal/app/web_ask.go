@@ -73,6 +73,9 @@ type webAsk struct {
 	// laptop card. id is then its id.
 	asker *webConn
 	id    string
+	// noAsk: the TUI does this without a question, so the page runs it at
+	// once (with web_approve_on_laptop on it is still a laptop card).
+	noAsk bool
 }
 
 // webAskState is the line of laptop cards (Update only).
@@ -81,6 +84,9 @@ type webAskState struct {
 	shown *webAsk            // the one whose dialog is open on the laptop
 	here  map[string]*webAsk // the pages' own questions by id (the page approves)
 	n     int                // the last page question's number
+	// direct: page requests the TUI does without a question; they run
+	// after the request was answered (webAskPump).
+	direct []*webAsk
 }
 
 // askHere: a request on c is confirmed by its own page, not the laptop.
@@ -119,26 +125,42 @@ func (m *Model) webAskQueue(call *webCall, a *webAsk) (string, bool) {
 }
 
 // webAskHereQueue asks the page that sent call to confirm a itself: the
-// ask ev with the card's exact text goes to that page only.
+// ask ev with the card's exact text goes to that page only. What the TUI
+// does without a question is not asked: it runs once the request is
+// answered.
 func (m *Model) webAskHereQueue(call *webCall, a *webAsk) (string, bool) {
-	s := &m.web.asks
 	if call.ctx.Err() != nil { // the page left while the card was built
 		call.fail(webproto.CodeGone, "The connection ended.")
 		return "", false
 	}
-	if len(s.here) >= webMaxAsks {
-		call.fail(webproto.CodeBusy, "Too many questions wait. Answer one first.")
+	a.op = call.op
+	direct := webAskDirect(a)
+	id, code, msg := m.webAskHereAdd(call.conn, a, !direct)
+	if code != "" {
+		call.fail(code, msg)
 		return "", false
+	}
+	if direct {
+		m.web.asks.direct = append(m.web.asks.direct, a)
+	}
+	return id, true
+}
+
+// webAskHereAdd puts a in c's questions; ask sends c the ask ev. A code
+// says why it could not.
+func (m *Model) webAskHereAdd(c *webConn, a *webAsk, ask bool) (string, webproto.ErrCode, string) {
+	s := &m.web.asks
+	if len(s.here) >= webMaxAsks {
+		return "", webproto.CodeBusy, "Too many questions wait. Answer one first."
 	}
 	s.n++
 	id := fmt.Sprintf("ask-%d", s.n)
 	data, err := webData(webproto.AskCard{ID: id, Title: a.title, Body: a.body, Action: a.action})
 	if err != nil {
-		recordError("[web] " + call.op + ": ask: " + err.Error())
-		call.fail(webproto.CodeInternal, "Something went wrong.")
-		return "", false
+		recordError("[web] " + a.op + ": ask: " + err.Error())
+		return "", webproto.CodeInternal, "Something went wrong."
 	}
-	a.op, a.conn, a.device, a.asker, a.id = call.op, call.conn.id, webName(call.conn.device), call.conn, id
+	a.conn, a.device, a.asker, a.id = c.id, webName(c.device), c, id
 	if a.device == "" {
 		a.device = "web"
 	}
@@ -146,8 +168,10 @@ func (m *Model) webAskHereQueue(call *webCall, a *webAsk) (string, bool) {
 		s.here = map[string]*webAsk{}
 	}
 	s.here[a.id] = a
-	call.conn.send(&webproto.Event{T: webproto.KindEv, Kind: webproto.EventAsk, Data: data})
-	return a.id, true
+	if ask {
+		c.send(&webproto.Event{T: webproto.KindEv, Kind: webproto.EventAsk, Data: data})
+	}
+	return a.id, "", ""
 }
 
 // webAskHereAnswer is cards.answer on a page question: only the page
@@ -203,7 +227,12 @@ func (m *Model) webAskPump(tea.Msg) tea.Cmd {
 		s.shown = nil
 	}
 	m.webAskShow()
-	return nil
+	var cmds []tea.Cmd
+	for _, a := range s.direct { // answered already: run them now
+		cmds = append(cmds, m.webAskDone(a, webproto.ChoiceConfirm, a.device))
+	}
+	s.direct = nil
+	return tea.Batch(cmds...)
 }
 
 // answerWebAsk is the laptop's answer to the open card's dialog; "" (Esc)
@@ -274,8 +303,12 @@ func (m *Model) webAskHereDone(a *webAsk, choice string) tea.Cmd {
 		m.webAuditLine(a.op, a.summary, a.device, "cancelled "+where)
 		return nil
 	}
-	m.webAuditLine(a.op, a.summary, a.device, "confirmed "+where)
+	done, word := "Approved on ", "confirmed "
+	if webAskDirect(a) {
+		done, word = "Done on ", "ran "
+	}
+	m.webAuditLine(a.op, a.summary, a.device, word+where)
 	var t tea.Cmd
-	m.toast, t = m.toast.PushDetail(toast.Info, "Approved on "+a.device, a.title)
+	m.toast, t = m.toast.PushDetail(toast.Info, done+a.device, a.title)
 	return tea.Batch(a.run(m), t)
 }

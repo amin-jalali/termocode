@@ -47,8 +47,9 @@ export function AskLaptop({ label, text, send, onDone, onConfirmed, cls = "ask" 
           } else toast("info", t(o.by === "laptop" ? "wait.cancelled" : "git.cancelled_here"));
           onDone();
         });
-        // The ask ev came first: HereAsks shows the card.
-        setStep(asked.peek().some((a) => a.id === card) ? { s: "here" } : { s: "wait", card, since: Date.now() });
+        // The page approves: HereAsks shows the card (the ask ev came
+        // first), or the TUI asks nothing and it runs.
+        setStep(here || asked.peek().some((a) => a.id === card) ? { s: "here" } : { s: "wait", card, since: Date.now() });
       },
       (e: unknown) => {
         failed(e);
