@@ -21,6 +21,7 @@ func dbOpenView(t *testing.T) (*Page, *HubConn) {
 	p, c := deskLogin(t, nil)
 	Eval[bool](p, `(location.hash = "#/more/db", true)`)
 	reply(t, c, expectOp(t, c, webproto.OpDBConns, `{}`), dbConns())
+	replyLocalHosts(t, c)
 	p.WaitJS(dbxSide + `?.querySelectorAll(".tr[data-conn]").length === 3`)
 	return p, c
 }

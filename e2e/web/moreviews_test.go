@@ -117,6 +117,7 @@ func openContainers(t *testing.T, vp Viewport, meta *webproto.Meta) (*Page, *Hub
 	p.GoTab("more")
 	p.TapJS(`document.querySelector('.more-link[data-sub="containers"]')`)
 	reply(t, c, expectOp(t, c, webproto.OpContainersList, `{}`), ctrList())
+	replyLocalHosts(t, c)
 	p.WaitJS(`document.querySelectorAll(".ctr").length === 2`)
 	return p, c
 }
@@ -201,6 +202,7 @@ func openDB(t *testing.T, vp Viewport, meta *webproto.Meta) (*Page, *HubConn) {
 		{ID: "prod", Driver: "postgres", Database: "app", Env: "production", SQL: true},
 		{ID: "cache", Driver: "redis"},
 	}})
+	replyLocalHosts(t, c)
 	p.WaitJS(`document.querySelectorAll(".db-conn").length === 3`)
 	return p, c
 }

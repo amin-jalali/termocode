@@ -48,6 +48,7 @@ func TestDeskDBParity(t *testing.T) {
 	p, c := deskLogin(t, nil)
 	Eval[bool](p, `(location.hash = "#/more/db", true)`)
 	reply(t, c, expectOp(t, c, webproto.OpDBConns, `{}`), dbxConns())
+	replyLocalHosts(t, c)
 	p.WaitJS(dbxSide + `?.querySelectorAll(".tr[data-conn]").length === 3`)
 	if s := Eval[string](p, dbxSide+`.querySelector('.tr[data-conn="local"] .db-tx')?.textContent ?? ""`); s != "2 not saved" {
 		t.Errorf("open transaction mark %q", s)

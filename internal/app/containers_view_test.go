@@ -70,7 +70,7 @@ func lineWith(lines []string, sub string) string {
 func TestContainersSummaryKeepsProjectCount(t *testing.T) {
 	defer func(m theme.IconMode) { theme.CurrentIconMode = m }(theme.CurrentIconMode)
 	theme.CurrentIconMode = theme.IconModeUnicode
-	lines := svcRender(svcHostState(), 29, 60)
+	lines := svcRender(svcHostState(), 34, 60) // host, project, container: two levels in
 	if got := lines[svcSummaryRow]; !strings.Contains(got, "compose · termocode") || !strings.HasSuffix(strings.TrimRight(got, " "), "3/5 up") {
 		t.Errorf("summary row = %q, want the project's 3/5 up", got)
 	}
@@ -82,12 +82,13 @@ func TestContainersSummaryKeepsProjectCount(t *testing.T) {
 	}
 }
 
-// Tester item 8: the engine line names the real active context.
+// Tester item 8: the header of the host in use names the real active
+// context and its engine.
 func TestContainersEngineLineNamesActiveContext(t *testing.T) {
 	st := svcHostState()
 	st.contextRows = []containers.Context{{Name: "default"}, {Name: "prod", Current: true}}
 	lines := svcRender(st, 29, 60)
-	if lineWith(lines, "docker 27 · prod") == "" || lineWith(lines, "docker 27 · default") != "" {
+	if lineWith(lines, "prod (docker 27)") == "" || lineWith(lines, "default (docker 27)") != "" {
 		t.Errorf("engine line does not name the active context:\n%s", strings.Join(lines, "\n"))
 	}
 	st.contextRows = nil
@@ -103,7 +104,7 @@ func TestContainersEngineLineNamesActiveContext(t *testing.T) {
 func TestContainersServiceNamesUnderGroup(t *testing.T) {
 	defer func(m theme.IconMode) { theme.CurrentIconMode = m }(theme.CurrentIconMode)
 	theme.CurrentIconMode = theme.IconModeUnicode
-	lines := svcRender(svcHostState(), 29, 60)
+	lines := svcRender(svcHostState(), 34, 60) // host, project, container: two levels in
 	for _, want := range []string{"postgres-1", "redis-1", "api-1", "nginx", "builder"} {
 		if lineWith(lines, want) == "" {
 			t.Errorf("no %q row:\n%s", want, strings.Join(lines, "\n"))
@@ -148,7 +149,7 @@ func TestContainersGroupRowsTyped(t *testing.T) {
 	if !found {
 		t.Errorf("group \"web 2\" lost its name: %+v", groups)
 	}
-	line := ansi.Strip(renderHostGroup(groups[0], false, false, false, 29))
+	line := ansi.Strip(renderHostGroup(groups[0], false, false, false, 36))
 	// CT-10: the group of this folder's project says so, because PROJECT
 	// above lists the same containers as services.
 	if !strings.Contains(line, "▾ termocode (project) ·") || !strings.HasSuffix(line, "2/3") {
@@ -303,7 +304,7 @@ func TestContainersHeaderCounts(t *testing.T) {
 // Tester item 10: folded headers stack without blank rows; an open
 // section gets one blank row before the next header.
 func TestContainersFoldedHeadersStack(t *testing.T) {
-	lines := svcRender(svcHostState(), 29, 60)
+	lines := svcRender(svcHostState(), 34, 60) // host, project, container: two levels in
 	at := func(sub string) int {
 		for i, l := range lines {
 			if strings.Contains(l, sub) {

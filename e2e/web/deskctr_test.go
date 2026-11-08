@@ -13,7 +13,7 @@ import (
 )
 
 // The rest of the desktop's Containers view (web parity, Containers):
-// images, networks, volumes, contexts and registries with their actions.
+// images, networks, volumes, the hosts and registries with their actions.
 
 func ctrHost() webproto.ContainersHost {
 	return webproto.ContainersHost{Engine: "docker", Context: "context default",
@@ -51,13 +51,13 @@ func askLaptop(t *testing.T, p *Page, text string) {
 	p.TapJS(ButtonByText("Ask the laptop"))
 }
 
-// Images, networks, volumes, contexts and registries list in their own
+// Images, networks, volumes and registries list in their own
 // sections; Inspect opens an editor tab with the laptop's masked text;
 // Pause asks in the view (Cancel first); Pull takes a reference in a box
 // and asks the laptop; every prune asks the laptop.
 func TestDeskContainersHost(t *testing.T) {
 	p, c := openDeskCtr(t, nil)
-	for _, sec := range []string{"images", "networks", "volumes", "contexts", "registries"} {
+	for _, sec := range []string{"images", "networks", "volumes", "registries"} {
 		if !Eval[bool](p, `!!`+deskCtr+`.querySelector('[data-section="`+sec+`"]')`) {
 			t.Errorf("no %s section", sec)
 		}
@@ -94,12 +94,11 @@ func TestDeskContainersHost(t *testing.T) {
 	reply(t, c, expectOp(t, c, webproto.OpContainersPrune, `{"kind":"images"}`), webproto.AskRef{Card: "card-2"})
 }
 
-// Contexts: Use Here asks in the view and switches this session; Make
+// A host row of CONTAINERS: Use Here asks in the view and switches this session; Make
 // Default and a registry's Sign Out ask the laptop; built-in networks
 // offer no Remove; the filter narrows the rows.
 func TestDeskContainersContextsAndFilter(t *testing.T) {
 	p, c := openDeskCtr(t, nil)
-	Eval[bool](p, deskCtr+`.querySelector('[data-section="contexts"] .ps-head').click() ?? true`)
 	ctrClick(p, `.tr[data-context="prod"]`, "use")
 	p.WaitJS(deskCtr + `.querySelector(".pv-ask")?.textContent.includes("Use prod in this session?")`)
 	p.TapJS(`[...` + deskCtr + `.querySelectorAll(".pv-ask button")].find((b) => b.textContent === "Use Here")`)

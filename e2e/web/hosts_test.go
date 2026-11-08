@@ -68,8 +68,7 @@ func TestDeskHostsOwnerPath(t *testing.T) {
 	reply(t, c, expectOp(t, c, webproto.OpContainersHost, `{}`), hostsCtrHost())
 	p.WaitJS(deskCtr + `?.querySelectorAll(".tr[data-id]").length === 2`)
 
-	// CONTEXTS: every host at once, "name · where".
-	Eval[bool](p, deskCtr+`.querySelector('[data-section="contexts"] .ps-head').click() ?? true`)
+	// CONTAINERS: every host at once, "name · where" (no CONTEXTS section).
 	label := func(name string) string {
 		return Eval[string](p, deskCtr+`.querySelector('.tr[data-context="`+name+`"] .tr-label')?.textContent ?? ""`)
 	}
@@ -111,7 +110,7 @@ func TestDeskHostsOwnerPath(t *testing.T) {
 	Eval[bool](p, `(location.hash = "#/more/db", true)`)
 	reply(t, c, expectOp(t, c, webproto.OpDBConns, `{}`), webproto.DBConns{Conns: []webproto.DBConn{}})
 	p.WaitJS(dbxSide + `?.querySelector('.tr[data-servers]') !== null`)
-	p.TapJS(dbxSide + `.querySelector('.tr[data-servers]')`)
+	p.WaitJS(dbxSide + `.querySelector(".tr[data-servers]").getAttribute("aria-expanded") === "true"`) // open: there are ssh hosts
 	p.WaitJS(dbxSide + `.querySelector('.tr[data-host="baaytona"]') && ` + dbxSide + `.querySelector('.tr[data-host="broken"]') && !` + dbxSide + `.querySelector('.tr[data-host="default"]')`)
 	p.TapJS(dbxSide + `.querySelector('.tr[data-host="baaytona"]')`)
 	p.WaitJS(dbxSide + `.querySelector('.tr[data-host-ctr="c0ffee01aa00"]') && !` + dbxSide + `.querySelector('.tr[data-host-ctr="c0ffee03aa00"]')`)
@@ -139,12 +138,16 @@ func TestDeskHostsOwnerPath(t *testing.T) {
 }
 
 func TestPhoneHostsOwnerPath(t *testing.T) {
-	p, c := openContainers(t, Phone, nil)
-	const hostsBox = `document.querySelector(".srv-hosts")`
-	p.WaitJS(hostsBox + ` !== null`)
-	p.TapJS(`[...` + hostsBox + `.querySelectorAll("button")].find((b) => b.textContent === "Show")`)
+	s := StartServer(t)
+	p := NewPage(t, s, Phone)
+	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+	c := p.LoginMeta(Meta("c-ctr"))
+	p.GoTab("more")
+	p.TapJS(`document.querySelector('.more-link[data-sub="containers"]')`)
+	reply(t, c, expectOp(t, c, webproto.OpContainersList, `{}`), ctrList())
+	// The hosts are in the tree at once (no Show).
 	reply(t, c, expectOp(t, c, webproto.OpContainersServers, `{}`), hostsList())
-	p.WaitJS(`document.querySelector('.srv-host[data-host="baaytona"]')?.textContent === "baaytona · deploy@65.109.212.14" && document.querySelector('.srv-host[data-host="default"]')?.textContent === "default · this machine"`)
+	p.WaitJS(`document.querySelector('.srv-host[data-host="baaytona"] .db-name')?.textContent === "baaytona · deploy@65.109.212.14" && document.querySelector('.srv-host[data-host="default"] .db-name')?.textContent === "default · this machine"`)
 	p.TapJS(`document.querySelector('.srv-host[data-host="baaytona"]')`)
 	reply(t, c, expectOp(t, c, webproto.OpContainersServer, `{"name":"baaytona"}`), baaytonaCtrs())
 	p.WaitJS(`document.querySelector('[data-host-project="baaytona/baaytona"]') && document.querySelector('[data-host-ctr="c0ffee01aa00"]') && document.querySelector('[data-host-ctr="c0ffee03aa00"]')`)

@@ -43,6 +43,7 @@ func TestDeskDBTreeGridAndQuery(t *testing.T) {
 	p, c := deskLogin(t, nil)
 	Eval[bool](p, `(location.hash = "#/more/db", true)`)
 	reply(t, c, expectOp(t, c, webproto.OpDBConns, `{}`), dbConns())
+	replyLocalHosts(t, c)
 	const side = `document.querySelector('.wb-side [data-view="db"]')`
 	p.WaitJS(side + `?.querySelectorAll(".tr[data-conn]").length === 3`)
 	if !Eval[bool](p, `!!`+side+`.querySelector('.tr[data-conn="cache"][data-twist]')`) {

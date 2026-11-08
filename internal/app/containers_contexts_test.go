@@ -172,17 +172,18 @@ func callsWithPrefix(calls []string, prefix string) []string {
 	return out
 }
 
-func TestContextsSectionListsContextsWithGlyphs(t *testing.T) {
+// The contexts are the hosts of CONTAINERS, each with its fold mark: the
+// host in use open, the others closed; no CONTEXTS section.
+func TestContextsAreHostRowsOfContainers(t *testing.T) {
 	defer func(m theme.IconMode) { theme.CurrentIconMode = m }(theme.CurrentIconMode)
-	for mode, want := range map[theme.IconMode][2]string{theme.IconModeUnicode: {"◉ default", "◦ prod"}, theme.IconModeASCII: {"* default", "o prod"}} {
+	for mode, want := range map[theme.IconMode][2]string{theme.IconModeUnicode: {"▾ default · this machine (docker 27)", "▸ prod · deploy@prod"}, theme.IconModeASCII: {"v default - this machine (docker 27)", "> prod - deploy@prod"}} {
 		theme.CurrentIconMode = mode
 		st := svcHostState()
-		st.collapsed[hostSection("contexts")] = false
 		st.contextRows[0].DockerEndpoint = "unix:///var/run/docker.sock"
 		st.contextRows[1].DockerEndpoint = "ssh://deploy@prod"
 		m := svcTestModel(st, 100, 60)
-		lines := plainLines(&m, 29, 60)
-		if lineWith(lines, "CONTEXTS") == "" || lineWith(lines, want[0]) == "" || lineWith(lines, want[1]) == "" {
+		lines := plainLines(&m, 60, 60)
+		if lineWith(lines, "CONTEXTS") != "" || lineWith(lines, want[0]) == "" || lineWith(lines, want[1]) == "" {
 			t.Errorf("mode %v: want %q and %q:\n%s", mode, want[0], want[1], strings.Join(lines, "\n"))
 		}
 		selectContext(t, st, "prod")
@@ -193,36 +194,43 @@ func TestContextsSectionListsContextsWithGlyphs(t *testing.T) {
 	}
 }
 
-func TestContextsAutoHiddenWithOnlyDefaultAndForPodman(t *testing.T) {
+// One context or many, docker or podman: CONTAINERS is the hosts tree
+// (the host in use first), never a CONTEXTS section.
+func TestContainersHostsTreeWithOneOrManyContexts(t *testing.T) {
+	hostsOf := func(st *servicesState) []string {
+		var out []string
+		for _, r := range st.rows() {
+			if r.section == hostSection("contexts") {
+				t.Errorf("a CONTEXTS row: %+v", r)
+			}
+			if r.host == hostContext {
+				out = append(out, r.hostID)
+			}
+		}
+		return out
+	}
 	st := svcHostState()
 	st.contextRows = st.contextRows[:1]
 	m := svcTestModel(st, 100, 60)
-	if lineWith(plainLines(&m, 29, 60), "CONTEXTS") != "" {
-		t.Error("CONTEXTS shown with only the default context")
+	if got := hostsOf(st); strings.Join(got, ",") != "default" || lineWith(plainLines(&m, 29, 60), "CONTEXTS") != "" {
+		t.Errorf("only the default context: hosts %q", got)
 	}
 	st.contextRows = append(st.contextRows, containers.Context{Name: "prod"})
 	st.touch()
-	if lineWith(plainLines(&m, 29, 60), "CONTEXTS") == "" {
-		t.Error("CONTEXTS hidden although a second context exists")
+	if got := hostsOf(st); strings.Join(got, ",") != "default,prod" {
+		t.Errorf("a second context: hosts %q", got)
 	}
-	// CP-12: podman connections are CONTEXTS now. With two connections the
-	// section shows; with none (only the local socket) it hides like
-	// docker with only `default`.
+	// CP-12: podman connections are hosts too; with none, the local
+	// socket is the one host.
 	st.containerEngine.Kind = "podman"
 	st.touch()
-	if lineWith(plainLines(&m, 29, 60), "CONTEXTS") == "" {
-		t.Error("CONTEXTS hidden for podman with two connections")
+	if got := hostsOf(st); len(got) < 2 {
+		t.Errorf("podman with two connections: hosts %q", got)
 	}
 	st.contextRows = nil
 	st.touch()
-	if lineWith(plainLines(&m, 29, 60), "CONTEXTS") != "" {
-		t.Error("CONTEXTS shown for podman without connections")
-	}
-	// Hidden sections never run their command and never get a cursor.
-	for _, r := range st.rows() {
-		if r.host == hostContext || r.section == hostSection("contexts") {
-			t.Errorf("hidden section has a row: %+v", r)
-		}
+	if got := hostsOf(st); len(got) != 1 || lineWith(plainLines(&m, 29, 60), "CONTEXTS") != "" {
+		t.Errorf("podman without connections: hosts %q", got)
 	}
 }
 
@@ -277,9 +285,17 @@ func TestContextEnterSwitchesThisSessionOnly(t *testing.T) {
 	if !servicestest.WaitGone(oldPID, 3*time.Second) {
 		t.Error("the old watcher is still running")
 	}
-	lines := plainLines(m, 29, 80)
-	if lineWith(lines, "docker 27 · prod") == "" || lineWith(lines, "docker 27 · default") != "" {
-		t.Errorf("engine line does not show prod:\n%s", strings.Join(lines, "\n"))
+	lines := plainLines(m, 60, 80)
+	for _, r := range st.rows() {
+		if r.host == hostContext {
+			if r.hostID != "prod" || !r.current {
+				t.Errorf("the first host is %q (in use %v), want prod in use:\n%s", r.hostID, r.current, strings.Join(lines, "\n"))
+			}
+			break
+		}
+	}
+	if lineWith(lines, "default - this machine") == "" && lineWith(lines, "default · this machine") == "" {
+		t.Errorf("default is not a host row after the switch:\n%s", strings.Join(lines, "\n"))
 	}
 	if g := lineWith(lines, "prod"); !strings.Contains(g, "prod") {
 		t.Fatal("no prod row")
@@ -349,11 +365,11 @@ func TestContextRemoteFailureShowsNoteAndCanSwitchBack(t *testing.T) {
 	if lineWith(lines, "context prod: ") == "" || !strings.Contains(text, "Connection timed out") {
 		t.Fatalf("no remote failure note naming the context:\n%s", text)
 	}
-	if !strings.Contains(text, "R retry · Enter on CONTEXTS to switch back") {
+	if !strings.Contains(text, "R retry · Enter on another host to switch back") {
 		t.Fatalf("note has no way back:\n%s", text)
 	}
-	if lineWith(lines, "CONTEXTS") == "" || lineWith(lines, "default") == "" {
-		t.Fatalf("CONTEXTS is gone while the remote fails:\n%s", text)
+	if lineWith(lines, "default - this machine") == "" && lineWith(lines, "default · this machine") == "" {
+		t.Fatalf("the other hosts are gone while the remote fails:\n%s", text)
 	}
 	// Enter on default switches back and everything loads again.
 	selectContext(t, st, "default")

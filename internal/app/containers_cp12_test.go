@@ -116,7 +116,7 @@ func TestContainersFilterNarrowsEverySection(t *testing.T) {
 		}
 	}
 	// Every section header stays (Tab still finds them).
-	for _, h := range []string{"#compose", "#containers", "#images", "#registries", "#networks", "#volumes", "#contexts", "#help"} {
+	for _, h := range []string{"#compose", "#containers", "#images", "#registries", "#networks", "#volumes", "#help"} {
 		if !containsString(got, h) {
 			t.Errorf("header %s gone: %s", h, joined)
 		}
@@ -606,8 +606,8 @@ func TestPodmanConnectionsAreContexts(t *testing.T) {
 	m, f := podSession(t)
 	st := m.services
 	got := strings.Join(rowNames(st), ",")
-	if !strings.Contains(got, "#contexts") || !strings.Contains(got, "podman-machine-default") || !strings.Contains(got, "build-box") {
-		t.Fatalf("connections not listed as CONTEXTS: %s", got)
+	if !strings.Contains(got, "podman-machine-default") || !strings.Contains(got, "build-box") {
+		t.Fatalf("connections are not hosts of CONTAINERS: %s", got)
 	}
 	if c := callsWithPrefix(f.ConnCalls(), "|system connection ls"); len(c) == 0 {
 		t.Errorf("no `system connection ls` call: %q", f.ConnCalls())
