@@ -199,3 +199,22 @@ func TestSignInDeadEndIsMarkedForTheApp(t *testing.T) {
 	p.Do(chromedp.Navigate(s.Base + "/"))
 	p.WaitJS(`document.documentElement.dataset.signin === "none"`)
 }
+
+// Spec (MOB stabilize, tablet 2026-11-08): the Remember this browser hint
+// is true on a Wi-Fi laptop too, where there is no passkey: it never
+// says "without the passkey".
+func TestRememberHintSaysWhatHappensWithNoPasskey(t *testing.T) {
+	s := StartServer(t)
+	p := NewPage(t, s, Phone)
+	plain, digest, _ := webgw.NewLinkSecret()
+	s.Pairing.SetSecret(digest, webgw.PairTTL, false)
+	p.Do(chromedp.Navigate(s.localhostBase() + "/#p=" + plain))
+	p.virtualAuthenticator()
+	p.Tap(".pair .connect-foot button")
+	<-s.Asks
+	s.PairAnswers <- webdevices.RoleControl
+	p.WaitJS(`!!document.querySelector(".pair .remember-hint")`)
+	if got := Eval[string](p, `document.querySelector(".pair .remember-hint").textContent`); got != "Next time, this browser signs back in by itself. Only this browser, only this address." {
+		t.Fatalf("remember hint = %q", got)
+	}
+}
