@@ -71,6 +71,10 @@ func TestMain(m *testing.M) {
 	_ = os.Setenv("PATH", guard.PathEnv())
 	cliGuard = guard
 	setupCardOff = true // see setup_card_ui.go
+	// The laptop-card tests written before the page approved its own
+	// actions (web_ask.go) keep the laptop; web_ask_here_test.go turns
+	// it off per hub, and checks the default (off) of the setting.
+	webApproveOnLaptop = func() bool { return true }
 	// The secret store: an in-memory keyring, never the real one, and the
 	// plain backend these tests were written for (they share one config
 	// dir; secrets_ui_test.go opts in to auto / age / keyring).
