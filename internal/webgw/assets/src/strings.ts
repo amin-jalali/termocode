@@ -527,7 +527,6 @@ export const S = {
   "more.containers": "Containers",
   "ctr.none": "No containers on this host.",
   "ctr.refresh": "Refresh",
-  "ctr.engine": "{engine} · {context}",
   "ctr.logs": "Logs",
   "ctr.hide_logs": "Hide logs",
   "ctr.no_logs": "No log output.",

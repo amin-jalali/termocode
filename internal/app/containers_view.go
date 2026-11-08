@@ -97,7 +97,9 @@ func (st *servicesState) hostRows() []svcRow {
 		if sec == "help" && !absent {
 			out = append(out, st.allContextsRows()...) // CTX-41 (containers_multi.go)
 		}
-		if !st.sectionShown(sec) || (sec == "contexts" && st.contextsHidden()) {
+		// CONTEXTS is folded into CONTAINERS: every host is a row of the
+		// hosts tree there (containers_hosttree.go).
+		if !st.sectionShown(sec) || sec == "contexts" {
 			continue
 		}
 		// No engine: CONTAINERS says so once; the other engine sections
@@ -118,7 +120,6 @@ func (st *servicesState) hostRows() []svcRow {
 func (st *servicesState) hostSectionBody(sec string) []svcRow {
 	key := hostSection(sec)
 	hint := func(t string) svcRow { return svcRow{kind: svcRowHint, section: key, text: t} }
-	note := func(t string) svcRow { return svcRow{kind: svcRowNote, section: key, text: t} }
 	switch sec {
 	case "help":
 		return st.helpSectionBody(key)
@@ -134,6 +135,17 @@ func (st *servicesState) hostSectionBody(sec string) []svcRow {
 	if sec == "contexts" {
 		return st.contextSectionBody(key)
 	}
+	if sec == "containers" {
+		return st.hostTreeRows(key)
+	}
+	return st.engineSectionBody(sec, key)
+}
+
+// engineSectionBody is one engine section's rows; for CONTAINERS, the
+// rows under the host in use.
+func (st *servicesState) engineSectionBody(sec, key string) []svcRow {
+	hint := func(t string) svcRow { return svcRow{kind: svcRowHint, section: key, text: t} }
+	note := func(t string) svcRow { return svcRow{kind: svcRowNote, section: key, text: t} }
 	if !st.containerEngine.Reachable {
 		name := st.engineTitle()
 		p := st.containerEngine.Problem
@@ -284,7 +296,7 @@ func (st *servicesState) remoteContextRows(sec, key, detail string) []svcRow {
 		msg = "timed out"
 	}
 	return []svcRow{{kind: svcRowNote, section: key, text: word + " " + name + ": " + msg},
-		{kind: svcRowHint, section: key, text: "R retry · Enter on CONTEXTS to switch back"}}
+		{kind: svcRowHint, section: key, text: "R retry · Enter on another host to switch back"}}
 }
 
 var sshHostPortRe = lazyre.New(`^ssh: connect to host \S+ port \d+: `)
@@ -300,11 +312,10 @@ func shortRemoteError(s string) string {
 // containerRowsOf groups the host's containers by compose project (the
 // workspace's project first, unlabeled ones last as "other").
 func (st *servicesState) containerRowsOf(key string) []svcRow {
-	line := st.engineLine()
+	var out []svcRow
 	if st.containerSort != "" {
-		line += " · by " + st.containerSort
+		out = append(out, svcRow{kind: svcRowHint, section: key, text: "by " + st.containerSort})
 	}
-	out := []svcRow{{kind: svcRowHint, section: key, text: line}}
 	if st.stats.lastFail != "" {
 		out = append(out, svcRow{kind: svcRowHint, section: key, text: st.stats.lastFail})
 	}
@@ -947,11 +958,20 @@ func (st *servicesState) renderHostItem(r svcRow, active, focused bool, w int) s
 		}
 		return renderHostLine(active, focused, w, r.depth, storageFoldGlyph(st, r), theme.TextDim, v.Name, theme.TextPrimary, cols)
 	case hostContext:
-		g, gcol, ncol := theme.GlyphSvcStopped, theme.TextDim, theme.TextSecondary
-		if r.current {
-			g, gcol, ncol = theme.GlyphSvcUp, theme.GitAdded, theme.TextPrimary
+		// A host of the tree: its fold mark (green for the host in use)
+		// and "running/all" once its containers are known.
+		g, gcol, ncol := theme.GlyphTreeCollapsed, theme.TextDim, theme.TextSecondary
+		if st.hostOpen(r.hostID) {
+			g = theme.GlyphExpand
 		}
-		return renderHostLine(active, focused, w, r.depth, g.String(), gcol, r.name, ncol, nil)
+		if r.current {
+			gcol, ncol = theme.GitAdded, theme.TextPrimary
+		}
+		var cols []hostCol
+		if r.count != "" {
+			cols = append(cols, hostCol{text: r.count, width: runewidth.StringWidth(r.count), right: true, col: theme.TextMuted})
+		}
+		return renderHostLine(active, focused, w, r.depth, g.String(), gcol, r.name, ncol, cols)
 	case hostRegistry, hostRegistryConnect:
 		g, gcol, ncol := st.registryRowLook(r)
 		return renderHostLine(active, focused, w, r.depth, g, gcol, r.name, ncol, nil)

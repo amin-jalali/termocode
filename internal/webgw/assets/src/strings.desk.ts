@@ -469,7 +469,6 @@ export const SD = {
   "ctr.context_now": "Using {name} in this session.",
   "ctr.context_use": "Use Here",
   "ctr.context_use_q": "Use {name} in this session? The default stays.",
-  "ctr.contexts": "Contexts",
   "srv.add_title": "Add a host by ssh://user@host.",
   "ctr.copy_id": "Copy ID",
   "ctr.copy_name": "Copy Name",

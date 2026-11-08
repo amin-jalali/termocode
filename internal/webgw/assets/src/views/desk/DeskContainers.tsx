@@ -1,7 +1,8 @@
 // The desktop's Containers view, a tree like the laptop editor's
-// container tools: CONTAINERS (grouped by compose project, each with its
-// state's icon, image and status), IMAGES, NETWORKS, VOLUMES, CONTEXTS
-// and REGISTRIES, each folding, with actions on hover. What only reads
+// container tools: CONTAINERS (the hosts tree: the host in use first,
+// open, its containers grouped by compose project, each with its state's
+// icon, image and status; then every other host), IMAGES, NETWORKS,
+// VOLUMES and REGISTRIES, each folding, with actions on hover. What only reads
 // or starts asks here first (Cancel first and focused) or runs at once:
 // logs (the panel's OUTPUT tab), inspect, history, stats, disk usage,
 // search and tags (editor tabs), start, restart, pause, tag, create,
@@ -9,10 +10,11 @@
 // sends or runs something asks the laptop: stop, remove, a shell or
 // attach, pull, push, run, every prune, compose stop and down, the
 // default context, sign in and out (the password is typed there), Open
-// in Databases. The filter narrows every section's rows. CONTEXTS is the
-// hosts tree (DeskHosts.tsx): every host "name · where" opens to its
-// compose projects and containers; a database container opens in
-// Databases; + Add Server… adds an ssh:// host.
+// in Databases. The filter narrows every section's rows. Every other
+// host of CONTAINERS (DeskHosts.tsx) "name · where" opens to its compose
+// projects and containers, read once; a database container opens in
+// Databases; a host row keeps Use Here and Make Default; the last row,
+// + Add Server…, adds an ssh:// host.
 import { Fragment, h, type ComponentChildren } from "preact";
 import { signal } from "@preact/signals";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
@@ -33,7 +35,7 @@ import { Act, Ask, PaneSection, PaneView, Row, Tree } from "../../ui/pane";
 import { Portal } from "../../ui/Portal";
 import { gitFailed as failed } from "../git/errors";
 import { go } from "../../lib/router";
-import { forgetHosts, hostLabel, openNext, pickDB, readHosts, setHosts, type HostCtr } from "../../state/hosts";
+import { forgetHosts, hostLabel, inUse, openNext, pickDB, readHosts, setHosts, upOf, type HostCtr, type HostView } from "../../state/hosts";
 import { loadConns } from "./dbstate";
 import { AddServerRow, HostRows } from "./DeskHosts";
 
@@ -41,7 +43,7 @@ type Load<T> = { s: "loading" } | { s: "ok"; v: T } | { s: "err"; msg: string };
 
 const list = signal<Load<ContainersView> | null>(null);
 const host = signal<Load<ContainersHost> | null>(null);
-const shut = signal<ReadonlySet<string>>(new Set(["#networks", "#volumes", "#contexts", "#registries"]));
+const shut = signal<ReadonlySet<string>>(new Set(["#networks", "#volumes", "#registries"]));
 
 /** filter narrows the rows (Containers: Filter Rows…); null: no box. */
 export const ctrFilter = signal<string | null>(null);
@@ -80,7 +82,7 @@ function reloadHost(): void {
   );
 }
 
-/** hostOpen are the CONTEXTS hosts shown open (their containers). */
+/** hostOpen are the other hosts of CONTAINERS shown open. */
 const hostOpen = signal<ReadonlySet<string>>(new Set());
 
 function reloadAll(): void {
@@ -341,7 +343,7 @@ function CtrRows({ cs, level, x }: { cs: CtrView[]; level: number; x: Ctx }) {
   );
 }
 
-function ProjectRow({ p, cs, x }: { p: string; cs: CtrView[]; x: Ctx }) {
+function ProjectRow({ p, cs, x, level }: { p: string; cs: CtrView[]; x: Ctx; level: number }) {
   const up = (verb: "up" | "restart") =>
     x.setPending({ key: "p:" + p, text: t(verb === "up" ? "ctr.compose_up_q" : "ctr.compose_restart_q", { name: p }), verb: t(verb === "up" ? "ctr.start" : "ctr.restart"), run: () => act("containers.compose", { project: p, verb }, t("ctr.compose_done", { name: p })) });
   const ask = (verb: "stop" | "down") =>
@@ -355,13 +357,13 @@ function ProjectRow({ p, cs, x }: { p: string; cs: CtrView[]; x: Ctx }) {
   return (
     <>
       <Row
-        level={0}
+        level={level}
         twist={shut.value.has(p) ? "closed" : "open"}
         onToggle={() => flip(p)}
         icon={<Cod name="package" />}
         label={p}
         data={{ project: p }}
-        end={<span class="count">{cs.length}</span>}
+        end={<span class="count">{upOf(cs)}</span>}
         onContextMenu={x.canAct ? menuOf(p, () => items) : undefined}
         actions={x.canAct && <>{buttons(items)}</>}
       />
@@ -391,6 +393,106 @@ function Section({ id, title, count, actions, load, empty, children }: { id: str
 }
 
 const imageName = (im: ImageItem) => im.tags[0] ?? im.id;
+
+/** hostItems are a host row's actions: Use Here (asks in the view) and
+ * Make Default (asks the laptop), as CONTEXTS had them. */
+function hostItems(c: HostView, x: Ctx, here: boolean): Item[] {
+  if (!x.canAct || !c.name) return [];
+  return [
+    here
+      ? null
+      : {
+          icon: "arrow-swap",
+          act: "use",
+          label: t("ctr.context_use"),
+          run: () => x.setPending({ key: "c:" + c.name, text: t("ctr.context_use_q", { name: c.name }), verb: t("ctr.context_use"), run: () => act("containers.context", { name: c.name }, t("ctr.context_now", { name: c.name })) }),
+        },
+    c.current ? null : { icon: "pinned", act: "default", label: t("ctr.context_default"), run: () => x.setLaptop({ label: t("ctr.context_default"), text: t("ctr.context_default_q", { name: c.name }), op: "containers.context_default", args: { name: c.name } }) },
+  ];
+}
+
+/** HostTree is the body of CONTAINERS: the host in use (open, its
+ * containers by compose project), every other host, + Add Server…. */
+function HostTree({ x }: { x: Ctx }) {
+  const l = list.value;
+  const v = l?.s === "ok" ? l.v : null;
+  const hl = host.value;
+  const hv = hl?.s === "ok" ? hl.v : null;
+  const known = !!hv && !hv.problems?.contexts;
+  const all = known ? readHosts(hv?.contexts) : [];
+  const here = inUse(all);
+  const others = all.filter((c) => c !== here);
+  // Compose projects first (as folders), then the containers of none.
+  const projects = new Map<string, CtrView[]>();
+  const loose: CtrView[] = [];
+  for (const c of v?.containers ?? []) {
+    if (c.project) projects.set(c.project, [...(projects.get(c.project) ?? []), c]);
+    else loose.push(c);
+  }
+  const open = !shut.value.has("@here");
+  const its = here ? hostItems(here, x, true) : [];
+  const describe = (c: HostView) => [hostLabel(c), hv?.contexts.find((o) => o.name === c.name)?.description].filter(Boolean).join(" — ");
+  return (
+    <Tree label={t("more.containers")}>
+      <Row
+        level={0}
+        twist={open ? "open" : "closed"}
+        onToggle={() => flip("@here")}
+        icon={<Cod name={here && !here.local && here.where ? "remote" : "vm"} />}
+        label={here ? hostLabel(here) : t("srv.this_machine")}
+        desc={v?.engine}
+        title={here ? describe(here) : undefined}
+        data={{ context: here?.name ?? "", "host-in-use": "1" }}
+        end={v ? <span class="count">{upOf(v.containers)}</span> : undefined}
+        onContextMenu={its.length ? menuOf(here?.name ?? "", () => its) : undefined}
+        actions={buttons(its)}
+      />
+      {here && <Under k={"c:" + here.name} x={x} />}
+      {open &&
+        (!l || l.s === "loading" ? (
+          <p class="tr-note">{t("loading")}</p>
+        ) : l.s === "err" ? (
+          <p class="tr-note is-err">{l.msg}</p>
+        ) : v && v.containers.length === 0 ? (
+          <p class="tr-note">{t("ctr.none")}</p>
+        ) : (
+          <>
+            {[...projects].map(([p, cs]) => (
+              <Fragment key={p}>
+                <ProjectRow p={p} cs={cs} x={x} level={1} />
+                {!shut.value.has(p) && <CtrRows cs={cs} level={2} x={x} />}
+              </Fragment>
+            ))}
+            {loose.length > 0 && (
+              <>
+                <Row level={1} twist={shut.value.has("@other") ? "closed" : "open"} onToggle={() => flip("@other")} icon={<Cod name="package" />} label={t("srv.other")} data={{ project: "" }} end={<span class="count">{upOf(loose)}</span>} />
+                {!shut.value.has("@other") && <CtrRows cs={loose} level={2} x={x} />}
+              </>
+            )}
+            {v && v.more > 0 && <p class="tr-note">{t("ctr.more", { n: v.more })}</p>}
+          </>
+        ))}
+      {others.map((c) => {
+        const items = hostItems(c, x, false);
+        return (
+          <HostRows
+            key={c.name}
+            h={c}
+            open={hostOpen}
+            desc={c.current ? t("ctr.default") : ""}
+            title={describe(c)}
+            under={<Under k={"c:" + c.name} x={x} />}
+            ctrActions={(ct) => (x.canAct && ct.db ? <Act icon="database" act="open-db" label={t("srv.open_db")} onClick={() => openInDB(c.name, ct)} /> : undefined)}
+            onMenu={items.length ? menuOf(c.name, () => items) : undefined}
+            actions={buttons(items)}
+          />
+        );
+      })}
+      {hv?.problems?.contexts && <p class="tr-note is-err">{hv.problems.contexts}</p>}
+      {known && <AddServerRow canAct={x.canAct} onAdded={reloadHost} />}
+    </Tree>
+  );
+}
 
 function HostSections({ x }: { x: Ctx }) {
   const hl = host.value;
@@ -516,41 +618,6 @@ function HostSections({ x }: { x: Ctx }) {
           ))}
         </Tree>
       </Section>
-      <Section id="contexts" title={t("ctr.contexts")} count={v?.contexts.length} load={load("contexts")} empty={(v?.contexts.length ?? 0) === 0}>
-        <Tree label={t("ctr.contexts")}>
-          {readHosts(v?.contexts).map((c) => (
-            <Fragment key={c.name}>
-              <HostRows
-                h={c}
-                open={hostOpen}
-                icon={<Cod name={c.session || (c.current && !v?.contexts.some((o) => o.session)) ? "check" : c.local ? "vm" : "remote"} />}
-                desc={c.current ? t("ctr.default") : ""}
-                title={[hostLabel(c), v?.contexts.find((o) => o.name === c.name)?.description].filter(Boolean).join(" — ")}
-                under={<Under k={"c:" + c.name} x={x} />}
-                ctrActions={(ct) =>
-                  x.canAct && ct.db ? <Act icon="database" act="open-db" label={t("srv.open_db")} onClick={() => openInDB(c.name, ct)} /> : undefined
-                }
-                actions={
-                  x.canAct && (
-                    <>
-                      {!c.session && (
-                        <Act
-                          icon="arrow-swap"
-                          act="use"
-                          label={t("ctr.context_use")}
-                          onClick={() => x.setPending({ key: "c:" + c.name, text: t("ctr.context_use_q", { name: c.name }), verb: t("ctr.context_use"), run: () => act("containers.context", { name: c.name }, t("ctr.context_now", { name: c.name })) })}
-                        />
-                      )}
-                      {!c.current && <Act icon="pinned" act="default" label={t("ctr.context_default")} onClick={() => lap("ctr.context_default", t("ctr.context_default_q", { name: c.name }), "containers.context_default", { name: c.name })} />}
-                    </>
-                  )
-                }
-              />
-            </Fragment>
-          ))}
-          {hl?.s === "ok" && !prob("contexts") && <AddServerRow canAct={x.canAct} onAdded={reloadHost} />}
-        </Tree>
-      </Section>
       <Section
         id="registries"
         title={t("ctr.registries")}
@@ -611,13 +678,6 @@ export function DeskContainers() {
   }, [ctrSearch.value]);
   const l = list.value;
   const v = l?.s === "ok" ? l.v : null;
-  // Compose projects first (as folders), then the containers of none.
-  const projects = new Map<string, CtrView[]>();
-  const loose: CtrView[] = [];
-  for (const c of v?.containers ?? []) {
-    if (c.project) projects.set(c.project, [...(projects.get(c.project) ?? []), c]);
-    else loose.push(c);
-  }
   const x: Ctx = { canAct, pending, setPending, setLaptop, form, setForm };
   const lap = (label: StringKey, q: StringKey, op: string, args: unknown) => setLaptop({ label: t(label), text: t(q), op, args });
   return (
@@ -657,25 +717,7 @@ export function DeskContainers() {
         count={v ? v.containers.length : undefined}
         actions={canAct && <Act icon="clear-all" act="prune-containers" label={t("ctr.prune")} onClick={() => lap("ctr.prune", "ctr.prune_containers_q", "containers.prune", { kind: "containers" })} />}
       >
-        {!l || l.s === "loading" ? (
-          <p class="pv-msg">{t("loading")}</p>
-        ) : l.s === "err" ? (
-          <p class="pv-msg c-err">{l.msg}</p>
-        ) : v && v.containers.length === 0 ? (
-          <p class="pv-msg">{t("ctr.none")}</p>
-        ) : (
-          <Tree label={t("more.containers")}>
-            {[...projects].map(([p, cs]) => (
-              <Fragment key={p}>
-                <ProjectRow p={p} cs={cs} x={x} />
-                {!shut.value.has(p) && <CtrRows cs={cs} level={1} x={x} />}
-              </Fragment>
-            ))}
-            <CtrRows cs={loose} level={0} x={x} />
-          </Tree>
-        )}
-        {v && v.more > 0 && <p class="pv-msg">{t("ctr.more", { n: v.more })}</p>}
-        {v && <p class="pv-msg">{t("ctr.engine", { engine: v.engine, context: v.context })}</p>}
+        <HostTree x={x} />
       </PaneSection>
       <HostSections x={x} />
       {laptop && (

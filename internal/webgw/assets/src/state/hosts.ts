@@ -3,9 +3,10 @@
 // containers read once when it is first opened (Refresh reads them
 // again), grouped by compose project. A host that does not answer keeps
 // its one-line reason under its own row; the others stay. One host list
-// and one cache for both views: the Containers view's CONTEXTS fill it
-// from containers.host, the Databases view asks containers.servers when
-// nothing filled it yet. Phone and desktop share this state.
+// and one cache for both views: the desktop Containers view fills it
+// from containers.host (CONTAINERS is the hosts tree), the phone and the
+// Databases view ask containers.servers when nothing filled it yet.
+// Phone and desktop share this state.
 import { signal } from "@preact/signals";
 import { OfflineError, ReqError } from "../net/link";
 import { link } from "../session";
@@ -53,6 +54,13 @@ function readCtrs(data: unknown): HostCtr[] {
     .filter((c) => /^[0-9a-f]{12,64}$/.test(str(c.id)))
     .map((c) => ({ id: str(c.id), name: str(c.name), image: str(c.image), state: str(c.state), status: str(c.status), project: str(c.project), db: str(c.db) }));
 }
+
+/** inUse is the host the laptop's engine talks to now: the session's,
+ * else the default (null: not known). */
+export const inUse = (list: HostView[]): HostView | null => list.find((x) => x.session) ?? list.find((x) => x.current) ?? null;
+
+/** upOf is "running/all" of a host's containers. */
+export const upOf = (cs: readonly { state: string }[]): string => cs.filter((c) => c.state === "running").length + "/" + cs.length;
 
 /** hostLabel is "name · where" (this machine for a local one). */
 export const hostLabel = (h: HostView): string => h.name + " · " + (h.local || !h.where ? t("srv.this_machine") : h.where);

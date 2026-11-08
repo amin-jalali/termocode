@@ -1102,11 +1102,18 @@ func hostKeysHelp(r svcRow) (string, []confirm.KeyRow) {
 		return with("Context keys",
 			[]string{"Enter", "use it here"},
 			[]string{"Space", "open: its projects and containers"},
+			[]string{"r", "read its containers again"},
 			[]string{"D", "make it the default"},
 			[]string{"y", "copy the endpoint"},
 			[]string{"i", "inspect"},
 			[]string{"n", "create a new one (asks first)"},
 			[]string{"x", "remove (asks first)"})
+	case r.kind == svcRowHostItem && r.host == hostServerContainer:
+		return with("Keys of a container on another host",
+			[]string{"Enter", "open a database container in Databases"},
+			[]string{"s / x", "start / stop"},
+			[]string{"y", "copy the id"},
+			[]string{"r", "read the host again"})
 	case r.kind == svcRowHostItem && (r.host == hostRegistry || r.host == hostRegistryImage || r.host == hostRegistryConnect):
 		return with("Registry keys",
 			[]string{"Enter", "open"},
@@ -1192,6 +1199,9 @@ func (m *Model) openContainersSectionsMenu(selected string) {
 	}
 	items := make([]menu.Item, 0, len(containerSectionOrder)+2)
 	for _, section := range containerSectionOrder {
+		if section == "contexts" {
+			continue // its hosts are CONTAINERS' tree
+		}
 		icon := " "
 		if m.services.sectionShown(section) {
 			icon = check

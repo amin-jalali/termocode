@@ -645,6 +645,8 @@ func (m *Model) handleServicesMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onAllContexts(msg), true
 	case serverListMsg: // the hosts tree (containers_servers.go)
 		return m.onServerList(msg), true
+	case serverActionMsg:
+		return m.onServerAction(msg), true
 	case containerActionDoneMsg:
 		return m.onContainerActionDone(msg), true
 	case containerBulkDoneMsg:

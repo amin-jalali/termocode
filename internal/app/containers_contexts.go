@@ -167,7 +167,7 @@ func (m *Model) contextForPalette() (string, tea.Cmd) {
 		}
 		return "", m.servicesToast(toast.Info, "Only the default context exists", "Add one with docker context create")
 	}
-	st.collapsed[hostSection("contexts")] = false
+	st.collapsed[hostSection("containers")] = false // the hosts tree
 	st.touch()
 	for i, r := range st.rows() {
 		if r.kind == svcRowHostItem && r.host == hostContext && !r.current {

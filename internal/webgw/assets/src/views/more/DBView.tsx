@@ -121,7 +121,7 @@ function Need({ conn, need, msg, onDone }: { conn: string; need: DBNeed; msg: st
 function Conns() {
   const { data, err } = useAsk("db.conns", {}, readDBConns, "conns");
   const canAct = link.meta.value?.role !== "viewer";
-  const servers = <PhoneHosts db canAct={canAct} onPicked={(conn) => to("db/" + conn)} />;
+  const servers = <PhoneHosts canAct={canAct} onPicked={(conn) => to("db/" + conn)} />;
   if (err) return <p class="empty refused">{err}</p>;
   if (!data) return <SkeletonRows rows={4} />;
   if (data.length === 0)

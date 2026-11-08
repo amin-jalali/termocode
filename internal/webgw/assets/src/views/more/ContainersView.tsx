@@ -1,10 +1,15 @@
-// Containers (WEB-44, web design 2.9): the host's containers as the
-// laptop's engine lists them, with a log tail. Start and restart ask in
+// Containers (WEB-44, web design 2.9): the hosts tree. The host in use
+// comes first, open, with its containers as the laptop's engine lists
+// them (by compose project, each with a log tail); every other host
+// follows, read once when it first opens (Hosts.tsx), then + Add
+// Server…. Start and restart ask in
 // the card first (Cancel first and focused); stop and remove ask the
 // laptop. The list is read when the page opens and with Refresh, and
 // again after an action. #/more/containers
-import { h } from "preact";
+import { Fragment, h } from "preact";
+import { signal } from "@preact/signals";
 import { useEffect, useRef, useState } from "preact/hooks";
+import { hostLabel, hosts, inUse, loadHosts, upOf } from "../../state/hosts";
 import { toast } from "../../lib/toasts";
 import { link } from "../../session";
 import { readContainers, type ContainersView as List, type CtrView } from "../../state/more";
@@ -14,7 +19,7 @@ import { Button } from "../../ui/Button";
 import { SkeletonRows } from "../../ui/Skeleton";
 import { gitFailed as failed } from "../git/errors";
 import { SubView } from "./SubView";
-import { PhoneHosts } from "./Hosts";
+import { AddServer, HostHead, HostRows, refreshHosts } from "./Hosts";
 import { go } from "../../lib/router";
 
 interface Logs {
@@ -146,6 +151,9 @@ function Ctr({ c, canAct, reload }: { c: CtrView; canAct: boolean; reload(): voi
   );
 }
 
+/** shut: the host in use is folded. */
+const shut = signal(false);
+
 export function ContainersView() {
   const [list, setList] = useState<List | null>(null);
   const [err, setErr] = useState("");
@@ -161,32 +169,78 @@ export function ContainersView() {
         setErr(e instanceof Error ? e.message : t("err.internal"));
       },
     );
+    // The other hosts of the tree (once a page; Refresh reads again).
+    if (n === 0 && !hosts.peek()) loadHosts();
   }, [n]);
   const canAct = link.meta.value?.role !== "viewer";
+  const hl = hosts.value;
+  const all = hl?.s === "ok" ? hl.v : [];
+  const here = inUse(all);
+  const others = all.filter((x) => x !== here);
+  const onPicked = (conn: string) => go({ tab: "more", rest: "db/" + conn, query: {} });
+  const cs = list?.containers ?? [];
+  const byProject = new Map<string, CtrView[]>();
+  const loose: CtrView[] = [];
+  for (const c of cs) {
+    if (c.project) byProject.set(c.project, [...(byProject.get(c.project) ?? []), c]);
+    else loose.push(c);
+  }
+  const parts: [string, CtrView[]][] = [...byProject];
+  if (loose.length) parts.push([t("srv.other"), loose]);
+  const name = here?.name ?? "";
   return (
     <SubView title={t("more.containers")}>
       <div class="ctrs">
         <div class="ctrs-head">
-          <p class="view-note" dir="ltr">
-            {list ? t("ctr.engine", { engine: list.engine, context: list.context }) : ""}
-          </p>
-          <Button small needsLink onClick={reload}>
+          <h2 class="group-title">{t("srv.hosts")}</h2>
+          <Button
+            small
+            needsLink
+            onClick={() => {
+              reload();
+              refreshHosts();
+            }}
+          >
             {t("ctr.refresh")}
           </Button>
         </div>
-        {err ? (
-          <p class="empty refused" dir="auto">
-            {err}
-          </p>
-        ) : !list ? (
-          <SkeletonRows rows={5} />
-        ) : list.containers.length === 0 ? (
-          <p class="empty">{t("ctr.none")}</p>
-        ) : (
-          list.containers.map((c) => <Ctr key={c.id} c={c} canAct={canAct} reload={reload} />)
-        )}
-        {list && list.more > 0 && <p class="view-note">{t("ctr.more", { n: list.more })}</p>}
-        <PhoneHosts db={false} canAct={canAct} onPicked={(conn) => go({ tab: "more", rest: "db/" + conn, query: {} })} />
+        <section class="srv-hosts srv-tree" aria-label={t("srv.hosts")}>
+          <HostHead
+            name={name}
+            label={here ? hostLabel(here) : t("srv.this_machine")}
+            desc={list?.engine}
+            count={list ? upOf(cs) : undefined}
+            isOpen={!shut.value}
+            onFlip={() => (shut.value = !shut.peek())}
+          />
+          {!shut.value &&
+            (err ? (
+              <p class="empty refused" dir="auto">
+                {err}
+              </p>
+            ) : !list ? (
+              <SkeletonRows rows={5} />
+            ) : cs.length === 0 ? (
+              <p class="empty">{t("ctr.none")}</p>
+            ) : (
+              parts.map(([p, items]) => (
+                <Fragment key={p}>
+                  <p class="db-conn srv-project" data-host-project={name + "/" + p} dir="ltr">
+                    {p}
+                  </p>
+                  {items.map((c) => (
+                    <Ctr key={c.id} c={c} canAct={canAct} reload={reload} />
+                  ))}
+                </Fragment>
+              ))
+            ))}
+          {!shut.value && list && list.more > 0 && <p class="view-note">{t("ctr.more", { n: list.more })}</p>}
+          {hl?.s === "err" && <p class="empty refused">{hl.msg}</p>}
+          {others.map((x) => (
+            <HostRows key={x.name} x={x} db={false} canAct={canAct} onPicked={onPicked} />
+          ))}
+          {hl?.s === "ok" && <AddServer canAct={canAct} />}
+        </section>
       </div>
     </SubView>
   );

@@ -1,23 +1,26 @@
 // The hosts tree on the phone (More › Containers and More › Databases),
-// as the laptop draws it: Show the hosts, then each host "name · where"
-// opens to its compose projects and containers, read once when it first
-// opens (Refresh reads them again); a host that does not answer shows its
-// reason under its own row. In Databases only the ssh:// hosts and their
-// database containers show, and tapping one adds it to Databases. + Add
-// Server… takes a name and ssh://user@host, then asks in the card
+// as the laptop draws it: each host "name · where" opens to its compose
+// projects and containers, read once when it first opens (Refresh reads
+// them again); a host that does not answer shows its reason under its
+// own row. In Containers the host in use comes first with its own
+// containers (ContainersView.tsx) and every other host follows. In
+// Databases only the ssh:// hosts and their database containers show,
+// open as soon as there is one, and tapping one adds it to Databases.
+// + Add Server… takes a name and ssh://user@host, then asks in the card
 // (Cancel first and focused).
 import { Fragment, h } from "preact";
 import { signal } from "@preact/signals";
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { toast } from "../../lib/toasts";
-import { addServer, errLine, forgetHosts, groups, hostCtrs, hostLabel, hosts, loadHosts, NAME, openHost, pickDB, SSH_HOST, type HostCtr } from "../../state/hosts";
+import { addServer, errLine, forgetHosts, groups, hostCtrs, hostLabel, hosts, loadHosts, NAME, openHost, pickDB, SSH_HOST, upOf, type HostCtr, type HostView } from "../../state/hosts";
 import { t } from "../../strings";
 import { Button } from "../../ui/Button";
 import { SkeletonRows } from "../../ui/Skeleton";
 
-/** shown: the phone's hosts list is open; open: its hosts shown open. */
-const shown = signal(false);
-const open = signal<ReadonlySet<string>>(new Set());
+/** shown: the Databases hosts list is open (null: open when there is
+ * an ssh:// host); open: the hosts shown open. */
+const shown = signal<boolean | null>(null);
+export const open = signal<ReadonlySet<string>>(new Set());
 
 function flip(name: string): void {
   const n = new Set(open.peek());
@@ -29,7 +32,13 @@ function flip(name: string): void {
   open.value = n;
 }
 
-function AddServer({ canAct }: { canAct: boolean }) {
+/** refreshHosts reads the host list and the open hosts again. */
+export function refreshHosts(): void {
+  loadHosts();
+  forgetHosts(open.peek());
+}
+
+export function AddServer({ canAct }: { canAct: boolean }) {
   const [step, setStep] = useState<"" | "form" | "ask">("");
   const [name, setName] = useState("");
   const [host, setHost] = useState("ssh://");
@@ -43,7 +52,7 @@ function AddServer({ canAct }: { canAct: boolean }) {
   if (!canAct) return null;
   if (step === "") {
     return (
-      <div class="choices">
+      <div class="choices" data-add-server="1">
         <Button small needsLink onClick={() => (setErr(""), setStep("form"))}>
           {t("srv.add")}
         </Button>
@@ -156,69 +165,95 @@ function Ctr({ host, c, db, canAct, onPicked }: { host: string; c: HostCtr; db: 
   );
 }
 
-/** PhoneHosts is the hosts group of a phone view (db: Databases). */
-export function PhoneHosts({ db, canAct, onPicked }: { db: boolean; canAct: boolean; onPicked: (conn: string) => void }) {
-  const hl = hosts.value;
-  const title = t(db ? "srv.servers" : "srv.hosts");
-  const toggle = () => {
-    shown.value = !shown.peek();
-    if (shown.peek() && (!hosts.peek() || hosts.peek()?.s === "err")) loadHosts();
-  };
-  const list = hl?.s === "ok" ? hl.v.filter((x) => !db || x.ssh) : [];
+/** HostHead is a host's row: its label and, once read, its counts. */
+export function HostHead({ name, label, desc, count, isOpen, onFlip }: { name: string; label: string; desc?: string; count?: string; isOpen: boolean; onFlip: () => void }) {
   return (
-    <section class="group srv-hosts" aria-labelledby={db ? "srv-db" : "srv-ctr"}>
+    <button type="button" class="db-conn srv-host" data-host={name} aria-expanded={isOpen ? "true" : "false"} onClick={onFlip}>
+      <span class="db-name" dir="ltr">
+        {label}
+      </span>
+      {desc && (
+        <span class="db-meta" dir="ltr">
+          {desc}
+        </span>
+      )}
+      {count && (
+        <span class="db-meta srv-count" dir="ltr">
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
+/** HostRows is one host and, when open, its projects and containers. */
+export function HostRows({ x, db, canAct, onPicked }: { x: HostView; db: boolean; canAct: boolean; onPicked: (conn: string) => void }) {
+  const isOpen = open.value.has(x.name);
+  const l = hostCtrs.value.get(x.name);
+  const cs = l?.s === "ok" ? (db ? l.v.filter((c) => c.db) : l.v) : [];
+  return (
+    <>
+      <HostHead name={x.name} label={hostLabel(x)} count={l?.s === "ok" ? upOf(cs) : undefined} isOpen={isOpen} onFlip={() => flip(x.name)} />
+      {isOpen && (!l || l.s === "loading") && <p class="db-conn db-meta">{t("loading")}</p>}
+      {isOpen && l?.s === "err" && (
+        <p class="db-conn db-note" data-host-err={x.name} dir="auto">
+          {l.msg}
+        </p>
+      )}
+      {isOpen && l?.s === "ok" && cs.length === 0 && <p class="db-conn db-meta">{t(db ? "srv.no_db" : "ctr.none")}</p>}
+      {isOpen &&
+        groups(cs).map(([proj, items]) => (
+          <Fragment key={proj}>
+            <p class="db-conn srv-project" data-host-project={x.name + "/" + proj} dir="ltr">
+              {proj}
+            </p>
+            {items.map((c) => (
+              <Ctr key={c.id} host={x.name} c={c} db={db} canAct={canAct} onPicked={onPicked} />
+            ))}
+          </Fragment>
+        ))}
+    </>
+  );
+}
+
+/** PhoneHosts is the Databases view's Servers group: open as soon as
+ * there is an ssh:// host. */
+export function PhoneHosts({ canAct, onPicked }: { canAct: boolean; onPicked: (conn: string) => void }) {
+  useEffect(() => {
+    if (!hosts.peek()) loadHosts();
+  }, []);
+  const hl = hosts.value;
+  const list = hl?.s === "ok" ? hl.v.filter((x) => x.ssh) : [];
+  const isShown = shown.value ?? list.length > 0;
+  const toggle = () => {
+    shown.value = !isShown;
+    if (!isShown && hosts.peek()?.s === "err") loadHosts();
+  };
+  return (
+    <section class="group srv-hosts" aria-labelledby="srv-db">
       <div class="ctrs-head">
-        <h2 class="group-title" id={db ? "srv-db" : "srv-ctr"}>
-          {title}
+        <h2 class="group-title" id="srv-db">
+          {t("srv.servers")}
         </h2>
-        <Button small pressed={shown.value} onClick={toggle}>
-          {shown.value ? t("srv.hide") : t("srv.show")}
+        <Button small pressed={isShown} onClick={toggle}>
+          {isShown ? t("srv.hide") : t("srv.show")}
         </Button>
       </div>
-      {shown.value && (
+      {isShown && (
         <>
           {(!hl || hl.s === "loading") && <SkeletonRows rows={2} />}
           {hl?.s === "err" && <p class="empty refused">{hl.msg}</p>}
           {hl?.s === "ok" && list.length === 0 && <p class="empty">{t("srv.no_hosts")}</p>}
           {list.length > 0 && (
             <div class="db-list">
-              {list.map((x) => {
-                const isOpen = open.value.has(x.name);
-                const l = hostCtrs.value.get(x.name);
-                const cs = l?.s === "ok" ? (db ? l.v.filter((c) => c.db) : l.v) : [];
-                return (
-                  <Fragment key={x.name}>
-                    <button type="button" class="db-conn srv-host" data-host={x.name} aria-expanded={isOpen ? "true" : "false"} onClick={() => flip(x.name)}>
-                      <span class="db-name" dir="ltr">
-                        {hostLabel(x)}
-                      </span>
-                    </button>
-                    {isOpen && (!l || l.s === "loading") && <p class="db-conn db-meta">{t("loading")}</p>}
-                    {isOpen && l?.s === "err" && (
-                      <p class="db-conn db-note" data-host-err={x.name} dir="auto">
-                        {l.msg}
-                      </p>
-                    )}
-                    {isOpen && l?.s === "ok" && cs.length === 0 && <p class="db-conn db-meta">{t(db ? "srv.no_db" : "ctr.none")}</p>}
-                    {isOpen &&
-                      groups(cs).map(([proj, items]) => (
-                        <Fragment key={proj}>
-                          <p class="db-conn srv-project" data-host-project={x.name + "/" + proj} dir="ltr">
-                            {proj}
-                          </p>
-                          {items.map((c) => (
-                            <Ctr key={c.id} host={x.name} c={c} db={db} canAct={canAct} onPicked={onPicked} />
-                          ))}
-                        </Fragment>
-                      ))}
-                  </Fragment>
-                );
-              })}
+              {list.map((x) => (
+                <HostRows key={x.name} x={x} db canAct={canAct} onPicked={onPicked} />
+              ))}
             </div>
           )}
           {hl?.s === "ok" && (
             <div class="choices">
-              <Button small needsLink onClick={() => (loadHosts(), forgetHosts(open.peek()))}>
+              <Button small needsLink onClick={refreshHosts}>
                 {t("ctr.refresh")}
               </Button>
             </div>

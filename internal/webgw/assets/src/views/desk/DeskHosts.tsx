@@ -1,5 +1,5 @@
 // The desktop's hosts tree, as the laptop draws it in the Containers
-// view (CONTEXTS) and the Databases view (SERVERS): each host "name ·
+// view (CONTAINERS) and the Databases view (SERVERS): each host "name ·
 // where" opens to its compose projects and containers, read once when it
 // first opens; a host that does not answer shows its reason under its
 // own row. The Databases view shows the ssh:// hosts and their database
@@ -9,7 +9,7 @@ import { Fragment, h, type ComponentChildren } from "preact";
 import type { Signal } from "@preact/signals";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { toast } from "../../lib/toasts";
-import { addServer, groups, hostCtrs, hostLabel, NAME, openHost, SSH_HOST, errLine, type HostCtr, type HostView } from "../../state/hosts";
+import { addServer, groups, hostCtrs, hostLabel, NAME, openHost, SSH_HOST, errLine, upOf, type HostCtr, type HostView } from "../../state/hosts";
 import { t, type StringKey } from "../../strings";
 import { Cod } from "../../ui/icons";
 import { Ask, Row } from "../../ui/pane";
@@ -46,6 +46,8 @@ interface Props {
   /** under is drawn right under the host row (a question). */
   under?: ComponentChildren;
   ctrActions?: (c: HostCtr) => ComponentChildren;
+  /** onMenu is the host row's right-click menu. */
+  onMenu?: (e: MouseEvent) => void;
   onPick?: (c: HostCtr) => void;
 }
 
@@ -66,6 +68,8 @@ export function HostRows(p: Props) {
         desc={p.desc}
         title={p.title ?? hostLabel(p.h)}
         data={{ context: p.h.name, host: p.h.name }}
+        end={l?.s === "ok" ? <span class="count">{upOf(shown)}</span> : undefined}
+        onContextMenu={p.onMenu}
         actions={p.actions}
       />
       {p.under}

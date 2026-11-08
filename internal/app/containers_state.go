@@ -518,11 +518,11 @@ func (m *Model) containersReloadAll() tea.Cmd {
 }
 
 // containersRefreshContexts lists the contexts again even when the
-// section is folded: the list decides whether CONTAINERS shows the
-// section at all, and `docker context ls` costs no daemon call.
+// section is folded: the list is the hosts of CONTAINERS' tree, and
+// `docker context ls` costs no daemon call.
 func (m *Model) containersRefreshContexts() tea.Cmd {
 	st := m.services
-	if st == nil || !st.visible || !st.sectionShown("contexts") || !st.containerDetected || !st.hasContexts() {
+	if st == nil || !st.visible || !(st.sectionShown("contexts") || st.sectionShown("containers")) || !st.containerDetected || !st.hasContexts() {
 		return nil
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

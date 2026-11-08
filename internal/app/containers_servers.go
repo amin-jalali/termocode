@@ -149,14 +149,18 @@ func serverContainerName(c containers.Container) string {
 	return containerShownName(c)
 }
 
-// addServerRow is the last row of CONTEXTS.
+// addServerRow is the last row of CONTAINERS.
 func addServerRow(key string) svcRow {
 	return svcRow{kind: svcRowHostItem, section: key, host: hostAddServer, idx: -1, name: addServerTitle}
 }
 
-// toggleServer opens or closes a host; the first open lists it.
+// toggleServer opens or closes a host; the first open lists it. The
+// host in use only folds (its rows are the view's own list).
 func (m *Model) toggleServer(name string) tea.Cmd {
 	st := m.services
+	if st.isActiveHost(name) {
+		return m.toggleActiveHost(name)
+	}
 	h := st.server(name)
 	h.open = !h.open
 	st.touch()
@@ -251,6 +255,8 @@ func (m *Model) serversKey(key string) (tea.Cmd, bool) {
 		}
 	case r.kind == svcRowHostItem && r.host == hostContext && (key == " " || key == "right"):
 		return m.toggleServer(r.hostID), true
+	case r.kind == svcRowHostItem && r.host == hostContext && key == "r" && m.services.isActiveHost(r.hostID):
+		return m.containersRefresh("containers"), true
 	case r.kind == svcRowHostItem && r.host == hostContext && key == "r" && m.services.server(r.hostID).open:
 		return m.loadServer(r.hostID), true
 	case r.kind == svcRowGroup && strings.HasPrefix(r.section, "grp/servers/") && (key == " " || key == "enter"):
@@ -273,8 +279,14 @@ func (m *Model) serversKey(key string) (tea.Cmd, bool) {
 			return m.servicesToast(toast.Info, "Copied container id", shortImageID(c.ID)), true
 		case "r", "R":
 			return m.loadServer(name), true
+		case "s":
+			return m.serverContainerAction("start", c, name), true
+		case "x":
+			return m.serverContainerAction("stop", c, name), true
 		}
-		return nil, true // the other keys act on the active host's rows only
+		// The other keys move, fold, filter…; the container keys of the
+		// host in use check for its own rows, so they do nothing here.
+		return nil, false
 	}
 	return nil, false
 }
@@ -333,4 +345,53 @@ func (st *servicesState) renderServerRow(r svcRow, active, focused bool, w int) 
 		cols = append(cols, hostCol{text: up, width: 6, right: true, col: ucol})
 	}
 	return renderHostLine(active, focused, w, r.depth, g.String(), gcol, r.name, theme.TextPrimary, cols)
+}
+
+// serverStartStop starts or stops a container of another host (tests
+// replace it).
+var serverStartStop = func(ctx context.Context, e containers.Engine, verb, id string) error {
+	if verb == "stop" {
+		return e.Stop(ctx, id)
+	}
+	return e.Start(ctx, id)
+}
+
+// serverActionMsg is a start or stop on another host, done.
+type serverActionMsg struct {
+	context, verb, name string
+	err                 error
+}
+
+// serverContainerAction is s / x on a container of another host: the
+// engine call of the host in use, with that host's context; the host is
+// listed again after it.
+func (m *Model) serverContainerAction(verb string, c containers.Container, host string) tea.Cmd {
+	st := m.services
+	if st == nil || st.containerEngine.Binary == "" {
+		return nil
+	}
+	e := st.containerEngine
+	e.Context = host
+	if host == podmanLocal {
+		e.Context = ""
+	}
+	run, id, name := serverStartStop, c.ID, serverContainerName(c)
+	title := "Starting " + name
+	if verb == "stop" {
+		title = "Stopping " + name
+	}
+	return tea.Batch(m.servicesToast(toast.Info, title, "on "+contextDisplayName(host)), func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+		return serverActionMsg{context: host, verb: verb, name: name, err: run(ctx, e, verb, id)}
+	})
+}
+
+// onServerAction says a failure and lists the host again.
+func (m *Model) onServerAction(msg serverActionMsg) tea.Cmd {
+	var cmds []tea.Cmd
+	if msg.err != nil {
+		cmds = append(cmds, m.servicesToast(toast.Errr, "Could not "+msg.verb+" "+msg.name, shortRemoteError(sanitizeOutputLine(errLine(msg.err.Error())))))
+	}
+	return tea.Batch(append(cmds, m.loadServer(msg.context))...)
 }

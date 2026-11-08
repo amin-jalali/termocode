@@ -270,8 +270,9 @@ export function openConfig(): void {
   );
 }
 
-/** serversOpen: the SERVERS rows are shown (read when first opened). */
-const serversOpen = signal(false);
+/** serversOpen: the SERVERS rows are shown (null: open as soon as there
+ * is an ssh:// host). */
+const serversOpen = signal<boolean | null>(null);
 /** srvOpen are the SERVERS hosts shown open. */
 const srvOpen = signal<ReadonlySet<string>>(new Set());
 
@@ -291,13 +292,13 @@ function pick(host: string, c: HostCtr): void {
 /** Servers is SERVERS: the ssh:// hosts, their compose projects and
  * database containers, then + Add Server…. */
 function Servers({ act }: { act: boolean }) {
-  const isOpen = serversOpen.value;
   const hl = hosts.value;
+  const list = hl?.s === "ok" ? hl.v.filter((x) => x.ssh) : [];
+  const isOpen = serversOpen.value ?? list.length > 0;
   const flipAll = () => {
     serversOpen.value = !isOpen;
     if (!isOpen && (!hosts.peek() || hosts.peek()?.s === "err")) loadHosts();
   };
-  const list = hl?.s === "ok" ? hl.v.filter((x) => x.ssh) : [];
   return (
     <Tree label={t("srv.servers")} class="db-servers">
       <Row level={0} twist={isOpen ? "open" : "closed"} onToggle={flipAll} icon={<Cod name="server" />} label={t("srv.servers")} data={{ servers: "1" }} end={hl?.s === "ok" ? <span class="count">{list.length}</span> : undefined} />
@@ -322,6 +323,7 @@ export function DeskDB() {
   const on = live.value;
   useEffect(() => {
     if (on && (!conns.peek() || conns.peek()?.s === "err")) loadConns();
+    if (on && !hosts.peek()) loadHosts(); // SERVERS opens when there is an ssh:// host
   }, [on]);
   // A database container just added: open it once it is listed.
   const next = openNext.value;
