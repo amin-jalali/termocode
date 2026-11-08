@@ -92,6 +92,7 @@ export interface Meta {
   ui: MetaUI;
   caps: string[];
   ws?: string;
+  approve_here?: boolean;
 }
 
 export interface MetaUI {
@@ -2130,6 +2131,13 @@ export interface Answered {
   id: string;
   by?: string;
   choice?: string;
+}
+
+export interface AskCard {
+  id: string;
+  title: string;
+  body: string;
+  action: string;
 }
 
 export interface Attention {
@@ -4236,6 +4244,7 @@ export interface TopicData {
 // The data of an ev message, by kind.
 export interface EventData {
   "answered": Answered;
+  "ask": AskCard;
   "attention": Attention;
   "search.batch": SearchBatch;
   "view_update": ViewUpdate;

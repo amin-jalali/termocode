@@ -91,5 +91,7 @@ func (m *Model) onWebHello(msg webHelloMsg) {
 		Viewers: msg.hub.browsers(),
 		UI:      webproto.MetaUI{Theme: m.themeID},
 		Caps:    webproto.CapsFor(c.role),
+		// The page confirms its own actions (web_ask.go).
+		ApproveHere: msg.hub.askHere(c),
 	})
 }

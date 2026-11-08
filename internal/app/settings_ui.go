@@ -117,6 +117,9 @@ type settingsConfig struct {
 	// WebPushDetail: what a phone push says (MOB-30, web_push.go).
 	WebPushDetail string `json:"web_push_detail,omitempty"`
 	WebPhone      string `json:"web_phone,omitempty"` // MOB-31
+	// WebApproveOnLaptop: a web action that needs a confirm waits for a
+	// card on the laptop, as before 2026-11-08 (web_ask.go). File only.
+	WebApproveOnLaptop *bool `json:"web_approve_on_laptop,omitempty"`
 	// The door (MOB-56): projects open at once from a phone, and the idle
 	// stop of a project the phone opened headless. File only.
 	WebProjectsMax        *int `json:"web_projects_max,omitempty"`

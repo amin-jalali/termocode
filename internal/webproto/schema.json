@@ -341,6 +341,7 @@
   ],
   "events": {
     "answered": "Answered",
+    "ask": "AskCard",
     "attention": "Attention",
     "search.batch": "SearchBatch",
     "view_update": "ViewUpdate",
@@ -5991,6 +5992,30 @@
       },
       "required": [
         "id"
+      ],
+      "additionalProperties": true
+    },
+    "AskCard": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "body",
+        "action"
       ],
       "additionalProperties": true
     },
@@ -14002,6 +14027,9 @@
     "Meta": {
       "type": "object",
       "properties": {
+        "approve_here": {
+          "type": "boolean"
+        },
         "caps": {
           "items": {
             "type": "string"

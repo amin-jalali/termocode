@@ -337,7 +337,7 @@ func (m *Model) webDoorBusy() string {
 	if m.wfx != nil && len(m.wfx.live) > 0 {
 		return "A workflow run goes"
 	}
-	if m.confirmOpen || (m.web != nil && (len(m.web.asks.line) > 0 || m.web.asks.shown != nil)) {
+	if m.confirmOpen || (m.web != nil && (len(m.web.asks.line) > 0 || m.web.asks.shown != nil || len(m.web.asks.here) > 0)) {
 		return "A card waits"
 	}
 	return ""

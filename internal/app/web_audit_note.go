@@ -79,6 +79,9 @@ func (c *webCall) audited(m webproto.Msg) {
 	case webproto.AuditYes:
 		if n.OK && p.LaptopCard {
 			n.Why = "laptop_card" // the outcome follows when the laptop answers
+			if conn.hub.askHere(conn) {
+				n.Why = "page_card" // the outcome follows when the page answers
+			}
 		}
 		n.Summary = webAuditSummary(c.args)
 		conn.hub.auditNote(n)
@@ -211,6 +214,10 @@ func webAuditBytes(args any) int {
 func (h *webHub) webAuditDecided(a *webAsk, choice, by string) {
 	why := "confirmed_laptop"
 	switch {
+	case a.asker != nil && choice == webproto.ChoiceConfirm:
+		why = "confirmed_page" // the page that asked confirmed it
+	case a.asker != nil:
+		why = "cancelled_page"
 	case choice != webproto.ChoiceConfirm && by == "laptop":
 		why = "cancelled_laptop"
 	case choice != webproto.ChoiceConfirm:

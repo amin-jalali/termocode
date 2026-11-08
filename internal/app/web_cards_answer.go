@@ -22,6 +22,9 @@ func init() {
 
 func (m *Model) webCardsAnswer(call *webCall) tea.Cmd {
 	a := call.args.(*webproto.CardsAnswerArgs)
+	if ask := m.web.asks.here[a.ID]; ask != nil { // the page's own question (web_ask.go)
+		return m.webAskHereAnswer(call, ask, a.Choice)
+	}
 	p := &m.web.cards
 	var ref *webCardRef
 	refs := m.webCards(p, false)

@@ -21,13 +21,16 @@ type webConfig struct {
 	MaxHours    int
 	OpenBrowser bool
 	MaxViewers  int
-	Tailnet     bool     // web_listen: "tailnet" (WEB-31)
-	LAN         bool     // web_listen: "lan": https on this Wi-Fi, pinned certificate
-	RequireTOTP bool     // web_require_totp (WEB-48)
-	AppKeyLogin bool     // web_app_key_login (MOB-27)
-	PushDetail  string   // web_push_detail (MOB-30): none, count or title
-	PhoneWatch  bool     // web_phone: "on": a paired phone that watches keeps the panel up (MOB-31)
-	Problems    []string // one line per bad value, for a warning toast
+	Tailnet     bool   // web_listen: "tailnet" (WEB-31)
+	LAN         bool   // web_listen: "lan": https on this Wi-Fi, pinned certificate
+	RequireTOTP bool   // web_require_totp (WEB-48)
+	AppKeyLogin bool   // web_app_key_login (MOB-27)
+	PushDetail  string // web_push_detail (MOB-30): none, count or title
+	PhoneWatch  bool   // web_phone: "on": a paired phone that watches keeps the panel up (MOB-31)
+	// ApproveOnLaptop (web_approve_on_laptop): a web action that needs a
+	// confirm waits for the laptop's card; off, the page confirms it.
+	ApproveOnLaptop bool
+	Problems        []string // one line per bad value, for a warning toast
 	// The door (MOB-56, plan §3.7): how many projects the paired gateway
 	// keeps open at once, and when a project the phone opened headless
 	// stops again.
@@ -97,6 +100,9 @@ func webSettings() webConfig {
 	}
 	if s.WebOpenBrowser != nil {
 		c.OpenBrowser = *s.WebOpenBrowser
+	}
+	if s.WebApproveOnLaptop != nil {
+		c.ApproveOnLaptop = *s.WebApproveOnLaptop
 	}
 	return c
 }

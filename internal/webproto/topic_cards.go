@@ -11,6 +11,7 @@ import "github.com/amin-jalali/termocode/internal/blocks"
 func init() {
 	registerTopic("cards", CardsSnap{}, CardsDelta{})
 	registerEvent(EventAnswered, Answered{})
+	registerEvent(EventAsk, AskCard{})
 }
 
 // Card kinds.
@@ -133,4 +134,19 @@ type Answered struct {
 	ID     string `json:"id"`
 	By     string `json:"by,omitempty"`     // "laptop", a device name, or "" (expired)
 	Choice string `json:"choice,omitempty"` // a laptop card: "confirm" or "cancel"
+}
+
+// EventAsk is the ev kind sent only to the page that made a request
+// which needs a confirm (an op whose row says LaptopCard), when the page
+// approves its own actions (meta.approve_here): the card's exact text,
+// the same the laptop card shows. The page answers it with cards.answer
+// (confirm or cancel); only the asking connection may confirm.
+const EventAsk = "ask"
+
+// AskCard is the data of an ask ev.
+type AskCard struct {
+	ID     string `json:"id"`     // the card id the op answered with
+	Title  string `json:"title"`  // "Discard changes?"
+	Body   string `json:"body"`   // what runs, exactly (paths, the command argv, the SQL)
+	Action string `json:"action"` // the confirm button's label ("Discard")
 }

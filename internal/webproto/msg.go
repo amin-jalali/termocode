@@ -110,6 +110,10 @@ type Meta struct {
 	UI      MetaUI   `json:"ui"`
 	Caps    []string `json:"caps"`
 	WS      string   `json:"ws,omitempty"` // the workspace this meta is of (set by the gateway)
+	// ApproveHere: this controller page confirms its own actions (the ask
+	// ev) instead of waiting for a laptop card; off when the laptop's
+	// web_approve_on_laptop is on, never for a viewer.
+	ApproveHere bool `json:"approve_here,omitempty"`
 }
 
 // MetaUI is the laptop's look, so the page can match it.

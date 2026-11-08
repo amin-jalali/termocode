@@ -701,7 +701,7 @@ list by group, with a filter of its own.
 - **Pin**, **Note** (one line, secrets hidden) and **Wake** run at once.
 - **Sleep** asks on the page first; when agent tabs would end, the laptop
   asks again with **Keep running** first.
-- **Archive**, **Restore** and **Delete** wait for a card on the laptop.
+- **Archive**, **Restore** and **Delete** ask first, on a card you confirm in the page.
   After yes, the laptop's own steps follow (changed files, the branch
   name).
 - The page names a worktree by an id the laptop made; it never sends a

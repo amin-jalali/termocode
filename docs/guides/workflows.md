@@ -389,7 +389,7 @@ first.
 
 The phone can also start a **dry run** at once (it never writes; plan
 steps still cost AI money, and the page says so first). A real run and
-saving a workflow the chat drafted wait for a card on the laptop
+saving a workflow the chat drafted ask first, on a card you confirm on the phone
 (**Cancel** first). See [the web panel](web.md#workflows-and-agents-from-the-phone).
 
 In a browser on a wide screen, **Workflows** in the activity bar lists

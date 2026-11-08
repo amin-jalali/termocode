@@ -188,7 +188,7 @@ Ghost text and the `quick` slot never use a level.
 
 One knob for how hard the AI works. **AI: Effort Dial…** lists four modes;
 **AI: Next Effort Mode** steps through them (the web palette has it too,
-after a card on the laptop).
+after a card you confirm in the page).
 
 | Mode | Profile | Reasoning |
 |---|---|---|

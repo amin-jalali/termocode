@@ -1,6 +1,8 @@
 package app
 
 import (
+	"fmt"
+
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/confirm"
@@ -17,12 +19,30 @@ import (
 // card's id; the outcome reaches the browsers as the answered event with
 // its choice. A dialog already open on the laptop is never replaced: the
 // card waits in line and shows when the laptop is free.
+//
+// The page approves (owner 2026-11-08): the same person who paired the
+// device can do everything on the web that the laptop can. Unless the
+// laptop's web_approve_on_laptop is on, a controller page's request is
+// not a laptop card: the page that asked gets the card's exact text as
+// an ask ev, Cancel first, and confirms or cancels it with cards.answer.
+// Only that connection may confirm; it ends with it. The laptop gets a
+// passive toast of what was done, never a dialog; the Web channel and
+// the gateway's audit say it was approved in the page. Viewers never
+// reach this: every LaptopCard op needs a controller.
 
 // confirmKindWebAsk is the laptop's dialog of a laptop card.
 const confirmKindWebAsk confirmKindEnum = 2610
 
 // webMaxAsks caps the laptop cards waiting at once.
 const webMaxAsks = 4
+
+// webApproveOnLaptopSetting reads web_approve_on_laptop (default off).
+func webApproveOnLaptopSetting() bool { return webSettings().ApproveOnLaptop }
+
+// webApproveOnLaptop is what a new hub takes; the package's tests swap it
+// (main_test.go) for the laptop-card tests written before the page
+// approved.
+var webApproveOnLaptop = webApproveOnLaptopSetting
 
 func init() {
 	// Registered before the cards publisher (file order), so a card that
@@ -49,12 +69,23 @@ type webAsk struct {
 	body    string // the laptop card's text, which names the device
 	action  string // the action button's label ("Discard")
 	run     func(m *Model) tea.Cmd
+	// asker is the page that confirms it (the page approves); nil: a
+	// laptop card. id is then its id.
+	asker *webConn
+	id    string
 }
 
 // webAskState is the line of laptop cards (Update only).
 type webAskState struct {
-	line  []*webAsk // oldest first
-	shown *webAsk   // the one whose dialog is open on the laptop
+	line  []*webAsk          // oldest first
+	shown *webAsk            // the one whose dialog is open on the laptop
+	here  map[string]*webAsk // the pages' own questions by id (the page approves)
+	n     int                // the last page question's number
+}
+
+// askHere: a request on c is confirmed by its own page, not the laptop.
+func (h *webHub) askHere(c *webConn) bool {
+	return !h.approveOnLaptop && c != nil && c.role == webproto.RoleController
 }
 
 // webAskOpen puts a laptop card in line for call and answers with its id.
@@ -69,6 +100,9 @@ func (m *Model) webAskOpen(call *webCall, a *webAsk) {
 // answered the call (too many cards wait).
 func (m *Model) webAskQueue(call *webCall, a *webAsk) (string, bool) {
 	h := m.web
+	if h.askHere(call.conn) {
+		return m.webAskHereQueue(call, a)
+	}
 	if len(h.asks.line) >= webMaxAsks {
 		call.fail(webproto.CodeBusy, "Too many questions wait for the laptop.")
 		return "", false
@@ -82,6 +116,66 @@ func (m *Model) webAskQueue(call *webCall, a *webAsk) (string, bool) {
 	id, _ := h.cards.id(a)
 	m.webAskShow()
 	return id, true
+}
+
+// webAskHereQueue asks the page that sent call to confirm a itself: the
+// ask ev with the card's exact text goes to that page only.
+func (m *Model) webAskHereQueue(call *webCall, a *webAsk) (string, bool) {
+	s := &m.web.asks
+	if call.ctx.Err() != nil { // the page left while the card was built
+		call.fail(webproto.CodeGone, "The connection ended.")
+		return "", false
+	}
+	if len(s.here) >= webMaxAsks {
+		call.fail(webproto.CodeBusy, "Too many questions wait. Answer one first.")
+		return "", false
+	}
+	s.n++
+	id := fmt.Sprintf("ask-%d", s.n)
+	data, err := webData(webproto.AskCard{ID: id, Title: a.title, Body: a.body, Action: a.action})
+	if err != nil {
+		recordError("[web] " + call.op + ": ask: " + err.Error())
+		call.fail(webproto.CodeInternal, "Something went wrong.")
+		return "", false
+	}
+	a.op, a.conn, a.device, a.asker, a.id = call.op, call.conn.id, webName(call.conn.device), call.conn, id
+	if a.device == "" {
+		a.device = "web"
+	}
+	if s.here == nil {
+		s.here = map[string]*webAsk{}
+	}
+	s.here[a.id] = a
+	call.conn.send(&webproto.Event{T: webproto.KindEv, Kind: webproto.EventAsk, Data: data})
+	return a.id, true
+}
+
+// webAskHereAnswer is cards.answer on a page question: only the page
+// that asked may answer it, with confirm or cancel.
+func (m *Model) webAskHereAnswer(call *webCall, a *webAsk, choice string) tea.Cmd {
+	if call.conn != a.asker {
+		call.fail(webproto.CodeForbidden, "Only the page that asked can answer this.")
+		return nil
+	}
+	if choice != webproto.ChoiceConfirm && choice != webproto.ChoiceCancel {
+		call.fail(webproto.CodeBadRequest, "That is not an answer to this question.")
+		return nil
+	}
+	cmd := m.webAskDone(a, choice, a.device)
+	call.reply(nil)
+	return cmd
+}
+
+// webAskHereGone cancels the questions of a page whose connection ended.
+func (m *Model) webAskHereGone(h *webHub, c *webConn) {
+	if m.web != h {
+		return
+	}
+	for _, a := range h.asks.here {
+		if a.asker == c {
+			m.webAskDone(a, webproto.ChoiceCancel, a.device)
+		}
+	}
 }
 
 // webAskShow opens the first waiting card's dialog when the laptop shows
@@ -132,6 +226,9 @@ func (m *Model) answerWebAsk(id string) tea.Cmd {
 func (m *Model) webAskDone(a *webAsk, choice, by string) tea.Cmd {
 	h := m.web
 	s := &h.asks
+	if a.asker != nil {
+		return m.webAskHereDone(a, choice)
+	}
 	for i, x := range s.line {
 		if x == a {
 			s.line = append(s.line[:i], s.line[i+1:]...)
@@ -157,4 +254,28 @@ func (m *Model) webAskDone(a *webAsk, choice, by string) tea.Cmd {
 	}
 	m.webAuditLine(a.op, a.summary, a.device, "confirmed "+where)
 	return a.run(m)
+}
+
+// webAskHereDone ends a page question: the page hears answered, the
+// audit says it was decided in the page, and confirm runs the action
+// with a passive toast on the laptop.
+func (m *Model) webAskHereDone(a *webAsk, choice string) tea.Cmd {
+	h := m.web
+	if h.asks.here[a.id] != a {
+		return nil // answered already
+	}
+	delete(h.asks.here, a.id)
+	if data, err := webData(webproto.Answered{ID: a.id, By: a.device, Choice: choice}); err == nil {
+		a.asker.send(&webproto.Event{T: webproto.KindEv, Kind: webproto.EventAnswered, Data: data})
+	}
+	h.webAuditDecided(a, choice, a.device)
+	where := "on " + a.device + " (page)"
+	if choice != webproto.ChoiceConfirm {
+		m.webAuditLine(a.op, a.summary, a.device, "cancelled "+where)
+		return nil
+	}
+	m.webAuditLine(a.op, a.summary, a.device, "confirmed "+where)
+	var t tea.Cmd
+	m.toast, t = m.toast.PushDetail(toast.Info, "Approved on "+a.device, a.title)
+	return tea.Batch(a.run(m), t)
 }

@@ -433,7 +433,7 @@ asks with `agent_race_models` (**Deny** first); the phone page asks with
 **Compare models**, and the laptop shows a card (**Cancel** first).
 
 From your phone, the races view shows the same lanes. You can start a
-race (a card on the laptop, **Cancel** first), ask for the summary, run
+race (a card you confirm on the phone, **Cancel** first), ask for the summary, run
 verify and stop the lanes. Merge and discard stay on the laptop. See
 [the web panel](web.md#workflows-and-agents-from-the-phone).
 

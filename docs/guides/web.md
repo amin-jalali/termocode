@@ -388,8 +388,9 @@ stops.
 ### Workflows and agents from the phone
 
 With control, the phone can start work on the laptop. Anything that
-starts real work waits for a card **on the laptop** (**Cancel** first);
-the phone only asks.
+starts real work asks first, on a card with **Cancel** first. You
+confirm it on the phone (see [How it keeps you safe](#how-it-keeps-you-safe)); with
+`web_approve_on_laptop` on, the card shows on the laptop instead.
 
 - **Workflows.** A **dry run** starts at once: it reads its sources
   read only and never writes. Plan steps still cost AI money, and the
@@ -502,10 +503,21 @@ In simple words:
   and has the focus. `Enter` and `Esc` never do the risky thing, and
   the risky button works only after a short moment on screen. The page
   never offers "Always allow".
-- **Big things need the laptop.** Discarding changes, closing a
+- **Big things ask first, in the page.** Discarding changes, closing a
   terminal, deleting a file, replacing a file with an upload, push,
-  pull, stash, switching branch, stopping or removing a container and
-  any SQL that may change data ask on the laptop first.
+  pull, stash, switching branch, stopping or removing a container, a
+  command on a server and any SQL that may change data ask first. The
+  page shows a card with the exact action (the files, the command, the
+  SQL), **Cancel** first. Only the device that asked can confirm it.
+  You do not need the laptop: you paired this device, so it can do what
+  you can do at the laptop. The laptop shows a short notice of what was
+  done, and the audit log keeps who did it, from where, and that it was
+  confirmed in the page.
+- **Want the laptop to confirm?** Set `"web_approve_on_laptop": true`
+  in `config.json`. Then these cards wait on the laptop, as before, and
+  the phone can only cancel them. The AI can never change this setting.
+- **Viewers only look.** A device that may only watch cannot act or
+  answer a card.
 - **Passkeys, no passwords.** A paired device signs in with a passkey
   that needs your face, finger or PIN. A copied passkey is noticed and
   blocked. A removed device is out at once. A remembered browser

@@ -55,7 +55,7 @@ func (m *Model) webAfterUpdate(msg tea.Msg) tea.Cmd {
 // idle: no connection (browser or gateway), no topic, no file view, no
 // laptop card waiting and no staged upload.
 func (h *webHub) idle() bool {
-	if len(h.live) != 0 || len(h.rings) != 0 || h.files != nil || len(h.asks.line) != 0 || h.asks.shown != nil {
+	if len(h.live) != 0 || len(h.rings) != 0 || h.files != nil || len(h.asks.line) != 0 || h.asks.shown != nil || len(h.asks.here) != 0 {
 		return false
 	}
 	h.mu.Lock()
