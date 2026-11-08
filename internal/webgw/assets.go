@@ -3,10 +3,14 @@
 package webgw
 
 import (
+	"bytes"
+	"compress/gzip"
 	"io/fs"
 	"net/http"
 	"path"
+	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/amin-jalali/termocode/internal/webgw/assets"
 	"github.com/amin-jalali/termocode/internal/webgw/assets/manifest"
@@ -50,6 +54,50 @@ func Manifest() http.Handler {
 type asset struct {
 	body  []byte
 	ctype string
+	gz    *gzBody // nil: sent as it is (fonts are compressed already)
+}
+
+// gzBody is an asset's gzipped bytes, made on its first request (a
+// gateway that never serves the editor never packs its 4.5 MB).
+type gzBody struct {
+	once sync.Once
+	src  []byte
+	b    []byte
+}
+
+func (g *gzBody) bytes() []byte {
+	g.once.Do(func() {
+		var buf bytes.Buffer
+		zw, _ := gzip.NewWriterLevel(&buf, gzip.DefaultCompression)
+		_, _ = zw.Write(g.src)
+		if zw.Close() == nil && buf.Len() < len(g.src) {
+			g.b = buf.Bytes()
+		}
+	})
+	return g.b
+}
+
+// packable are the asset kinds sent gzipped to a browser that takes it.
+var packable = map[string]bool{".html": true, ".js": true, ".css": true, ".txt": true, ".svg": true}
+
+// takesGzip reports whether the request's Accept-Encoding names gzip
+// with a weight above 0.
+func takesGzip(r *http.Request) bool {
+	for _, h := range r.Header.Values("Accept-Encoding") {
+		for _, part := range strings.Split(h, ",") {
+			name, params, _ := strings.Cut(part, ";")
+			if !strings.EqualFold(strings.TrimSpace(name), "gzip") {
+				continue
+			}
+			k, v, ok := strings.Cut(strings.TrimSpace(params), "=")
+			if !ok || strings.TrimSpace(k) != "q" {
+				return true
+			}
+			q, err := strconv.ParseFloat(strings.TrimSpace(v), 64)
+			return err == nil && q > 0
+		}
+	}
+	return false
 }
 
 // KitEnabled reports whether this build serves the component kit at
@@ -79,17 +127,21 @@ func Assets() http.Handler {
 		if err != nil || !ok {
 			continue
 		}
+		a := asset{body: b, ctype: ctype}
+		if packable[path.Ext(e.Path)] {
+			a.gz = &gzBody{src: b}
+		}
 		switch {
 		case e.Path == "index.html":
-			routes["/"] = asset{b, ctype}
+			routes["/"] = a
 		case e.Path == "kit.html":
-			routes["/dev/kit"] = asset{b, ctype}
+			routes["/dev/kit"] = a
 		case "/assets/"+e.Path == FramePath:
-			routes[FramePath] = asset{b, ctype}
+			routes[FramePath] = a
 		case strings.HasSuffix(e.Path, ".html"), e.Path == "manifest.webmanifest":
 			// No other pages; the manifest is Manifest()'s.
 		default:
-			routes["/assets/"+e.Path] = asset{b, ctype}
+			routes["/assets/"+e.Path] = a
 		}
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -109,6 +161,17 @@ func Assets() http.Handler {
 			w.Header().Set("X-Frame-Options", "SAMEORIGIN")
 		}
 		w.Header().Set("Content-Type", a.ctype)
-		_, _ = w.Write(a.body)
+		body := a.body
+		if a.gz != nil {
+			// The page's code is public and the same for everyone (no
+			// secret in it to guess at), so packing it leaks nothing.
+			w.Header().Set("Vary", "Accept-Encoding")
+			if z := a.gz.bytes(); z != nil && takesGzip(r) {
+				w.Header().Set("Content-Encoding", "gzip")
+				body = z
+			}
+		}
+		w.Header().Set("Content-Length", strconv.Itoa(len(body)))
+		_, _ = w.Write(body)
 	})
 }
