@@ -77,8 +77,14 @@ func (c *Calls) Count(marker string, step func()) int {
 	c.p.T.Helper()
 	c.take() // resets the counters
 	step()
+	return c.countIn(c.take(), marker)
+}
+
+// countIn is Count over coverage already taken.
+func (c *Calls) countIn(res []*profiler.ScriptCoverage, marker string) int {
+	c.p.T.Helper()
 	n, found := 0, false
-	for _, sc := range c.take() {
+	for _, sc := range res {
 		if os.Getenv("WEB_PERF_CALLS_DEBUG") != "" {
 			c.p.T.Logf("coverage: %s (%d functions)", sc.URL, len(sc.Functions))
 		}

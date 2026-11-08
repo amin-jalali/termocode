@@ -102,6 +102,10 @@ func perfWalk(t *testing.T, vp Viewport) {
 	p := NewPage(t, s, vp)
 	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
 	r := StartPerf(p)
+	var calls *Calls
+	if os.Getenv("WEB_PERF_CALLS") != "" {
+		calls = StartCalls(p)
+	}
 	if v, err := strconv.ParseFloat(os.Getenv("WEB_PERF_CPU"), 64); err == nil && v > 1 {
 		r.Throttle(v)
 	}
@@ -134,11 +138,15 @@ func perfWalk(t *testing.T, vp Viewport) {
 	t.Logf("wire bytes to the connect screen: %d (%v)", n, urls)
 	var c *HubConn
 	add(r.Measure("login → workbench", func() { c = p.LoginHere("c-perf") }))
+	t.Logf("DOM after login: %s", Eval[string](p, `(() => { const all = document.querySelectorAll("*"); const by = {}; for (const e of all) { const k = e.tagName + "." + (typeof e.className === "string" ? e.className.split(" ")[0] : ""); by[k] = (by[k] || 0) + 1; } return all.length + " elements; " + Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 15).map(([k, n]) => k + " " + n).join(", "); })()`))
 	if vp.W >= 1200 {
 		add(r.Measure("big tree (400 rows)", func() {
 			c.Send(t, Snap("tree", 1, bigTree(200)))
 			p.WaitJS(`document.querySelectorAll('[data-view="files"] .tree-row').length > 50`)
 		}))
+		if os.Getenv("WEB_PERF_CV") != "" {
+			Eval[bool](p, `(() => { const s = new CSSStyleSheet(); s.replaceSync(".wb-side .tree-line{content-visibility:auto;contain-intrinsic-size:auto 22px}"); document.adoptedStyleSheets = [...document.adoptedStyleSheets, s]; return true; })()`)
+		}
 		add(r.Measure("open a folder of 1500", func() {
 			p.TapJS(treeRow("dir000"))
 			p.WaitJS(treeRow("dir000/inner1499.ts"))
@@ -188,6 +196,17 @@ func perfWalk(t *testing.T, vp Viewport) {
 			deskType(p, true, "abcdefghijklmnopqrst")
 			p.WaitJS(deskDoc + `.querySelector(".view-lines").textContent.includes("abcdefghijklmnopqrst")`)
 		}))
+		add(r.Measure("open 2nd file (2000 lines)", func() {
+			openBufAs(t, p, c, 3, "big2.go", nil, lines...)
+			p.WaitJS(`document.querySelector(".ed-tab.is-on .ed-tab-name")?.textContent === "big2.go"`)
+			p.WaitJS(deskDoc + `?.querySelector(".view-lines .view-line")`)
+		}))
+		drain(c, 200*time.Millisecond)
+		add(r.Measure("back to the 1st tab", func() {
+			Eval[bool](p, `(location.hash = "#/files/big.go", true)`)
+			p.WaitJS(`document.querySelector(".ed-tab.is-on .ed-tab-name")?.textContent === "big.go"`)
+		}))
+		drain(c, 200*time.Millisecond)
 		stop := autoReply(t, c, map[string]any{
 			webproto.OpContainersList:    manyContainers(30),
 			webproto.OpContainersHost:    ctrHost(),
@@ -222,6 +241,51 @@ func perfWalk(t *testing.T, vp Viewport) {
 			}
 			time.Sleep(300 * time.Millisecond)
 		}))
+		if calls != nil {
+			marks := map[string]string{"App": "shell layout-desktop", "Workbench": "wb-center", "chat msg": "msg-text", "tree row": treeRowFn}
+			seq := uint64(22)
+			countAll := func(name string, step func()) {
+				// one pass per marker would repeat the step: count all at once
+				calls.take()
+				step()
+				res := calls.take()
+				var parts []string
+				for k, m := range marks {
+					parts = append(parts, fmt.Sprintf("%s %d", k, calls.countIn(res, m)))
+				}
+				t.Logf("renders during %s: %v", name, parts)
+			}
+			countAll("status delta ×20", func() {
+				for i := range 20 {
+					seq++
+					c.Send(t, Delta("status", seq, statusData("main", i)))
+				}
+				time.Sleep(300 * time.Millisecond)
+			})
+			countAll("20 keys in the editor", func() {
+				deskType(p, true, "ABCDEFGHIJKLMNOPQRST")
+				p.WaitJS(deskDoc + `.querySelector(".view-lines").textContent.includes("ABCDEFGHIJKLMNOPQRST")`)
+				time.Sleep(300 * time.Millisecond)
+			})
+			countAll("20 keys in the composer", func() {
+				p.TapJS(composer + `.querySelector("textarea")`)
+				p.Key("klmnopqrstuvwxyzabcd")
+				time.Sleep(300 * time.Millisecond)
+			})
+			countAll("idle 3s", func() { time.Sleep(3 * time.Second) })
+			countAll("view: scm and back", func() {
+				p.GoTab("git")
+				p.GoTab("files")
+			})
+			countAll("chat append ×20", func() {
+				c.Send(t, Snap("chat", 1, chatWith(true, userMsg(0, "q"), aiMsg(1, mdPara("a")))))
+				p.WaitJS(chatView + `?.querySelectorAll(".msg").length === 2`)
+				for i := range 20 {
+					c.Send(t, Delta("chat", uint64(2+i), map[string]any{"op": "append", "i": 1, "text": " more"}))
+				}
+				time.Sleep(300 * time.Millisecond)
+			})
+		}
 	}
 	drain(c, 200*time.Millisecond)
 	since := time.Now()
