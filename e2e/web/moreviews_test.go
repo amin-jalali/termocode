@@ -260,7 +260,7 @@ func TestDBView(t *testing.T) {
 			p.TapJS(`[...document.querySelectorAll(".row-ask .btn")].find((b) => b.textContent === "Run query")`)
 			r := expectOp(t, c, webproto.OpDBQuery, `{"conn":"local","sql":"DELETE FROM users"}`)
 			c.Send(t, &webproto.ErrMsg{T: webproto.KindErr, ID: r.ID, Code: webproto.CodeForbidden, Msg: "This statement may change data. It needs the laptop."})
-			p.WaitJS(`document.querySelector(".ask-text")?.textContent === "This may change data on local. Ask the laptop to run it?"`)
+			p.WaitJS(`document.querySelector(".ask-text")?.textContent === "This may change data on local. Run it?"`)
 			p.WaitJS(`document.querySelector(".ask .arm.is-armed")`)
 			p.TapJS(ButtonByText("Ask the laptop"))
 			reply(t, c, expectOp(t, c, webproto.OpDBExec, `{"conn":"local","sql":"DELETE FROM users"}`), webproto.AskRef{Card: "card-21"})

@@ -99,7 +99,7 @@ func TestHTTPQuickRequestAndLaptopCard(t *testing.T) {
 	click(p, `document.querySelector('.http-form [data-act="ok"]')`)
 	reply(t, c, expectOp(t, c, webproto.OpHTTPSend, `{"method":"POST","url":"https://api.example.com/x","headers":[{"name":"X-A","value":"1"}],"body":"{}"}`),
 		webproto.HTTPSent{Card: "card-1", Host: "api.example.com"})
-	p.WaitJS(`document.body.textContent.includes("The laptop asks before the first request to api.example.com.")`)
+	p.WaitJS(`document.body.textContent.includes("A card asks before the first request to api.example.com.")`)
 	// Show the last response after the laptop's yes.
 	click(p, `document.querySelector('.pv[data-view="http"] [data-act="http-last"]')`)
 	reply(t, c, expectOp(t, c, webproto.OpHTTPResponse, `{}`), webproto.HTTPResponse{Run: 9, Method: "POST", URL: "https://api.example.com/x", Status: 201, StatusText: "Created", ReqHeaders: []webproto.HTTPHeader{}, Headers: []webproto.HTTPHeader{}})

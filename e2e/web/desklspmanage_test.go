@@ -27,7 +27,7 @@ func TestDeskManageLanguageServers(t *testing.T) {
 	p.WaitJS(details + ` === "Installed by termocode v0.16.2 · used in this workspace|Not installed|On the laptop's PATH|Not installed · cargo is not on PATH (install Rust)"`)
 	p.Key("pyright")
 	pickRow(p, "pyright (Python)")
-	if got := p.Text(".ask .ask-text"); got != "Install pyright on the laptop? The laptop card shows what runs there." {
+	if got := p.Text(".ask .ask-text"); got != "Install pyright on the laptop? The card shows what runs there." {
 		t.Errorf("question %q", got)
 	}
 	askTheLaptop(t, p, c, webproto.OpLSPServerAsk, `{"name":"pyright","action":"install"}`)

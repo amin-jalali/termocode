@@ -35,7 +35,7 @@ func TestServicesActions(t *testing.T) {
 			p.TapJS(svcRow("web") + `.querySelector('[data-act="restart"]')`)
 			p.TapJS(svcRow("web") + `.querySelector(".dbg-ask .btn-primary")`)
 			reply(t, c, expectOp(t, c, webproto.OpServicesRestart, `{"name":"web"}`), webproto.ServiceDone{Asked: true})
-			p.WaitJS(`document.body.textContent.includes("The laptop asks before this command runs.")`)
+			p.WaitJS(`document.body.textContent.includes("A card asks before this command runs.")`)
 			focus("db")
 			Eval[bool](p, `(`+svcRow("db")+`.querySelector('[data-act="logs"]').click(), true)`)
 			reply(t, c, expectOp(t, c, webproto.OpServicesLogs, `{"name":"db"}`), webproto.ServiceLogs{Name: "db", Lines: []string{"ready to accept", "<i>x</i>"}})

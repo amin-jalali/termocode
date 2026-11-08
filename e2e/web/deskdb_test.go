@@ -32,7 +32,7 @@ func dbxConns() webproto.DBConns {
 // dbxAsk waits for the laptop question (Cancel first), then asks.
 func dbxAsk(t *testing.T, p *Page) {
 	t.Helper()
-	p.WaitJS(`document.querySelector(".ask-text")?.textContent === "The laptop shows exactly what changes and asks you there." && document.activeElement?.textContent === "Cancel"`)
+	p.WaitJS(`document.querySelector(".ask-text")?.textContent === "A card shows exactly what changes and asks you." && document.activeElement?.textContent === "Cancel"`)
 	p.WaitJS(`document.querySelector(".ask .arm.is-armed")`)
 	p.TapJS(ButtonByText("Ask the laptop"))
 }

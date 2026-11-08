@@ -105,7 +105,7 @@ func TestDeskDBTreeGridAndQuery(t *testing.T) {
 	p.TapJS(`[...document.querySelectorAll('[data-view="db-query"] .pv-ask button')].find((b) => b.textContent === "Run query")`)
 	r = expectOp(t, c, webproto.OpDBQuery, "")
 	c.Send(t, &webproto.ErrMsg{T: webproto.KindErr, ID: r.ID, Code: webproto.CodeForbidden, Msg: "This statement may change data. It needs the laptop."})
-	p.WaitJS(`document.querySelector(".ask-text")?.textContent === "This may change data on local. Ask the laptop to run it?"`)
+	p.WaitJS(`document.querySelector(".ask-text")?.textContent === "This may change data on local. Run it?"`)
 }
 
 // Containers: grouped by compose project with state icons; Logs show in

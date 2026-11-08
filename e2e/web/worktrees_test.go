@@ -66,7 +66,7 @@ func TestDeskWorktrees(t *testing.T) {
 	noReq(t, c, 200*time.Millisecond)
 	p.TapJS(`document.querySelector('.wb-side .pv-ask .pv-btn:not(.is-2)')`)
 	reply(t, c, expectOp(t, c, webproto.OpWorktreesSleep, `{"id":"112233445566","on":true}`), webproto.WorktreeDone{Asked: true})
-	p.WaitJS(`document.body.textContent.includes("The laptop asks first")`)
+	p.WaitJS(`document.body.textContent.includes("A card asks first")`)
 
 	wtAct(p, "112233445566", "note")
 	p.WaitJS(`document.activeElement?.closest(".wt-note")`)
