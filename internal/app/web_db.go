@@ -135,6 +135,12 @@ type webDBConn struct {
 	net    *webDBNet
 	tunnel bool
 	sec    dbSSHSecrets
+	// The tunnel the session rides: via is the laptop's (nil: none open
+	// there), tun the one used (the laptop's or the page's).
+	via, tun *dbclient.Tunnel
+	// fresh asks open for a new login (a connection test); keep opens a
+	// session meant for many reads (web_db_net.go keeps it).
+	fresh, keep bool
 }
 
 func (m *Model) webDBFind(call *webCall, id string) (webDBConn, bool) {
@@ -158,16 +164,14 @@ func (m *Model) webDBFind(call *webCall, id string) (webDBConn, bool) {
 		out.snap.user = d.sessions[id]
 		if c.SSH != nil {
 			out.snap.dial, _ = d.dbDialFor(c)
+			if out.snap.dial != nil {
+				out.via = d.tunnel(id)
+				out.tun = out.via
+			}
 		}
 	}
 	m.webDBRoute(&out)
 	return out, true
-}
-
-// open is a read-only session of the connection (the caller closes it).
-// Its error is the driver's or the tunnel's: w.fail tells the page why.
-func (w *webDBConn) open(ctx context.Context) (dbclient.Session, error) {
-	return w.session(ctx, true)
 }
 
 // webDBSchema is the schema whose tables the page lists.

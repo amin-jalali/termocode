@@ -316,6 +316,31 @@ func (s *SQLSession) ReadOnlySession() (Session, error) {
 	return clone, nil
 }
 
+// AsReadOnly makes s, a session no one else holds, read-only in place:
+// every statement then runs in a read-only transaction of its own and
+// Begin is refused, as on a ReadOnlySession clone, but s keeps its pool
+// and the connection its login opened (no second login).
+func (s *SQLSession) AsReadOnly() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return errors.New("database session is closed")
+	}
+	if s.tx != nil || s.manual != nil {
+		return errors.New("a transaction is active")
+	}
+	s.readonly = true
+	return nil
+}
+
+// KeepIdle lets s keep up to n connections open between statements, each
+// for at most idle (a session that is reused for many reads; a
+// ReadOnlySession clone keeps none).
+func (s *SQLSession) KeepIdle(n int, idle time.Duration) {
+	s.db.SetMaxIdleConns(n)
+	s.db.SetConnMaxIdleTime(idle)
+}
+
 func (s *SQLSession) Run(ctx context.Context, statement string, opts RunOptions) (result Result) {
 	if s.name == "sqlserver" {
 		if stmt, analyze, ok := sqlServerPlanTarget(statement); ok {

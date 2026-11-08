@@ -144,12 +144,11 @@ func (t *Tunnel) MapHost(host, addr string) {
 	t.hosts[host] = addr
 }
 
-// HostMapped reports a host MapHost pointed somewhere on this tunnel.
-func (t *Tunnel) HostMapped(host string) bool {
+// HostMapped is where MapHost points host on this tunnel ("": nowhere).
+func (t *Tunnel) HostMapped(host string) string {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	_, ok := t.hosts[host]
-	return ok
+	return t.hosts[host]
 }
 
 // mapped is addr with its host mapped by MapHost.

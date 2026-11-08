@@ -314,7 +314,7 @@ func TestDBMoreChangesNeedLaptopCard(t *testing.T) {
 	}
 	n := len(*opened)
 	webDBAsk(t, m, c, webproto.OpDBEdit, edit, "3 changes", "users", `DELETE FROM "public"."users" WHERE "id" = '2'`, `'new@example.com'`, `INSERT INTO "public"."users" ("email") VALUES (NULL)`)
-	if len(*opened) != n+1 { // the key lookup's read-only one
+	if len(*opened) != n { // the key lookup reuses the read-only session db.tables kept
 		t.Fatalf("sessions before the yes: %d", len(*opened)-n)
 	}
 	webTestLaptopSelect(t, m, "confirm")

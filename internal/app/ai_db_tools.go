@@ -294,6 +294,21 @@ func dbAITake(ctx context.Context, call aiIDECaller, id string) dbAISnapshot {
 // auto-commit one for writes. The caller closes it. snap.password is set
 // to the password used, so callers can keep it out of every text.
 func dbAIOpen(ctx context.Context, root string, c dbclient.Conn, snap *dbAISnapshot, readOnly bool) (dbclient.Session, error) {
+	return dbAIOpenAs(ctx, root, c, snap, readOnly, false)
+}
+
+// dbReadKeeper is a session that can be made read-only in place and keep
+// its connections between statements (dbclient.SQLSession).
+type dbReadKeeper interface {
+	AsReadOnly() error
+	KeepIdle(n int, idle time.Duration)
+}
+
+// dbAIOpenAs is dbAIOpen; keep (read-only only) opens a session meant to
+// be reused for many reads: the login that checked the password is the
+// connection the reads use, and connections stay open between them.
+func dbAIOpenAs(ctx context.Context, root string, c dbclient.Conn, snap *dbAISnapshot, readOnly, keep bool) (dbclient.Session, error) {
+	keep = keep && readOnly
 	if c.Driver == "sqlite" {
 		if !filepath.IsAbs(c.Path) {
 			c.Path = filepath.Join(root, c.Path)
@@ -323,6 +338,9 @@ func dbAIOpen(ctx context.Context, root string, c dbclient.Conn, snap *dbAISnaps
 		// A read-only clone of the user's session: its own pool, never the
 		// user's connection or transaction.
 		if ro, err := snap.user.ReadOnlySession(); err == nil && ro != nil {
+			if k, ok := ro.(dbReadKeeper); ok && keep {
+				k.KeepIdle(2, webDBIdleFor)
+			}
 			return ro, nil
 		}
 	}
@@ -339,6 +357,12 @@ func dbAIOpen(ctx context.Context, root string, c dbclient.Conn, snap *dbAISnaps
 	}
 	if !readOnly {
 		return base, nil
+	}
+	if k, ok := base.(dbReadKeeper); ok && keep {
+		if err := k.AsReadOnly(); err == nil {
+			k.KeepIdle(2, webDBIdleFor)
+			return base, nil
+		}
 	}
 	ro, err := base.ReadOnlySession()
 	_ = base.Close()

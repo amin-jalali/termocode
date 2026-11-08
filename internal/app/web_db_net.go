@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net"
@@ -44,6 +46,241 @@ type webDBNet struct {
 	mu       sync.Mutex
 	tunnels  map[string]*dbclient.Tunnel              // by connection id and SSH settings
 	hostKeys map[string]*dbclient.UnknownHostKeyError // the key last asked about, by connection
+	kept     map[string][]*webDBKept                  // idle read-only sessions, by webDBConn.keptKey
+	stopped  bool                                     // the hub stopped: nothing is kept any more
+	// resolving locks the container lookups of a tunnel (by tunnel key).
+	resolving map[string]*sync.Mutex
+}
+
+// webDBKeepMax is how many idle read-only sessions the page keeps per
+// connection (two reads at once each have one).
+const webDBKeepMax = 2
+
+// webDBKept is a read-only session the page keeps for the next reads of
+// its connection, with the password it logged in with (every answer
+// masks it) and the tunnel it rides.
+type webDBKept struct {
+	sess  dbclient.Session
+	pw    string
+	hasPW bool
+	via   *dbclient.Tunnel // the laptop's tunnel it rides (nil: the page's, or none)
+	tun   *dbclient.Tunnel // the tunnel it rides (nil: none)
+	timer *time.Timer      // closes it after webDBIdleFor unused
+}
+
+// take is an idle session kept under key that rides via (it is the
+// caller's until its lease ends); nil: none. Sessions whose tunnel
+// closed are closed.
+func (n *webDBNet) take(key string, via *dbclient.Tunnel) *webDBKept {
+	n.mu.Lock()
+	var got *webDBKept
+	var stale, rest []*webDBKept
+	for _, k := range n.kept[key] {
+		switch {
+		case k.tun != nil && !k.tun.Alive():
+			k.timer.Stop()
+			stale = append(stale, k)
+		case got == nil && k.via == via:
+			k.timer.Stop()
+			got = k
+		default:
+			rest = append(rest, k)
+		}
+	}
+	if len(rest) == 0 {
+		delete(n.kept, key)
+	} else {
+		n.kept[key] = rest
+	}
+	n.mu.Unlock()
+	for _, k := range stale {
+		_ = k.sess.Close()
+	}
+	return got
+}
+
+// put keeps k under key for webDBIdleFor (closed instead when the hub
+// stopped or enough are kept).
+func (n *webDBNet) put(key string, k *webDBKept) {
+	n.mu.Lock()
+	if n.stopped || len(n.kept[key]) >= webDBKeepMax || k.tun != nil && !k.tun.Alive() {
+		n.mu.Unlock()
+		_ = k.sess.Close()
+		return
+	}
+	if n.kept == nil {
+		n.kept = map[string][]*webDBKept{}
+	}
+	n.kept[key] = append(n.kept[key], k)
+	k.timer = time.AfterFunc(webDBIdleFor, func() { n.expire(key, k) })
+	n.mu.Unlock()
+}
+
+// expire closes k when it is still kept (idle for webDBIdleFor).
+func (n *webDBNet) expire(key string, k *webDBKept) {
+	n.mu.Lock()
+	list, found := n.kept[key], false
+	for i, x := range list {
+		if x == k {
+			n.kept[key] = append(list[:i:i], list[i+1:]...)
+			found = true
+			break
+		}
+	}
+	if len(n.kept[key]) == 0 {
+		delete(n.kept, key)
+	}
+	n.mu.Unlock()
+	if found {
+		_ = k.sess.Close()
+	}
+}
+
+// dropConn closes the kept sessions of connection id (its password or
+// settings changed).
+func (n *webDBNet) dropConn(id string) {
+	n.mu.Lock()
+	var drop []*webDBKept
+	for key, list := range n.kept {
+		if strings.HasPrefix(key, id+"\x00") {
+			drop = append(drop, list...)
+			delete(n.kept, key)
+		}
+	}
+	for _, k := range drop {
+		k.timer.Stop()
+	}
+	n.mu.Unlock()
+	for _, k := range drop {
+		_ = k.sess.Close()
+	}
+}
+
+// webDBLease is a kept session lent to one read: Close gives it back for
+// the next read, unless a call on it failed (it may be broken: it is
+// closed) or a transaction was asked for (never on a kept session).
+type webDBLease struct {
+	n   *webDBNet
+	key string
+	k   *webDBKept
+
+	mu   sync.Mutex
+	bad  bool
+	done bool
+}
+
+func (l *webDBLease) fail(err error) {
+	if err != nil {
+		l.mu.Lock()
+		l.bad = true
+		l.mu.Unlock()
+	}
+}
+
+// webDBAgain reports a read that failed on a dropped connection (a kept one
+// the server closed: a restart, a recreated container): it runs once
+// more, on a new connection of the pool. It only reads.
+func webDBAgain(ctx context.Context, err error) bool {
+	return err != nil && ctx.Err() == nil && dbclient.ConnLost(err)
+}
+
+func (l *webDBLease) Ping(ctx context.Context) error {
+	err := l.k.sess.Ping(ctx)
+	if webDBAgain(ctx, err) {
+		err = l.k.sess.Ping(ctx)
+	}
+	l.fail(err)
+	return err
+}
+
+func (l *webDBLease) Introspect(ctx context.Context, req dbclient.IntrospectionRequest) (dbclient.IntrospectionResult, error) {
+	r, err := l.k.sess.Introspect(ctx, req)
+	if webDBAgain(ctx, err) {
+		r, err = l.k.sess.Introspect(ctx, req)
+	}
+	l.fail(err)
+	return r, err
+}
+
+func (l *webDBLease) Run(ctx context.Context, sql string, opts dbclient.RunOptions) dbclient.Result {
+	r := l.k.sess.Run(ctx, sql, opts)
+	if webDBAgain(ctx, r.Err) {
+		r = l.k.sess.Run(ctx, sql, opts)
+	}
+	l.fail(r.Err)
+	return r
+}
+
+func (l *webDBLease) Begin(ctx context.Context) error {
+	l.fail(errors.New("a transaction"))
+	return l.k.sess.Begin(ctx)
+}
+
+func (l *webDBLease) Commit(ctx context.Context) error {
+	l.fail(errors.New("a transaction"))
+	return l.k.sess.Commit(ctx)
+}
+
+func (l *webDBLease) Rollback(ctx context.Context) error {
+	l.fail(errors.New("a transaction"))
+	return l.k.sess.Rollback(ctx)
+}
+
+func (l *webDBLease) ReadOnlySession() (dbclient.Session, error) { return l.k.sess.ReadOnlySession() }
+
+func (l *webDBLease) Cancel() { l.k.sess.Cancel() }
+
+func (l *webDBLease) Close() error {
+	l.mu.Lock()
+	done, bad := l.done, l.bad
+	l.done = true
+	l.mu.Unlock()
+	switch {
+	case done:
+	case bad:
+		_ = l.k.sess.Close()
+	default:
+		l.n.put(l.key, l.k)
+	}
+	return nil
+}
+
+// webDBKeeps reports a driver whose read-only session the page keeps (a
+// network login; sqlite opens a local file).
+func webDBKeeps(driver string) bool { return driver == "postgres" || driver == "mysql" }
+
+// keptKey names w's kept sessions: the connection's settings and the
+// password it logs in with (the laptop's, or the secret store's).
+func (w *webDBConn) keptKey() string {
+	b, _ := json.Marshal(w.c)
+	pw := "store"
+	if w.snap.hasPW {
+		sum := sha256.Sum256([]byte(w.snap.password))
+		pw = hex.EncodeToString(sum[:])
+	}
+	return w.c.ID + "\x00" + string(b) + "\x00" + pw
+}
+
+// open is a read-only session of w's connection (the caller closes it).
+// A network connection's session is kept for the next reads (one login,
+// not one per read); w.fresh asks for a new login.
+func (w *webDBConn) open(ctx context.Context) (dbclient.Session, error) {
+	if w.net == nil || w.fresh || !webDBKeeps(w.c.Driver) {
+		return w.session(ctx, true)
+	}
+	key := w.keptKey()
+	if k := w.net.take(key, w.via); k != nil {
+		w.snap.password, w.snap.hasPW = k.pw, k.hasPW
+		return &webDBLease{n: w.net, key: key, k: k}, nil
+	}
+	w.keep = true
+	s, err := w.session(ctx, true)
+	w.keep = false
+	if err != nil {
+		return nil, err
+	}
+	k := &webDBKept{sess: s, pw: w.snap.password, hasPW: w.snap.hasPW, via: w.via, tun: w.tun}
+	return &webDBLease{n: w.net, key: key, k: k}, nil
 }
 
 // webDBTunnelKey names c's tunnel: new SSH settings get a new one.
@@ -57,29 +294,53 @@ func webDBTunnelKey(c dbclient.Conn) string {
 // by its name once per tunnel (docker inspect is a new SSH session and
 // the docker CLI starting, often a second); a dial that fails later asks
 // again once and dials the new IP (a recreated container has a new one).
-func (n *webDBNet) dial(ctx context.Context, c dbclient.Conn, root string, sec dbSSHSecrets) (dbclient.DialFunc, error) {
+func (n *webDBNet) dial(ctx context.Context, c dbclient.Conn, root string, sec dbSSHSecrets) (dbclient.DialFunc, *dbclient.Tunnel, error) {
 	t, err := n.tunnel(ctx, c, root, sec)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if c.Container == nil {
-		return t.DialContext, nil
+		return t.DialContext, t, nil
 	}
-	if !t.HostMapped(webDBContainerHost(c)) {
-		if err := dbResolveContainer(ctx, c, t); err != nil {
-			return nil, err
+	host, mu := webDBContainerHost(c), n.resolver(webDBTunnelKey(c))
+	// resolve asks for the IP unless the tunnel points host somewhere
+	// other than was: one ask for reads that fail at the same time.
+	resolve := func(ctx context.Context, was string) error {
+		mu.Lock()
+		defer mu.Unlock()
+		if t.HostMapped(host) != was {
+			return nil
 		}
+		return dbResolveContainer(ctx, c, t)
+	}
+	if err := resolve(ctx, ""); err != nil {
+		return nil, nil, err
 	}
 	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+		was := t.HostMapped(host)
 		nc, err := t.DialContext(ctx, network, addr)
 		if err == nil || ctx.Err() != nil || !t.Alive() {
 			return nc, err
 		}
-		if rerr := dbResolveContainer(ctx, c, t); rerr != nil {
+		if rerr := resolve(ctx, was); rerr != nil {
 			return nil, rerr // the container is gone or stopped: say so
 		}
 		return t.DialContext(ctx, network, addr)
-	}, nil
+	}, t, nil
+}
+
+// resolver is the lock of the container lookups through the tunnel key
+// names.
+func (n *webDBNet) resolver(key string) *sync.Mutex {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	if n.resolving == nil {
+		n.resolving = map[string]*sync.Mutex{}
+	}
+	if n.resolving[key] == nil {
+		n.resolving[key] = &sync.Mutex{}
+	}
+	return n.resolving[key]
 }
 
 // webDBContainerHost is the name dials to c's container use (as
@@ -119,8 +380,20 @@ func (n *webDBNet) tunnel(ctx context.Context, c dbclient.Conn, root string, sec
 	return t, nil
 }
 
-// closeAll closes every tunnel (the hub stops).
+// closeAll closes every kept session, then every tunnel (the hub stops).
 func (n *webDBNet) closeAll() {
+	n.mu.Lock()
+	n.stopped = true
+	var drop []*webDBKept
+	for key, list := range n.kept {
+		drop = append(drop, list...)
+		delete(n.kept, key)
+	}
+	n.mu.Unlock()
+	for _, k := range drop {
+		k.timer.Stop()
+		_ = k.sess.Close()
+	}
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	for key, t := range n.tunnels {
@@ -178,11 +451,11 @@ func (w *webDBConn) route(ctx context.Context) error {
 	if !w.tunnel || w.snap.dial != nil {
 		return nil
 	}
-	dial, err := w.net.dial(ctx, w.c, w.root, w.sec)
+	dial, t, err := w.net.dial(ctx, w.c, w.root, w.sec)
 	if err != nil {
 		return err
 	}
-	w.snap.dial = dial
+	w.snap.dial, w.tun = dial, t
 	return nil
 }
 
@@ -196,6 +469,7 @@ func (w *webDBConn) session(ctx context.Context, readOnly bool) (dbclient.Sessio
 	octx, cancel := context.WithTimeout(ctx, dbTestTimeout)
 	type opened struct {
 		snap dbAISnapshot
+		tun  *dbclient.Tunnel
 		sess dbclient.Session
 		err  error
 		ok   bool
@@ -206,9 +480,9 @@ func (w *webDBConn) session(ctx context.Context, readOnly bool) (dbclient.Sessio
 		err := cp.route(octx)
 		var sess dbclient.Session
 		if err == nil {
-			sess, err = dbAIOpen(octx, cp.root, cp.c, &cp.snap, readOnly)
+			sess, err = dbAIOpenAs(octx, cp.root, cp.c, &cp.snap, readOnly, cp.keep)
 		}
-		done <- opened{snap: cp.snap, sess: sess, err: err, ok: true}
+		done <- opened{snap: cp.snap, tun: cp.tun, sess: sess, err: err, ok: true}
 	}, func() {
 		done <- opened{err: errors.New("the read stopped on an internal error (a crash report was saved)")}
 	})
@@ -218,7 +492,7 @@ func (w *webDBConn) session(ctx context.Context, readOnly bool) (dbclient.Sessio
 	case r := <-done:
 		cancel()
 		if r.ok {
-			w.snap = r.snap
+			w.snap, w.tun = r.snap, r.tun
 		}
 		if r.err != nil && ctx.Err() == nil && errors.Is(octx.Err(), context.DeadlineExceeded) && dbclient.ReachText(r.err) == "" {
 			r.err = dbNoAnswer(w.c, w.c.SSH != nil) // the database said nothing in time
@@ -345,7 +619,7 @@ func (m *Model) webDBSecret(call *webCall) tea.Cmd {
 		return nil
 	}
 	ai.RegisterSecret(a.Value)
-	kind, value := a.Kind, a.Value
+	kind, value, net := a.Kind, a.Value, &m.web.dbNet
 	call.later()
 	return func() tea.Msg {
 		store := databaseSecretStore()
@@ -357,6 +631,7 @@ func (m *Model) webDBSecret(call *webCall) tea.Cmd {
 			call.fail(webproto.CodeConflict, "Could not save it in the laptop's secret store.")
 			return nil
 		}
+		net.dropConn(c.ID) // the next read logs in with it
 		return applyMsg(func(m *Model) tea.Cmd {
 			m.webAuditOp(call, c.ID+" "+kind, "saved")
 			call.reply(webproto.DBDone{Text: "Saved in the laptop's secret store."})

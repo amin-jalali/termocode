@@ -34,6 +34,14 @@ func connLost(err error) bool {
 	return false
 }
 
+// ConnLost reports an error of a dropped connection (the server, the
+// network or the tunnel's channel went away), also after a session
+// turned it into its text: a read that failed so may run again on a new
+// connection.
+func ConnLost(err error) bool {
+	return connLost(err) || err != nil && strings.Contains(err.Error(), "the connection was lost mid-query")
+}
+
 // rowCount is "1 row" or "N rows".
 func rowCount(n int) string {
 	if n == 1 {

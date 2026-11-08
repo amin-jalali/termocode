@@ -259,6 +259,7 @@ func (m *Model) webDBTest(call *webCall) tea.Cmd {
 		return nil
 	}
 	w.snap.user = nil // a fresh login, never a clone of the open session
+	w.fresh = true    // nor a session the page kept
 	m.webAuditOp(call, w.c.ID, "test")
 	return m.webDBReadOnce(call, w, func(ctx context.Context, s dbclient.Session) (any, error) {
 		start := time.Now()

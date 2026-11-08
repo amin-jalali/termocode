@@ -168,6 +168,9 @@ func TestWebDBRemoteContainerFindsItsIPByName(t *testing.T) {
 	mu.Lock()
 	ip = "172.18.0.9" // docker compose up recreated it
 	mu.Unlock()
+	// Its connections died with it: the page's kept session is gone (the
+	// real driver's way there: TestWebDBContainerIPFoundOncePerTunnel).
+	m.web.dbNet.dropConn("baaytona")
 	webTestData(t, webCallWithin(t, m, c, webproto.OpDBTables, `{"conn":"baaytona"}`, 5*time.Second), &tb)
 	if got := srv.Targets(); got[len(got)-1] != "172.18.0.9:5432" {
 		t.Fatalf("after the recreate the tunnel went to %q, want 172.18.0.9:5432", got)
