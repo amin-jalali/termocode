@@ -468,6 +468,9 @@ func dbErrorText(err error) string {
 	if err == nil {
 		return ""
 	}
+	if t := dbclient.ReachText(err); t != "" {
+		return sanitizeDBText(t) // one plain line: what to check
+	}
 	switch {
 	case errors.Is(err, context.Canceled):
 		return "Cancelled"

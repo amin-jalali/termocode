@@ -393,7 +393,7 @@ func (t *Tunnel) DialContext(ctx context.Context, network, addr string) (net.Con
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		return nil, fmt.Errorf("the SSH server could not reach %s: %s", addr, sanitizeLine(strings.TrimPrefix(err.Error(), "ssh: ")))
+		return nil, tunnelReachError(addr, t.target.Host, err)
 	}
 	return &tunnelConn{Conn: c}, nil
 }
@@ -416,6 +416,7 @@ func OpenTunnel(ctx context.Context, cfg SSHConfig, opts TunnelOptions) (*Tunnel
 	}
 	var clients []*ssh.Client
 	var names []string
+	var agentLate atomic.Bool // the ssh-agent ran out of time
 	fail := func(err error) (*Tunnel, error) {
 		_ = closeClients(clients)
 		return nil, err
@@ -433,7 +434,7 @@ func OpenTunnel(ctx context.Context, cfg SSHConfig, opts TunnelOptions) (*Tunnel
 		if jump {
 			auth, authErr, cleanup = jumpAuth(ctx, hop, opts)
 		} else {
-			auth, cleanup, err = sshAuth(ctx, hop, opts)
+			auth, cleanup, err = sshAuth(ctx, hop, opts, &agentLate)
 			if err != nil {
 				return fail(err)
 			}
@@ -464,6 +465,9 @@ func OpenTunnel(ctx context.Context, cfg SSHConfig, opts TunnelOptions) (*Tunnel
 		c, err := sshHandshake(ctx, conn, hop, auth, authErr)
 		cleanup()
 		if err != nil {
+			if agentLate.Load() {
+				return fail(ErrAgentNoAnswer)
+			}
 			return fail(err)
 		}
 		clients = append(clients, c)
@@ -673,7 +677,9 @@ func TrustHostKey(file, host string, key ssh.PublicKey) error {
 	return cerr
 }
 
-func sshAuth(ctx context.Context, t SSHTarget, o TunnelOptions) ([]ssh.AuthMethod, func(), error) {
+// sshAuth is the login of the tunnel's own server. late is set when the
+// ssh-agent ran out of time (nil: not watched).
+func sshAuth(ctx context.Context, t SSHTarget, o TunnelOptions, late *atomic.Bool) ([]ssh.AuthMethod, func(), error) {
 	noop := func() {}
 	switch t.Auth {
 	case SSHAuthPassword:
@@ -710,22 +716,47 @@ func sshAuth(ctx context.Context, t SSHTarget, o TunnelOptions) ([]ssh.AuthMetho
 		if sock == "" {
 			return nil, noop, errors.New("ssh-agent is not running (SSH_AUTH_SOCK is not set); start it or use a key file")
 		}
-		var d net.Dialer
-		conn, err := d.DialContext(ctx, "unix", sock)
+		conn, closeAgent, err := dialAgent(ctx, sock, late)
 		if err != nil {
 			return nil, noop, errors.New("could not reach ssh-agent; start it or use a key file")
 		}
 		signers, err := agent.NewClient(conn).Signers()
 		if err != nil {
-			_ = conn.Close()
+			closeAgent()
+			if late != nil && late.Load() {
+				return nil, noop, ErrAgentNoAnswer
+			}
 			return nil, noop, errors.New("could not read the keys of ssh-agent")
 		}
 		if len(signers) == 0 {
-			_ = conn.Close()
+			closeAgent()
 			return nil, noop, errors.New("ssh-agent has no keys; add one with ssh-add")
 		}
-		return []ssh.AuthMethod{ssh.PublicKeys(signers...)}, func() { _ = conn.Close() }, nil
+		return []ssh.AuthMethod{ssh.PublicKeys(signers...)}, closeAgent, nil
 	}
+}
+
+// ErrAgentNoAnswer is an ssh-agent that did not list its keys or sign
+// before the connect deadline (it may wait for a confirmation).
+var ErrAgentNoAnswer = errors.New("ssh-agent did not answer in time; is it waiting for you to confirm the key?")
+
+// dialAgent opens the ssh-agent socket. The agent gets no more time than
+// ctx: when ctx ends, late is set and the socket closes, so a key list or
+// a signature that never comes ends the wait (the agent may wait for a
+// confirmation nobody gives).
+func dialAgent(ctx context.Context, sock string, late *atomic.Bool) (net.Conn, func(), error) {
+	var d net.Dialer
+	conn, err := d.DialContext(ctx, "unix", sock)
+	if err != nil {
+		return nil, func() {}, err
+	}
+	stop := context.AfterFunc(ctx, func() {
+		if late != nil {
+			late.Store(true)
+		}
+		_ = conn.Close()
+	})
+	return conn, func() { stop(); _ = conn.Close() }, nil
 }
 
 // sshKeyLoaded runs right after a key file was read and decrypted (tests

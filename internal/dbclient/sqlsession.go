@@ -282,6 +282,10 @@ func (s *SQLSession) openClone() (*sql.DB, func(), error) {
 
 func (s *SQLSession) Ping(ctx context.Context) error {
 	if err := s.db.PingContext(ctx); err != nil {
+		var reach *ReachError
+		if errors.As(err, &reach) {
+			return reach // no secret in it; the app shows its plain line
+		}
 		return errors.New(Redact(err.Error()))
 	}
 	return nil

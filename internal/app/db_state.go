@@ -2,10 +2,13 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -14,6 +17,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/containers"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/dbclient"
 	"github.com/amin-jalali/termocode/internal/services"
 )
@@ -720,11 +724,79 @@ func (s *dbState) connectionCommand(id string, cmd tea.Cmd) tea.Cmd {
 
 func dbConnectCommand(c dbclient.Conn, root, password string, generation uint64, sec dbSSHSecrets) tea.Cmd {
 	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), dbTestTimeout)
-		defer cancel()
-		sess, tun, err := dbOpenSession(ctx, c, root, password, sec)
+		sess, tun, err := dbOpenBounded(dbTestTimeout, c, root, password, sec)
 		return dbConnectMsg{id: c.ID, generation: generation, session: sess, password: password, tunnel: tun, err: err}
 	}
+}
+
+// dbConnectGrace is how long a connect may run past its deadline before
+// it is given up (a driver or agent that ignores the deadline).
+var dbConnectGrace = time.Second
+
+// dbOpenBounded is dbOpenSession under timeout. The answer always comes
+// by timeout + dbConnectGrace: a connect still running then is given up
+// (what it opens later is closed), so a row never stays on Loading….
+func dbOpenBounded(timeout time.Duration, c dbclient.Conn, root, password string, sec dbSSHSecrets) (dbclient.Session, *dbclient.Tunnel, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	type opened struct {
+		sess dbclient.Session
+		tun  *dbclient.Tunnel
+		err  error
+	}
+	done := make(chan opened, 1)
+	crash.Go("the database connect", func() {
+		sess, tun, err := dbOpenSession(ctx, c, root, password, sec)
+		done <- opened{sess, tun, err}
+	})
+	give := time.NewTimer(timeout + dbConnectGrace)
+	defer give.Stop()
+	select {
+	case r := <-done:
+		cancel()
+		return r.sess, r.tun, r.err
+	case <-give.C:
+		cancel()
+		crash.Go("the database connect", func() {
+			r := <-done
+			if r.sess != nil {
+				_ = r.sess.Close()
+			}
+			if r.tun != nil {
+				_ = r.tun.Close()
+			}
+		})
+		return nil, nil, dbNoAnswer(c, c.SSH != nil)
+	}
+}
+
+// dbNoAnswer is "No answer from host:port [on ssh-host (through SSH)] in
+// time." for c (throughSSH: the tunnel was up).
+func dbNoAnswer(c dbclient.Conn, throughSSH bool) error {
+	e := &dbclient.ReachError{Addr: dbConnAddr(c), Timeout: true}
+	if throughSSH && c.SSH != nil {
+		e.Via = c.SSH.Host
+	}
+	return e
+}
+
+// dbConnAddr is host:port of c (its name when it has no host).
+func dbConnAddr(c dbclient.Conn) string {
+	host, port := c.Host, c.Port
+	if host == "" && c.URL != "" {
+		if p, err := dbclient.ParseURL(c.URL); err == nil {
+			host, port = p.Host, p.Port
+		}
+	}
+	if host == "" {
+		return dbConnName(c)
+	}
+	if port == 0 {
+		port = defaultDBPort(c.Driver)
+	}
+	if port == 0 {
+		return host
+	}
+	return net.JoinHostPort(host, strconv.Itoa(port))
 }
 
 // dbOpenSession opens and pings a session of c, through a new SSH tunnel
@@ -746,6 +818,10 @@ func dbOpenSession(ctx context.Context, c dbclient.Conn, root, password string, 
 	if err != nil {
 		if tun != nil {
 			_ = tun.Close()
+		}
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) && dbclient.ReachText(err) == "" {
+			// The database said nothing before the deadline.
+			err = dbNoAnswer(c, tun != nil)
 		}
 		return nil, nil, err
 	}
@@ -841,8 +917,6 @@ func dbTestCommand(c dbclient.Conn, password, root string, generation uint64) te
 // and closes both.
 func dbTestCommandSSH(c dbclient.Conn, password, root string, generation uint64, sec dbSSHSecrets, existing bool) tea.Cmd {
 	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), dbTestTimeout)
-		defer cancel()
 		start := time.Now()
 		var err error
 		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "clickhouse" && c.Driver != "cassandra" && c.Driver != "libsql" && c.Driver != "sqlserver" && c.Driver != "duckdb" && c.Driver != "trino" && c.Driver != "presto" && c.Driver != "mongodb" && !dbclient.IsHTTPEngine(c.Driver) && !dbclient.IsExtraSQL(c.Driver) {
@@ -851,7 +925,7 @@ func dbTestCommandSSH(c dbclient.Conn, password, root string, generation uint64,
 		var sess dbclient.Session
 		var tun *dbclient.Tunnel
 		if err == nil {
-			sess, tun, err = dbOpenSession(ctx, c, root, password, sec)
+			sess, tun, err = dbOpenBounded(dbTestTimeout, c, root, password, sec)
 		}
 		msg := dbTestMsg{conn: c, password: password, generation: generation, err: err, existing: existing, elapsed: time.Since(start)}
 		if tun != nil {

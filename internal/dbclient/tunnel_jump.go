@@ -158,9 +158,10 @@ var errJumpPassword = errors.New("jump host asks for a password")
 func jumpAuth(ctx context.Context, hop SSHTarget, o TunnelOptions) ([]ssh.AuthMethod, *jumpAuthState, func()) {
 	st := &jumpAuthState{}
 	var agentConn net.Conn
+	agentClose := func() {}
 	cleanup := func() {
 		if agentConn != nil {
-			_ = agentConn.Close()
+			agentClose()
 		}
 	}
 	var cached []ssh.Signer
@@ -176,9 +177,8 @@ func jumpAuth(ctx context.Context, hop SSHTarget, o TunnelOptions) ([]ssh.AuthMe
 			sock = os.Getenv("SSH_AUTH_SOCK")
 		}
 		if sock != "" {
-			var d net.Dialer
-			if c, err := d.DialContext(ctx, "unix", sock); err == nil {
-				agentConn = c
+			if c, closeAgent, err := dialAgent(ctx, sock, nil); err == nil {
+				agentConn, agentClose = c, closeAgent
 				if ss, err := agent.NewClient(c).Signers(); err == nil {
 					out = append(out, ss...)
 				}
