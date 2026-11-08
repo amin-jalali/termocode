@@ -171,7 +171,7 @@ function ConnRows({ c }: { c: DBConnView }) {
         }
       />
       {isOpen && (!tl || tl.s === "loading") && <p class="tr-note">{t("loading")}</p>}
-      {isOpen && tl?.s === "err" && (tl.need ? <DBNeedAsk conn={c.id} need={tl.need} onDone={() => loadChildren(c)} onNo={() => dropNeed(c.id)} /> : <p class="tr-note is-err">{tl.msg}</p>)}
+      {isOpen && tl?.s === "err" && (tl.need ? <DBNeedAsk conn={c.id} need={tl.need} msg={tl.msg} onDone={() => loadChildren(c)} onNo={() => dropNeed(c.id)} /> : <p class="tr-note is-err">{tl.msg}</p>)}
       {isOpen && tl?.s === "ok" && ("keys" in tl.v ? <KeyRows c={c} v={tl.v} /> : <SchemaRows c={c} v={tl.v} />)}
     </>
   );

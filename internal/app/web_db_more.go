@@ -28,9 +28,10 @@ import (
 // the connection entry; and runs only after its yes, in a fresh session
 // (never the user's), except commit, roll back, the transaction mode and
 // disconnect, which act on the laptop console's own session as its keys
-// do. Passwords stay on the laptop: no arg takes one, a new connection
-// is saved without one (the laptop asks on connect), and every text the
-// page gets passes the database redaction.
+// do. Passwords stay on the laptop: only db.secret takes one (a read asked
+// for it; web_db_net.go keeps it in the secret store), a new connection is
+// saved without one, and every text the page gets passes the database
+// redaction.
 
 func init() {
 	webOps[webproto.OpDBDDL] = (*Model).webDBDDL

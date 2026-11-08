@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"path/filepath"
 	"strings"
 	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/dbclient"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
@@ -19,10 +21,14 @@ import (
 // laptop's) and keeps it for the next reads until the hub stops. An
 // unknown host key is never trusted on its own: the read fails with the
 // key (a DBNeed), and db.trust_host saves exactly that key once the user
-// said yes on the page.
+// said yes on the page. A secret the laptop does not have (the SSH
+// password or key passphrase, the database's password) fails the same
+// way; db.secret keeps the one the user typed in the secret store, where
+// the next read finds it.
 
 func init() {
 	webOps[webproto.OpDBTrustHost] = (*Model).webDBTrustHost
+	webOps[webproto.OpDBSecret] = (*Model).webDBSecret
 }
 
 // webDBNet is the hub's tunnels and the host keys it asked about (own
@@ -156,7 +162,121 @@ func (w *webDBConn) needOf(err error) (*webproto.DBNeed, string) {
 		return &webproto.DBNeed{Need: "host_key", Host: host, KeyType: sanitizeDBText(dbKeyTypeName(unknown.KeyType)), Fingerprint: sanitizeDBText(unknown.Fingerprint), Jump: unknown.Jump != ""},
 			"Unknown " + what + " " + host + ". Check its key before you trust it."
 	}
+	var secret *dbclient.SSHSecretError
+	if errors.As(err, &secret) {
+		if secret.Kind == "passphrase" {
+			key := sanitizeDBText(filepath.Base(secret.KeyFile))
+			msg := "The SSH key " + key + " needs its passphrase."
+			if secret.Wrong {
+				msg = "Wrong passphrase for the SSH key " + key + "."
+			}
+			return &webproto.DBNeed{Need: "ssh_passphrase", Key: key, Wrong: secret.Wrong}, msg
+		}
+		msg := "The SSH server needs a password."
+		if secret.Wrong {
+			msg = "The SSH server did not accept the password."
+		}
+		return &webproto.DBNeed{Need: "ssh_password", Wrong: secret.Wrong}, msg
+	}
+	if webDBAuthFailed(err) && webDBPasswordName(w.c) != "" {
+		if w.snap.password == "" {
+			return &webproto.DBNeed{Need: "password"}, "The database needs a password."
+		}
+		return &webproto.DBNeed{Need: "password", Wrong: true}, "The database did not accept the password."
+	}
 	return nil, ""
+}
+
+// webDBAuthFailed reports a server that refused the login's password
+// (PostgreSQL 28P01, MySQL 1045, Redis WRONGPASS / NOAUTH).
+func webDBAuthFailed(err error) bool {
+	s := err.Error()
+	for _, mark := range []string{"SQLSTATE 28P01", "password authentication failed", "Error 1045", "WRONGPASS", "NOAUTH"} {
+		if strings.Contains(s, mark) {
+			return true
+		}
+	}
+	return false
+}
+
+// webDBPasswordName is the secret store name c reads its password from
+// when the page may set it: db.<id> (no password in its settings) or the
+// NAME of ${secret:NAME}. "": c takes it from elsewhere (a .env value, a
+// reference, a literal in its file) or has none.
+func webDBPasswordName(c dbclient.Conn) string {
+	if c.Driver == "sqlite" && !dbclient.IsSQLCipher(c) || c.Driver == "duckdb" || dbProjectCmdRef(c) {
+		return ""
+	}
+	if _, literal := databaseLiteralPassword(c); literal {
+		return ""
+	}
+	switch {
+	case c.Password == "":
+		return "db." + c.ID
+	case strings.HasPrefix(c.Password, "${secret:") && strings.HasSuffix(c.Password, "}"):
+		return strings.TrimSuffix(strings.TrimPrefix(c.Password, "${secret:"), "}")
+	}
+	return ""
+}
+
+// webDBSecretName is where db.secret of kind keeps c's secret ("" and why
+// not when c takes no such secret).
+func webDBSecretName(c dbclient.Conn, kind string) (string, string) {
+	auth := dbSSHAuth(c)
+	switch kind {
+	case "password":
+		if n := webDBPasswordName(c); n != "" {
+			return n, ""
+		}
+		return "", "This connection takes its password from its settings. Change it there."
+	case "ssh_password":
+		if c.SSH != nil && auth == dbclient.SSHAuthPassword {
+			return dbSSHSecretName(c.ID, "password"), ""
+		}
+		return "", "This connection does not log in to SSH with a password."
+	case "ssh_passphrase":
+		if c.SSH != nil && auth != dbclient.SSHAuthPassword && auth != dbclient.SSHAuthAgent {
+			return dbSSHSecretName(c.ID, "passphrase"), ""
+		}
+		return "", "This connection does not use an SSH key file."
+	}
+	return "", "Unknown kind of secret."
+}
+
+// webDBSecret keeps a secret a read asked for in the laptop's secret
+// store (the laptop's own prompts keep theirs there too). The value goes
+// nowhere else: no answer, no audit line, no log; it is registered so
+// every text the page gets has it hidden.
+func (m *Model) webDBSecret(call *webCall) tea.Cmd {
+	a := call.args.(*webproto.DBSecretArgs)
+	_, c, ok := m.webDBAny(call, a.Conn)
+	if !ok {
+		return nil
+	}
+	name, why := webDBSecretName(c, a.Kind)
+	if name == "" {
+		call.fail(webproto.CodeBadRequest, why)
+		return nil
+	}
+	ai.RegisterSecret(a.Value)
+	kind, value := a.Kind, a.Value
+	call.later()
+	return func() tea.Msg {
+		store := databaseSecretStore()
+		if store == nil || store.Locked() {
+			call.fail(webproto.CodeConflict, "The secret store is locked. Unlock it on the laptop first.")
+			return nil
+		}
+		if err := store.Set(name, value); err != nil {
+			call.fail(webproto.CodeConflict, "Could not save it in the laptop's secret store.")
+			return nil
+		}
+		return applyMsg(func(m *Model) tea.Cmd {
+			m.webAuditOp(call, c.ID+" "+kind, "saved")
+			call.reply(webproto.DBDone{Text: "Saved in the laptop's secret store."})
+			return nil
+		})
+	}
 }
 
 func (m *Model) webDBTrustHost(call *webCall) tea.Cmd {

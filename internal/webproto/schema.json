@@ -3748,6 +3748,20 @@
       "phase": "v2"
     },
     {
+      "op": "db.secret",
+      "args": "DBSecretArgs",
+      "result": "DBDone",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 2048,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "ci.fix_prompt",
       "args": "EmptyArgs",
       "result": "CIFixPrompt",
@@ -8919,6 +8933,30 @@
       "required": [
         "conn",
         "mode"
+      ],
+      "additionalProperties": false
+    },
+    "DBSecretArgs": {
+      "type": "object",
+      "properties": {
+        "conn": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "password",
+            "ssh_password",
+            "ssh_passphrase"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "conn",
+        "kind",
+        "value"
       ],
       "additionalProperties": false
     },

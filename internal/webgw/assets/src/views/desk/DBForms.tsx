@@ -3,8 +3,8 @@
 // schemas, import a CSV file, the transaction mode, pick a connection,
 // a Redis key's TTL. A form never changes anything itself: what changes
 // a database or a saved connection asks the laptop (AskLaptop), whose
-// card shows exactly what happens. No form has a password field: the
-// laptop asks for it on connect.
+// card shows exactly what happens. No form has a password field: a read
+// that needs one asks for it (DBNeed.tsx), as the laptop does on connect.
 import { h } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { activeDesk } from "../../lib/deskeditor";

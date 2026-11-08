@@ -17,12 +17,14 @@ import "strings"
 // statements with their values), a CSV import (the file, its rows and
 // the INSERT), a Redis key's delete or TTL, a new connection, an SSH
 // tunnel, SSL settings, a disconnect, commit, roll back and the
-// transaction mode of the laptop's console. No arg carries a password,
-// a passphrase or a URL: decoding refuses unknown fields.
+// transaction mode of the laptop's console. No other arg carries a
+// password, a passphrase or a URL: decoding refuses unknown fields.
 //
 // A read that needs the user first fails as a conflict whose data is a
 // DBNeed: an unknown SSH host key (db.trust_host saves the one the page
-// showed, named by its fingerprint, to known_hosts).
+// showed, named by its fingerprint, to known_hosts), or a secret the
+// laptop does not have (db.secret hands it over once, to keep in the
+// laptop's secret store only; it is in no answer and no audit line).
 
 // Database op names (web parity).
 const (
@@ -45,6 +47,7 @@ const (
 	OpDBDisconnect = "db.disconnect"
 	OpDBTx         = "db.tx"
 	OpDBTrustHost  = "db.trust_host"
+	OpDBSecret     = "db.secret"
 )
 
 var opDBRows = []Policy{
@@ -67,6 +70,7 @@ var opDBRows = []Policy{
 	{Op: OpDBDisconnect, New: newOf[DBConnArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpDBTx, New: newOf[DBTxArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpDBTrustHost, New: newOf[DBTrustArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpDBSecret, New: newOf[DBSecretArgs](), Role: RoleController, Rate: slow, MaxBytes: 2 * kib, Audit: AuditYes, Phase: PhaseV2},
 }
 
 var _ = func() bool { opTable = append(opTable, opDBRows...); return true }()
@@ -83,6 +87,7 @@ func init() {
 	registerResult(OpDBConfig, DBConfigFile{})
 	registerResult(OpRedisKeys, RedisKeys{})
 	registerResult(OpDBTrustHost, DBDone{})
+	registerResult(OpDBSecret, DBDone{})
 	for _, op := range []string{OpDBEdit, OpDBImport, OpRedisKey, OpDBAdd, OpDBSSH, OpDBSSL, OpDBDisconnect, OpDBTx} {
 		registerResult(op, AskRef{})
 	}
@@ -108,7 +113,8 @@ const (
 	MaxDBLaptopPath  = 1024
 	MaxDBDatabase    = 128
 	MaxDBEnvironment = 32
-	MaxDBFingerprint = 100 // "SHA256:" and the key's hash
+	MaxDBFingerprint = 100  // "SHA256:" and the key's hash
+	MaxDBSecret      = 1024 // bytes of a typed password or passphrase
 )
 
 // ── Args ────────────────────────────────────────────────────────────────
@@ -233,6 +239,15 @@ type DBSSLArgs struct {
 type DBTrustArgs struct {
 	Conn        string `json:"conn"`
 	Fingerprint string `json:"fingerprint"`
+}
+
+// DBSecretArgs hands the laptop a secret a read asked for (a DBNeed of
+// the same kind): the database's password, the SSH password or the SSH
+// key's passphrase. The laptop keeps it in its secret store only.
+type DBSecretArgs struct {
+	Conn  string `json:"conn"`
+	Kind  string `json:"kind" enum:"password|ssh_password|ssh_passphrase"`
+	Value string `json:"value"`
 }
 
 // DBTxArgs ends the laptop console's transaction or sets its mode.
@@ -425,6 +440,18 @@ func (a *DBTrustArgs) validate(int) error {
 	return nil
 }
 
+func (a *DBSecretArgs) validate(int) error {
+	if !validName(a.Conn, MaxID) || a.Value == "" || len(a.Value) > MaxDBSecret || hasControl(a.Value) {
+		return invalid("bad connection or value")
+	}
+	switch a.Kind {
+	case "password", "ssh_password", "ssh_passphrase":
+	default:
+		return invalid("bad kind")
+	}
+	return nil
+}
+
 func (a *DBTxArgs) validate(int) error {
 	if !validName(a.Conn, MaxID) {
 		return invalid("bad connection")
@@ -442,13 +469,18 @@ func (a *DBTxArgs) validate(int) error {
 // DBNeed is the data of a database op's conflict that the user can
 // clear from the page. Need "host_key": the SSH server (Jump: a jump
 // host on the way) is not in known_hosts yet; Host, KeyType and
-// Fingerprint are what to check before db.trust_host.
+// Fingerprint are what to check before db.trust_host. Need "password",
+// "ssh_password" or "ssh_passphrase" (Key: the key file's name): the
+// laptop has no such secret, or Wrong: it was not accepted; db.secret of
+// that kind gives it.
 type DBNeed struct {
 	Need        string `json:"need"`
 	Host        string `json:"host,omitempty"`
 	KeyType     string `json:"key_type,omitempty"`
 	Fingerprint string `json:"fingerprint,omitempty"`
 	Jump        bool   `json:"jump,omitempty"`
+	Key         string `json:"key,omitempty"`
+	Wrong       bool   `json:"wrong,omitempty"`
 }
 
 // DBText answers db.ddl.

@@ -12,20 +12,21 @@ export type Load<T> = { s: "loading" } | { s: "ok"; v: T } | { s: "err"; msg: st
 
 /** DBNeed is what a failed database read asks the user for (the
  * laptop's err data, webproto.DBNeed): an unknown SSH host key to check
- * and trust. */
-export interface DBNeed {
-  need: "host_key";
-  host: string;
-  key_type?: string;
-  fingerprint: string;
-  jump?: boolean;
-}
+ * and trust, or a secret the laptop does not have (key: the SSH key
+ * file's name; wrong: the one it had was not accepted). */
+export type DBNeed =
+  | { need: "host_key"; host: string; key_type?: string; fingerprint: string; jump?: boolean }
+  | { need: DBSecretKind; key?: string; wrong?: boolean };
+
+/** DBSecretKind is a secret db.secret takes. */
+export type DBSecretKind = "password" | "ssh_password" | "ssh_passphrase";
 
 /** dbNeed is the DBNeed of a failed request (undefined: none). */
 export function dbNeed(e: unknown): DBNeed | undefined {
   if (!(e instanceof ReqError) || e.code !== "conflict") return undefined;
-  const d = e.data as Partial<DBNeed> | null | undefined;
-  if (d?.need === "host_key" && typeof d.host === "string" && typeof d.fingerprint === "string") return d as DBNeed;
+  const d = e.data as { need?: unknown; host?: unknown; fingerprint?: unknown } | null | undefined;
+  if (d?.need === "host_key") return typeof d.host === "string" && typeof d.fingerprint === "string" ? (d as DBNeed) : undefined;
+  if (d?.need === "password" || d?.need === "ssh_password" || d?.need === "ssh_passphrase") return d as DBNeed;
   return undefined;
 }
 

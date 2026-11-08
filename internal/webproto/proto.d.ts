@@ -887,6 +887,12 @@ export interface DBTrustArgs {
   fingerprint: string;
 }
 
+export interface DBSecretArgs {
+  conn: string;
+  kind: "password" | "ssh_password" | "ssh_passphrase";
+  value: string;
+}
+
 export interface GitLinesArgs {
   path: string;
   from: number;
@@ -4063,6 +4069,7 @@ export interface OpArgs {
   "db.disconnect": DBConnArgs;
   "db.tx": DBTxArgs;
   "db.trust_host": DBTrustArgs;
+  "db.secret": DBSecretArgs;
   "ci.fix_prompt": EmptyArgs;
   "git.stage_lines": GitLinesArgs;
   "git.unstage_lines": GitLinesArgs;
@@ -4380,6 +4387,7 @@ export interface OpResult {
   "db.disconnect": AskRef;
   "db.tx": AskRef;
   "db.trust_host": DBDone;
+  "db.secret": DBDone;
   "ci.fix_prompt": CIFixPrompt;
   "git.discard_lines": AskRef;
   "git.discard_hunk": AskRef;

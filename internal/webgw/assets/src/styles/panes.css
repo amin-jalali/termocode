@@ -293,6 +293,8 @@
 .dbf-note { margin: 4px 0; color: var(--wb-desc); font-size: 11px; }
 .db-need-key code { overflow-wrap: anywhere; }
 .db-need-note { color: var(--wb-desc); font-size: 11px; }
+.db-need-field { display: block; margin: 0 0 2px; }
+.db-need .pv-input { margin: 0 0 6px; padding: 0; }
 .dbf .pv-ask-row { margin-top: 6px; }
 .dbf-filter { margin: 2px 12px 6px 20px; }
 .db-on { display: inline-block; width: 7px; height: 7px; margin-inline-end: 4px; border-radius: 50%; background: var(--wb-ok); }
