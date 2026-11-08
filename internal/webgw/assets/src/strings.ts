@@ -47,7 +47,7 @@ export const S = {
   "signin.bookmark": "Opening from your bookmark…",
   "signin.body_bookmark_gone": "The bookmark sign-in ended on the laptop. Sign in with the passkey, or open the link from the laptop.",
   "remember.label": "Remember this browser",
-  "remember.body": "Next time a bookmark opens the panel without the passkey. Only this browser, only this address.",
+  "remember.body": "Next time, this browser signs back in by itself. Only this browser, only this address.",
   "bookmark.title": "Bookmark sign-in",
   "bookmark.body_on": "On: this browser opens the panel from a bookmark. Forget it on a shared computer.",
   "bookmark.body_off": "Off. To turn it on, tick Remember this browser when you sign in.",
