@@ -21,6 +21,7 @@ import { Nav } from "./ui/Nav";
 import { OfflineBar } from "./ui/OfflineBar";
 import { Strip } from "./ui/Strip";
 import { Toasts } from "./ui/Toasts";
+import { HereAsks } from "./ui/AskLaptop";
 import { ViewerBar } from "./ui/ViewerBar";
 import { TitleBar } from "./ui/TitleBar";
 import { desk, deskFailed, home, homeFailed, homeHosted, loadDesk, loadHome } from "./lib/lazy";
@@ -131,6 +132,7 @@ function Solo({ buf }: { buf: number }) {
       </main>
       {r.card && <CardSheet key={r.card} id={r.card} />}
       {linkAsk.value && <LinkSheet href={linkAsk.value} />}
+      <HereAsks />
       <Toasts />
     </div>
   );
@@ -163,6 +165,7 @@ export function App() {
         <StatusBar />
         {r.card && <CardSheet key={r.card} id={r.card} />}
         {linkAsk.value && <LinkSheet href={linkAsk.value} />}
+        <HereAsks />
         <Toasts />
       </div>
     );
@@ -182,6 +185,7 @@ export function App() {
         <HomeView />
         {r.card && <CardSheet key={r.card} id={r.card} />}
         {linkAsk.value && <LinkSheet href={linkAsk.value} />}
+        <HereAsks />
         <Toasts />
       </div>
     );
@@ -207,6 +211,7 @@ export function App() {
       {l === "phone" && <Nav variant="tabs" active={r.tab} />}
       {r.card && <CardSheet key={r.card} id={r.card} />}
       {linkAsk.value && <LinkSheet href={linkAsk.value} />}
+      <HereAsks />
       <Toasts />
     </div>
   );

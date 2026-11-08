@@ -48,7 +48,7 @@ func approveHereDiscard(t *testing.T, p *Page, c *HubConn, open func(), paths st
 	open()
 	r := expectOp(t, c, webproto.OpGitDiscard, `{"paths":[`+paths+`]}`)
 	hubAsks(t, c, r, "ask-1", body, "Discard")
-	p.WaitJS(`document.querySelector(".discard-text")?.textContent === ` + jsq(body) + ` && document.activeElement === document.querySelector(".discard .choices button")`)
+	p.WaitJS(`document.querySelector(".ask-text")?.textContent === ` + jsq(body) + ` && document.activeElement === document.querySelector(".ask .choices button")`)
 	if n := Eval[int](p, `[...document.querySelectorAll(".sheet button")].filter((b) => b.textContent.includes("Ask the laptop")).length`); n != 0 {
 		t.Fatal("the page asks the laptop although it approves here")
 	}
@@ -57,15 +57,15 @@ func approveHereDiscard(t *testing.T, p *Page, c *HubConn, open func(), paths st
 	}
 	p.Key(kb.Enter) // the focused button is Cancel
 	pageAnswers(t, c, "ask-1", "cancel")
-	p.WaitJS(`!document.querySelector(".discard") && document.querySelector(".toasts")?.textContent.includes("Cancelled. Nothing changed.")`)
+	p.WaitJS(`!document.querySelector(".ask") && document.querySelector(".toasts")?.textContent.includes("Cancelled. Nothing changed.")`)
 
 	open()
 	r = expectOp(t, c, webproto.OpGitDiscard, "")
 	hubAsks(t, c, r, "ask-2", body, "Discard")
-	p.WaitJS(`document.querySelector(".discard .arm.is-armed")?.textContent === "Discard"`)
-	p.TapJS(`[...document.querySelectorAll(".discard button")].find((b) => b.textContent === "Discard")`)
+	p.WaitJS(`document.querySelector(".ask .arm.is-armed")?.textContent === "Discard"`)
+	p.TapJS(`[...document.querySelectorAll(".ask button")].find((b) => b.textContent === "Discard")`)
 	pageAnswers(t, c, "ask-2", "confirm")
-	p.WaitJS(`!document.querySelector(".discard") && document.querySelector(".toasts")?.textContent.includes("Done")`)
+	p.WaitJS(`!document.querySelector(".ask") && document.querySelector(".toasts")?.textContent.includes("Done")`)
 	c.Quiet(t, 200*time.Millisecond)
 	if pr := p.Problems(); len(pr) > 0 {
 		t.Errorf("problems: %q", pr)

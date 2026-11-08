@@ -1,15 +1,14 @@
 // A request that needs a confirm (web UX 3.9), for any op whose row says
 // LaptopCard. The page approves (meta.approve_here, owner 2026-11-08):
-// the request goes at once, and the laptop's answer is its exact card
-// (the ask ev: what runs, the paths, the argv, the SQL), Cancel first and
+// the request goes at once and HereAsks shows the hub's exact card (the
+// ask ev: what runs, the paths, the argv, the SQL), Cancel first and
 // focused, the action armed after 600 ms; this page confirms it. With
 // web_approve_on_laptop on, first an in-page sheet with the question
 // ("Ask the laptop" armed), then the waiting state, whose Cancel cancels
 // the laptop's card too. The outcome is told even after the sheet closed.
 import { h } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { AskCard } from "../../../../webproto/proto";
-import { cancelAsk, onAnswered } from "../lib/asks";
+import { asked, cancelAsk, ended, onAnswered } from "../lib/asks";
 import { toast } from "../lib/toasts";
 import { link, live } from "../session";
 import { t } from "../strings";
@@ -18,7 +17,7 @@ import { useArming } from "./arming";
 import { Sheet } from "./Sheet";
 import { WaitingLaptop } from "./Waiting";
 
-type Step = { s: "ask" } | { s: "sending" } | { s: "wait"; card: string; since: number } | { s: "here"; card: string; text: string; verb: string };
+type Step = { s: "ask" } | { s: "sending" } | { s: "here" } | { s: "wait"; card: string; since: number };
 
 interface Props {
   label: string;
@@ -38,11 +37,8 @@ export function AskLaptop({ label, text, send, onDone, onConfirmed, cls = "ask" 
 
   const ask = () => {
     setStep({ s: "sending" });
-    let got: AskCard | undefined;
-    const off = link.onEvent((k, d) => k === "ask" && (got = d as AskCard));
     send().then(
       (r) => {
-        off();
         const card = String((r as { card?: unknown } | null)?.card ?? "");
         onAnswered(card, (o) => {
           if (o.confirmed) {
@@ -51,10 +47,10 @@ export function AskLaptop({ label, text, send, onDone, onConfirmed, cls = "ask" 
           } else toast("info", t(o.by === "laptop" ? "wait.cancelled" : "git.cancelled_here"));
           onDone();
         });
-        setStep(got?.id === card ? { s: "here", card, text: got.body, verb: got.action } : { s: "wait", card, since: Date.now() });
+        // The ask ev came first: HereAsks shows the card.
+        setStep(asked.peek().some((a) => a.id === card) ? { s: "here" } : { s: "wait", card, since: Date.now() });
       },
       (e: unknown) => {
-        off();
         failed(e);
         onDone();
       },
@@ -64,23 +60,32 @@ export function AskLaptop({ label, text, send, onDone, onConfirmed, cls = "ask" 
     if (here) ask();
   }, []);
 
-  const cancel = () => {
-    if (step.s === "wait" || step.s === "here")
-      cancelAsk(step.card).catch((e: unknown) => {
-        failed(e);
-        onDone();
-      });
-  };
-
+  if ((here && step.s === "sending") || step.s === "here") return null;
+  const cancel = () => step.s === "wait" && cancelAsk(step.card).catch(failed);
   return (
-    <Sheet onLater={step.s === "here" ? cancel : onDone} label={label}>
+    <Sheet onLater={onDone} label={label}>
       {step.s === "wait" ? (
         <WaitingLaptop since={step.since} onCancel={cancel} />
-      ) : step.s === "here" ? (
-        <Ask key="here" cls={cls} text={step.text} verb={step.verb} onNo={cancel} onYes={() => link.request("cards.answer", { id: step.card, choice: "confirm" }).catch(failed)} />
-      ) : here ? null : (
+      ) : (
         <Ask cls={cls} text={text} note={t("wait.e14")} verb={t("git.ask_laptop")} off={step.s !== "ask"} onNo={onDone} onYes={ask} />
       )}
+    </Sheet>
+  );
+}
+
+/** HereAsks shows this page's own questions (ask evs), one at a time:
+ * the card's exact text, Cancel first; the answer is this page's. */
+export function HereAsks() {
+  const a = asked.value[0];
+  if (!a) return null;
+  const end = (e: unknown) => {
+    failed(e);
+    ended(a.id);
+  };
+  const no = () => cancelAsk(a.id).catch(end);
+  return (
+    <Sheet onLater={no} label={a.title}>
+      <Ask key={a.id} cls="ask" text={a.body} verb={a.action} onNo={no} onYes={() => link.request("cards.answer", { id: a.id, choice: "confirm" }).catch(end)} />
     </Sheet>
   );
 }
