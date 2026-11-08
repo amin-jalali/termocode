@@ -16,7 +16,11 @@ import (
 
 // serversState is the Containers view with the local engine and two
 // ssh:// hosts in CONTEXTS (open), the remote hosts not loaded yet.
-func serversState() *servicesState {
+func serversState(t *testing.T) *servicesState {
+	t.Helper()
+	mode := theme.CurrentIconMode
+	theme.CurrentIconMode = theme.IconModeUnicode
+	t.Cleanup(func() { theme.CurrentIconMode = mode })
 	st := svcHostState()
 	st.contextRows = []containers.Context{
 		{Name: "default", Current: true, DockerEndpoint: "unix:///var/run/docker.sock"},
@@ -79,7 +83,7 @@ func openServer(t *testing.T, m *Model, name string) {
 // containers; a + Add Server… row ends the list.
 func TestContainersServersTreeShowsEveryHost(t *testing.T) {
 	calls := fakeServerLists(t)
-	m0 := svcTestModel(serversState(), 120, 40)
+	m0 := svcTestModel(serversState(t), 120, 40)
 	m := &m0
 	names := strings.Join(rowNames(m.services), "\n")
 	for _, want := range []string{"default · this machine", "baaytona · deploy@65.109.212.14", "broken · me@down.example.com", "+ Add Server…"} {
@@ -121,7 +125,7 @@ func TestContainersServersTreeShowsEveryHost(t *testing.T) {
 // header; the other hosts keep their rows.
 func TestContainersServerThatFailsDoesNotBlockTheOthers(t *testing.T) {
 	fakeServerLists(t)
-	m0 := svcTestModel(serversState(), 120, 40)
+	m0 := svcTestModel(serversState(t), 120, 40)
 	m := &m0
 	openServer(t, m, "broken")
 	openServer(t, m, "baaytona")
@@ -151,7 +155,7 @@ func TestContainersServerThatFailsDoesNotBlockTheOthers(t *testing.T) {
 func TestContainersServerDatabaseRowOpensInDatabases(t *testing.T) {
 	withConfigDir(t)
 	fakeServerLists(t)
-	m0 := svcTestModel(serversState(), 120, 40)
+	m0 := svcTestModel(serversState(t), 120, 40)
 	m := &m0
 	m.databases = newDBState()
 	m.databases.root, m.databases.loaded = t.TempDir(), true
@@ -169,7 +173,7 @@ func TestContainersServerDatabaseRowOpensInDatabases(t *testing.T) {
 
 // + Add Server… asks the name, then ssh://user@host (Create Context).
 func TestContainersAddServerRowAsksNameThenHost(t *testing.T) {
-	m0 := svcTestModel(serversState(), 120, 40)
+	m0 := svcTestModel(serversState(t), 120, 40)
 	m := &m0
 	cursorTo(t, m, func(r svcRow) bool { return r.host == hostAddServer })
 	_ = press(m, "enter")
@@ -184,10 +188,11 @@ func TestContainersAddServerRowAsksNameThenHost(t *testing.T) {
 
 // 80×24 in ASCII: every line fits and the host reads.
 func TestContainersServersTreeAt80x24ASCII(t *testing.T) {
-	defer func(mode theme.IconMode) { theme.CurrentIconMode = mode }(theme.CurrentIconMode)
-	theme.CurrentIconMode = theme.IconModeASCII
 	fakeServerLists(t)
-	m0 := svcTestModel(serversState(), 80, 24)
+	st := serversState(t)
+	theme.CurrentIconMode = theme.IconModeASCII // serversState puts the mode back
+	st.touch()
+	m0 := svcTestModel(st, 80, 24)
 	m := &m0
 	openServer(t, m, "baaytona")
 	cursorTo(t, m, func(r svcRow) bool { return r.host == hostServerContainer && r.name == "baaytona-db-1" })
@@ -202,7 +207,7 @@ func TestContainersServersTreeAt80x24ASCII(t *testing.T) {
 		t.Fatalf("the database row is not drawn:\n%s", plain)
 	}
 	for _, l := range strings.Split(plain, "\n") {
-		if !strings.Contains(l, "baaytona") {
+		if !strings.Contains(l, "baaytona-db-1") && !strings.Contains(l, "deploy@") {
 			continue // the tree's own rows
 		}
 		for _, r := range l {

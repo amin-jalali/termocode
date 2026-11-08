@@ -247,7 +247,7 @@ func (st *servicesState) contextSectionBody(key string) []svcRow {
 	}
 	choices := st.contextChoices()
 	if len(choices) == 0 {
-		return []svcRow{hint("No " + st.contextWord() + "s")}
+		return []svcRow{hint("No " + st.contextWord() + "s"), addServerRow(key)}
 	}
 	active := st.activeContext()
 	if active == "" && st.isPodman() {
@@ -255,9 +255,12 @@ func (st *servicesState) contextSectionBody(key string) []svcRow {
 	}
 	var out []svcRow
 	for i, c := range choices {
-		out = append(out, svcRow{kind: svcRowHostItem, section: key, host: hostContext, idx: i, hostID: c.Name, name: contextDisplayName(c.Name), current: c.Name == active})
+		// A host of the tree: "name · where", its projects and
+		// containers under it once opened (containers_servers.go).
+		out = append(out, svcRow{kind: svcRowHostItem, section: key, host: hostContext, idx: i, hostID: c.Name, name: serverLabel(c), current: c.Name == active})
+		out = append(out, st.serverRows(key, c)...)
 	}
-	return out
+	return append(out, addServerRow(key))
 }
 
 // remoteContextRows: while the session uses a context and its engine
@@ -861,6 +864,8 @@ func hostClamp(row string, width, w int, bg lipgloss.Color) string {
 // renderHostItem draws one host object row (plan §2.4 width ladder).
 func (st *servicesState) renderHostItem(r svcRow, active, focused bool, w int) string {
 	switch r.host {
+	case hostServerContainer, hostAddServer: // the hosts tree (containers_servers.go)
+		return st.renderServerRow(r, active, focused, w)
 	case hostAllContainer: // CTX-41 (containers_multi.go)
 		return st.renderAllContainer(r, active, focused, w)
 	case hostContainer:
@@ -1013,6 +1018,9 @@ func (st *servicesState) hostFooter(r svcRow) (string, string) {
 		if sec == allContextsSection { // CTX-41
 			return "context " + r.name, "space fold · Enter on a row uses it"
 		}
+		if sec == "servers" {
+			return "compose project " + r.name + " on " + contextDisplayName(r.hostID), "space fold"
+		}
 		if sec == "containers" {
 			if r.name == "other" {
 				return "containers without a compose project", "space fold"
@@ -1028,6 +1036,8 @@ func (st *servicesState) hostFooter(r svcRow) (string, string) {
 		switch r.host {
 		case hostAllContainer: // CTX-41
 			return st.allContextsFooter(r)
+		case hostServerContainer, hostAddServer:
+			return st.serverFooter(r)
 		case hostContainer:
 			if r.idx < len(st.containerRows) {
 				c := st.containerRows[r.idx]

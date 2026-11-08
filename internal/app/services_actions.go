@@ -678,6 +678,9 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	if cmd, ok := m.containerBulkKey(k.String()); ok {
 		return m, cmd
 	}
+	if cmd, ok := m.serversKey(k.String()); ok { // the hosts tree (containers_servers.go)
+		return m, cmd
+	}
 	if cmd, ok := m.allContextsKey(k.String()); ok { // CTX-41 (containers_multi.go)
 		return m, cmd
 	}
@@ -1098,6 +1101,7 @@ func hostKeysHelp(r svcRow) (string, []confirm.KeyRow) {
 	case r.kind == svcRowHostItem && r.host == hostContext:
 		return with("Context keys",
 			[]string{"Enter", "use it here"},
+			[]string{"Space", "open: its projects and containers"},
 			[]string{"D", "make it the default"},
 			[]string{"y", "copy the endpoint"},
 			[]string{"i", "inspect"},
@@ -1350,6 +1354,14 @@ func (m Model) handleServicesSidebarMouse(x, y int, t tea.MouseEventType) (Model
 	if r.kind == svcRowHostItem && r.host == hostRegistryConnect {
 		m.startRegistryConnect("")
 		return m, nil
+	}
+	if r.kind == svcRowHostItem && r.host == hostAddServer {
+		return m, m.askContextCreate()
+	}
+	if double && r.kind == svcRowHostItem && r.host == hostServerContainer {
+		st.lastClick = time.Time{}
+		cmd, _ := m.serversKey("enter")
+		return m, cmd
 	}
 	if cmd, ok := m.runHelpRow(r); ok {
 		return m, cmd

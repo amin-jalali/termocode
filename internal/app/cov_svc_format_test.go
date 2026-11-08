@@ -96,7 +96,8 @@ func TestCovSvcRemoteContextRows(t *testing.T) {
 	}
 	st.hostLoaded["contexts"] = true
 	st.contextRows = nil
-	if rows := st.contextSectionBody("host/contexts"); len(rows) != 1 || !strings.HasPrefix(rows[0].text, "No context") {
+	// No contexts yet: + Add Server… is still there to add one.
+	if rows := st.contextSectionBody("host/contexts"); len(rows) != 2 || !strings.HasPrefix(rows[0].text, "No context") || rows[1].host != hostAddServer {
 		t.Errorf("empty rows = %+v", rows)
 	}
 }

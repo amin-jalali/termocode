@@ -58,6 +58,7 @@ type servicesState struct {
 	debugTarget containers.Container // CTX-43: the container the toolbox prompt is for (containers_debug.go)
 	// CTX-41: ALL CONTEXTS (containers_multi.go)
 	allContexts bool
+	servers     map[string]*serverHost // the hosts tree of CONTEXTS (containers_servers.go)
 	multi       containers.MultiResult
 	multiLoaded bool
 	multiGen    uint64
@@ -642,6 +643,8 @@ func (m *Model) handleServicesMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onContainerHost(msg), true
 	case allContextsMsg: // CTX-41 (containers_multi.go)
 		return m.onAllContexts(msg), true
+	case serverListMsg: // the hosts tree (containers_servers.go)
+		return m.onServerList(msg), true
 	case containerActionDoneMsg:
 		return m.onContainerActionDone(msg), true
 	case containerBulkDoneMsg:
