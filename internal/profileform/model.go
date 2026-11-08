@@ -297,7 +297,9 @@ func (m Model) Profile() ai.Profile {
 		st := s.orig
 		st.ID, st.Title, st.System, st.Plan = strings.TrimSpace(s.id), strings.TrimSpace(s.title), s.system, s.plan
 		st.Slot, st.Category, st.CLI, st.Provider, st.Model = s.ch.slot, s.ch.category, s.ch.cli, s.ch.provider, s.ch.model
-		if preset := toolPresets[s.tools]; !(preset == agentdag.PresetAll && s.orig.Tools.Preset == "") {
+		// No preset is written only when the step gets the chosen one
+		// without it: a CLI step without a preset reads only.
+		if preset := toolPresets[s.tools]; s.orig.Tools.Preset != "" || ai.StepTools(st) != preset {
 			st.Tools.Preset = preset
 		}
 		deps, _ := m.parseDeps(s.deps, i)
