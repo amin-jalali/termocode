@@ -4775,6 +4775,66 @@
       "phase": "v2"
     },
     {
+      "op": "containers.servers",
+      "args": "EmptyArgs",
+      "result": "ServersList",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "containers.server",
+      "args": "ContextArgs",
+      "result": "ServerContainers",
+      "role": "viewer",
+      "rate": {
+        "n": 4,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 4,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "containers.add_server",
+      "args": "AddServerArgs",
+      "result": "HostDone",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "db.add_container",
+      "args": "DBAddContainerArgs",
+      "result": "DBAdded",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "ai.mcp_items",
       "args": "EmptyArgs",
       "result": "MCPItems",
@@ -5885,6 +5945,22 @@
         "items"
       ],
       "additionalProperties": true
+    },
+    "AddServerArgs": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "host"
+      ],
+      "additionalProperties": false
     },
     "Answered": {
       "type": "object",
@@ -8074,6 +8150,9 @@
         "busy": {
           "type": "boolean"
         },
+        "db": {
+          "type": "string"
+        },
         "id": {
           "type": "string"
         },
@@ -8376,6 +8455,40 @@
         "driver"
       ],
       "additionalProperties": false
+    },
+    "DBAddContainerArgs": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "host",
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "DBAdded": {
+      "type": "object",
+      "properties": {
+        "conn": {
+          "type": "string"
+        },
+        "existing": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "conn"
+      ],
+      "additionalProperties": true
     },
     "DBCell": {
       "type": "object",
@@ -15747,6 +15860,74 @@
       "required": [
         "t",
         "code"
+      ],
+      "additionalProperties": true
+    },
+    "ServerContainers": {
+      "type": "object",
+      "properties": {
+        "containers": {
+          "items": {
+            "$ref": "#/defs/ContainerItem"
+          },
+          "type": "array"
+        },
+        "more": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "containers"
+      ],
+      "additionalProperties": true
+    },
+    "ServerHost": {
+      "type": "object",
+      "properties": {
+        "current": {
+          "type": "boolean"
+        },
+        "local": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "session": {
+          "type": "boolean"
+        },
+        "ssh": {
+          "type": "boolean"
+        },
+        "where": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "ServersList": {
+      "type": "object",
+      "properties": {
+        "engine": {
+          "type": "string"
+        },
+        "hosts": {
+          "items": {
+            "$ref": "#/defs/ServerHost"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "engine",
+        "hosts"
       ],
       "additionalProperties": true
     },

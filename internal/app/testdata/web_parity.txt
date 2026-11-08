@@ -500,7 +500,7 @@ missing	canvas-open	AI|M
 missing	ai-follow-agent	AI|M
 missing	codebase-search	Search|M
 missing	ai-dial	AI|S
-missing	containers-all-contexts	Containers|M
+web	containers-all-contexts	op:containers.servers
 missing	containers-build-cache-prune	Containers|S
 missing	containers-build-check	Containers|S
 missing	containers-build-detail	Containers|S
@@ -508,7 +508,7 @@ missing	containers-builds	Containers|S
 missing	containers-check-updates	Containers|S
 missing	containers-commit	Containers|S
 missing	containers-compose-snippet	Containers|S
-missing	containers-context-create	Containers|S
+web	containers-context-create	op:containers.add_server
 missing	containers-context-inspect	Containers|S
 missing	containers-context-remove	Containers|S
 missing	containers-custom-command	Containers|S

@@ -1096,6 +1096,16 @@ export interface ReviewNote {
   text: string;
 }
 
+export interface AddServerArgs {
+  name: string;
+  host: string;
+}
+
+export interface DBAddContainerArgs {
+  host: string;
+  id: string;
+}
+
 export interface ChatHomeArgs {
   text?: string;
 }
@@ -3573,6 +3583,7 @@ export interface ContainerItem {
   ports?: string;
   project?: string;
   busy?: boolean;
+  db?: string;
 }
 
 export interface ContainerLogs {
@@ -3691,6 +3702,32 @@ export interface PushState {
   state: "ready" | "none" | "locked" | "off";
   key?: string;
   on: boolean;
+}
+
+export interface ServersList {
+  engine: string;
+  hosts: ServerHost[];
+}
+
+export interface ServerHost {
+  name: string;
+  where?: string;
+  local?: boolean;
+  ssh?: boolean;
+  current?: boolean;
+  session?: boolean;
+}
+
+export interface ServerContainers {
+  name: string;
+  containers: ContainerItem[];
+  more?: number;
+}
+
+export interface DBAdded {
+  conn: string;
+  name?: string;
+  existing?: boolean;
 }
 
 export interface MCPItems {
@@ -4141,6 +4178,10 @@ export interface OpArgs {
   "push.subscribe": PushSubArgs;
   "push.unsubscribe": PushUnsubscribeArgs;
   "ai.worktree_notes": AIWorktreeNotesArgs;
+  "containers.servers": EmptyArgs;
+  "containers.server": ContextArgs;
+  "containers.add_server": AddServerArgs;
+  "db.add_container": DBAddContainerArgs;
   "ai.mcp_items": EmptyArgs;
   "chat.side": ChatSendArgs;
   "chat.home": ChatHomeArgs;
@@ -4455,6 +4496,10 @@ export interface OpResult {
   "push.subscribe": PushState;
   "push.unsubscribe": PushState;
   "ai.worktree_notes": ChatRef;
+  "containers.servers": ServersList;
+  "containers.server": ServerContainers;
+  "containers.add_server": HostDone;
+  "db.add_container": DBAdded;
   "ai.mcp_items": MCPItems;
   "chat.side": ChatSide;
   "chat.home": ChatSnap;

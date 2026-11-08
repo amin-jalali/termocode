@@ -38,6 +38,7 @@ type ContainerItem struct {
 	Ports   string `json:"ports,omitempty"`
 	Project string `json:"project,omitempty"` // its compose project
 	Busy    bool   `json:"busy,omitempty"`    // starting or stopping on the laptop now
+	DB      string `json:"db,omitempty"`      // containers.server: its database driver
 }
 
 // ContainerLogs answers containers.logs.
