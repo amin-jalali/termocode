@@ -34,6 +34,10 @@ func init() {
 	webOps[webproto.OpDBSecret] = (*Model).webDBSecret
 }
 
+// webDBIdleFor is how long the page keeps a connection's read-only
+// session unused before it closes it.
+var webDBIdleFor = 2 * time.Minute
+
 // webDBNet is the hub's tunnels and the host keys it asked about (own
 // lock: the reads run off Update).
 type webDBNet struct {

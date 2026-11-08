@@ -133,3 +133,77 @@ func TestWebDBContainerIPFoundOncePerTunnel(t *testing.T) {
 		t.Fatalf("the last read went to %s, want the new IP (targets %q)", last, tg)
 	}
 }
+
+// webSlowReadOnly fails t when a read ran outside a read-only
+// transaction on the server.
+func webSlowReadOnly(t *testing.T, stmts []string) {
+	t.Helper()
+	ro, reads := false, 0
+	for _, s := range stmts {
+		u := strings.ToUpper(s)
+		switch {
+		case strings.HasPrefix(u, "BEGIN"):
+			ro = strings.Contains(u, "READ ONLY")
+		case strings.HasPrefix(u, "ROLLBACK"), strings.HasPrefix(u, "COMMIT"):
+			ro = false
+		case strings.HasPrefix(u, "SELECT"):
+			reads++
+			if !ro {
+				t.Errorf("%q ran outside a read-only transaction", s)
+			}
+		}
+	}
+	if reads == 0 {
+		t.Error("no read reached the server")
+	}
+}
+
+// Spec (perf): the page keeps its read-only session of a connection for
+// the next reads: the first open logs in once (the login that checked
+// the password is the one the reads use), later reads log in no more,
+// and every read still runs in a read-only transaction. The session is
+// closed when it was idle for webDBIdleFor, when the page saves a new
+// password for the connection, and when the hub stops.
+func TestWebDBReadsReuseOneLogin(t *testing.T) {
+	w := newWebSlowDB(t, 0, 0)
+	if _, c := w.read(t, webproto.OpDBTables, `{"conn":"pg"}`); c.logins != 1 {
+		t.Errorf("first open: %d logins, want 1", c.logins)
+	}
+	for _, op := range []struct{ op, args string }{{webproto.OpDBTables, `{"conn":"pg"}`}, {webproto.OpDBRows, `{"conn":"pg","table":"users"}`},
+		{webproto.OpDBQuery, `{"conn":"pg","sql":"SELECT 1"}`}} {
+		if _, c := w.read(t, op.op, op.args); c.logins != 0 {
+			t.Errorf("%s: %d logins, want none (the session is kept)", op.op, c.logins)
+		}
+	}
+	webSlowReadOnly(t, w.pg.Statements())
+
+	// A new password from the page: the next read logs in with it.
+	if f := webTestCallBg(t, w.m, w.c, webproto.OpDBSecret, `{"conn":"pg","kind":"password","value":"pg-pw-31"}`); webTestErr(f) != "" {
+		t.Fatalf("db.secret: %v", f)
+	}
+	if n := w.pg.WaitOpen(0); n != 0 {
+		t.Errorf("%d database connections open after a new password, want the kept session closed", n)
+	}
+	if _, c := w.read(t, webproto.OpDBTables, `{"conn":"pg"}`); c.logins != 1 {
+		t.Errorf("after a new password: %d logins, want 1", c.logins)
+	}
+
+	// Idle for webDBIdleFor: closed; the next read logs in again.
+	old := webDBIdleFor
+	webDBIdleFor = 30 * time.Millisecond
+	t.Cleanup(func() { webDBIdleFor = old })
+	_, _ = w.read(t, webproto.OpDBTables, `{"conn":"pg"}`)
+	if n := w.pg.WaitOpen(0); n != 0 {
+		t.Errorf("%d database connections open after the idle time, want none", n)
+	}
+	if _, c := w.read(t, webproto.OpDBTables, `{"conn":"pg"}`); c.logins != 1 {
+		t.Errorf("after the idle time: %d logins, want 1", c.logins)
+	}
+	webDBIdleFor = old
+
+	_, _ = w.read(t, webproto.OpDBTables, `{"conn":"pg"}`)
+	w.m.web.stop()
+	if n := w.pg.WaitOpen(0); n != 0 {
+		t.Errorf("%d database connections outlived the hub", n)
+	}
+}
