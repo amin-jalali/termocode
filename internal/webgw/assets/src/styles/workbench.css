@@ -667,7 +667,9 @@ kbd {
 .layout-desktop .toasts { width: 28rem; }
 
 /* ---- Tree rows: the actions button sits on the row, shown on hover ---- */
-.wb-side .tree-line { position: relative; }
+/* A row out of view is not laid out or painted until it scrolls in (a
+   folder of thousands opens and shows at once); 22px is its height. */
+.wb-side .tree-line { position: relative; content-visibility: auto; contain-intrinsic-size: auto 22px; }
 .wb-side .tree-more {
   position: absolute;
   inset-inline-end: 4px;
