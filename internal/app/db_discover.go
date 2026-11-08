@@ -45,6 +45,18 @@ var dbListContainers = func(ctx context.Context, dir string) ([]containers.Conta
 	return e.ListContainers(ctx)
 }
 
+// dbListContexts reads the engine's contexts (docker contexts or podman
+// connections); tests replace it.
+var dbListContexts = func(ctx context.Context, dir string) ([]containers.Context, error) {
+	return nil, nil
+}
+
+// dbListContextContainers reads the containers of one context; tests
+// replace it.
+var dbListContextContainers = func(ctx context.Context, dir, name string) ([]containers.Container, error) {
+	return nil, nil
+}
+
 type dbDiscoverMsg struct {
 	generation uint64
 	containers []containers.Container

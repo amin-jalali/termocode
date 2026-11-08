@@ -26,16 +26,20 @@ type SSHServer struct {
 	// Forward opens the target of a tunnel channel (host:port as the
 	// client asked for it).
 	Forward func(ctx context.Context, addr string) (net.Conn, error)
+	// Exec answers an "exec" session (the command as the client sent
+	// it): its stdout and exit status. nil: sessions are refused.
+	Exec func(cmd string) (stdout string, exit int)
 
 	logins   atomic.Int32 // successful logins
 	attempts atomic.Int32 // auth attempts of any kind
 	open     atomic.Int32 // client connections being served
 
-	mu      sync.Mutex
-	targets []string
-	conns   []net.Conn
-	wg      sync.WaitGroup
-	closed  bool
+	mu       sync.Mutex
+	targets  []string
+	commands []string
+	conns    []net.Conn
+	wg       sync.WaitGroup
+	closed   bool
 }
 
 // NewSSHServer is a server with a fresh ed25519 host key.
@@ -85,6 +89,13 @@ func (s *SSHServer) Targets() []string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return append([]string(nil), s.targets...)
+}
+
+// Commands are the exec commands the clients ran, in order.
+func (s *SSHServer) Commands() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]string(nil), s.commands...)
 }
 
 // Dial is the client's dialer (addr is ignored: there is one server).
@@ -169,6 +180,18 @@ func (s *SSHServer) serve(c net.Conn) {
 	var wg sync.WaitGroup
 	defer wg.Wait()
 	for nc := range chans {
+		if nc.ChannelType() == "session" && s.Exec != nil {
+			ch, creqs, err := nc.Accept()
+			if err != nil {
+				continue
+			}
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				s.session(ch, creqs)
+			}()
+			continue
+		}
 		if nc.ChannelType() != "direct-tcpip" {
 			_ = nc.Reject(ssh.UnknownChannelType, "only direct-tcpip")
 			continue
@@ -214,5 +237,31 @@ func (s *SSHServer) serve(c net.Conn) {
 			_, _ = io.Copy(target, ch)
 			_ = target.Close()
 		}()
+	}
+}
+
+// session runs the one exec request of a session channel through Exec.
+func (s *SSHServer) session(ch ssh.Channel, reqs <-chan *ssh.Request) {
+	defer ch.Close()
+	for req := range reqs {
+		if req.Type != "exec" {
+			if req.WantReply {
+				_ = req.Reply(false, nil)
+			}
+			continue
+		}
+		var p struct{ Command string }
+		if err := ssh.Unmarshal(req.Payload, &p); err != nil {
+			_ = req.Reply(false, nil)
+			return
+		}
+		_ = req.Reply(true, nil)
+		s.mu.Lock()
+		s.commands = append(s.commands, p.Command)
+		s.mu.Unlock()
+		out, code := s.Exec(p.Command)
+		_, _ = io.WriteString(ch, out)
+		_, _ = ch.SendRequest("exit-status", false, ssh.Marshal(struct{ Status uint32 }{uint32(code)}))
+		return
 	}
 }

@@ -35,8 +35,11 @@ type Conn struct {
 	SSH         *SSHConfig        `json:"ssh,omitempty"`
 	SSL         *SSLConfig        `json:"ssl,omitempty"`
 	Kube        *KubeConfig       `json:"kube,omitempty"`
-	TLS         bool              `json:"tls,omitempty"`
-	Options     *ConnOptions      `json:"options,omitempty"`
+	// Container is the container behind the connection on a remote
+	// engine (its IP is found again on every connect).
+	Container *ContainerRef `json:"container,omitempty"`
+	TLS       bool          `json:"tls,omitempty"`
+	Options   *ConnOptions  `json:"options,omitempty"`
 	// Folder groups the connection in the tree ("team/prod"); Color is
 	// one of ConnColors (DBX-21).
 	Folder  string `json:"folder,omitempty"`
