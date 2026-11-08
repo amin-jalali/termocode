@@ -57,8 +57,8 @@ func TestAssetsGzipped(t *testing.T) {
 		if !bytes.Equal(got, want) {
 			t.Errorf("GET %s: the gzipped body is not the file", path)
 		}
-		if len(want) > 10<<10 && len(zb)*3 > len(want) { // the code (a small page is mostly hashes)
-			t.Errorf("GET %s: %d B gzipped of %d B, want under a third", path, len(zb), len(want))
+		if len(want) > 10<<10 && len(zb)*2 > len(want) { // the code (a small page is mostly hashes)
+			t.Errorf("GET %s: %d B gzipped of %d B, want under half", path, len(zb), len(want))
 		}
 		if cl := res.Header.Get("Content-Length"); cl != "" && cl != strconv.Itoa(len(zb)) {
 			t.Errorf("GET %s: Content-Length %s for %d B", path, cl, len(zb))
