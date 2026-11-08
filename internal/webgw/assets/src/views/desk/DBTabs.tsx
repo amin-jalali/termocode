@@ -22,14 +22,13 @@ import { link, live } from "../../session";
 import { readDBRows, type DBCellView, type DBRowsView } from "../../state/more";
 import { t } from "../../strings";
 import { AskLaptop } from "../../ui/AskLaptop";
-import { errText } from "../../ui/CardSheet";
 import { openMenu } from "../../ui/ContextMenu";
 import { Cod } from "../../ui/icons";
 import { Act, Ask } from "../../ui/pane";
 import { Portal } from "../../ui/Portal";
 import type { DBHistory, DBPlan } from "../../../../../webproto/proto";
 import { gitFailed as failed } from "../git/errors";
-import { canAct, connView, pushed, pushQuery, queries, runNext, setQuery } from "./dbstate";
+import { canAct, connView, dbErr, pushed, pushQuery, queries, runNext, setQuery } from "./dbstate";
 
 const NUM = /^-?\d+(\.\d+)?([eE][-+]?\d+)?$/;
 const MIN_W = 48;
@@ -286,7 +285,7 @@ export function DBTableTab({ conn, table, slot }: { conn: string; table: string;
     setRes((x) => ({ r: x.r, err: "" }));
     link.request("db.rows", { conn, table, from }).then(
       (d) => !stop && (setRes({ r: readDBRows(d), err: "" }), setE(NO_EDIT), setSel(-1)),
-      (err: unknown) => !stop && setRes({ r: null, err: errText(err) }),
+      (err: unknown) => !stop && setRes({ r: null, err: dbErr(err) }),
     );
     return () => {
       stop = true;
@@ -503,7 +502,7 @@ export function DBQueryTab({ conn, slot }: { conn: string; slot: string }) {
         (e: unknown) => {
           if (e instanceof ReqError && e.code === "forbidden" && !plan) setStep("laptop");
           else {
-            setRes({ o: null, err: errText(e) });
+            setRes({ o: null, err: dbErr(e) });
             failed(e);
           }
         },
@@ -597,7 +596,7 @@ export function DBTextTab({ kind, conn, table, slot }: { kind: "ddl" | "scmp"; c
           });
     req.then(
       (v) => setSt({ ...v, err: "" }),
-      (e: unknown) => setSt({ text: null, err: errText(e), note: "" }),
+      (e: unknown) => setSt({ text: null, err: dbErr(e), note: "" }),
     );
   }, [kind, conn, table, on]);
   useEffect(() => {
@@ -644,7 +643,7 @@ export function DBHistoryTab() {
     if (on)
       link.request("db.history", {}).then(
         (d) => setH({ v: d as DBHistory, err: "" }),
-        (e: unknown) => setH({ v: null, err: errText(e) }),
+        (e: unknown) => setH({ v: null, err: dbErr(e) }),
       );
   }, [on]);
   const list = h.v?.entries ?? [];

@@ -18,13 +18,12 @@ import { link, live } from "../../session";
 import { readDBTables, type DBConnView } from "../../state/more";
 import { t } from "../../strings";
 import { AskLaptop } from "../../ui/AskLaptop";
-import { errText } from "../../ui/CardSheet";
 import { onMenu, openMenu, type MenuItems } from "../../ui/ContextMenu";
 import { Cod } from "../../ui/icons";
 import { Act, PaneView, Row, Tree } from "../../ui/pane";
 import type { RedisKeys } from "../../../../../webproto/proto";
 import { DBFormView } from "./DBForms";
-import { canAct, conns, dbFilter, dbForm, loadConns, type Load } from "./dbstate";
+import { canAct, conns, dbErr, dbFilter, dbForm, loadConns, type Load } from "./dbstate";
 
 type Tables = ReturnType<typeof readDBTables>;
 
@@ -44,7 +43,7 @@ function loadChildren(c: DBConnView): void {
   const redis = c.driver === "redis";
   link.request(redis ? "redis.keys" : "db.tables", { conn: c.id }).then(
     (r) => set({ s: "ok", v: redis ? (r as RedisKeys) : readDBTables(r) }),
-    (e: unknown) => set({ s: "err", msg: errText(e) }),
+    (e: unknown) => set({ s: "err", msg: dbErr(e) }),
   );
 }
 
@@ -70,7 +69,7 @@ const ask = (label: string, op: string, args: unknown) => (laptop.value = { labe
 function read(op: string, args: unknown): void {
   link.request(op, args).then(
     (r) => toast("ok", (r as { text?: string }).text ?? t("wait.done")),
-    (e: unknown) => toast("warn", errText(e)),
+    (e: unknown) => toast("warn", dbErr(e)),
   );
 }
 
@@ -253,7 +252,7 @@ function SchemaRows({ c, v }: { c: DBConnView; v: Tables }) {
 export function openConfig(): void {
   link.request("db.config", {}).then(
     (r) => showFile((r as { path?: string }).path ?? ".termocode/databases.json"),
-    (e: unknown) => toast("warn", errText(e)),
+    (e: unknown) => toast("warn", dbErr(e)),
   );
 }
 

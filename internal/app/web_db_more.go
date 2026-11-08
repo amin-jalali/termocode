@@ -179,13 +179,13 @@ func (m *Model) webDBReadOnce(call *webCall, w webDBConn, read func(ctx context.
 		defer stop()
 		s, err := w.open(ctx)
 		if err != nil {
-			call.fail(webproto.CodeInternal, err.Error())
+			w.fail(call, err)
 			return nil
 		}
 		defer s.Close()
 		out, err := read(ctx, s)
 		if err != nil {
-			call.fail(webproto.CodeInternal, dbAIError(err, w.snap.password).Error())
+			w.fail(call, err)
 			return nil
 		}
 		call.reply(out)
@@ -298,13 +298,13 @@ func (m *Model) webDBCompare(call *webCall) tea.Cmd {
 		for i := range sides {
 			s, err := sides[i].open(ctx)
 			if err != nil {
-				call.fail(webproto.CodeInternal, err.Error())
+				sides[i].fail(call, err)
 				return nil
 			}
 			canon[i], err = dbclient.ReadCanonSchema(ctx, s, sides[i].c.Driver, webDBSchema(sides[i].c))
 			_ = s.Close()
 			if err != nil {
-				call.fail(webproto.CodeInternal, dbAIError(err, sides[i].snap.password).Error())
+				sides[i].fail(call, err)
 				return nil
 			}
 			canon[i].Label = sides[i].c.ID
@@ -484,7 +484,7 @@ func (m *Model) webRedisKeys(call *webCall) tea.Cmd {
 		defer stop()
 		s, err := webRedisOpen(ctx, w.root, w.c, &w.snap, true)
 		if err != nil {
-			call.fail(webproto.CodeInternal, dbAIClean(dbOneLine(err.Error()), w.snap.password))
+			w.fail(call, err)
 			return nil
 		}
 		defer s.Close()
@@ -495,7 +495,7 @@ func (m *Model) webRedisKeys(call *webCall) tea.Cmd {
 			metas, err = s.Types(ctx, db, keys)
 		}
 		if err != nil {
-			call.fail(webproto.CodeInternal, dbAIClean(dbOneLine(err.Error()), w.snap.password))
+			w.fail(call, err)
 			return nil
 		}
 		out := webproto.RedisKeys{DB: db, Keys: []webproto.RedisKey{}, More: more}
@@ -651,13 +651,13 @@ func (m *Model) webDBEdit(call *webCall, open func(*webAsk) tea.Msg) tea.Cmd {
 		defer stop()
 		s, err := w.open(ctx)
 		if err != nil {
-			call.fail(webproto.CodeInternal, err.Error())
+			w.fail(call, err)
 			return nil
 		}
 		ir, err := s.Introspect(ctx, t.request())
 		_ = s.Close()
 		if err != nil {
-			call.fail(webproto.CodeInternal, dbAIError(err, w.snap.password).Error())
+			w.fail(call, err)
 			return nil
 		}
 		edits, code, err := webDBRowEdits(a, webDBKeyOf(ir))
@@ -752,13 +752,13 @@ func (m *Model) webDBImport(call *webCall, open func(*webAsk) tea.Msg) tea.Cmd {
 		}
 		s, err := w.open(ctx)
 		if err != nil {
-			call.fail(webproto.CodeInternal, err.Error())
+			w.fail(call, err)
 			return nil
 		}
 		ir, err := s.Introspect(ctx, t.request())
 		_ = s.Close()
 		if err != nil {
-			call.fail(webproto.CodeInternal, dbAIError(err, w.snap.password).Error())
+			w.fail(call, err)
 			return nil
 		}
 		var targets []string

@@ -2,8 +2,10 @@
 // laptop session's state), the open form in the view, the query text of
 // each connection's query tab and the result pinned in it. Desktop only.
 import { signal } from "@preact/signals";
+import { OfflineError, ReqError } from "../../net/link";
 import { link } from "../../session";
 import { readDBConns, type DBConnView } from "../../state/more";
+import { t } from "../../strings";
 import { errText } from "../../ui/CardSheet";
 
 export type Load<T> = { s: "loading" } | { s: "ok"; v: T } | { s: "err"; msg: string };
@@ -15,8 +17,17 @@ export function loadConns(): void {
   if (!conns.peek()) conns.value = { s: "loading" };
   link.request("db.conns", {}).then(
     (r) => (conns.value = { s: "ok", v: readDBConns(r) }),
-    (e: unknown) => (conns.value = { s: "err", msg: errText(e) }),
+    (e: unknown) => (conns.value = { s: "err", msg: dbErr(e) }),
   );
+}
+
+/** dbErr is the line for a failed database request: the laptop's own
+ * reason (the server's words, the password hidden), "Offline" when the
+ * link is down, or the generic line for termocode's own faults. */
+export function dbErr(e: unknown): string {
+  if (e instanceof OfflineError) return t("offline.input");
+  if (e instanceof ReqError && e.message && e.code !== "internal") return e.message;
+  return errText(e);
 }
 
 /** connView is a listed connection by id. */

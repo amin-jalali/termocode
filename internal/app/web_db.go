@@ -159,12 +159,9 @@ func (m *Model) webDBFind(call *webCall, id string) (webDBConn, bool) {
 }
 
 // open is a read-only session of the connection (the caller closes it).
+// Its error is the driver's: w.fail tells the page why.
 func (w *webDBConn) open(ctx context.Context) (dbclient.Session, error) {
-	s, err := dbAIOpen(ctx, w.root, w.c, &w.snap, true)
-	if err != nil {
-		return nil, errors.New(dbAIClean(dbOneLine(err.Error()), w.snap.password))
-	}
-	return s, nil
+	return dbAIOpen(ctx, w.root, w.c, &w.snap, true)
 }
 
 // webDBSchema is the schema whose tables the page lists.
@@ -189,14 +186,14 @@ func (m *Model) webDBTables(call *webCall) tea.Cmd {
 		defer stop()
 		s, err := w.open(ctx)
 		if err != nil {
-			call.fail(webproto.CodeInternal, err.Error())
+			w.fail(call, err)
 			return nil
 		}
 		defer s.Close()
 		schema := webDBSchema(w.c)
 		res, err := s.Introspect(ctx, dbclient.IntrospectionRequest{Schema: schema})
 		if err != nil {
-			call.fail(webproto.CodeInternal, dbAIError(err, w.snap.password).Error())
+			w.fail(call, err)
 			return nil
 		}
 		out := webproto.DBTables{Conn: w.c.ID, Schema: schema, Tables: []webproto.DBTable{}}
@@ -253,13 +250,13 @@ func (m *Model) webDBRows(call *webCall) tea.Cmd {
 		defer stop()
 		s, err := w.open(ctx)
 		if err != nil {
-			call.fail(webproto.CodeInternal, err.Error())
+			w.fail(call, err)
 			return nil
 		}
 		defer s.Close()
 		r := s.Run(ctx, sql, dbclient.RunOptions{MaxRows: webproto.DBPageRows + 1})
 		if r.Err != nil {
-			call.fail(webproto.CodeInternal, dbAIError(r.Err, w.snap.password).Error())
+			w.fail(call, r.Err)
 			return nil
 		}
 		more := len(r.Rows) > webproto.DBPageRows
@@ -323,14 +320,14 @@ func (m *Model) webDBQuery(call *webCall) tea.Cmd {
 		defer stop()
 		s, err := w.open(ctx)
 		if err != nil {
-			call.fail(webproto.CodeInternal, err.Error())
+			w.fail(call, err)
 			return nil
 		}
 		defer s.Close()
 		start := time.Now()
 		r := s.Run(ctx, sql, dbclient.RunOptions{MaxRows: webproto.MaxDBRows})
 		if r.Err != nil {
-			call.fail(webproto.CodeInternal, dbAIError(r.Err, w.snap.password).Error())
+			w.fail(call, r.Err)
 			return nil
 		}
 		out := webDBResult(r, w.snap.password)
