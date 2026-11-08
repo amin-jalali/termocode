@@ -207,3 +207,35 @@ func TestWebDBReadsReuseOneLogin(t *testing.T) {
 		t.Errorf("%d database connections outlived the hub", n)
 	}
 }
+
+// Spec (perf): on a 40 ms link the page's first open of a container's
+// Postgres costs one docker inspect and one login; after that a table
+// list or a page of rows runs no SSH command, logs in no more and waits
+// only a few round trips (the list asks the catalog only for the tables,
+// the rows only for the key), so it answers well under a second.
+func TestWebDBSlowLinkReadsUnderASecond(t *testing.T) {
+	w := newWebSlowDB(t, 20*time.Millisecond, 300*time.Millisecond)
+	f, first := w.read(t, webproto.OpDBTables, `{"conn":"pg"}`)
+	var tb webproto.DBTables
+	webTestData(t, f, &tb)
+	if len(tb.Tables) != 2 {
+		t.Fatalf("tables %+v", tb)
+	}
+	if first.execs != 1 || first.logins != 1 {
+		t.Errorf("first open: %d docker inspect and %d logins, want 1 and 1", first.execs, first.logins)
+	}
+	_, again := w.read(t, webproto.OpDBTables, `{"conn":"pg"}`)
+	_, rows := w.read(t, webproto.OpDBRows, `{"conn":"pg","table":"users"}`)
+	_, rows2 := w.read(t, webproto.OpDBRows, `{"conn":"pg","table":"users"}`)
+	for name, c := range map[string]webSlowCost{"second table list": again, "rows": rows, "rows again": rows2} {
+		if c.execs != 0 || c.logins != 0 {
+			t.Errorf("%s: %d docker inspect and %d logins, want none", name, c.execs, c.logins)
+		}
+		if c.rounds > 10 {
+			t.Errorf("%s: %d round trips, want at most 10", name, c.rounds)
+		}
+		if c.took > time.Second {
+			t.Errorf("%s took %v, want under 1 s", name, c.took)
+		}
+	}
+}
