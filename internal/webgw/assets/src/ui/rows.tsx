@@ -108,7 +108,7 @@ export function TreeRow({
       onClick={onClick}
       onDblClick={onDblClick}
     >
-      <span class={`chev${open ? " is-open" : ""}`} aria-hidden="true">{dir ? (desk ? <Cod name={open ? "chevron-down" : "chevron-right"} /> : "›") : ""}</span>
+      <span class={`chev${open ? " is-open" : ""}`} aria-hidden="true">{dir ? (desk ? <Cod name={open ? "chevron-down" : "chevron-right"} /> : "›") : null}</span>
       {desk ? (
         dir ? null : <FileIcon path={name} />
       ) : (

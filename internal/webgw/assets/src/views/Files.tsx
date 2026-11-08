@@ -3,8 +3,8 @@
 // Folders list lazily when opened; names keep their own direction while
 // the indent stays on the start side; git letters use the git colours;
 // ignored names are dim; dotfiles follow the laptop and can be hidden here.
-import { Fragment, h, type ComponentChildren } from "preact";
-import { useEffect, useState } from "preact/hooks";
+import { Fragment, h, type ComponentChildren, type VNode } from "preact";
+import { useEffect, useMemo, useState } from "preact/hooks";
 import type { BufItem, TreeDir, TreeEntry } from "../../../../webproto/proto";
 import { go, route } from "../lib/router";
 import { layout } from "../lib/layout";
@@ -109,6 +109,10 @@ function StatusRow({ depth, children }: { depth: number; children: ComponentChil
 
 function Folder({ path, depth, tree }: { path: string; depth: number; tree: TreeData }) {
   const [filter, setFilter] = useState("");
+  // Each row's drawing, kept while what it shows stays the same: Preact
+  // skips a row it gets again as it was, so a change in one folder (a git
+  // letter, a new file) leaves the other thousands of rows alone.
+  const rows = useMemo(() => new Map<string, [string, VNode]>(), []);
   const dir = own(tree.dirs, path);
   const why = failed.value.get(path);
   if (!dir) {
@@ -130,6 +134,7 @@ function Folder({ path, depth, tree }: { path: string; depth: number; tree: Tree
     );
   }
   const hide = hideDots.value;
+  const desk = layout.value === "desktop";
   const needle = filter.trim().toLowerCase();
   const entries = (dir.entries ?? []).filter((e: TreeEntry) => !(hide && e.hidden) && (!needle || e.name.toLowerCase().includes(needle)));
   return (
@@ -152,26 +157,37 @@ function Folder({ path, depth, tree }: { path: string; depth: number; tree: Tree
       {entries.map((e) => {
         const p = join(path, e.name);
         const open = e.dir && expanded.value.has(p);
-        return (
-          <Fragment key={e.name}>
-            <div class="tree-line" onContextMenu={layout.value === "desktop" ? onMenu(e.name, () => treeMenu(p, e.dir)) : undefined}>
+        const more = canEdit() && t("files.more", { name: e.name });
+        const k = `${e.dir}${open}${e.git}${e.ignored}${desk}${more}`;
+        let row = rows.get(e.name);
+        if (row?.[0] !== k)
+          rows.set(
+            e.name,
+            (row = [
+              k,
+            <div class="tree-line" onContextMenu={desk ? onMenu(e.name, () => treeMenu(p, e.dir)) : undefined}>
               <TreeRow
                 depth={depth}
                 dir={e.dir}
                 open={open}
                 name={e.name}
                 git={gitBadge(e.git)}
-                dim={e.ignored === true}
+                dim={e.ignored}
                 path={p}
-                onClick={() => (e.dir ? toggle(p) : layout.peek() === "desktop" ? showFile(p, true) : openFile(p))}
-                onDblClick={e.dir || layout.peek() !== "desktop" ? undefined : () => keep(p)}
+                onClick={() => (e.dir ? toggle(p) : desk ? showFile(p, true) : openFile(p))}
+                onDblClick={e.dir || !desk ? undefined : () => keep(p)}
               />
-              {canEdit() && (
-                <button type="button" class="tree-more" aria-label={t("files.more", { name: e.name })} onClick={() => (acting.value = { path: p, dir: e.dir })}>
+              {more && (
+                <button type="button" class="tree-more" aria-label={more} onClick={() => (acting.value = { path: p, dir: e.dir })}>
                   ⋯
                 </button>
               )}
-            </div>
+            </div>,
+            ]),
+          );
+        return (
+          <Fragment key={e.name}>
+            {row[1]}
             {open && <Folder path={p} depth={depth + 1} tree={tree} />}
           </Fragment>
         );
