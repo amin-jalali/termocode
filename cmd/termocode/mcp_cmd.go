@@ -22,13 +22,20 @@ func runMCP(args []string) int {
 
 // runMCPIn is runMCP with its streams and current folder passed in.
 func runMCPIn(args []string, in io.Reader, out, errw io.Writer, cwd string) int {
-	dir, explicit := "", false
+	dir, explicit, sock := "", false, ""
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		switch {
 		case a == "-h" || a == "--help" || a == "help":
 			fmt.Fprint(out, mcpUsage)
 			return mcpExitOK
+		case a == "--socket":
+			if i+1 >= len(args) || args[i+1] == "" {
+				fmt.Fprintf(errw, "termocode mcp: --socket needs a path\n\n%s", mcpUsage)
+				return mcpExitUsage
+			}
+			i++
+			sock = args[i]
 		case a == "--dir":
 			if i+1 >= len(args) {
 				fmt.Fprintf(errw, "termocode mcp: --dir needs a folder\n\n%s", mcpUsage)
@@ -42,6 +49,14 @@ func runMCPIn(args []string, in io.Reader, out, errw io.Writer, cwd string) int 
 			fmt.Fprintf(errw, "termocode mcp: unknown argument %q\n\n%s", a, mcpUsage)
 			return mcpExitUsage
 		}
+	}
+	if sock != "" { // a CLI step's own server: that socket or nothing
+		conn, err := net.DialTimeout("unix", sock, 2*time.Second)
+		if err != nil {
+			fmt.Fprintf(errw, "termocode mcp: the AI step's tools are not open (%v); the step may have ended\n", err)
+			return mcpExitLost
+		}
+		return relayMCP(in, out, conn, errw, "this AI step")
 	}
 	if explicit {
 		if info, err := os.Stat(dir); err != nil || !info.IsDir() {
