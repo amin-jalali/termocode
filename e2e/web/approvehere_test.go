@@ -94,6 +94,24 @@ func TestDeskApprovesHere(t *testing.T) {
 	}, `"src/a.go"`)
 }
 
+// Where the TUI asks nothing, the hub sends no ask ev: the page shows no
+// question and never waits for the laptop; it says Done when the hub
+// answers the card.
+func TestApproveHereNoQuestion(t *testing.T) {
+	p, c := openDeskSCM(t, hereMeta("c-scm"))
+	Eval[bool](p, scmRow("changes", "src/a.go")+`.querySelector('[aria-label="Discard Changes"]').click() ?? true`)
+	reply(t, c, expectOp(t, c, webproto.OpGitDiscard, ""), webproto.AskRef{Card: "ask-5"})
+	c.Quiet(t, 300*time.Millisecond)
+	if Eval[bool](p, `!!document.querySelector(".waiting, .ask, .discard")`) {
+		t.Fatal("the page shows a question or waits for the laptop before the answer")
+	}
+	c.Send(t, &webproto.Event{T: webproto.KindEv, Kind: webproto.EventAnswered, Data: raw(webproto.Answered{ID: "ask-5", By: "loc-test", Choice: "confirm"})})
+	p.WaitJS(`document.querySelector(".toasts")?.textContent.includes("Done")`)
+	if Eval[bool](p, `!!document.querySelector(".waiting, .ask, .discard")`) {
+		t.Fatal("the page shows a question or waits for the laptop")
+	}
+}
+
 // Whichever view sent the request (a palette command, a sheet's action,
 // a view without its own question), the page shows the hub's card from
 // the ask ev, Cancel first, and answers it itself; on the phone and on
