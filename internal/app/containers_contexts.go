@@ -184,6 +184,7 @@ func (m *Model) openContextMenu(r svcRow, x, y int) {
 	items := []menu.Item{
 		{ID: "use", Title: "Use in this session", Hint: "enter"},
 		{ID: "default", Title: "Make default…", Hint: "D"},
+		{ID: "terminal", Title: "Open Terminal", Hint: "t"},
 		{Sep: true},
 		{ID: "copy", Title: "Copy endpoint", Hint: "y"},
 		{ID: "inspect", Title: "Inspect", Hint: "i"},
@@ -203,6 +204,8 @@ func (m *Model) handleContextRowMenuSelect(id string, r svcRow) tea.Cmd {
 		return m.switchContext(r.hostID)
 	case "default":
 		return m.askContextDefault(r.hostID)
+	case "terminal":
+		return m.openContextTerminal(r.hostID)
 	case "copy":
 		return m.copyContextEndpoint(r.hostID)
 	case "inspect":

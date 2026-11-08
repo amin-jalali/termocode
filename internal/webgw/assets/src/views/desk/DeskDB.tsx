@@ -26,8 +26,8 @@ import { Act, PaneView, Row, Tree } from "../../ui/pane";
 import type { RedisKeys } from "../../../../../webproto/proto";
 import { DBFormView } from "./DBForms";
 import { DBNeedAsk } from "./DBNeed";
-import { AddServerRow, HostRows } from "./DeskHosts";
-import { hosts, loadHosts, openNext, pickDB, type HostCtr } from "../../state/hosts";
+import { AddServerRow, HostRows, termAsk } from "./DeskHosts";
+import { hosts, loadHosts, openNext, pickDB, type HostCtr, type HostView } from "../../state/hosts";
 import { canAct, conns, dbErr, dbFilter, dbForm, dbNeed, loadConns, type Load } from "./dbstate";
 
 type Tables = ReturnType<typeof readDBTables>;
@@ -36,7 +36,7 @@ const tables = signal<ReadonlyMap<string, Load<Tables | RedisKeys>>>(new Map());
 /** open: the tree nodes shown open (conn, conn/schema, conn/schema/kind). */
 const open = signal<ReadonlySet<string>>(new Set());
 /** laptop is the question for the laptop a menu item asked. */
-const laptop = signal<{ label: string; op: string; args: unknown } | null>(null);
+const laptop = signal<{ label: string; op: string; args: unknown; text?: string } | null>(null);
 
 function loadChildren(c: DBConnView): void {
   const set = (l: Load<Tables | RedisKeys>) => {
@@ -289,6 +289,18 @@ function pick(host: string, c: HostCtr): void {
   );
 }
 
+/** termActs is Open Terminal on a SERVERS host row: its hover button
+ * and right-click menu (asks the laptop). */
+function termActs(host: HostView, act: boolean) {
+  const a = act ? termAsk(host) : null;
+  if (!a) return {};
+  const run = () => (laptop.value = a);
+  return {
+    actions: <Act icon="terminal" act="terminal" label={a.label} onClick={run} />,
+    onMenu: onMenu(host.name, () => [{ label: a.label, run }]),
+  };
+}
+
 /** Servers is SERVERS: the ssh:// hosts, their compose projects and
  * database containers, then + Add Server…. */
 function Servers({ act }: { act: boolean }) {
@@ -305,7 +317,7 @@ function Servers({ act }: { act: boolean }) {
       {isOpen && (!hl || hl.s === "loading") && <p class="tr-note">{t("loading")}</p>}
       {isOpen && hl?.s === "err" && <p class="tr-note is-err">{hl.msg}</p>}
       {isOpen && hl?.s === "ok" && list.length === 0 && <p class="tr-note">{t("srv.no_hosts")}</p>}
-      {isOpen && list.map((x) => <HostRows key={x.name} h={x} open={srvOpen} db level={1} onPick={act ? (c) => pick(x.name, c) : undefined} />)}
+      {isOpen && list.map((x) => <HostRows key={x.name} h={x} open={srvOpen} db level={1} onPick={act ? (c) => pick(x.name, c) : undefined} {...termActs(x, act)} />)}
       {isOpen && hl?.s === "ok" && (
         <AddServerRow
           level={1}
@@ -387,7 +399,7 @@ export function DeskDB() {
       {l && (
         <AskLaptop
           label={l.label}
-          text={t("dbv.laptop_q")}
+          text={l.text ?? t("dbv.laptop_q")}
           send={() => link.request(l.op, l.args)}
           onDone={() => (laptop.value = null)}
           onConfirmed={() => setTimeout(refresh, 300)}

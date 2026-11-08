@@ -87,6 +87,20 @@ func (s *dbState) serverTreeRows() []dbTreeRow {
 	return append(out, dbTreeRow{kind: dbNodeAddServer, path: dbAddServerPath, name: "Add Server…", selectable: true})
 }
 
+// serverHostAt is the host of a SERVERS host row ("\x00server/<context>").
+func (s *dbState) serverHostAt(path string) (dbRemoteHost, bool) {
+	rest, ok := strings.CutPrefix(path, dbServerPath())
+	if !ok || rest == "" || strings.Contains(rest, "/") {
+		return dbRemoteHost{}, false
+	}
+	for _, f := range s.discoveredRemote {
+		if f.host.context == rest {
+			return f.host, true
+		}
+	}
+	return dbRemoteHost{}, false
+}
+
 // databaseAddServer is + Add Server…: the Containers view's Create
 // Context (it needs the engine the Containers view found).
 func (m *Model) databaseAddServer() tea.Cmd {

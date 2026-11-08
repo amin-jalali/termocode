@@ -3435,6 +3435,20 @@
       "phase": "v2"
     },
     {
+      "op": "containers.host_terminal",
+      "args": "ContextArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "services.start_all",
       "args": "EmptyArgs",
       "result": "HostDone",

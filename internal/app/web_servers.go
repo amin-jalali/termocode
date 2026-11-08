@@ -32,6 +32,34 @@ func init() {
 	webOps[webproto.OpContainersServer] = (*Model).webContainersServer
 	webOps[webproto.OpContainersAddServer] = (*Model).webContainersAddServer
 	webOps[webproto.OpDBAddContainer] = (*Model).webDBAddContainer
+	webAskOps[webproto.OpContainersHostTerminal] = (*Model).webContainersHostTerminal
+}
+
+// webContainersHostTerminal is Open Terminal on a host row from the page:
+// the laptop's card (Cancel first) names the exact argv, then the laptop
+// opens the same terminal tab as its own t (containers_hostterm.go).
+func (m *Model) webContainersHostTerminal(call *webCall) *webAsk {
+	name := call.args.(*webproto.ContextArgs).Name
+	host, ok := m.webServersSeen().hosts[name]
+	if !ok {
+		call.fail(webproto.CodeNotFound, "That host is not in the list. Open the list again.")
+		return nil
+	}
+	ep := host.DockerEndpoint
+	shown := webName(name)
+	if argv, ok := hostTerminalArgv(ep); ok {
+		return webCtrAsk(shown+" ssh", "Open a terminal on "+shown+"?", "Open Terminal",
+			"Open a laptop terminal running ssh to "+webName(serverTarget(host))+"? What you type there runs on that server.", argv, func(m *Model) tea.Cmd {
+				return m.openHostTerminal(name, ep)
+			})
+	}
+	if !hostIsLocal(ep) {
+		call.fail(webproto.CodeConflict, "Open Terminal needs an ssh:// host or this machine.")
+		return nil
+	}
+	return webCtrAsk(shown+" shell", "Open a shell?", "Open Terminal", "Open a shell in the project folder in a laptop terminal?", []string{localShell()}, func(m *Model) tea.Cmd {
+		return m.openHostTerminal(name, ep)
+	})
 }
 
 // webServerWait bounds one host's list (a remote engine over SSH).

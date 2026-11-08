@@ -22,6 +22,15 @@ function ctrIcon(c: HostCtr) {
   return <span class="c-err"><Cod name="vm-outline" /></span>;
 }
 
+/** termAsk is Open Terminal on a host row: the laptop's question (ssh
+ * to an ssh:// host, a shell for this machine); null: no terminal. The
+ * phone has its own copy (more/Hosts.tsx): the shared chunk stays small. */
+export function termAsk(h: HostView): { label: string; text: string; op: string; args: unknown } | null {
+  if (!h.name || (!h.ssh && !h.local && h.where)) return null;
+  const text = h.ssh ? t("srv.terminal_q", { name: h.name, where: h.where }) : t("srv.terminal_here_q");
+  return { label: t("srv.terminal"), text, op: "containers.host_terminal", args: { name: h.name } };
+}
+
 /** flipHost opens or closes a host row; the first open reads it. */
 export function flipHost(open: Signal<ReadonlySet<string>>, name: string): void {
   const n = new Set(open.peek());

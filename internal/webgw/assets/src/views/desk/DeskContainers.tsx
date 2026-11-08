@@ -37,7 +37,7 @@ import { gitFailed as failed } from "../git/errors";
 import { go } from "../../lib/router";
 import { forgetHosts, hostLabel, inUse, openNext, pickDB, readHosts, setHosts, upOf, type HostCtr, type HostView } from "../../state/hosts";
 import { loadConns } from "./dbstate";
-import { AddServerRow, HostRows } from "./DeskHosts";
+import { AddServerRow, HostRows, termAsk } from "./DeskHosts";
 
 type Load<T> = { s: "loading" } | { s: "ok"; v: T } | { s: "err"; msg: string };
 
@@ -394,8 +394,14 @@ function Section({ id, title, count, actions, load, empty, children }: { id: str
 
 const imageName = (im: ImageItem) => im.tags[0] ?? im.id;
 
-/** hostItems are a host row's actions: Use Here (asks in the view) and
- * Make Default (asks the laptop), as CONTEXTS had them. */
+/** termItem is Open Terminal on a host row (asks the laptop). */
+function termItem(c: HostView, x: Ctx): Item {
+  const a = termAsk(c);
+  return a && { icon: "terminal", act: "terminal", label: a.label, run: () => x.setLaptop(a) };
+}
+
+/** hostItems are a host row's actions: Use Here (asks in the view),
+ * Open Terminal and Make Default (ask the laptop), as CONTEXTS had them. */
 function hostItems(c: HostView, x: Ctx, here: boolean): Item[] {
   if (!x.canAct || !c.name) return [];
   return [
@@ -407,6 +413,7 @@ function hostItems(c: HostView, x: Ctx, here: boolean): Item[] {
           label: t("ctr.context_use"),
           run: () => x.setPending({ key: "c:" + c.name, text: t("ctr.context_use_q", { name: c.name }), verb: t("ctr.context_use"), run: () => act("containers.context", { name: c.name }, t("ctr.context_now", { name: c.name })) }),
         },
+    termItem(c, x),
     c.current ? null : { icon: "pinned", act: "default", label: t("ctr.context_default"), run: () => x.setLaptop({ label: t("ctr.context_default"), text: t("ctr.context_default_q", { name: c.name }), op: "containers.context_default", args: { name: c.name } }) },
   ];
 }

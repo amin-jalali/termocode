@@ -19,7 +19,7 @@ import { Button } from "../../ui/Button";
 import { SkeletonRows } from "../../ui/Skeleton";
 import { gitFailed as failed } from "../git/errors";
 import { SubView } from "./SubView";
-import { AddServer, HostHead, HostRows, refreshHosts } from "./Hosts";
+import { AddServer, HostHead, HostRows, HostTerm, refreshHosts } from "./Hosts";
 import { go } from "../../lib/router";
 
 interface Logs {
@@ -213,6 +213,7 @@ export function ContainersView() {
             isOpen={!shut.value}
             onFlip={() => (shut.value = !shut.peek())}
           />
+          {!shut.value && here && <HostTerm host={here} canAct={canAct} />}
           {!shut.value &&
             (err ? (
               <p class="empty refused" dir="auto">

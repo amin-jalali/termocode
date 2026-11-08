@@ -43,6 +43,7 @@ const (
 	OpContainersContextDefault = "containers.context_default"
 	OpContainersRegistry       = "containers.registry"
 	OpContainersOpenDB         = "containers.open_db"
+	OpContainersHostTerminal   = "containers.host_terminal" // Open Terminal on a host row
 	OpServicesStartAll         = "services.start_all"
 	OpServicesStopAll          = "services.stop_all"
 	OpServicesConfigure        = "services.configure"
@@ -69,6 +70,7 @@ var opContainersRows = []Policy{
 	{Op: OpContainersContextDefault, New: newOf[ContextArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpContainersRegistry, New: newOf[RegistryArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpContainersOpenDB, New: newOf[ContainerArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpContainersHostTerminal, New: newOf[ContextArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpServicesStartAll, New: newOf[EmptyArgs](), Role: RoleController, Rate: perSec(1), MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpServicesStopAll, New: newOf[EmptyArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpServicesConfigure, New: newOf[EmptyArgs](), Role: RoleController, Rate: perSec(1), MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV2},
@@ -92,7 +94,7 @@ func init() {
 	registerResult(OpServicesStartAll, HostDone{})
 	registerResult(OpServicesConfigure, ServicesConfig{})
 	for _, op := range []string{OpContainersExec, OpContainersImage, OpContainersPrune, OpContainersStorageRemove, OpContainersComposeAsk,
-		OpContainersContextDefault, OpContainersRegistry, OpContainersOpenDB, OpServicesStopAll} {
+		OpContainersContextDefault, OpContainersRegistry, OpContainersOpenDB, OpContainersHostTerminal, OpServicesStopAll} {
 		registerResult(op, AskRef{})
 	}
 }

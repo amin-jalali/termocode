@@ -13,6 +13,8 @@ import { signal } from "@preact/signals";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { toast } from "../../lib/toasts";
 import { addServer, errLine, forgetHosts, groups, hostCtrs, hostLabel, hosts, loadHosts, NAME, openHost, pickDB, SSH_HOST, upOf, type HostCtr, type HostView } from "../../state/hosts";
+import { link } from "../../session";
+import { AskLaptop } from "../../ui/AskLaptop";
 import { t } from "../../strings";
 import { Button } from "../../ui/Button";
 import { SkeletonRows } from "../../ui/Skeleton";
@@ -165,6 +167,30 @@ function Ctr({ host, c, db, canAct, onPicked }: { host: string; c: HostCtr; db: 
   );
 }
 
+/** termAsk is Open Terminal's question for a host (null: none); the
+ * desktop's copy is in desk/DeskHosts.tsx. */
+function termAsk(h: HostView): { label: string; text: string; op: string; args: unknown } | null {
+  if (!h.name || (!h.ssh && !h.local && h.where)) return null;
+  const text = h.ssh ? t("srv.terminal_q", { name: h.name, where: h.where }) : t("srv.terminal_here_q");
+  return { label: t("srv.terminal"), text, op: "containers.host_terminal", args: { name: h.name } };
+}
+
+/** HostTerm is Open Terminal under an open host: it asks the laptop,
+ * which opens ssh to the host (a shell for this machine). */
+export function HostTerm({ host, canAct }: { host: HostView; canAct: boolean }) {
+  const [asking, setAsking] = useState(false);
+  const a = canAct ? termAsk(host) : null;
+  if (!a) return null;
+  return (
+    <div class="choices" data-host-term={host.name}>
+      <Button small needsLink onClick={() => setAsking(true)}>
+        {a.label}
+      </Button>
+      {asking && <AskLaptop label={a.label} text={a.text} send={() => link.request(a.op, a.args)} onDone={() => setAsking(false)} />}
+    </div>
+  );
+}
+
 /** HostHead is a host's row: its label and, once read, its counts. */
 export function HostHead({ name, label, desc, count, isOpen, onFlip }: { name: string; label: string; desc?: string; count?: string; isOpen: boolean; onFlip: () => void }) {
   return (
@@ -194,6 +220,7 @@ export function HostRows({ x, db, canAct, onPicked }: { x: HostView; db: boolean
   return (
     <>
       <HostHead name={x.name} label={hostLabel(x)} count={l?.s === "ok" ? upOf(cs) : undefined} isOpen={isOpen} onFlip={() => flip(x.name)} />
+      {isOpen && <HostTerm host={x} canAct={canAct} />}
       {isOpen && (!l || l.s === "loading") && <p class="db-conn db-meta">{t("loading")}</p>}
       {isOpen && l?.s === "err" && (
         <p class="db-conn db-note" data-host-err={x.name} dir="auto">

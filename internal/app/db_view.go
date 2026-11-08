@@ -637,6 +637,9 @@ func (m Model) handleDatabasesSidebarMouse(x, y int, t tea.MouseEventType) (Mode
 		if r.kind == dbNodeRedisKey {
 			items = []menu.Item{{ID: "connect", Title: "Open value", Hint: "enter", Icon: "▸"}, {ID: "redis-ttl", Title: "Set TTL…", Hint: "t", Icon: "◷"}, {ID: "redis-delete", Title: "Delete key…", Hint: "D", Icon: theme.GlyphClose.String()}, {ID: "copyname", Title: "Copy key", Hint: "y", Icon: "⧉"}, {Sep: true}, {ID: "refresh", Title: "Refresh", Hint: "R", Icon: "↻"}}
 		}
+		if _, ok := m.databases.serverHostAt(r.path); ok && r.kind == dbNodeFolderHeader {
+			items = []menu.Item{{ID: "host-terminal", Title: "Open Terminal", Hint: "t", Icon: ">"}}
+		}
 		if _, stopped := m.dbStoppedHint(r, 200); stopped && r.kind == dbNodeConnection {
 			items = append(items, menu.Item{ID: "start-service", Title: "Start service", Hint: "S", Icon: "▸"})
 		}
@@ -691,6 +694,11 @@ func (m Model) handleDatabasesHeaderClick(x, y int) (Model, tea.Cmd) {
 func (m *Model) handleDatabasesMenuSelect(id string) tea.Cmd {
 	r := m.databases.menuRow
 	switch id {
+	case "host-terminal":
+		if h, ok := m.databases.serverHostAt(r.path); ok {
+			return m.openHostTerminal(h.context, h.endpoint)
+		}
+		return nil
 	case "connect":
 		_, cmd := m.handleDatabasesSidebarKey(tea.KeyMsg{Type: tea.KeyEnter})
 		return cmd

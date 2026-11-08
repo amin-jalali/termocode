@@ -1103,6 +1103,7 @@ func hostKeysHelp(r svcRow) (string, []confirm.KeyRow) {
 			[]string{"Enter", "use it here"},
 			[]string{"Space", "open: its projects and containers"},
 			[]string{"r", "read its containers again"},
+			[]string{"t", "open a terminal: ssh to it, or a shell here"},
 			[]string{"D", "make it the default"},
 			[]string{"y", "copy the endpoint"},
 			[]string{"i", "inspect"},

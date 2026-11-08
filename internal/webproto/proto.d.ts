@@ -4087,6 +4087,7 @@ export interface OpArgs {
   "containers.context_default": ContextArgs;
   "containers.registry": RegistryArgs;
   "containers.open_db": ContainerArgs;
+  "containers.host_terminal": ContextArgs;
   "services.start_all": EmptyArgs;
   "services.stop_all": EmptyArgs;
   "services.configure": EmptyArgs;
@@ -4409,6 +4410,7 @@ export interface OpResult {
   "containers.context_default": AskRef;
   "containers.registry": AskRef;
   "containers.open_db": AskRef;
+  "containers.host_terminal": AskRef;
   "services.start_all": HostDone;
   "services.stop_all": AskRef;
   "services.configure": ServicesConfig;

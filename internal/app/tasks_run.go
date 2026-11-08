@@ -382,7 +382,8 @@ const taskSpawnLua = `
 	}
 	if type(env) == 'table' and next(env) ~= nil then opts.env = env end
 	if clear then opts.clear_env = true end
-	local argv = { vim.o.shell, '-c', cmd }
+	-- A list is the argv itself (no shell reads it); a string is a shell line.
+	local argv = type(cmd) == 'table' and cmd or { vim.o.shell, '-c', cmd }
 	local ok, job
 	if vim.fn.has('nvim-0.11') == 1 then
 		opts.term = true
@@ -412,6 +413,7 @@ const taskSpawnLua = `
 type terminalJob struct {
 	Label   string         // tab name
 	Cmdline string         // shell line, run with vim.o.shell -c
+	Argv    []string       // run as is, no shell (wins over Cmdline)
 	Dir     string         // cwd
 	Env     map[string]any // extra env
 	Task    string         // task label (task tabs)
@@ -438,11 +440,16 @@ func (m *Model) spawnTerminalJob(j terminalJob) (int, error) {
 		env = map[string]any{}
 	}
 	var bufNum int64
-	if err := m.nvim.EvalLuaArgs(taskSpawnLua, &bufNum, m.terminalWinID, j.Cmdline, j.Dir, env, j.Label, j.ClearEnv); err != nil {
+	var cmd any = j.Cmdline
+	what := j.Cmdline
+	if len(j.Argv) > 0 {
+		cmd, what = j.Argv, j.Argv[0]
+	}
+	if err := m.nvim.EvalLuaArgs(taskSpawnLua, &bufNum, m.terminalWinID, cmd, j.Dir, env, j.Label, j.ClearEnv); err != nil {
 		return 0, err
 	}
 	if bufNum <= 0 {
-		return 0, fmt.Errorf("cannot start %s", j.Cmdline)
+		return 0, fmt.Errorf("cannot start %s", what)
 	}
 	buf := int(bufNum)
 	for i := len(m.terminalTabs) - 1; i >= 0; i-- {

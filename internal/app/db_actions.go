@@ -444,6 +444,11 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if cmd, ok := m.databaseRedisSidebarKey(k.String(), row); ok {
 			return m, cmd
 		}
+		if row.kind == dbNodeFolderHeader && k.String() == "t" {
+			if h, ok := s.serverHostAt(row.path); ok { // Open Terminal (containers_hostterm.go)
+				return m, m.openHostTerminal(h.context, h.endpoint)
+			}
+		}
 		if row.kind == dbNodeFolderHeader {
 			if handled := s.folderKey(k.String(), row.path); handled {
 				return m, nil

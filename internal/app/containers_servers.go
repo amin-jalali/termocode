@@ -255,6 +255,8 @@ func (m *Model) serversKey(key string) (tea.Cmd, bool) {
 		}
 	case r.kind == svcRowHostItem && r.host == hostContext && (key == " " || key == "right"):
 		return m.toggleServer(r.hostID), true
+	case r.kind == svcRowHostItem && r.host == hostContext && key == "t":
+		return m.openContextTerminal(r.hostID), true // containers_hostterm.go
 	case r.kind == svcRowHostItem && r.host == hostContext && key == "r" && m.services.isActiveHost(r.hostID):
 		return m.containersRefresh("containers"), true
 	case r.kind == svcRowHostItem && r.host == hostContext && key == "r" && m.services.server(r.hostID).open:
