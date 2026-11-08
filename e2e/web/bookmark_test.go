@@ -155,3 +155,47 @@ func TestBookmarkOfARemovedDeviceSaysRemoved(t *testing.T) {
 		t.Fatalf("connect line = %q", got)
 	}
 }
+
+// Spec (MOB stabilize, tablet 2026-11-08): the page marks a sign-in that
+// cannot go on, so the phone app can show its own Pair again screen (the
+// page has no way back to the app's Connect screen): <html data-signin>
+// is "removed" when the laptop refused the bookmark as removed, and
+// "none" when the page has nothing to sign in with. It is gone once the
+// workspace is open.
+func TestSignInDeadEndIsMarkedForTheApp(t *testing.T) {
+	s := StartServer(t)
+	p := NewPage(t, s, Phone)
+	plain, digest, _ := webgw.NewLinkSecret()
+	s.Pairing.SetSecret(digest, webgw.PairTTL, false)
+	p.Do(chromedp.Navigate(s.localhostBase() + "/#p=" + plain))
+	p.virtualAuthenticator()
+	p.Tap(".pair .connect-foot button")
+	<-s.Asks
+	s.PairAnswers <- webdevices.RoleControl
+	p.WaitJS(`!!document.querySelector(".pair .remember input")`)
+	p.Tap(".pair .remember input")
+	p.WaitJS(`document.querySelector(".pair .remember input").checked`)
+	p.Tap(".pair .connect-foot .btn-primary")
+	c := s.Hub.Accept(t)
+	c.HandshakeMeta(t, Meta("c-paired"))
+	p.WaitJS(`document.documentElement.dataset.link === "online"`)
+	if got := Eval[string](p, `document.documentElement.dataset.signin ?? ""`); got != "" {
+		t.Fatalf("open workspace: data-signin = %q, want none", got)
+	}
+
+	devs, err := s.Devices.List()
+	if err != nil || len(devs) != 1 {
+		t.Fatalf("devices: %v %v", devs, err)
+	}
+	if _, ok, err := s.Devices.Remove(devs[0].ID); !ok || err != nil {
+		t.Fatalf("remove: %v %v", ok, err)
+	}
+	Eval[bool](p, `(sessionStorage.clear(), true)`)
+	p.Reload()
+	p.WaitJS(`document.documentElement.dataset.signin === "removed"`)
+
+	// The laptop cleared the cookie: the next open has nothing to go on
+	// (an address, where a passkey cannot be used, like a Wi-Fi laptop).
+	p.Do(chromedp.Navigate(s.Base + "/"))
+	p.WaitJS(`document.documentElement.dataset.signin === "none"`)
+}
