@@ -597,3 +597,26 @@ func TestDeskChatLookAndInsert(t *testing.T) {
 		t.Fatalf("insert %+v", a)
 	}
 }
+
+// Spec (MOB stabilize, tablet 2026-11-08): offline, the desktop chat's
+// icon Send keeps its icon and says Offline only to screen readers and
+// in its tooltip; the word never spills out of the small button over the
+// microphone.
+func TestDeskIconSendStaysAnIconOffline(t *testing.T) {
+	p, c := openChat(t, Desktop, chatWith(false, userMsg(0, "hi")))
+	c.Drop()
+	const send = `document.querySelector(".chatcol .composer-tools .send .btn")`
+	p.WaitJS(send + `?.classList.contains("is-offline")`)
+	if !Eval[bool](p, send+`.querySelector(".cod-send") !== null`) {
+		t.Error("offline Send lost its icon")
+	}
+	if got := Eval[string](p, send+`.textContent`); got != "Offline" {
+		t.Errorf("offline Send says %q to screen readers, want Offline", got)
+	}
+	if got := Eval[string](p, send+`.title`); got != "Offline" {
+		t.Errorf("offline Send tooltip %q, want Offline", got)
+	}
+	if over := Eval[bool](p, send+`.scrollWidth > `+send+`.clientWidth + 1`); over {
+		t.Error("offline Send's text spills out of the button")
+	}
+}
