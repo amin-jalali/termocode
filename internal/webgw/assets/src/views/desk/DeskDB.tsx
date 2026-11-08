@@ -6,8 +6,10 @@
 // TTLs; never a value). A table opens its rows in an editor tab; New
 // Query opens a query editor tab; the "…" menu (or a right click) has
 // the rest. Reads run here; what changes a database or a saved
-// connection asks the laptop, which shows exactly what happens. No host,
-// user or password ever comes to the page.
+// connection asks the laptop, which shows exactly what happens. No
+// connection's host, user or password ever comes to the page. SERVERS is
+// the hosts tree (the ssh:// hosts as "name · where", their compose
+// projects and database containers): picking one adds it and opens it.
 import { Fragment, h } from "preact";
 import { signal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
@@ -24,6 +26,8 @@ import { Act, PaneView, Row, Tree } from "../../ui/pane";
 import type { RedisKeys } from "../../../../../webproto/proto";
 import { DBFormView } from "./DBForms";
 import { DBNeedAsk } from "./DBNeed";
+import { AddServerRow, HostRows } from "./DeskHosts";
+import { hosts, loadHosts, openNext, pickDB, type HostCtr } from "../../state/hosts";
 import { canAct, conns, dbErr, dbFilter, dbForm, dbNeed, loadConns, type Load } from "./dbstate";
 
 type Tables = ReturnType<typeof readDBTables>;
@@ -266,11 +270,70 @@ export function openConfig(): void {
   );
 }
 
+/** serversOpen: the SERVERS rows are shown (read when first opened). */
+const serversOpen = signal(false);
+/** srvOpen are the SERVERS hosts shown open. */
+const srvOpen = signal<ReadonlySet<string>>(new Set());
+
+/** pick adds a host's database container and opens it (its tables, or
+ * what it asks first: the host key, the password). */
+function pick(host: string, c: HostCtr): void {
+  pickDB(host, c.id).then(
+    (r) => {
+      toast("ok", t("srv.db_added", { name: r.name || c.name }));
+      openNext.value = r.conn;
+      loadConns();
+    },
+    (e: unknown) => toast("warn", dbErr(e)),
+  );
+}
+
+/** Servers is SERVERS: the ssh:// hosts, their compose projects and
+ * database containers, then + Add Server…. */
+function Servers({ act }: { act: boolean }) {
+  const isOpen = serversOpen.value;
+  const hl = hosts.value;
+  const flipAll = () => {
+    serversOpen.value = !isOpen;
+    if (!isOpen && (!hosts.peek() || hosts.peek()?.s === "err")) loadHosts();
+  };
+  const list = hl?.s === "ok" ? hl.v.filter((x) => x.ssh) : [];
+  return (
+    <Tree label={t("srv.servers")} class="db-servers">
+      <Row level={0} twist={isOpen ? "open" : "closed"} onToggle={flipAll} icon={<Cod name="server" />} label={t("srv.servers")} data={{ servers: "1" }} end={hl?.s === "ok" ? <span class="count">{list.length}</span> : undefined} />
+      {isOpen && (!hl || hl.s === "loading") && <p class="tr-note">{t("loading")}</p>}
+      {isOpen && hl?.s === "err" && <p class="tr-note is-err">{hl.msg}</p>}
+      {isOpen && hl?.s === "ok" && list.length === 0 && <p class="tr-note">{t("srv.no_hosts")}</p>}
+      {isOpen && list.map((x) => <HostRows key={x.name} h={x} open={srvOpen} db level={1} onPick={act ? (c) => pick(x.name, c) : undefined} />)}
+      {isOpen && hl?.s === "ok" && (
+        <AddServerRow
+          level={1}
+          canAct={act}
+          onAdded={() => {
+            loadHosts();
+          }}
+        />
+      )}
+    </Tree>
+  );
+}
+
 export function DeskDB() {
   const on = live.value;
   useEffect(() => {
     if (on && (!conns.peek() || conns.peek()?.s === "err")) loadConns();
   }, [on]);
+  // A database container just added: open it once it is listed.
+  const next = openNext.value;
+  useEffect(() => {
+    const l = conns.value;
+    if (!next || l?.s !== "ok") return;
+    const it = l.v.find((x) => x.id === next);
+    if (!it) return;
+    openNext.value = null;
+    if (!open.peek().has(it.id)) flip(it.id, it);
+    else loadChildren(it);
+  }, [next, conns.value]);
   const c = conns.value;
   const act = canAct();
   const f = dbFilter.value;
@@ -316,6 +379,7 @@ export function DeskDB() {
             ))}
           </Tree>
         )}
+        <Servers act={act} />
         <p class="pv-msg">{t("dbv.readonly_note")}</p>
       </div>
       {l && (

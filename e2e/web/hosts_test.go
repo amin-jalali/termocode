@@ -101,7 +101,7 @@ func TestDeskHostsOwnerPath(t *testing.T) {
 	p.WaitJS(deskCtr + `.querySelector('.ctr-form input')?.value === "ssh://" && document.activeElement === ` + deskCtr + `.querySelector('.ctr-form input')`)
 	setInput(p, deskCtr+`.querySelector('.ctr-form input')`, "ssh://deploy@10.0.0.2")
 	p.Key(kb.Enter)
-	p.WaitJS(deskCtr + `.querySelector(".pv-ask")?.textContent.includes("Add server box2 (ssh://deploy@10.0.0.2)?") && document.activeElement?.textContent === "Cancel"`)
+	p.WaitJS(deskCtr + `.querySelector(".pv-ask")?.textContent.includes("Add server box2 (ssh://deploy@10.0.0.2) for every terminal") && document.activeElement?.textContent === "Cancel"`)
 	c.Quiet(t, 200*time.Millisecond)
 	p.TapJS(`[...` + deskCtr + `.querySelectorAll(".pv-ask button")].find((b) => b.textContent === "Add Server")`)
 	reply(t, c, expectOp(t, c, webproto.OpContainersAddServer, `{"name":"box2","host":"ssh://deploy@10.0.0.2"}`), webproto.HostDone{})
@@ -158,7 +158,7 @@ func TestPhoneHostsOwnerPath(t *testing.T) {
 	setInput(p, `document.querySelectorAll('.srv-add input')[0]`, "box2")
 	setInput(p, `document.querySelectorAll('.srv-add input')[1]`, "ssh://deploy@10.0.0.2")
 	p.TapJS(`document.querySelector('.srv-add button[type="submit"]')`)
-	p.WaitJS(`document.querySelector('.srv-add .row-ask-text')?.textContent.includes("Add server box2 (ssh://deploy@10.0.0.2)?") && document.activeElement?.textContent === "Cancel"`)
+	p.WaitJS(`document.querySelector('.srv-add .row-ask-text')?.textContent.includes("Add server box2 (ssh://deploy@10.0.0.2) for every terminal") && document.activeElement?.textContent === "Cancel"`)
 	c.Quiet(t, 200*time.Millisecond)
 	p.TapJS(`[...document.querySelectorAll('.srv-add .btn')].find((b) => b.textContent === "Add Server")`)
 	reply(t, c, expectOp(t, c, webproto.OpContainersAddServer, `{"name":"box2","host":"ssh://deploy@10.0.0.2"}`), webproto.HostDone{})
@@ -166,8 +166,7 @@ func TestPhoneHostsOwnerPath(t *testing.T) {
 	p.noOverflow("containers hosts")
 
 	// More › Databases: Servers shows the ssh hosts and database containers only.
-	p.GoTab("more")
-	p.TapJS(`document.querySelector('.more-link[data-sub="db"]')`)
+	Eval[bool](p, `(location.hash = "#/more/db", true)`)
 	reply(t, c, expectOp(t, c, webproto.OpDBConns, `{}`), webproto.DBConns{Conns: []webproto.DBConn{}})
 	p.WaitJS(`document.querySelector('.srv-host[data-host="baaytona"]') && !document.querySelector('.srv-host[data-host="default"]') && document.querySelector('button[data-host-ctr="c0ffee01aa00"]') && !document.querySelector('[data-host-ctr="c0ffee03aa00"]')`)
 	p.TapJS(`document.querySelector('button[data-host-ctr="c0ffee01aa00"]')`)

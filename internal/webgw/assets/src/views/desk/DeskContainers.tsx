@@ -9,7 +9,10 @@
 // sends or runs something asks the laptop: stop, remove, a shell or
 // attach, pull, push, run, every prune, compose stop and down, the
 // default context, sign in and out (the password is typed there), Open
-// in Databases. The filter narrows every section's rows.
+// in Databases. The filter narrows every section's rows. CONTEXTS is the
+// hosts tree (DeskHosts.tsx): every host "name · where" opens to its
+// compose projects and containers; a database container opens in
+// Databases; + Add Server… adds an ssh:// host.
 import { Fragment, h, type ComponentChildren } from "preact";
 import { signal } from "@preact/signals";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
@@ -29,6 +32,10 @@ import { Cod } from "../../ui/icons";
 import { Act, Ask, PaneSection, PaneView, Row, Tree } from "../../ui/pane";
 import { Portal } from "../../ui/Portal";
 import { gitFailed as failed } from "../git/errors";
+import { go } from "../../lib/router";
+import { forgetHosts, hostLabel, openNext, pickDB, readHosts, setHosts, type HostCtr } from "../../state/hosts";
+import { loadConns } from "./dbstate";
+import { AddServerRow, HostRows } from "./DeskHosts";
 
 type Load<T> = { s: "loading" } | { s: "ok"; v: T } | { s: "err"; msg: string };
 
@@ -64,14 +71,38 @@ function reload(): void {
 function reloadHost(): void {
   if (!host.peek()) host.value = { s: "loading" };
   link.request("containers.host", {}).then(
-    (r) => (host.value = { s: "ok", v: r as ContainersHost }),
+    (r) => {
+      const v = r as ContainersHost;
+      host.value = { s: "ok", v };
+      if (!v.problems?.contexts) setHosts(readHosts(v.contexts)); // one host list (state/hosts.ts)
+    },
     (e: unknown) => (host.value = { s: "err", msg: errText(e) }),
   );
 }
 
+/** hostOpen are the CONTEXTS hosts shown open (their containers). */
+const hostOpen = signal<ReadonlySet<string>>(new Set());
+
 function reloadAll(): void {
   reload();
   reloadHost();
+}
+
+/** refreshAll is Refresh: the lists, and the open hosts read again. */
+function refreshAll(): void {
+  reloadAll();
+  forgetHosts(hostOpen.peek());
+}
+
+/** openInDB adds a host's database container to Databases and opens it
+ * there (its tables, or what it needs first: the host key, a password). */
+function openInDB(host: string, c: HostCtr): void {
+  pickDB(host, c.id).then((r) => {
+    toast("ok", t("srv.db_added", { name: r.name || c.name }));
+    openNext.value = r.conn;
+    loadConns();
+    go({ tab: "more", rest: "db", query: {} });
+  }, failed);
 }
 
 /** showLogs reads a container's log tail into the panel's OUTPUT tab. */
@@ -487,13 +518,18 @@ function HostSections({ x }: { x: Ctx }) {
       </Section>
       <Section id="contexts" title={t("ctr.contexts")} count={v?.contexts.length} load={load("contexts")} empty={(v?.contexts.length ?? 0) === 0}>
         <Tree label={t("ctr.contexts")}>
-          {(v?.contexts ?? []).map((c) => (
+          {readHosts(v?.contexts).map((c) => (
             <Fragment key={c.name}>
-              <Row
-                icon={<Cod name={c.session || (c.current && !v?.contexts.some((o) => o.session)) ? "check" : "server"} />}
-                label={c.name}
-                desc={c.current ? t("ctr.default") : c.description}
-                data={{ context: c.name }}
+              <HostRows
+                h={c}
+                open={hostOpen}
+                icon={<Cod name={c.session || (c.current && !v?.contexts.some((o) => o.session)) ? "check" : c.local ? "vm" : "remote"} />}
+                desc={c.current ? t("ctr.default") : ""}
+                title={[hostLabel(c), v?.contexts.find((o) => o.name === c.name)?.description].filter(Boolean).join(" — ")}
+                under={<Under k={"c:" + c.name} x={x} />}
+                ctrActions={(ct) =>
+                  x.canAct && ct.db ? <Act icon="database" act="open-db" label={t("srv.open_db")} onClick={() => openInDB(c.name, ct)} /> : undefined
+                }
                 actions={
                   x.canAct && (
                     <>
@@ -510,9 +546,9 @@ function HostSections({ x }: { x: Ctx }) {
                   )
                 }
               />
-              <Under k={"c:" + c.name} x={x} />
             </Fragment>
           ))}
+          {hl?.s === "ok" && !prob("contexts") && <AddServerRow canAct={x.canAct} onAdded={reloadHost} />}
         </Tree>
       </Section>
       <Section
@@ -593,7 +629,7 @@ export function DeskContainers() {
           <Act icon="search" act="search" label={t("ctr.search")} disabled={!on || !canAct} onClick={() => (ctrSearch.value = true)} />
           <Act icon="filter" act="filter" label={t("ctr.filter")} on={ctrFilter.value !== null} onClick={() => (ctrFilter.value = ctrFilter.peek() === null ? "" : null)} />
           {canAct && <Act icon="trash" act="prune-system" label={t("ctr.prune_system")} disabled={!on} onClick={() => lap("ctr.prune_system", "ctr.prune_system_q", "containers.prune", { kind: "system" })} />}
-          <Act icon="refresh" label={t("ctr.refresh")} disabled={!on} onClick={reloadAll} />
+          <Act icon="refresh" label={t("ctr.refresh")} disabled={!on} onClick={refreshAll} />
         </>
       }
     >

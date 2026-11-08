@@ -4,7 +4,7 @@
 // after an in-page confirm; one that may change data asks the laptop,
 // which shows the exact SQL. No password is ever sent or shown.
 // #/more/db, #/more/db/<conn>, #/more/db/<conn>/<table>
-import { h } from "preact";
+import { Fragment, h } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { go } from "../../lib/router";
 import { ReqError } from "../../net/link";
@@ -16,30 +16,123 @@ import { Button } from "../../ui/Button";
 import { SkeletonRows } from "../../ui/Skeleton";
 import { gitFailed as failed } from "../git/errors";
 import { SubView } from "./SubView";
+import { dbErr, dbNeed, type DBNeed } from "../desk/dbstate";
+import { PhoneHosts } from "./Hosts";
 
 const to = (rest: string) => go({ tab: "more", rest, query: {} });
 
-/** useAsk runs a request once per key and keeps its answer or its error. */
-function useAsk<T>(op: string, args: Record<string, unknown>, read: (r: unknown) => T, key: string): { data: T | null; err: string } {
+/** useAsk runs a request once per key and keeps its answer or its error
+ * (need: what the read asks the user for); again reads once more. */
+function useAsk<T>(op: string, args: Record<string, unknown>, read: (r: unknown) => T, key: string): { data: T | null; err: string; need?: DBNeed; again: () => void } {
   const [data, setData] = useState<T | null>(null);
   const [err, setErr] = useState("");
+  const [need, setNeed] = useState<DBNeed | undefined>(undefined);
+  const [n, setN] = useState(0);
   useEffect(() => {
     setData(null);
     setErr("");
+    setNeed(undefined);
     link.request(op, args).then(
       (r) => setData(read(r)),
-      (e: unknown) => setErr(e instanceof Error ? e.message : t("err.internal")),
+      (e: unknown) => {
+        setErr(e instanceof Error ? e.message : t("err.internal"));
+        setNeed(dbNeed(e));
+      },
     );
-  }, [key]);
-  return { data, err };
+  }, [key, n]);
+  return { data, err, need, again: () => setN((x) => x + 1) };
+}
+
+/** Need asks what a read needs (Cancel first): to trust an unknown SSH
+ * host key, or a secret the laptop does not have, sent once in a masked
+ * field to stay in the laptop's secret store only. Then it reads again. */
+function Need({ conn, need, msg, onDone }: { conn: string; need: DBNeed; msg: string; onDone: () => void }) {
+  const [no, setNo] = useState(false);
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const safe = useRef<HTMLButtonElement | null>(null);
+  const field = useRef<HTMLInputElement | null>(null);
+  useEffect(() => (need.need === "host_key" ? safe.current : field.current)?.focus(), [need]);
+  if (no) return <p class="empty refused" dir="auto">{msg}</p>;
+  if (need.need === "host_key") {
+    const q = t(need.jump ? "dbv.jump_q" : "dbv.host_q", { host: need.host });
+    const trust = () => {
+      setBusy(true);
+      link.request("db.trust_host", { conn, fingerprint: need.fingerprint }).then(onDone, (e: unknown) => {
+        setBusy(false);
+        setErr(dbErr(e));
+      });
+    };
+    return (
+      <div class="row-ask db-need" role="group" aria-label={q}>
+        <p class="row-ask-text" dir="auto">
+          {q}
+        </p>
+        <p class="dbn-key" dir="ltr">
+          {[need.key_type, need.fingerprint].filter(Boolean).join(" ")}
+        </p>
+        <p class="view-note">{t("dbv.check_key") + " " + t("dbv.trust_note")}</p>
+        {err && <p class="db-note">{err}</p>}
+        <div class="choices">
+          <button type="button" class="btn btn-neutral" ref={safe} onClick={() => setNo(true)}>
+            {t("cancel")}
+          </button>
+          <Button kind="primary" needsLink disabled={busy} onClick={trust}>
+            {t("dbv.trust")}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  const kind = need.need;
+  const label = kind === "password" ? t("dbv.pw_db") : kind === "ssh_password" ? t("dbv.pw_ssh") : t("dbv.pw_key", { key: need.key ?? "" });
+  const send = (e: Event) => {
+    e.preventDefault();
+    const el = field.current;
+    const value = el?.value ?? "";
+    if (!el || !value || busy) return;
+    el.value = ""; // the page keeps no copy
+    setBusy(true);
+    link.request("db.secret", { conn, kind, value }).then(onDone, (x: unknown) => {
+      setBusy(false);
+      setErr(dbErr(x));
+    });
+  };
+  return (
+    <form class="row-ask db-need" aria-label={label} onSubmit={send}>
+      <p class="row-ask-text" dir="auto">
+        {msg}
+      </p>
+      <input ref={field} class="field-box" type="password" aria-label={label} placeholder={label} autocomplete="off" spellcheck={false} autocapitalize="off" />
+      <p class="view-note">{t("dbv.pw_note")}</p>
+      {err && <p class="db-note">{err}</p>}
+      <div class="choices">
+        <button type="button" class="btn btn-neutral" onClick={() => setNo(true)}>
+          {t("cancel")}
+        </button>
+        <button type="submit" class="btn btn-primary" disabled={busy}>
+          {t("dbv.pw_send")}
+        </button>
+      </div>
+    </form>
+  );
 }
 
 function Conns() {
   const { data, err } = useAsk("db.conns", {}, readDBConns, "conns");
+  const canAct = link.meta.value?.role !== "viewer";
+  const servers = <PhoneHosts db canAct={canAct} onPicked={(conn) => to("db/" + conn)} />;
   if (err) return <p class="empty refused">{err}</p>;
   if (!data) return <SkeletonRows rows={4} />;
-  if (data.length === 0) return <p class="empty">{t("db.none")}</p>;
+  if (data.length === 0)
+    return (
+      <>
+        <p class="empty">{t("db.none")}</p>
+        {servers}
+      </>
+    );
   return (
+    <>
     <div class="db-list">
       {data.map((c: DBConnView) => (
         <button type="button" class="db-conn" key={c.id} data-conn={c.id} disabled={!c.sql} onClick={() => to("db/" + c.id)}>
@@ -64,6 +157,8 @@ function Conns() {
         </button>
       ))}
     </div>
+    {servers}
+    </>
   );
 }
 
@@ -175,11 +270,13 @@ function Query({ conn }: { conn: string }) {
 }
 
 function Tables({ conn }: { conn: string }) {
-  const { data, err } = useAsk("db.tables", { conn }, readDBTables, "t/" + conn);
+  const { data, err, need, again } = useAsk("db.tables", { conn }, readDBTables, "t/" + conn);
   const canQuery = link.meta.value?.role !== "viewer";
   return (
     <div class="dbv-body">
-      {err ? (
+      {err && need && canQuery ? (
+        <Need key={err} conn={conn} need={need} msg={err} onDone={again} />
+      ) : err ? (
         <p class="empty refused" dir="auto">
           {err}
         </p>

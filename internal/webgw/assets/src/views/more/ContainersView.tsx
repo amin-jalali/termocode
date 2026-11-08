@@ -14,6 +14,8 @@ import { Button } from "../../ui/Button";
 import { SkeletonRows } from "../../ui/Skeleton";
 import { gitFailed as failed } from "../git/errors";
 import { SubView } from "./SubView";
+import { PhoneHosts } from "./Hosts";
+import { go } from "../../lib/router";
 
 interface Logs {
   lines: string[];
@@ -184,6 +186,7 @@ export function ContainersView() {
           list.containers.map((c) => <Ctr key={c.id} c={c} canAct={canAct} reload={reload} />)
         )}
         {list && list.more > 0 && <p class="view-note">{t("ctr.more", { n: list.more })}</p>}
+        <PhoneHosts db={false} canAct={canAct} onPicked={(conn) => go({ tab: "more", rest: "db/" + conn, query: {} })} />
       </div>
     </SubView>
   );
