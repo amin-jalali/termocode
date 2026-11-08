@@ -53,6 +53,12 @@ func New(title, message string, buttons []Button) Model {
 	return Model{title: title, message: message, buttons: buttons}
 }
 
+// Title is the card's title.
+func (m Model) Title() string { return m.title }
+
+// Message is the card's text.
+func (m Model) Message() string { return m.message }
+
 // Buttons returns a copy of the card's buttons, in order.
 func (m Model) Buttons() []Button { return append([]Button(nil), m.buttons...) }
 

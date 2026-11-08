@@ -76,6 +76,10 @@ type webAsk struct {
 	// noAsk: the TUI does this without a question, so the page runs it at
 	// once (with web_approve_on_laptop on it is still a laptop card).
 	noAsk bool
+	// cancel, when set, runs on the page's Cancel (a mirrored laptop
+	// dialog: its safe answer, web_ask_parity.go).
+	cancel func(m *Model) tea.Cmd
+	kind   confirmKindEnum // a laptop dialog shown in the page: its kind (web_ask_parity.go)
 }
 
 // webAskState is the line of laptop cards (Update only).
@@ -87,6 +91,8 @@ type webAskState struct {
 	// direct: page requests the TUI does without a question; they run
 	// after the request was answered (webAskPump).
 	direct []*webAsk
+	origin *webAskOrigin // the last page that acted (web_ask_parity.go)
+	mirror *webAsk       // the laptop dialog shown in that page now
 }
 
 // askHere: a request on c is confirmed by its own page, not the laptop.
@@ -197,8 +203,12 @@ func (m *Model) webAskHereGone(h *webHub, c *webConn) {
 	}
 	for _, a := range h.asks.here {
 		if a.asker == c {
+			a.cancel = nil // a laptop dialog stays on the laptop
 			m.webAskDone(a, webproto.ChoiceCancel, a.device)
 		}
+	}
+	if s := &h.asks; s.mirror != nil && s.mirror.asker == c {
+		s.mirror = nil
 	}
 }
 
@@ -232,6 +242,7 @@ func (m *Model) webAskPump(tea.Msg) tea.Cmd {
 		cmds = append(cmds, m.webAskDone(a, webproto.ChoiceConfirm, a.device))
 	}
 	s.direct = nil
+	m.webMirrorPump()
 	return tea.Batch(cmds...)
 }
 
@@ -301,6 +312,9 @@ func (m *Model) webAskHereDone(a *webAsk, choice string) tea.Cmd {
 	where := "on " + a.device + " (page)"
 	if choice != webproto.ChoiceConfirm {
 		m.webAuditLine(a.op, a.summary, a.device, "cancelled "+where)
+		if a.cancel != nil {
+			return a.cancel(m)
+		}
 		return nil
 	}
 	done, word := "Approved on ", "confirmed "

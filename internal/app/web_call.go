@@ -170,6 +170,9 @@ func (m *Model) onWebCall(msg webCallMsg) tea.Cmd {
 // An op whose row says LaptopCard runs only through its card builder,
 // for a browser (the control connection is the same user's CLI).
 func (m *Model) webRunCall(h *webHub, call *webCall) (cmd tea.Cmd, found bool) {
+	if h.askHere(call.conn) { // a laptop dialog this opens asks in this page too (web_ask_parity.go)
+		h.asks.origin = &webAskOrigin{conn: call.conn, at: webNow()}
+	}
 	if p, _ := webproto.Lookup(call.op); p.LaptopCard && call.conn.role != webproto.RoleCtl {
 		if later := webAskLaterOps[call.op]; later != nil {
 			// The card is built after a read off the UI thread; open puts it

@@ -31,7 +31,7 @@ var webTUIAsksNone = map[string]bool{
 	webproto.OpWorkspaceRemoveFolder:  true, // the folder picker
 }
 
-// webAskDirect: the page gets no card for a (the TUI asks nothing: it runs).
+// webAskDirect: the page gets no card for a (it runs, or the TUI asks).
 func webAskDirect(a *webAsk) bool {
-	return a.noAsk || webTUIAsksNone[a.op]
+	return a.noAsk || webTUIAsksNone[a.op] || webTUIDialogOps[a.op]
 }
