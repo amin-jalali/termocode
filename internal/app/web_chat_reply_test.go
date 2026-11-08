@@ -34,8 +34,10 @@ func TestChatOneStepReplyShowsOnce(t *testing.T) {
 		t.Errorf("reply with tools: %+v", cm)
 	}
 	// Running: the step's text is the message's, streaming.
-	cm, _ = webChatMsg(1, ptrMsg(gptReplyMsg(ai.RunStateRunning, "", "I am")), false)
-	if cm.Text != "I am" || !cm.Streaming || len(cm.Steps) != 0 || cm.Run != nil {
+	// (the text ends at a space: an end that could start a registered
+	// secret waits for more text)
+	cm, _ = webChatMsg(1, ptrMsg(gptReplyMsg(ai.RunStateRunning, "", "I am ")), false)
+	if cm.Text != "I am " || !cm.Streaming || len(cm.Steps) != 0 || cm.Run != nil {
 		t.Errorf("running reply: %+v", cm)
 	}
 	// Two steps: the step whose answer is the message's does not repeat it.
