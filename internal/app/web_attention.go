@@ -34,7 +34,9 @@ func (m *Model) webPublishAttention(tea.Msg) tea.Cmd {
 			if id == a.runID && a.runState != st && webRunLive(a.runState) {
 				switch st {
 				case ai.RunStateDone:
-					h.attention(webproto.AttentionRunDone, id)
+					if !webChatReply(rm) { // a one-step reply is a chat answer, not a run
+						h.attention(webproto.AttentionRunDone, id)
+					}
 				case ai.RunStateFailed, ai.RunStateCancelled, ai.RunStateInterrupted:
 					h.attention(webproto.AttentionRunFailed, id)
 				}

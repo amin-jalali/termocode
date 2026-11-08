@@ -67,7 +67,7 @@ func (m *Model) webChatBuild(p *webChatPub) webproto.ChatSnap {
 		return snap
 	}
 	snap.ID, snap.Title, snap.Busy = s.conv.ID, webChatTitle(s.conv), s.streaming
-	snap.Profile, snap.Model = s.profile, s.cfg.Model
+	snap.Profile, snap.Model = s.profile, webProfileModel(s)
 	p.id, p.title, p.busy = snap.ID, snap.Title, snap.Busy
 	if tokens, window, pct, ok := s.contextUse(); ok {
 		snap.CtxPct, snap.CtxTokens, snap.CtxWindow = pct, tokens, window
@@ -307,16 +307,91 @@ func webChatMsgOf(i int, sm *ai.StoredMessage, streaming bool, max int) (webprot
 		}
 		cm.Attached = append(cm.Attached, webproto.AttachChip{Kind: a.Kind, Label: webName(webChatRedact(a.Label))})
 	}
-	if r := sm.Run; r != nil {
-		cm.Run = &webproto.ChatRun{ID: r.ID, Profile: r.Profile, State: webRunState(r.State), ElapsedMs: r.ElapsedMs, CostUSD: r.Spent, PlanWait: r.PlanWait}
-	}
-	for j := range sm.Steps {
-		cm.Steps = append(cm.Steps, webChatStep(&sm.Steps[j]))
+	if webChatReply(sm) { // a one-step profile answers like a plain chat
+		st := &sm.Steps[0]
+		cm.Model = webStepModel(st)
+		if sm.Run.State == ai.RunStateRunning || sm.Run.State == ai.RunStatePaused {
+			end, trunc := webChatVisible(st.Text)
+			cm.Text, cm.Streaming, cm.Truncated = webChatRedact(st.Text[:end]), true, trunc
+		}
+		if len(st.Tools) > 0 { // its tool lines, not its answer
+			out := webChatStep(st)
+			out.Text, out.MD = "", nil
+			cm.Steps = []webproto.ChatStep{out}
+		}
+	} else {
+		if r := sm.Run; r != nil {
+			cm.Run = &webproto.ChatRun{ID: r.ID, Profile: r.Profile, State: webRunState(r.State), ElapsedMs: r.ElapsedMs, CostUSD: r.Spent, PlanWait: r.PlanWait}
+		}
+		for j := range sm.Steps {
+			out := webChatStep(&sm.Steps[j])
+			if t := strings.TrimSpace(sm.Steps[j].Text); t != "" && t == strings.TrimSpace(sm.Text) {
+				out.Text, out.MD = "", nil // the message shows this answer
+			}
+			cm.Steps = append(cm.Steps, out)
+		}
 	}
 	if b := webChatBlock(sm.Block); b != nil {
 		cm.Blocks = []webproto.Block{*b}
 	}
 	return cm, sent
+}
+
+// webChatReply reports whether sm is the reply of a one-step profile
+// that answers like a plain chat: one step of its own (no plan, loop or
+// worktree), running or done without an error.
+func webChatReply(sm *ai.StoredMessage) bool {
+	r := sm.Run
+	if r == nil || len(sm.Steps) != 1 || r.MaxRounds > 0 || r.PlanWait {
+		return false
+	}
+	st := &sm.Steps[0]
+	if st.Planned || st.Worktree != nil || st.Error != "" {
+		return false
+	}
+	switch r.State {
+	case ai.RunStateRunning, ai.RunStatePaused:
+		return true
+	case ai.RunStateDone:
+		return strings.TrimSpace(sm.Text) != ""
+	}
+	return false
+}
+
+// webStepModel is a step's model for the chip: a CLI step's own model
+// ("gpt-6-sol" of "Codex · gpt-6-sol"), else what the card says.
+func webStepModel(st *ai.StoredStep) string {
+	if st.CLI != "" {
+		if _, model, ok := strings.Cut(st.Model, " · "); ok {
+			return model
+		}
+	}
+	return st.Model
+}
+
+// webProfileModel is the model the composer chip shows: a one-step
+// profile's step model, else the main model.
+func webProfileModel(s *aiState) string {
+	if s.profile == "" {
+		return s.cfg.Model
+	}
+	p := s.activeProfile()
+	if len(p.Steps) != 1 || p.Loop != nil || p.Steps[0].Plan {
+		return s.cfg.Model
+	}
+	st := p.Steps[0]
+	switch {
+	case st.CLI != "" && st.Model != "":
+		return st.Model
+	case st.CLI != "":
+		return ai.CLITitle(st.CLI)
+	case st.Model != "":
+		return st.Model
+	}
+	if sl, err := s.resolveSlot(st.Slot); err == nil && sl.cfg.Model != "" {
+		return sl.cfg.Model
+	}
+	return s.cfg.Model
 }
 
 // webRunState maps a stored run state onto the page's list.
