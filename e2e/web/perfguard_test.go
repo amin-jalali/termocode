@@ -4,6 +4,7 @@ package web
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 )
@@ -130,4 +131,37 @@ func TestPerfGuardTreeDrawsOnlyWhatChanged(t *testing.T) {
 	}); n != 0 {
 		t.Errorf("opening a file drew %d tree rows, want 0", n)
 	}
+}
+
+// The explorer lays out only the rows in view: with 1,900 names the rest
+// wait until they scroll in (content-visibility), so showing the
+// explorer again or opening the big folder is not one long task (113 ms
+// and 102 ms at 1x before, 430 ms at 4x CPU).
+func TestPerfGuardTreeLaysOutOnlyWhatIsInView(t *testing.T) {
+	s := StartServer(t)
+	p := NewPage(t, s, Desktop)
+	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+	r := StartPerf(p)
+	c := p.Login("c-tree")
+	c.Send(t, Snap("tree", 1, bigTree(200)))
+	p.WaitJS(treeRow("dir000"))
+	sp := r.Measure("open a folder of 1500", func() {
+		p.TapJS(treeRow("dir000"))
+		p.WaitJS(treeRow("dir000/inner1499.ts"))
+	})
+	t.Log(sp)
+	const far = `document.querySelector('.wb-side .tree-row[data-path="dir000/inner1400.ts"]')`
+	const near = `document.querySelector('.wb-side .tree-row[data-path="dir000"]')`
+	if !Eval[bool](p, near+`.checkVisibility({contentVisibilityAuto: true})`) {
+		t.Fatal("a row in view is not drawn")
+	}
+	if Eval[bool](p, far+`.checkVisibility({contentVisibilityAuto: true})`) {
+		t.Error("a row 1,400 rows down is laid out while out of view")
+	}
+	// It is there for a reader, and drawn once it scrolls in.
+	if !strings.Contains(Eval[string](p, far+`.textContent`), "inner1400.ts") {
+		t.Errorf("the far row reads %q", Eval[string](p, far+`.textContent`))
+	}
+	Eval[bool](p, `(`+far+`.scrollIntoView({block: "center"}), true)`)
+	p.WaitJS(far + `.checkVisibility({contentVisibilityAuto: true})`)
 }
