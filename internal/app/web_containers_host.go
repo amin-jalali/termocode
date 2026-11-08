@@ -131,6 +131,7 @@ func (m *Model) webContainersHostList(call *webCall) tea.Cmd {
 			out.Problems[sec] = errLine(aiContainersRedact(err.Error()))
 		}
 		used := map[string]bool{}
+		var hosts []containers.Context // the hosts tree (web_servers.go)
 		if list, err := h.e.ListContainers(ctx); err == nil {
 			for _, c := range list {
 				used[webShortImageID(c.ImageID)] = true
@@ -182,9 +183,11 @@ func (m *Model) webContainersHostList(call *webCall) tea.Cmd {
 			problem("contexts", err)
 		} else {
 			for _, c := range cs {
+				sh := webServerHost(c, h.session)
 				out.Contexts = append(out.Contexts, webproto.ContextItem{Name: webName(c.Name), Current: c.Current, Session: h.session != "" && c.Name == h.session,
-					Description: aiContainersRedact(webName(c.Description))})
+					Description: aiContainersRedact(webName(c.Description)), Where: sh.Where, Local: sh.Local, SSH: sh.SSH})
 				seen.contexts[c.Name] = true
+				hosts = append(hosts, c)
 			}
 		}
 		if cfg, err := containers.ReadRegistryConfig(registryConfigPath(h.e.Kind)); err != nil && !os.IsNotExist(err) {
@@ -198,6 +201,13 @@ func (m *Model) webContainersHostList(call *webCall) tea.Cmd {
 		return applyMsg(func(m *Model) tea.Cmd {
 			if m.web != nil {
 				m.web.more.host = seen
+				if hosts != nil {
+					srv := m.webServersSeen()
+					srv.hosts = map[string]containers.Context{}
+					for _, c := range hosts {
+						srv.hosts[c.Name] = c
+					}
+				}
 			}
 			call.reply(out)
 			return nil

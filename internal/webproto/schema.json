@@ -8362,11 +8362,20 @@
         "description": {
           "type": "string"
         },
+        "local": {
+          "type": "boolean"
+        },
         "name": {
           "type": "string"
         },
         "session": {
           "type": "boolean"
+        },
+        "ssh": {
+          "type": "boolean"
+        },
+        "where": {
+          "type": "string"
         }
       },
       "required": [

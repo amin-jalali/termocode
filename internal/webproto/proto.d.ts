@@ -3161,6 +3161,9 @@ export interface ContextItem {
   current?: boolean;
   session?: boolean;
   description?: string;
+  where?: string;
+  local?: boolean;
+  ssh?: boolean;
 }
 
 export interface RegistryItem {

@@ -372,6 +372,11 @@ type ContextItem struct {
 	Current     bool   `json:"current,omitempty"`
 	Session     bool   `json:"session,omitempty"`
 	Description string `json:"description,omitempty"`
+	// The hosts tree: where it points (user@host[:port], no scheme; ""
+	// with Local: this machine); SSH marks an ssh:// one.
+	Where string `json:"where,omitempty"`
+	Local bool   `json:"local,omitempty"`
+	SSH   bool   `json:"ssh,omitempty"`
 }
 
 // RegistryItem is one registry the engine knows (never a credential).
