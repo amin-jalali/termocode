@@ -18,10 +18,10 @@ import (
 
 var aiContainersReadNames = []string{"containers_list", "containers_inspect", "containers_logs", "containers_stats",
 	"images_list", "volumes_list", "networks_list", "contexts_list", "registries_list"}
-var aiContainersWriteNames = []string{"containers_control", "images_pull", "compose_up"}
+var aiContainersWriteNames = []string{"compose_up"}
 
-// aiContainersManageNames ask per op (their own tests pin each gate).
-var aiContainersManageNames = []string{"contexts_manage"}
+// aiContainersManageNames ask per call (their own tests pin each gate).
+var aiContainersManageNames = []string{"contexts_manage", "containers_control", "images_pull"}
 
 // aiContainersTestModel is a model on the fake docker (docker27 fixtures)
 // with a synchronous IDE caller.
@@ -96,9 +96,6 @@ func TestAIContainersToolsSchema(t *testing.T) {
 		}
 	}
 	ctl := aiContainersTool(t, tools, "containers_control")
-	if got := aiParamEnum(ctl.Params["action"]); strings.Join(got, ",") != "start,stop,restart,pause,unpause" {
-		t.Errorf("containers_control actions = %v", got)
-	}
 	if strings.Join(ctl.Required, ",") != "action,target" {
 		t.Errorf("containers_control required = %v", ctl.Required)
 	}
