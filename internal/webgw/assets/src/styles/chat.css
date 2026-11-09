@@ -100,20 +100,52 @@
 .msg-stub.msg-user .sk-row { margin-inline-start: auto; width: 40%; }
 .stub-text { font-size: var(--fs-hint); color: var(--muted); }
 
-/* Runs and steps */
+/* The phone chat's look (phone/chatlook.tsx, the desktop's parts): the
+   line under an answer, a short line per tool call, Thinking…, a run's
+   strip and its full-screen sheet, the rules file once at the top. */
 .run { margin-top: var(--s2); border: 1px solid var(--border); border-radius: var(--r-chip); background: var(--bg-panel); font-size: var(--fs-row); }
-.run-head, .step-head { display: flex; align-items: center; gap: var(--s2); min-height: var(--tap); padding: 0 var(--s3); font-family: var(--font-mono); font-size: var(--fs-row); color: var(--text-2); unicode-bidi: isolate; overflow-wrap: anywhere; }
-.run-mark { color: var(--ai); }
-.run-head.st-failed, .step.st-failed .step-head { color: var(--red); }
-.run-head.st-done { color: var(--green); }
-.run-wait { margin: 0; padding: 0 var(--s3) var(--s2); color: var(--amber); }
-.step { border-top: 1px solid var(--border); }
-.step-head { cursor: pointer; list-style: none; }
-.step-head::-webkit-details-marker { display: none; }
-.step-head::before { content: "▸"; color: var(--dim); }
-.step[open] > .step-head::before { content: "▾"; }
-.step-body { padding: 0 var(--s3) var(--s2); display: flex; flex-direction: column; gap: var(--s1); font-size: var(--fs-body); }
-.step-error { margin: 0; color: var(--red); }
+:is(.layout-phone, .layout-tablet) :is(.msg-meta, .msg-meta-more, .msg-think, .run-strip, .chat-rules) { color: var(--muted); font-size: var(--fs-hint); font-variant-numeric: tabular-nums; }
+:is(.layout-phone, .layout-tablet) .msg-meta { min-height: 32px; margin-top: var(--s1); padding: 0; }
+:is(.layout-phone, .layout-tablet) .msg-meta-more { font-family: var(--font-mono); }
+:is(.layout-phone, .layout-tablet, .ph-runv) .tool-rows { display: flex; flex-direction: column; margin: 0 0 var(--s1); }
+:is(.layout-phone, .layout-tablet, .ph-runv) .tool-sum { display: block; max-width: 100%; min-height: 32px; overflow: hidden; padding: 0; color: var(--muted); font: var(--fs-row) / 32px var(--font-mono); text-align: start; text-overflow: ellipsis; white-space: nowrap; }
+:is(.layout-phone, .layout-tablet, .ph-runv) .is-bad .tool-sum { color: var(--red); }
+:is(.layout-phone, .layout-tablet, .ph-runv) .tool-more { margin: 0 0 var(--s1) var(--s3); padding-inline-start: var(--s2); border-inline-start: 2px solid var(--border); font: var(--fs-row) var(--font-mono); white-space: pre-wrap; }
+:is(.layout-phone, .layout-tablet) .msg-tool { display: block; }
+:is(.layout-phone, .layout-tablet) .msg-think { display: flex; align-items: center; gap: var(--s2); }
+:is(.layout-phone, .layout-tablet) :is(.think-stop, .ai-pick) { min-height: 32px; padding: 0 var(--s3); border: 1px solid var(--border); border-radius: var(--r-chip); color: var(--text-2); }
+:is(.layout-phone, .layout-tablet) .think-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ai); }
+:is(.layout-phone, .layout-tablet) .run-strip { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s2); width: 100%; min-height: 36px; margin-bottom: var(--s1); padding: 0; text-align: start; }
+:is(.layout-phone, .layout-tablet) .strip-steps { display: inline-flex; align-items: center; gap: var(--s1); color: var(--text-2); }
+:is(.layout-phone, .layout-tablet) .strip-where::before { content: "· "; }
+:is(.layout-phone, .layout-tablet) .strip-sep { width: 10px; height: 1px; background: var(--border); }
+:is(.layout-phone, .layout-tablet) .strip-step::before, .ph-runv .runv-name::before { content: "○ "; color: var(--muted); }
+:is(.layout-phone, .layout-tablet) .strip-step.is-done::before, .ph-runv .is-done .runv-name::before { content: "◉ "; color: var(--green); }
+:is(.layout-phone, .layout-tablet) .strip-step.is-now::before, .ph-runv .is-now .runv-name::before { content: "◉ "; color: var(--ai); }
+:is(.layout-phone, .layout-tablet) .strip-step.is-bad::before, .ph-runv .is-bad .runv-name::before { content: "✗ "; color: var(--red); }
+:is(.layout-phone, .layout-tablet) .strip-wait { color: var(--amber); }
+.ph-runv .sheet { height: 100dvh; max-height: none; max-width: none; border-radius: 0; }
+.ph-runv .grip { display: none; }
+.ph-runv .run-view { display: flex; flex-direction: column; min-height: 0; }
+.ph-runv .runv-head { display: flex; align-items: center; gap: var(--s2); padding: var(--s2) 0 var(--s2) var(--gutter); border-bottom: 1px solid var(--border); }
+.ph-runv .runv-title { font-weight: 600; }
+.ph-runv :is(.runv-sub, .runv-facts) { flex: 1; color: var(--muted); font: var(--fs-hint) var(--font-mono); }
+.ph-runv .runv-close { min-width: var(--tap); min-height: var(--tap); color: var(--text-2); }
+.ph-runv .runv-close::before { content: "✕"; }
+.ph-runv .runv-steps { margin: 0; padding: 0 var(--gutter) var(--s4); list-style: none; overflow-y: auto; }
+.ph-runv .runv-step { padding: var(--s3) 0; border-bottom: 1px solid var(--border); }
+.ph-runv .runv-step-head { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s2); margin-bottom: var(--s1); }
+.ph-runv .runv-name { font-weight: 600; }
+.ph-runv .runv-out { margin: var(--s1) 0 0; }
+.ph-runv .step-error { margin: var(--s1) 0 0; color: var(--red); }
+:is(.layout-phone, .layout-tablet) .chat-rules { margin: 0 0 var(--s2); font-family: var(--font-mono); }
+.chat:has(> .chat-rules) .msg-extras .rules, .chat:has(> .chat-rules) .msg-extras:not(:has(> :not(.rules))) { display: none; }
+:is(.layout-phone, .layout-tablet) .chat-picks { display: flex; gap: var(--s1); margin-bottom: var(--s2); }
+.chat-picks:empty { display: none; }
+:is(.layout-phone, .layout-tablet) .ai-pick { max-width: 50%; overflow: hidden; font-size: var(--fs-hint); text-overflow: ellipsis; white-space: nowrap; }
+:is(.layout-phone, .layout-tablet) .ai-pick::after { content: " ▾"; }
+.ai-menu .ai-menu-label { flex: 1; overflow-wrap: anywhere; }
+.ai-menu-keys { color: var(--muted); }
 .msg-extras { display: flex; flex-wrap: wrap; gap: var(--s1); margin-top: var(--s1); unicode-bidi: isolate; }
 
 /* An AI screen of the laptop, read only (ChatMore.tsx). */

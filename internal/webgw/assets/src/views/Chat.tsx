@@ -17,6 +17,7 @@ import { BlobImg } from "../ui/BlobImg";
 import { Md } from "../ui/Markdown";
 import { Cod, face } from "../ui/icons";
 import { layout } from "../lib/layout";
+import { loadHome } from "../lib/lazy";
 import { hasBlocks, look, toolBlocks } from "../lib/toolblocks";
 import { Progress, SkeletonBubbles } from "../ui/Skeleton";
 import { errText } from "../ui/CardSheet";
@@ -24,7 +25,6 @@ import { ChatList } from "./ChatList";
 import { ChatMoreFlows, openMore } from "./ChatMore";
 import { Composer } from "./Composer";
 import { CommentBox } from "./ChatComment";
-import { Run } from "./Run";
 import { View } from "./View";
 
 /** newChat asks the laptop for an empty chat; refused while the AI answers. */
@@ -162,7 +162,7 @@ export function Message({ m: raw, chat = "", canFetch = false }: { m: ChatMsg; c
       );
     default: {
       const body = (
-        <div class="msg-body">
+        <div class="msg-body" key="b">
           {m.md && !m.streaming ? <Md doc={m.md} /> : <MsgText text={m.text} streaming={m.streaming} />}
           {rest}
         </div>
@@ -177,7 +177,6 @@ export function Message({ m: raw, chat = "", canFetch = false }: { m: ChatMsg; c
                 {m.model && <span class="msg-model">{m.model}</span>}
               </div>
               {body}
-              <Run m={m} />
             </>
           )}
           <Extras m={m} canFetch={canFetch} />
@@ -219,6 +218,11 @@ function openChat(c: ChatItem, laptop: string): void {
 export function ChatView() {
   useEffect(() => link.subscribe("chat", "cards", "chats"), []);
   const desk = layout.value === "desktop";
+  // A phone's chat look (its run strip and sheet, tool lines, picker)
+  // is in home.js (phone/chatlook.tsx); a desktop's in aictx.js.
+  useEffect(() => {
+    if (!desk) loadHome().catch(() => undefined);
+  }, [desk]);
   const body = useRef<HTMLDivElement | null>(null);
   const stick = useRef(true);
   const [list, setList] = useState(false);

@@ -18,3 +18,7 @@ export { ProjectPage, ProjectsPage } from "./views/phone/ProjectPage";
 // read's questions (app.js had them before).
 export { ContainersView } from "./views/more/ContainersView";
 export { DBView } from "./views/more/DBView";
+// The phone chat's look (the desktop's, phone-sized): Chat.tsx loads
+// home.js on a phone for it.
+import { phoneLook } from "./phone/chatlook";
+phoneLook();

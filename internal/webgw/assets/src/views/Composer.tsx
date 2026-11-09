@@ -143,6 +143,7 @@ export function Composer({
           ))}
         </ul>
       )}
+      {!desk && <span class="chat-picks">{look.value?.pick()}</span>}
       <div class="composer-row">
         <textarea
           ref={box}

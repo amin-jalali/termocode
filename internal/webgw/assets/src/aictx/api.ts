@@ -7,7 +7,7 @@
 // withAI). It imports types and pure helpers only and gets everything
 // with state through this host, so there is one Preact and one session,
 // and workbench.js stays small.
-import type { h as PH, render as PRender } from "preact";
+import type { ComponentChildren, JSX as PJSX, h as PH, render as PRender } from "preact";
 import type { ReadonlySignal, Signal } from "@preact/signals";
 import type { Attach, ChatSnap } from "../../../../webproto/proto";
 import type { Link } from "../net/link";
@@ -108,4 +108,10 @@ export interface AIHost {
   Cod: typeof PCod;
   AskLaptop: typeof PAskLaptop;
   aiSnap: typeof AISnapOf;
+  /** phone: the phone's chat look (home.js, phone/chatlook.tsx) uses
+   * these parts too: a tap opens what a tooltip shows, a run opens in a
+   * full-screen sheet, a list opens as a sheet (openMenu). */
+  phone?: boolean;
+  /** Fragment is Preact's own (the phone's host). */
+  Fragment?: (p: { children?: ComponentChildren }) => PJSX.Element;
 }

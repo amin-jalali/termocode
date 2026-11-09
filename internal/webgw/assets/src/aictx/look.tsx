@@ -8,7 +8,8 @@
 // a strip of its steps above the answer, and its Run view on Show
 // (runview.tsx). The rules file the turns used shows once, at the top
 // of the chat (desk CSS hides its chip on each message). The page's Chat.tsx asks here
-// through lib/toolblocks.ts look; the phone never loads this.
+// through lib/toolblocks.ts look. The phone draws the same parts from
+// home.js (phone/chatlook.tsx gives them the page's host, phone set).
 import type { ChatMsg } from "../../../../webproto/proto";
 import type { ChatLook } from "../lib/toolblocks";
 import type { VNode } from "preact";
@@ -85,16 +86,30 @@ function Thinking({ from }: { from?: number }) {
 const num = (n = 0) => n.toLocaleString("en-US");
 
 /** Meta is the line under an answer: model and time, the rest in its
- * tooltip. */
+ * tooltip (on a phone a tap shows the rest under it). */
 function Meta({ m }: { m: ChatMsg }) {
+  const [open, setOpen] = H.useState(false);
   const x = m.meta;
   const line = [m.model, x?.elapsed_ms ? dur(x.elapsed_ms) : ""].filter(Boolean).join(" · ");
   if (!line) return null;
   const tip = [x?.in || x?.out ? H.t("look.tokens", { in: num(x.in), out: num(x.out) }) : "", x?.step, x?.cli].filter(Boolean).join(" · ");
+  if (!H.phone)
+    return (
+      <div class="msg-meta" dir="ltr" title={tip || undefined}>
+        {line}
+      </div>
+    );
   return (
-    <div class="msg-meta" dir="ltr" title={tip || undefined}>
-      {line}
-    </div>
+    <>
+      <button type="button" class="msg-meta" dir="ltr" aria-expanded={open ? "true" : "false"} disabled={!tip} onClick={() => setOpen(!open)}>
+        {line}
+      </button>
+      {open && (
+        <div class="msg-meta-more" dir="ltr">
+          {tip}
+        </div>
+      )}
+    </>
   );
 }
 

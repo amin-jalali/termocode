@@ -6,9 +6,10 @@ import type { AIHost } from "./api";
 
 export let H!: AIHost;
 
-/** setHost keeps the workbench's host (init). */
+/** setHost keeps the workbench's host (init), or the phone's. */
 export function setHost(host: AIHost): void {
   H = host;
+  if (host.Fragment) Fragment = host.Fragment;
 }
 
 /** h is the page's createElement. */
@@ -17,10 +18,9 @@ export function h(type: unknown, props: unknown, ...children: unknown[]): PJSX.E
 }
 
 /** Fragment is <>…</>: its children as they are (Preact's own does the
- * same). */
-export function Fragment(p: { children?: ComponentChildren }): PJSX.Element {
-  return p.children as PJSX.Element;
-}
+ * same). The phone's host gives Preact's own: the chat's answers drawn
+ * before home.js came then keep their elements when its look comes. */
+export let Fragment = (p: { children?: ComponentChildren }): PJSX.Element => p.children as PJSX.Element;
 
 // The JSX types of h: Preact's own (tsconfig.json: jsxFactory h).
 export namespace h {

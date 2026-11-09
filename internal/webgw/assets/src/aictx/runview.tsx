@@ -2,7 +2,9 @@
 // of its steps above the answer ("◉ Plan ─ ◉ Code ─ ○ Review  step 2 of
 // 3 · 40s  Show"), and Show opens the Run view beside the chat: each
 // step with its model, time, state, output, tool calls and error. The
-// view follows the run live (it reads the chat it came from).
+// view follows the run live (it reads the chat it came from). On a phone
+// the strip is one button ("◉ Plan ─ ◉ Code ─ ○ Review · 2/3") and the
+// Run view a full-screen sheet.
 import type { Signal } from "@preact/signals";
 import type { ChatMsg, ChatStep } from "../../../../webproto/proto";
 import { readChat } from "../state/chat";
@@ -34,6 +36,27 @@ export function Strip({ m, chat }: { m: ChatMsg; chat: string }) {
   const r = m.run!;
   const steps = m.steps ?? [];
   const cur = steps.findIndex((s) => s.state === "running");
+  const dots = (
+    <span class="strip-steps">
+      {steps.map((s, i) => [i > 0 && <span class="strip-sep" aria-hidden="true" />, <span class={`strip-step is-${tone(s.state)}`}>{s.title || s.id}</span>])}
+    </span>
+  );
+  const wait = r.plan_wait && <span class="strip-wait">{H.t("run.plan_wait")}</span>;
+  const show = () => openRun(chat, m.i);
+  if (H.phone) {
+    // The phone's strip is one button: "◉ Plan ─ ◉ Code ─ ○ Review · 2/3".
+    const at = cur >= 0 ? cur + 1 : steps.filter((s) => tone(s.state) === "done").length;
+    return (
+      <button type="button" class={`run-strip st-${r.state}`} dir="ltr" aria-haspopup="dialog" onClick={show}>
+        {dots}
+        <span class="strip-where">
+          {at}/{steps.length}
+          {time(m)}
+        </span>
+        {wait}
+      </button>
+    );
+  }
   const where =
     r.state === "running"
       ? cur >= 0
@@ -44,15 +67,13 @@ export function Strip({ m, chat }: { m: ChatMsg; chat: string }) {
         : r.state;
   return (
     <div class={`run-strip st-${r.state}`} dir="ltr">
-      <span class="strip-steps">
-        {steps.map((s, i) => [i > 0 && <span class="strip-sep" aria-hidden="true" />, <span class={`strip-step is-${tone(s.state)}`}>{s.title || s.id}</span>])}
-      </span>
+      {dots}
       <span class="strip-where">
         {where}
         {time(m)}
       </span>
-      {r.plan_wait && <span class="strip-wait">{H.t("run.plan_wait")}</span>}
-      <button type="button" class="strip-show" onClick={() => openRun(chat, m.i)}>
+      {wait}
+      <button type="button" class="strip-show" onClick={show}>
         {H.t("srv.show")}
       </button>
     </div>
@@ -62,9 +83,10 @@ export function Strip({ m, chat }: { m: ChatMsg; chat: string }) {
 function openRun(chat: string, i: number): void {
   if (!shown) {
     shown = H.signal<At | null>(null);
-    // Its own root, with the workbench's colours (.layout-desktop).
+    // Its own root, with the workbench's colours (.layout-desktop); on a
+    // phone a full-screen sheet (.ph-runv).
     const el = document.body.appendChild(document.createElement("div"));
-    el.className = "layout-desktop runv-host";
+    el.className = H.phone ? "ph-runv" : "layout-desktop runv-host";
     H.render(<RunView />, el);
     addEventListener("keydown", (e) => e.key === "Escape" && shown?.peek() && (shown.value = null));
   }
@@ -121,7 +143,7 @@ function RunView() {
   const r = m.run;
   const col = document.querySelector(".chatcol")?.getBoundingClientRect();
   const close = () => shown && (shown.value = null);
-  return (
+  const view = (
     <aside class="run-view" role="complementary" aria-label={H.t("look.run_view")} style={col ? { right: innerWidth - col.left + "px", top: col.top + "px", bottom: innerHeight - col.bottom + "px" } : undefined}>
       <div class="runv-head">
         <span class="runv-title">{H.t("look.run_view")}</span>
@@ -140,5 +162,12 @@ function RunView() {
         ))}
       </ol>
     </aside>
+  );
+  return H.phone ? (
+    <H.Sheet onLater={close} label={H.t("look.run_view")}>
+      {view}
+    </H.Sheet>
+  ) : (
+    view
   );
 }
