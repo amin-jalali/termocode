@@ -9,7 +9,7 @@
 // and workbench.js stays small.
 import type { ComponentChildren, JSX as PJSX, h as PH, render as PRender } from "preact";
 import type { ReadonlySignal, Signal } from "@preact/signals";
-import type { Attach, ChatSnap } from "../../../../webproto/proto";
+import type { AskCard, Attach, ChatSnap } from "../../../../webproto/proto";
 import type { Link } from "../net/link";
 import type { DBRowsView } from "../state/more";
 import type { Store } from "../state/store";
@@ -108,6 +108,10 @@ export interface AIHost {
   Cod: typeof PCod;
   AskLaptop: typeof PAskLaptop;
   aiSnap: typeof AISnapOf;
+  /** asked and later are the page's own questions and the one put off
+   * (lib/asks.ts): a tool line's Answer opens the one its tool waits on. */
+  asked: ReadonlySignal<readonly AskCard[]>;
+  later: Signal<string>;
   /** phone: the phone's chat look (home.js, phone/chatlook.tsx) uses
    * these parts too: a tap opens what a tooltip shows, a run opens in a
    * full-screen sheet, a list opens as a sheet (openMenu). */

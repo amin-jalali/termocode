@@ -15,6 +15,7 @@ import { setHost } from "../aictx/jsx";
 import { look as deskLook } from "../aictx/look";
 import { AS } from "../aictx/strings";
 import { aiSnap } from "../lib/ai";
+import { asked, later } from "../lib/asks";
 import { layout } from "../lib/layout";
 import { goTab } from "../lib/router";
 import { look } from "../lib/toolblocks";
@@ -133,6 +134,8 @@ const host = {
   Sheet,
   AskLaptop,
   aiSnap,
+  asked,
+  later,
   openMenu: (_x: number, _y: number, label: string, items: MenuItems) => (menu.value = { label, items }),
   phone: true,
 } as Partial<AIHost> as AIHost;

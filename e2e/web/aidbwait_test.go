@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/chromedp/chromedp/kb"
+
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -14,7 +16,7 @@ import (
 // tool waited on a password nobody saw). While the hub's newest message
 // carries a wait, its tool line shows "Waiting for you: <text>" with an
 // Answer button, on the phone and the desktop. Putting the question's
-// sheet off (a tap beside it) keeps the question open, it does not
+// sheet off (Escape, or a tap beside it) keeps the question open, it does not
 // cancel the tool; Answer opens it again. The message without the wait
 // drops the line.
 
@@ -50,11 +52,11 @@ func TestAIChatSaysWhatTheToolWaitsFor(t *testing.T) {
 				t.Error("an Answer button with no question to open")
 			}
 
-			// The question comes: its sheet opens; a tap beside it puts it
-			// off without cancelling the tool.
+			// The question comes: its sheet opens; Escape puts it off
+			// without cancelling the tool.
 			c.Send(t, aiDBAsk("ask-w1", webproto.DBNeed{Need: "password"}, "The database needs a password."))
-			p.WaitJS(`!!document.querySelector('.sheet .db-need input[type="password"]')`)
-			p.TapJS(`[...document.querySelectorAll(".scrim")].pop()`)
+			p.WaitJS(`document.activeElement?.matches('.sheet .db-need input[type="password"]')`)
+			p.Key(kb.Escape)
 			p.WaitJS(`!document.querySelector(".sheet .db-need")`)
 			noAnswer(t, c, 300*time.Millisecond)
 

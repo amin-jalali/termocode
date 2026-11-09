@@ -91,15 +91,24 @@ type aiActivityView struct {
 	retry, retries int
 	stalled        bool
 	progress       string
-	bg             bool // an MCP call can move to the background (Ctrl+B)
+	bg             bool   // an MCP call can move to the background (Ctrl+B)
+	wait           string // what a db_* tool waits for from the user ("Database password for BaaytonaDB")
 }
 
 // aiActivityView is the line's state at now (zero without a running turn).
+// While an AI db_* tool waits on the user, the line says what for (as the
+// page's chat does).
 func (m *Model) aiActivityView(now time.Time) aiActivityView {
 	if m.ai == nil {
 		return aiActivityView{}
 	}
-	return m.ai.activityView(now)
+	v := m.ai.activityView(now)
+	if v.phase != aiPhaseNone {
+		if w := m.dbAIWaitChat(); w != nil {
+			v.wait = w.Text
+		}
+	}
+	return v
 }
 
 func (s *aiState) activityView(now time.Time) aiActivityView {
@@ -157,6 +166,9 @@ func (v aiActivityView) lines(ind string, inner int) []aiLine {
 	switch {
 	case v.phase == aiPhaseNone:
 		return nil
+	case v.wait != "":
+		text = theme.GlyphAITool.String() + " Waiting for you: " + aiCleanText(v.wait) + " · " + aiSecs(v.secs)
+		style = theme.Fg(theme.DiagWarning)
 	case v.stalled:
 		text = theme.GlyphAIStall.String() + " no answer for " + aiSecs(v.secs) + " — Esc to stop"
 		style = theme.Fg(theme.DiagWarning)

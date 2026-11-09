@@ -10,7 +10,7 @@
 // of the chat (desk CSS hides its chip on each message). The page's Chat.tsx asks here
 // through lib/toolblocks.ts look. The phone draws the same parts from
 // home.js (phone/chatlook.tsx gives them the page's host, phone set).
-import type { ChatMsg } from "../../../../webproto/proto";
+import type { ChatMsg, ChatWait } from "../../../../webproto/proto";
 import type { ChatLook } from "../lib/toolblocks";
 import type { VNode } from "preact";
 import { readChat } from "../state/chat";
@@ -52,6 +52,23 @@ export function Tool({ line, done }: { line: string; done: boolean }) {
           {what.length > 48 && <div class="tool-call">{what}</div>}
           {res && <div class="tool-res">{res}</div>}
         </div>
+      )}
+    </div>
+  );
+}
+
+/** Wait is what the message's tool waits for from the user ("Waiting
+ * for you: Database password for BaaytonaDB"), and Answer when this
+ * page has that question: it opens it again (its sheet put off). */
+function Wait({ w }: { w: ChatWait }) {
+  const a = H.asked.value.find((x) => x.conn === w.conn && x.need?.need === w.need);
+  return (
+    <div class="msg-think tool-wait" dir="ltr">
+      <span>⏳ {H.t("look.wait", { what: w.text })}</span>
+      {a && (
+        <button type="button" class="think-stop" onClick={() => (H.later.value = "")}>
+          {H.t("look.wait_open")}
+        </button>
       )}
     </div>
   );
@@ -139,6 +156,7 @@ function answer(m: ChatMsg, body: VNode): VNode {
           ))}
         </div>
       )}
+      {m.wait && <Wait w={m.wait} />}
       {body}
       {run ? null : m.streaming ? <Thinking from={m.meta?.started_ms} /> : <Meta m={m} />}
     </>
@@ -151,7 +169,8 @@ export const look: ChatLook = {
       answer(m, body)
     ) : (
       <div class="msg msg-tool" data-i={m.i}>
-        <Tool line={m.text ?? ""} done />
+        <Tool line={m.text ?? ""} done={!m.wait} />
+        {m.wait && <Wait w={m.wait} />}
       </div>
     ),
   top: (msgs) => {

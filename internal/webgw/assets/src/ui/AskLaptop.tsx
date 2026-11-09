@@ -8,7 +8,7 @@
 // the laptop's card too. The outcome is told even after the sheet closed.
 import { h } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { asked, cancelAsk, ended, onAnswered } from "../lib/asks";
+import { asked, cancelAsk, ended, later, onAnswered } from "../lib/asks";
 import { toast } from "../lib/toasts";
 import { link, live } from "../session";
 import { t } from "../strings";
@@ -79,9 +79,10 @@ export function AskLaptop({ label, text, send, onDone, onConfirmed, cls = "ask" 
 /** HereAsks shows this page's own questions (ask evs), one at a time:
  * the card's exact text, Cancel first; the answer is this page's. A
  * question an AI db_* tool waits on (conn and need) is the Databases
- * view's own card (DBAsk): Trust and save, or a masked field. */
+ * view's own card (DBAsk): Trust and save, or a masked field; closing
+ * its sheet puts it off (the tool waits, the chat's line opens it). */
 export function HereAsks() {
-  const a = asked.value[0];
+  const a = asked.value.find((x) => x.id !== later.value);
   if (!a) return null;
   const end = (e: unknown) => {
     failed(e);
@@ -89,7 +90,7 @@ export function HereAsks() {
   };
   const no = () => cancelAsk(a.id).catch(end);
   return (
-    <Sheet onLater={no} label={a.title}>
+    <Sheet onLater={a.need ? () => (later.value = a.id) : no} label={a.title}>
       {a.need && a.conn ? (
         <div class="ask">
           <p class="ask-note">{a.title}</p>

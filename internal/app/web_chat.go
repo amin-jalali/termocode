@@ -40,6 +40,20 @@ type webChatSent struct {
 	sent      int  // streaming: raw bytes of text the browsers have
 	truncated bool // streaming: the text reached the cap
 	key       string
+	wait      string // the wait it carries (webChatWait's key), "" for none
+}
+
+// webChatWait is the wait the newest message of the open chat carries
+// while its turn runs: what an AI db_* tool waits for from the user (nil
+// and "": nothing). key sums it up to see a change.
+func (m *Model) webChatWait() (w *webproto.ChatWait, key string) {
+	if m.ai == nil || !m.ai.streaming {
+		return nil, ""
+	}
+	if w = m.dbAIWaitChat(); w == nil {
+		return nil, ""
+	}
+	return w, w.Text + "\x00" + w.Conn + "\x00" + w.Need
 }
 
 // webChatPub is what the chat topic sent last (Update only).
@@ -76,10 +90,13 @@ func (m *Model) webChatBuild(p *webChatPub) webproto.ChatSnap {
 	p.ctx = [3]int{snap.CtxPct, snap.CtxTokens, snap.CtxWindow}
 	n := len(s.conv.Messages)
 	full := webChatFullFrom(s.conv.Messages)
+	wait, wkey := m.webChatWait()
 	for i := range s.conv.Messages {
 		cm, sent := webChatMsg(i, &s.conv.Messages[i], webChatStreaming(s, i, n))
 		if i < full {
 			cm = webChatStub(cm)
+		} else if i == n-1 && wait != nil {
+			cm.Wait, sent.wait = wait, wkey
 		}
 		snap.Messages = append(snap.Messages, cm)
 		p.msgs = append(p.msgs, sent)
@@ -150,10 +167,15 @@ func (m *Model) webPublishChat(tea.Msg) tea.Cmd {
 		h.publish("chat", webChatDelta{Op: webproto.ChatTruncate, N: &n})
 		p.msgs = p.msgs[:n]
 	}
+	wait, wkey := m.webChatWait()
 	for i := range msgs {
 		sm := &msgs[i]
 		live := webChatStreaming(s, i, n)
-		if i < len(p.msgs) {
+		want := ""
+		if i == n-1 {
+			want = wkey
+		}
+		if i < len(p.msgs) && p.msgs[i].wait == want { // a wait that came or went sends the message whole
 			old := &p.msgs[i]
 			if live && old.streaming && old.role == sm.Role && webChatAppendable(old, sm.Text) {
 				end, trunc := webChatVisible(sm.Text)
@@ -172,6 +194,9 @@ func (m *Model) webPublishChat(tea.Msg) tea.Cmd {
 			}
 		}
 		cm, sent := webChatMsg(i, sm, live)
+		if want != "" {
+			cm.Wait, sent.wait = wait, want
+		}
 		if i < len(p.msgs) {
 			p.msgs[i] = sent
 		} else {

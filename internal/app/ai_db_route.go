@@ -3,11 +3,14 @@ package app
 import (
 	"context"
 	"errors"
+	"strconv"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/dbclient"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -22,6 +25,9 @@ import (
 // waits: an unknown host key (the trust card), an SSH password or key
 // passphrase, the database's password (masked prompts). The model never
 // sees or gives a secret; a cancel ends the tool with a short error.
+// While it waits, the chat says what for (dbAIWaitChat: the page's tool
+// line and the TUI's activity line); calls that need the same answer at
+// once share one question; nobody answering for dbAIAskWait ends them.
 
 // dbThenAI marks a trust card or SSH secret prompt a db_* tool waits on.
 const dbThenAI = "ai"
@@ -95,28 +101,92 @@ func dbAIReach(ctx context.Context, root string, call aiIDECaller, net *webDBNet
 	return nil, errors.New("the SSH tunnel of " + c.ID + " did not open")
 }
 
+// dbAIAskWait is how long a db_* tool waits for the user's answer (owner
+// 2026-11-09: a chat sat 4+ minutes on a prompt nobody saw). Then the
+// tool ends with a short error and the question closes everywhere.
+const dbAIAskWait = 5 * time.Minute
+
+// dbAIWait is the question db_* tools wait on: the calls that need the
+// same answer at once (the model fired several) share it, so the user
+// is asked once and every waiting call gets the answer.
+type dbAIWait struct {
+	key  string        // the connection and what it needs
+	what string        // "the database password of BaaytonaDB" (the timeout's error)
+	n    int           // the calls waiting on it (Update only)
+	quit chan struct{} // closed (on Update) when the last call left before an answer
+	done chan struct{} // closed once val or err is set
+	val  any
+	err  error
+}
+
+// ended: the question was answered, timed out or left.
+func (w *dbAIWait) ended() bool {
+	select {
+	case <-w.done:
+		return true
+	case <-w.quit:
+		return true
+	default:
+		return false
+	}
+}
+
 // dbAIAsk opens a question on Update (open returns its answer channel)
-// and waits for the answer; when ctx ends first, drop closes it.
-func dbAIAsk[T any](ctx context.Context, call aiIDECaller, open func(m *Model) (chan T, error), drop func(m *Model, ch chan T)) (T, error) {
+// and waits for the answer. A call that needs the same (key) while it is
+// open waits on it too, with no second question. Nobody answering for
+// dbAIAskWait closes it (drop) and ends the calls with a short error;
+// when the last waiting call's ctx ends first, drop closes it too.
+func dbAIAsk[T any](ctx context.Context, call aiIDECaller, key, what string, open func(m *Model) (chan T, error), drop func(m *Model, ch chan T)) (T, error) {
 	var zero T
-	var ch chan T
+	var w *dbAIWait
 	if _, err := call(ctx, func(m *Model) (string, tea.Cmd, error) {
-		if m.confirmOpen || m.promptOpen {
-			return "", nil, errDBAIAskBusy
-		}
 		if m.databases == nil {
 			m.databases = newDBState()
 		}
-		var err error
-		ch, err = open(m)
-		return "", nil, err
+		if cur := m.databases.aiWait; cur != nil && cur.key == key && !cur.ended() {
+			cur.n++
+			w = cur
+			return "", nil, nil
+		}
+		if m.confirmOpen || m.promptOpen {
+			return "", nil, errDBAIAskBusy
+		}
+		ch, err := open(m)
+		if err != nil {
+			return "", nil, err
+		}
+		w = &dbAIWait{key: key, what: what, n: 1, quit: make(chan struct{}), done: make(chan struct{})}
+		m.databases.aiWait = w
+		crash.Go("db.ai-ask", func() { dbAIAnswerOf(call, w, ch, drop) })
+		return "", nil, nil
 	}); err != nil {
 		return zero, err
 	}
 	select {
-	case v := <-ch:
-		return v, nil
+	case <-w.done:
+		if w.err != nil {
+			return zero, w.err
+		}
+		return w.val.(T), nil
 	case <-ctx.Done():
+		dctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_, _ = call(dctx, func(m *Model) (string, tea.Cmd, error) {
+			if w.n--; w.n == 0 && !w.ended() {
+				close(w.quit) // dbAIAnswerOf drops the question
+			}
+			return "", nil, nil
+		})
+		return zero, ctx.Err()
+	}
+}
+
+// dbAIAnswerOf waits for w's answer on ch and hands it to every waiting
+// call: the value, a timeout after dbAIAskWait (the question closes on
+// the laptop, so in every page too) or the calls having left.
+func dbAIAnswerOf[T any](call aiIDECaller, w *dbAIWait, ch chan T, drop func(m *Model, ch chan T)) {
+	defer close(w.done)
+	closeIt := func() {
 		dctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		_, _ = call(dctx, func(m *Model) (string, tea.Cmd, error) {
@@ -125,13 +195,39 @@ func dbAIAsk[T any](ctx context.Context, call aiIDECaller, open func(m *Model) (
 			}
 			return "", nil, nil
 		})
-		return zero, ctx.Err()
+	}
+	select {
+	case v := <-ch:
+		w.val = v
+		return
+	case <-w.quit:
+		closeIt()
+		w.err = context.Canceled
+		return
+	case <-clock.After(dbAIAskWait):
+	}
+	closeIt()
+	select {
+	case v := <-ch: // answered just before it closed
+		w.val = v
+	default:
+		w.err = dbAINoAnswer("Waited " + strconv.Itoa(int(dbAIAskWait/time.Minute)) + " min for " + w.what +
+			"; nobody answered. Do not retry this call at once: tell the user what it needs and wait for their reply.")
 	}
 }
 
+// dbAINoAnswer is the error of a question nobody answered in time. It is
+// termocode's own text (no server's): the tools pass it on as it is, so
+// "password of BaaytonaDB" is not taken for a secret.
+type dbAINoAnswer string
+
+func (e dbAINoAnswer) Error() string { return string(e) }
+
 // dbAIAskTrust shows the view's trust card for e and waits for yes.
 func dbAIAskTrust(ctx context.Context, call aiIDECaller, c dbclient.Conn, e *dbclient.UnknownHostKeyError) error {
-	ok, err := dbAIAsk(ctx, call, func(m *Model) (chan bool, error) {
+	host := webDBHostName(e.Host)
+	what := "the user to trust the SSH host " + host + " of " + sanitizeDBText(dbConnName(c))
+	ok, err := dbAIAsk(ctx, call, c.ID+"\x00host_key\x00"+e.Fingerprint, what, func(m *Model) (chan bool, error) {
 		ch := make(chan bool, 1)
 		m.databaseTunnelError(e, c.ID, dbThenAI)
 		m.databases.hostAsk.done = ch
@@ -148,7 +244,7 @@ func dbAIAskTrust(ctx context.Context, call aiIDECaller, c dbclient.Conn, e *dbc
 		return err
 	}
 	if !ok {
-		return errors.New("the SSH host " + webDBHostName(e.Host) + " was not trusted (the user cancelled); the tunnel was not opened")
+		return errors.New("the SSH host " + host + " was not trusted (the user cancelled); the tunnel was not opened")
 	}
 	return nil
 }
@@ -156,7 +252,8 @@ func dbAIAskTrust(ctx context.Context, call aiIDECaller, c dbclient.Conn, e *dbc
 // dbAIAskSSHSecret shows the view's SSH password / passphrase prompt and
 // waits for the typed value (kept in the secret store, as the view does).
 func dbAIAskSSHSecret(ctx context.Context, call aiIDECaller, c dbclient.Conn, e *dbclient.SSHSecretError) (string, error) {
-	v, err := dbAIAsk(ctx, call, func(m *Model) (chan string, error) {
+	what := "the SSH " + dbAISecretWord(e.Kind) + " of " + sanitizeDBText(dbConnName(c))
+	v, err := dbAIAsk(ctx, call, c.ID+"\x00ssh_"+e.Kind, what, func(m *Model) (chan string, error) {
 		ch := make(chan string, 1)
 		m.databaseTunnelError(e, c.ID, dbThenAI)
 		m.databases.secretAsk.done = ch
@@ -188,7 +285,8 @@ func dbAISecretWord(kind string) string {
 // dbAIAskPassword shows the view's masked database password prompt for
 // c and waits for the typed value (kept in the secret store as name).
 func dbAIAskPassword(ctx context.Context, call aiIDECaller, c dbclient.Conn, name string, wrong bool) (string, error) {
-	v, err := dbAIAsk(ctx, call, func(m *Model) (chan string, error) {
+	what := "the database password of " + sanitizeDBText(dbConnName(c))
+	v, err := dbAIAsk(ctx, call, c.ID+"\x00password", what, func(m *Model) (chan string, error) {
 		ch := make(chan string, 1)
 		title := "Database password · " + sanitizeDBText(dbConnName(c))
 		if wrong {

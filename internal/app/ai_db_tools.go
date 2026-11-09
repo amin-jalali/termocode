@@ -601,6 +601,10 @@ func dbAIResultText(c dbclient.Conn, r dbclient.Result, run *dbRun, password str
 // dbAIError is a server error for the model: every line (the server's
 // message, detail and hint), redacted and cleaned.
 func dbAIError(err error, password string) error {
+	var none dbAINoAnswer
+	if errors.As(err, &none) {
+		return none
+	}
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return errors.New(dbErrorText(err))
 	}

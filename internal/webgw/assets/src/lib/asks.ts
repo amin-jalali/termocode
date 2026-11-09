@@ -20,6 +20,10 @@ const waiting = new Map<string, (o: AskOutcome) => void>();
 /** asked: this page's own questions (ask evs), oldest first. */
 export const asked = signal<AskCard[]>([]);
 
+/** later: the AI tool's question put off (its sheet closed, the tool
+ * still waits); the chat's waiting line opens it again (""). */
+export const later = signal("");
+
 /** ended drops the card's question and tells its waiter the outcome. */
 export function ended(id: string, o: AskOutcome = { confirmed: false, by: "" }): void {
   asked.value = asked.value.filter((a) => a.id !== id);

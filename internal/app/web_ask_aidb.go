@@ -35,6 +35,7 @@ type webAIDBAsk struct {
 	key   any // the TUI's question: *dbHostAsk, *dbSecretAsk or *dbAIPasswordAsk
 	host  *dbclient.UnknownHostKeyError
 	card  webproto.AskCard // its text, connection and need (no id)
+	wait  string           // the chat's "Waiting for you: …" ("Database password for BaaytonaDB")
 	pages map[*webConn]bool
 	asks  []*webAsk // the pages' questions
 	by    string    // the device whose page answered it ("": the laptop)
@@ -52,8 +53,8 @@ func (m *Model) webAIDBAskNow() *webAIDBAsk {
 		}
 		return sanitizeDBText(id)
 	}
-	ask := func(key any, conn, msg, action string, need webproto.DBNeed) *webAIDBAsk {
-		return &webAIDBAsk{key: key, pages: map[*webConn]bool{}, card: webproto.AskCard{
+	ask := func(key any, conn, msg, action, wait string, need webproto.DBNeed) *webAIDBAsk {
+		return &webAIDBAsk{key: key, wait: wait + " for " + name(conn), pages: map[*webConn]bool{}, card: webproto.AskCard{
 			Title: "AI chat · " + name(conn), Body: msg, Action: action, Conn: conn, Need: &need}}
 	}
 	if a := s.hostAsk; a != nil && a.done != nil && a.err != nil {
@@ -61,7 +62,7 @@ func (m *Model) webAIDBAskNow() *webAIDBAsk {
 		if a.err.Jump != "" {
 			what = "SSH jump host"
 		}
-		w := ask(a, a.conn, "Unknown "+what+" "+host+". Check its key before you trust it.", "Trust and save",
+		w := ask(a, a.conn, "Unknown "+what+" "+host+". Check its key before you trust it.", "Trust and save", "Trust "+what+" "+host,
 			webproto.DBNeed{Need: "host_key", Host: host, KeyType: sanitizeDBText(dbKeyTypeName(a.err.KeyType)), Fingerprint: sanitizeDBText(a.err.Fingerprint), Jump: a.err.Jump != ""})
 		w.host = a.err
 		return w
@@ -72,22 +73,32 @@ func (m *Model) webAIDBAskNow() *webAIDBAsk {
 			if a.wrong {
 				msg = "Wrong passphrase for the SSH key " + a.key + "."
 			}
-			return ask(a, a.conn, msg, "Save and connect", webproto.DBNeed{Need: "ssh_passphrase", Key: a.key, Wrong: a.wrong})
+			return ask(a, a.conn, msg, "Save and connect", "SSH key passphrase", webproto.DBNeed{Need: "ssh_passphrase", Key: a.key, Wrong: a.wrong})
 		}
 		msg := "The SSH server needs a password."
 		if a.wrong {
 			msg = "The SSH server did not accept the password."
 		}
-		return ask(a, a.conn, msg, "Save and connect", webproto.DBNeed{Need: "ssh_password", Wrong: a.wrong})
+		return ask(a, a.conn, msg, "Save and connect", "SSH password", webproto.DBNeed{Need: "ssh_password", Wrong: a.wrong})
 	}
 	if a := s.pendingSecretAI; a != nil {
 		msg := "The database needs a password."
 		if a.wrong {
 			msg = "The database did not accept the password."
 		}
-		return ask(a, a.conn, msg, "Save and connect", webproto.DBNeed{Need: "password", Wrong: a.wrong})
+		return ask(a, a.conn, msg, "Save and connect", "Database password", webproto.DBNeed{Need: "password", Wrong: a.wrong})
 	}
 	return nil
+}
+
+// dbAIWaitChat is what an AI db_* tool waits for from the user now, for
+// the chat's waiting line on the page and in the TUI (nil: nothing).
+func (m *Model) dbAIWaitChat() *webproto.ChatWait {
+	a := m.webAIDBAskNow()
+	if a == nil {
+		return nil
+	}
+	return &webproto.ChatWait{Text: a.wait, Conn: a.card.Conn, Need: a.card.Need.Need}
 }
 
 // webAIDBAskPump runs after every Update: a question that ended (on the

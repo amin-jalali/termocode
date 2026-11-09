@@ -640,6 +640,10 @@ func aiDBTestConn(ctx context.Context, root string, call aiIDECaller, c dbclient
 		pcancel()
 		_ = sess.Close()
 	}
+	var none dbAINoAnswer
+	if errors.As(err, &none) {
+		return "", none
+	}
 	if err != nil {
 		return "", fmt.Errorf("the connection failed: %s (if a password is missing, db_connection op connect lets the user type it)", dbAIError(err, snap.password).Error())
 	}

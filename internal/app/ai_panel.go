@@ -393,7 +393,7 @@ func (m Model) aiTranscriptCached(width int) *aiTranscriptCache {
 	resizing := m.dragKind == dragActionsLeft
 	c := &s.transcript
 	now := clock.Now()
-	act, stall := s.activityView(now), s.agentsStallSig(now)
+	act, stall := m.aiActivityView(now), s.agentsStallSig(now)
 	if c.matches(s, width, rk, resizing, act, stall) {
 		return c
 	}

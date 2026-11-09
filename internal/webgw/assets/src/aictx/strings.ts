@@ -25,4 +25,6 @@ export const AS = {
   "look.step_of": "step {n} of {of}",
   "look.steps": "{n} steps",
   "look.run_view": "Run view",
+  "look.wait": "Waiting for you: {what}",
+  "look.wait_open": "Answer",
 } as const;

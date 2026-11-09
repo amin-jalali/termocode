@@ -18,6 +18,7 @@ import { AskLaptop } from "../ui/AskLaptop";
 import { Cod } from "../ui/icons";
 import { Md } from "../ui/Markdown";
 import { aiSnap } from "./ai";
+import { asked, later } from "./asks";
 import { look } from "./toolblocks";
 import { pinned } from "../views/Chat";
 import { ctrList } from "../views/desk/DeskContainers";
@@ -61,6 +62,8 @@ const host = (): AIHost => ({
   Cod,
   AskLaptop,
   aiSnap,
+  asked,
+  later,
 });
 
 let loading: Promise<Mod> | null = null;

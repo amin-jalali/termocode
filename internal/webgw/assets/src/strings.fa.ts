@@ -1550,6 +1550,8 @@ export const FA: Record<TranslatedKey, string> = {
   "look.step_of": "گام {n} از {of}",
   "look.steps": "{n} گام",
   "look.run_view": "نمای اجرا",
+  "look.wait": "منتظر شماست: {what}",
+  "look.wait_open": "پاسخ",
   "ai.attach_list": "با پیام فرستاده می‌شود",
   "dictate.start": "به‌جای نوشتن، بگویید",
   "dictate.stop": "توقف شنیدن",

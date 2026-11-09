@@ -116,6 +116,7 @@ type dbState struct {
 	scroll              int
 	pendingSecretID     string
 	pendingSecretAI     *dbAIPasswordAsk // the AI's password prompt: the value goes to the waiting tool (ai_db_route.go)
+	aiWait              *dbAIWait        // the question db_* tools wait on now (ai_db_route.go)
 	filter              string
 	filterTyping        bool // the inline "/" filter takes the keys (db_filter.go)
 	seq                 uint64
