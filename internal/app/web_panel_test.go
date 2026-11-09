@@ -44,6 +44,10 @@ func newWebPanelRig(t *testing.T) *webPanelRig {
 	oldSock := webHTTPSocketPath
 	t.Cleanup(func() { webHTTPSocketPath = oldSock })
 	webHTTPSocketPath = func() (string, error) { return filepath.Join(sockDir, "k.webhttp.sock"), nil }
+	oldResume := webResumeFile
+	t.Cleanup(func() { webResumeFile = oldResume })
+	resumePath := filepath.Join(dir, "web-resume.json")
+	webResumeFile = func() (string, error) { return resumePath, nil }
 	restore := SetClipboardSink(func(s string) { r.links <- s })
 	t.Cleanup(restore)
 	old := webGatewayStart
@@ -69,12 +73,19 @@ func newWebPanelRig(t *testing.T) *webPanelRig {
 				return d.DialContext(ctx, "unix", r.path)
 			},
 			AuditPath: r.audit, StatusPath: filepath.Join(dir, "web.json"),
-			LockPath: filepath.Join(dir, "web.lock"), Handoff: pw,
+			LockPath: filepath.Join(dir, "web.lock"), Handoff: pw, ResumePath: resumePath,
 		}
-		for i, a := range args { // SSH mode, as the real gateway reads it
-			if a == "--ssh-port" && i+1 < len(args) {
+		for i, a := range args { // SSH mode, the port and a resume, as the real gateway reads them
+			switch {
+			case a == "--ssh-port" && i+1 < len(args):
 				cfg.PortHint, _ = strconv.Atoi(args[i+1])
 				cfg.UnixPath, _ = webHTTPSocketPath()
+			case a == "--port" && i+1 < len(args):
+				cfg.Port, _ = strconv.Atoi(args[i+1])
+			case a == "--resume":
+				if res, err := webgw.ReadResume(resumePath, time.Now()); err == nil {
+					cfg.Resume = &res
+				}
 			}
 		}
 		go func() {
@@ -123,6 +134,13 @@ func (r *webPanelRig) started() string {
 // the connection once the hub's meta came back through the gateway.
 func (r *webPanelRig) browser(link string) *websocket.Conn {
 	r.t.Helper()
+	c, _, _ := r.browserTok(link)
+	return c
+}
+
+// browserTok is browser; it also returns the session token and the meta.
+func (r *webPanelRig) browserTok(link string) (*websocket.Conn, string, map[string]any) {
+	r.t.Helper()
 	base, secret, ok := strings.Cut(link, "/#s=")
 	if !ok {
 		r.t.Fatalf("link %q", link)
@@ -142,6 +160,14 @@ func (r *webPanelRig) browser(link string) *websocket.Conn {
 	if tok.Token == "" {
 		r.t.Fatalf("auth %d", resp.StatusCode)
 	}
+	c, meta := r.browserWith(base, tok.Token)
+	return c, tok.Token, meta
+}
+
+// browserWith opens the WebSocket at base with a session token and
+// returns it with the hub's meta, once that came through the gateway.
+func (r *webPanelRig) browserWith(base, token string) (*websocket.Conn, map[string]any) {
+	r.t.Helper()
 	h := http.Header{}
 	h.Set("Origin", base)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -152,7 +178,7 @@ func (r *webPanelRig) browser(link string) *websocket.Conn {
 		r.t.Fatal(err)
 	}
 	r.t.Cleanup(func() { _ = c.CloseNow() })
-	hello, _ := json.Marshal(map[string]any{"t": "hello", "v": webproto.Version, "token": tok.Token})
+	hello, _ := json.Marshal(map[string]any{"t": "hello", "v": webproto.Version, "token": token})
 	if err := c.Write(ctx, websocket.MessageText, hello); err != nil {
 		r.t.Fatal(err)
 	}
@@ -177,7 +203,7 @@ func (r *webPanelRig) browser(link string) *websocket.Conn {
 	if meta["t"] != "meta" || meta["role"] != "controller" {
 		r.t.Fatalf("first message %v", meta)
 	}
-	return c
+	return c, meta
 }
 
 // Spec (WEB-9): Start Panel runs the gateway, the gateway gets the link's
