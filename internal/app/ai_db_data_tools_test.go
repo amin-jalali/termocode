@@ -81,7 +81,7 @@ func TestAIDBDataImportCSV(t *testing.T) {
 	}
 	args := map[string]any{"op": "import_csv", "conn": "local", "path": "people.csv", "table": "users"}
 	card := e.tool(t, "db_data").Human(args)
-	for _, want := range []string{"Import 2 rows from people.csv into users on local", "id, email", "one transaction"} {
+	for _, want := range []string{"Import 2 rows from people.csv into public.users on local", "id, email", "one transaction"} {
 		if !strings.Contains(card, want) {
 			t.Errorf("card lacks %q:\n%s", want, card)
 		}

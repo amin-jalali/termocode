@@ -154,6 +154,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`db_search_data`](#db_search_data) | auto | no | Find a value in every column of every table of a schema (MySQL: a database), in a read-only session. |
 | [`db_connection`](#db_connection) | add: confirm (always asks)<br>connect: auto<br>delete: confirm (always asks)<br>disconnect: confirm (always asks)<br>edit: confirm (always asks)<br>open_container: auto<br>ssh: confirm (always asks)<br>ssl: confirm (always asks)<br>test: auto | no | Manage a connection of the Databases view, in the file that holds it (.termocode/databases.json or your connections file). |
 | [`db_session`](#db_session) | cancel: auto<br>commit: confirm (always asks)<br>rollback: confirm (always asks)<br>rollback_savepoint: confirm (always asks)<br>savepoint: auto<br>status: auto<br>tx_mode: confirm (always asks) | no | Control the user's own session of a connection in the Databases view (not yours: db_query has its own). |
+| [`db_data`](#db_data) | dump: confirm (always asks)<br>export: confirm (fileWrite)<br>import_csv: confirm (always asks)<br>restore: confirm (always asks) | no | Move data in and out of a connection as the Databases view does. |
 | [`ast_grep`](#ast_grep) | search: auto<br>with rewrite: confirm (review), or confirm (fileWrite) when AI file changes are not reviewed | no | Structural code search with ast-grep: pattern is code with $VAR wildcards ("fmt.Println($A)"). |
 | [`codebase_search`](#codebase_search) | auto | no | Find code by meaning: describe what it does in plain words ("where the password is checked") and get the best matching places as file:line with a score, best first. |
 | [`look_at`](#look_at) | auto<br>an image is sent to the main model in one extra request (a PDF is read locally) | no | Look at an image file (png, jpg, gif, webp) and answer a question about it, or read the text of a PDF file. |
@@ -1942,6 +1943,25 @@ Control the user's own session of a connection in the Databases view (not yours:
 | `op` | string | yes | what to do. One of: `cancel`, `commit`, `rollback`, `rollback_savepoint`, `savepoint`, `status`, `tx_mode` |
 | `mode` | string |   | tx_mode: manual commit or auto-commit. One of: `manual`, `auto` |
 | `name` | string |   | savepoint / rollback_savepoint: the savepoint name |
+
+### db_data
+
+Move data in and out of a connection as the Databases view does. op export (sql: one read, path, format csv|tsv|json|md) writes the rows to a workspace file; import_csv (path to a .csv, table, schema, header) inserts its rows in one transaction; dump (path) and restore (path) run the server's own tool (pg_dump / pg_restore / psql, mysqldump / mysql) on a connection the user has connected. Each asks the user; files stay inside the workspace.
+
+**Gate:** dump: confirm (always asks) · export: confirm (fileWrite) · import_csv: confirm (always asks) · restore: confirm (always asks)
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conn` | string | yes | connection id (db_connections) |
+| `op` | string | yes | what to do. One of: `dump`, `export`, `import_csv`, `restore` |
+| `path` | string | yes | the file, relative to the workspace |
+| `format` | string |   | export: the file format (default from the file's extension, else csv). One of: `csv`, `tsv`, `json`, `md` |
+| `header` | boolean |   | import_csv: the first line names the columns (default true) |
+| `schema` | string |   | import_csv: its schema (default: public on PostgreSQL, the connection's database on MySQL) |
+| `sql` | string |   | export: one read statement |
+| `table` | string |   | import_csv: the table |
 
 ### ast_grep
 
