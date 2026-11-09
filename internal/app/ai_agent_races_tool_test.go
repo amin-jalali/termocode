@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -23,8 +25,8 @@ func aiAgentRacesRun(t *testing.T, m *Model, args map[string]any) (string, error
 	if !ok {
 		t.Fatal("no agent_races tool in the chat")
 	}
-	if tl.Mutating || tl.Gate != nil {
-		t.Errorf("agent_races asks (mutating %v, gate %v); the compare page does not", tl.Mutating, tl.Gate != nil)
+	if ask, class := aiEffGate(tl, args); ask != (args["op"] == "discard" || args["op"] == "restack") || class != "" {
+		t.Errorf("agent_races %v: ask=%v class=%q; only discard and restack have a card on the page", args["op"], ask, class)
 	}
 	if err := tl.Validate(args); err != nil {
 		return "", err
@@ -86,5 +88,42 @@ func TestAIAgentRacesReadsTheRecords(t *testing.T) {
 	out, err := aiAgentRacesRun(t, e.m, map[string]any{"op": "list"})
 	if err != nil || !strings.Contains(out, race.ID) {
 		t.Fatalf("list from disk: %q %v", out, err)
+	}
+}
+
+// The page's lane keys: merge (no card) writes a finished lane into the
+// user's files; discard (its card asks) removes a lane; restack asks;
+// judge needs two finished lanes and a main model.
+func TestAIAgentRacesLaneOps(t *testing.T) {
+	e, _ := webRaceRig(t, "claude", "codex")
+	race := e.start(t, "change a", "", "claude", "codex")
+	if _, err := aiAgentRacesRun(t, e.m, map[string]any{"op": "merge", "race": race.ID, "lane": race.Lanes[0].ID}); err == nil || !strings.Contains(err.Error(), "finished") {
+		t.Errorf("merge of a working lane: %v", err)
+	}
+	if _, err := aiAgentRacesRun(t, e.m, map[string]any{"op": "restack", "race": race.ID, "lane": race.Lanes[0].ID}); err == nil || !strings.Contains(err.Error(), "mode") {
+		t.Errorf("restack without a mode: %v", err)
+	}
+	e.finishLane(t, 0, map[string]string{"new.txt": "from claude\n"})
+	if _, err := aiAgentRacesRun(t, e.m, map[string]any{"op": "judge", "race": race.ID}); err == nil || !strings.Contains(err.Error(), "two finished lanes") {
+		t.Errorf("judge of one finished lane: %v", err)
+	}
+	e.finishLane(t, 1, map[string]string{"other.txt": "from codex\n"})
+	out, err := aiAgentRacesRun(t, e.m, map[string]any{"op": "merge", "race": race.ID, "lane": race.Lanes[0].ID})
+	if err != nil || !strings.Contains(out, "new.txt") {
+		t.Fatalf("merge: %q %v", out, err)
+	}
+	if b, err := os.ReadFile(filepath.Join(e.dir, "new.txt")); err != nil || string(b) != "from claude\n" {
+		t.Fatalf("new.txt after the merge: %q %v", b, err)
+	}
+	if e.race(t).Lanes[0].State != agentrace.Merged {
+		t.Errorf("lane 0 is %s", e.race(t).Lanes[0].State)
+	}
+	e.m.confirmOpen = false // the page may offer to discard the other lanes
+	out, err = aiAgentRacesRun(t, e.m, map[string]any{"op": "discard", "race": race.ID, "lane": race.Lanes[1].ID})
+	if err != nil || !strings.Contains(out, "Discarded") {
+		t.Fatalf("discard: %q %v", out, err)
+	}
+	if _, err := os.Stat(filepath.Join(e.dir, "other.txt")); err == nil {
+		t.Error("a discarded lane's file reached the user's tree")
 	}
 }
