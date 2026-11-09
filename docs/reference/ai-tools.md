@@ -66,16 +66,16 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`git_hunk`](#git_hunk) | stage: confirm (git)<br>unstage: confirm (git)<br>discard: confirm (always asks) | no | Stage, unstage or discard the one diff hunk that contains line (1-based; for unstage, the line in the staged version). |
 | [`git_stash`](#git_stash) | list: auto<br>show: auto<br>save: confirm (git)<br>apply: confirm (git)<br>pop: confirm (always asks)<br>drop: confirm (always asks)<br>branch: confirm (git) | some ask | Stash: list; show (the entry at index as a diff); save (tracked changes, optional message, untracked=true adds new files; cleans the working tree); apply / pop / drop the entry at index (default 0); branch (name: a new branch from the entry's commit, with its changes; the entry goes). |
 | [`git_branch`](#git_branch) | compare: auto<br>create: confirm (git)<br>delete: confirm (always asks)<br>delete_remote: auto<br>list: auto<br>merge: confirm (always asks)<br>rename: confirm (git)<br>set_upstream: confirm (git)<br>unset_upstream: confirm (git) | some ask | Branches: list (default; remote=true adds remote branches), compare (base, head: the commits and files head has that base lacks), create (name, from: a branch, tag or commit; it switches to the new branch), rename (name, default the current one; new_name), set_upstream (upstream like origin/main; branch default current) and unset_upstream ask with Always allow git; delete (name; force=true for a branch with commits of its own, they are lost) and merge (name into the current branch; no_ff) ask every time; delete_remote (name like origin/x) opens the user's card, where they type the branch name. |
-| [`git_tag`](#git_tag) | checkout: confirm (always asks)<br>create: confirm (git)<br>delete: confirm (always asks)<br>delete_remote: auto<br>list: auto<br>push: confirm (always asks)<br>show: auto | no | Tags: list (default) and show (name: its commit, tagger, message) run at once; create (name, rev default HEAD, message: annotated, empty: lightweight) asks with Always allow git; delete (local only), push (name, or all=true; to the branch's remote or remote) and checkout (name: a detached HEAD) ask every time; delete_remote (name) opens the user's card, where they type the tag name. |
-| [`git_remote`](#git_remote) | add: confirm (git)<br>fetch_all: confirm (git)<br>force_push: auto<br>incoming: auto<br>list: auto<br>outgoing: auto<br>pull_from: confirm (git)<br>push_to: confirm (always asks)<br>remove: confirm (always asks)<br>rename: confirm (git)<br>set_url: confirm (git) | no | Remotes: list (default), incoming (the upstream's commits HEAD lacks, as of the last fetch) and outgoing (what a push sends) run at once; add (name, url), rename (name, new_name), set_url (name, url), fetch_all (every remote, prune) and pull_from (remote, branch; rebase=true) ask with Always allow git; remove (name) and push_to (remote, branch: HEAD to that branch) ask every time; force_push opens the user's Force Push card for the current branch (with lease), where they type the branch name. |
-| [`git_history`](#git_history) | apply_patch: confirm (always asks)<br>cherry_pick: confirm (always asks)<br>file_at: auto<br>line_history: auto<br>move_commit: confirm (always asks)<br>move_to: confirm (always asks)<br>patch: auto<br>redo: confirm (always asks)<br>reflog: auto<br>reset: confirm (always asks)<br>restore_file: confirm (always asks)<br>revert: confirm (always asks)<br>search: auto<br>show: auto<br>uncommit: confirm (git)<br>undo: confirm (always asks) | no | Commit history. |
-| [`git_rebase`](#git_rebase) | abort: confirm (always asks)<br>autosquash: confirm (always asks)<br>continue: confirm (always asks)<br>drop: confirm (always asks)<br>fixup: confirm (always asks)<br>onto: confirm (always asks)<br>plan: auto<br>reword: confirm (always asks)<br>skip: confirm (always asks)<br>squash: confirm (always asks)<br>start: confirm (always asks)<br>status: auto | no | Rebase. |
-| [`git_conflicts`](#git_conflicts) | abort: confirm (always asks)<br>continue: confirm (always asks)<br>list: auto<br>resolve: confirm (git)<br>show: auto<br>take: confirm (always asks)<br>take_file: confirm (always asks) | no | Merge conflicts of a stopped merge, cherry-pick or revert (a rebase: git_rebase continues it). |
-| [`git_lines`](#git_lines) | discard: confirm (always asks)<br>stage: confirm (git)<br>unstage: confirm (git) | no | Stage, unstage or discard the changes on lines start..end (1-based, of the working file) of one file, as Stage / Unstage / Discard Line do. |
-| [`git_discard`](#git_discard) | confirm (always asks) | no | Throw changes away; each asks every time (Cancel first). |
-| [`git_repo`](#git_repo) | bisect_mark: confirm (always asks)<br>bisect_reset: confirm (always asks)<br>bisect_start: confirm (always asks)<br>bisect_status: auto<br>contributors: auto<br>identity: auto<br>ignore: confirm (git)<br>init: confirm (always asks)<br>lfs_files: auto<br>submodule_update: confirm (git)<br>submodules: auto<br>unshallow: confirm (git)<br>untrack: confirm (git) | no | The repository. |
-| [`git_pr`](#git_pr) | checkout: confirm (always asks)<br>checks: auto<br>ci_log: auto<br>close: confirm (always asks)<br>comment: confirm (always asks)<br>create: confirm (always asks)<br>diff: auto<br>draft: confirm (always asks)<br>list: auto<br>merge: confirm (always asks)<br>ready: confirm (always asks)<br>reopen: confirm (always asks)<br>reply: confirm (always asks)<br>rerun: confirm (always asks)<br>resolve_thread: confirm (always asks)<br>review: confirm (always asks)<br>threads: auto<br>view: auto | no | GitHub pull requests and CI (gh, signed in on this machine). |
-| [`worktree`](#worktree) | add_folder: confirm (git)<br>archive: confirm (always asks)<br>create: confirm (git)<br>delete: confirm (always asks)<br>diff: auto<br>link: auto<br>notes: auto<br>pin: auto<br>restack: confirm (always asks)<br>restore: confirm (always asks)<br>sleep: auto<br>switch: confirm (always asks)<br>unpin: auto<br>wake: auto | no | One worktree of the WORKTREES view (worktree: a path, branch or name from worktrees_list; default this workspace's). |
+| [`git_tag`](#git_tag) | checkout: confirm (always asks)<br>create: confirm (git)<br>delete: confirm (always asks)<br>delete_remote: auto<br>list: auto<br>push: confirm (always asks)<br>show: auto | some ask | Tags: list (default) and show (name: its commit, tagger, message) run at once; create (name, rev default HEAD, message: annotated, empty: lightweight) asks with Always allow git; delete (local only), push (name, or all=true; to the branch's remote or remote) and checkout (name: a detached HEAD) ask every time; delete_remote (name) opens the user's card, where they type the tag name. |
+| [`git_remote`](#git_remote) | add: confirm (git)<br>fetch_all: confirm (git)<br>force_push: auto<br>incoming: auto<br>list: auto<br>outgoing: auto<br>pull_from: confirm (git)<br>push_to: confirm (always asks)<br>remove: confirm (always asks)<br>rename: confirm (git)<br>set_url: confirm (git) | some ask | Remotes: list (default), incoming (the upstream's commits HEAD lacks, as of the last fetch) and outgoing (what a push sends) run at once; add (name, url), rename (name, new_name), set_url (name, url), fetch_all (every remote, prune) and pull_from (remote, branch; rebase=true) ask with Always allow git; remove (name) and push_to (remote, branch: HEAD to that branch) ask every time; force_push opens the user's Force Push card for the current branch (with lease), where they type the branch name. |
+| [`git_history`](#git_history) | apply_patch: confirm (always asks)<br>cherry_pick: confirm (always asks)<br>file_at: auto<br>line_history: auto<br>move_commit: confirm (always asks)<br>move_to: confirm (always asks)<br>patch: auto<br>redo: confirm (always asks)<br>reflog: auto<br>reset: confirm (always asks)<br>restore_file: confirm (always asks)<br>revert: confirm (always asks)<br>search: auto<br>show: auto<br>uncommit: confirm (git)<br>undo: confirm (always asks) | asks | Commit history. |
+| [`git_rebase`](#git_rebase) | abort: confirm (always asks)<br>autosquash: confirm (always asks)<br>continue: confirm (always asks)<br>drop: confirm (always asks)<br>fixup: confirm (always asks)<br>onto: confirm (always asks)<br>plan: auto<br>reword: confirm (always asks)<br>skip: confirm (always asks)<br>squash: confirm (always asks)<br>start: confirm (always asks)<br>status: auto | some ask | Rebase. |
+| [`git_conflicts`](#git_conflicts) | abort: confirm (always asks)<br>continue: confirm (always asks)<br>list: auto<br>resolve: confirm (git)<br>show: auto<br>take: confirm (always asks)<br>take_file: confirm (always asks) | some ask | Merge conflicts of a stopped merge, cherry-pick or revert (a rebase: git_rebase continues it). |
+| [`git_lines`](#git_lines) | discard: confirm (always asks)<br>stage: confirm (git)<br>unstage: confirm (git) | asks | Stage, unstage or discard the changes on lines start..end (1-based, of the working file) of one file, as Stage / Unstage / Discard Line do. |
+| [`git_discard`](#git_discard) | confirm (always asks) | asks | Throw changes away; each asks every time (Cancel first). |
+| [`git_repo`](#git_repo) | bisect_mark: confirm (always asks)<br>bisect_reset: confirm (always asks)<br>bisect_start: confirm (always asks)<br>bisect_status: auto<br>contributors: auto<br>identity: auto<br>ignore: confirm (git)<br>init: confirm (always asks)<br>lfs_files: auto<br>submodule_update: confirm (git)<br>submodules: auto<br>unshallow: confirm (git)<br>untrack: confirm (git) | some ask | The repository. |
+| [`git_pr`](#git_pr) | checkout: confirm (always asks)<br>checks: auto<br>ci_log: auto<br>close: confirm (always asks)<br>comment: confirm (always asks)<br>create: confirm (always asks)<br>diff: auto<br>draft: confirm (always asks)<br>list: auto<br>merge: confirm (always asks)<br>ready: confirm (always asks)<br>reopen: confirm (always asks)<br>reply: confirm (always asks)<br>rerun: confirm (always asks)<br>resolve_thread: confirm (always asks)<br>review: confirm (always asks)<br>threads: auto<br>view: auto | yes | GitHub pull requests and CI (gh, signed in on this machine). |
+| [`worktree`](#worktree) | add_folder: confirm (git)<br>archive: confirm (always asks)<br>create: confirm (git)<br>delete: confirm (always asks)<br>diff: auto<br>link: auto<br>notes: auto<br>pin: auto<br>restack: confirm (always asks)<br>restore: confirm (always asks)<br>sleep: auto<br>switch: confirm (always asks)<br>unpin: auto<br>wake: auto | asks | One worktree of the WORKTREES view (worktree: a path, branch or name from worktrees_list; default this workspace's). |
 | [`tasks_list`](#tasks_list) | auto | yes | List the workspace tasks (.termocode/tasks.json, user commands, auto-detected build/test tasks): label, group (build/test, default), command and the state of the last run. |
 | [`tasks_run`](#tasks_run) | confirm (run) | asks | Run a task in its own VISIBLE terminal tab (like Tasks: Run Task). |
 | [`tasks_status`](#tasks_status) | auto | yes | State of a task run: running or the exit code, and the last output lines. |
@@ -815,7 +815,7 @@ Tags: list (default) and show (name: its commit, tagger, message) run at once; c
 
 **Gate:** checkout: confirm (always asks) · create: confirm (git) · delete: confirm (always asks) · delete_remote: auto · list: auto · push: confirm (always asks) · show: auto
 
-**MCP server:** no
+**MCP server:** some ask
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -832,7 +832,7 @@ Remotes: list (default), incoming (the upstream's commits HEAD lacks, as of the 
 
 **Gate:** add: confirm (git) · fetch_all: confirm (git) · force_push: auto · incoming: auto · list: auto · outgoing: auto · pull_from: confirm (git) · push_to: confirm (always asks) · remove: confirm (always asks) · rename: confirm (git) · set_url: confirm (git)
 
-**MCP server:** no
+**MCP server:** some ask
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -850,7 +850,7 @@ Commit history. At once: show (rev, default HEAD: the commit and its diff; path 
 
 **Gate:** apply_patch: confirm (always asks) · cherry_pick: confirm (always asks) · file_at: auto · line_history: auto · move_commit: confirm (always asks) · move_to: confirm (always asks) · patch: auto · redo: confirm (always asks) · reflog: auto · reset: confirm (always asks) · restore_file: confirm (always asks) · revert: confirm (always asks) · search: auto · show: auto · uncommit: confirm (git) · undo: confirm (always asks)
 
-**MCP server:** no
+**MCP server:** asks
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -877,7 +877,7 @@ Rebase. At once: status (a rebase, merge, cherry-pick or revert in progress, its
 
 **Gate:** abort: confirm (always asks) · autosquash: confirm (always asks) · continue: confirm (always asks) · drop: confirm (always asks) · fixup: confirm (always asks) · onto: confirm (always asks) · plan: auto · reword: confirm (always asks) · skip: confirm (always asks) · squash: confirm (always asks) · start: confirm (always asks) · status: auto
 
-**MCP server:** no
+**MCP server:** some ask
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -896,7 +896,7 @@ Merge conflicts of a stopped merge, cherry-pick or revert (a rebase: git_rebase 
 
 **Gate:** abort: confirm (always asks) · continue: confirm (always asks) · list: auto · resolve: confirm (git) · show: auto · take: confirm (always asks) · take_file: confirm (always asks)
 
-**MCP server:** no
+**MCP server:** some ask
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -911,7 +911,7 @@ Stage, unstage or discard the changes on lines start..end (1-based, of the worki
 
 **Gate:** discard: confirm (always asks) · stage: confirm (git) · unstage: confirm (git)
 
-**MCP server:** no
+**MCP server:** asks
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -926,7 +926,7 @@ Throw changes away; each asks every time (Cancel first). files (paths: their unc
 
 **Gate:** confirm (always asks)
 
-**MCP server:** no
+**MCP server:** asks
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -940,7 +940,7 @@ The repository. At once: identity (the name and e-mail on commits), submodules, 
 
 **Gate:** bisect_mark: confirm (always asks) · bisect_reset: confirm (always asks) · bisect_start: confirm (always asks) · bisect_status: auto · contributors: auto · identity: auto · ignore: confirm (git) · init: confirm (always asks) · lfs_files: auto · submodule_update: confirm (git) · submodules: auto · unshallow: confirm (git) · untrack: confirm (git)
 
-**MCP server:** no
+**MCP server:** some ask
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -957,7 +957,7 @@ GitHub pull requests and CI (gh, signed in on this machine). At once: list (stat
 
 **Gate:** checkout: confirm (always asks) · checks: auto · ci_log: auto · close: confirm (always asks) · comment: confirm (always asks) · create: confirm (always asks) · diff: auto · draft: confirm (always asks) · list: auto · merge: confirm (always asks) · ready: confirm (always asks) · reopen: confirm (always asks) · reply: confirm (always asks) · rerun: confirm (always asks) · resolve_thread: confirm (always asks) · review: confirm (always asks) · threads: auto · view: auto
 
-**MCP server:** no
+**MCP server:** yes
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -989,7 +989,7 @@ One worktree of the WORKTREES view (worktree: a path, branch or name from worktr
 
 **Gate:** add_folder: confirm (git) · archive: confirm (always asks) · create: confirm (git) · delete: confirm (always asks) · diff: auto · link: auto · notes: auto · pin: auto · restack: confirm (always asks) · restore: confirm (always asks) · sleep: auto · switch: confirm (always asks) · unpin: auto · wake: auto
 
-**MCP server:** no
+**MCP server:** asks
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
