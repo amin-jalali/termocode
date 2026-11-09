@@ -1,8 +1,9 @@
 // The workbench's side of the AI chat's extras (aictx.js, loaded on
 // first use; contract in aictx/api.ts): a row's right-click menu gets Add
 // to AI Chat after its own items, and a table grid's right click opens
-// the item under it. aictx.js loads when the user asks, or once the chat
-// input takes the focus (there it watches for @ and for a send).
+// the item under it, and a row can be dragged to the chat. aictx.js
+// loads when the user asks, starts a drag, or once the chat input takes
+// the focus (there it watches for @ and for a send).
 import { h, render } from "preact";
 import { effect } from "@preact/signals";
 import type { AIHost, AIItem, GridAt } from "../aictx/api";
@@ -81,6 +82,10 @@ export function aiMenu(item: AIItem, own?: (e: MouseEvent) => void): (e: MouseEv
     }
   };
 }
+
+/** aiDrag starts a row's drag to the AI chat (aictx/drop.ts takes the
+ * drop); aictx.js loads meanwhile. */
+export const aiDrag = (item: AIItem) => (e: DragEvent) => (e.dataTransfer?.setData("application/x-termocode-item", JSON.stringify(item)), withAI(() => 0));
 
 /** aiGrid is a table grid's right-click handler: the item under the
  * pointer (aictx.js reads which). */

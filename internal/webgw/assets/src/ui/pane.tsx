@@ -7,7 +7,7 @@
 import { h, type ComponentChildren } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 import type { AIItem } from "../aictx/api";
-import { aiMenu } from "../lib/aictx";
+import { aiDrag, aiMenu } from "../lib/aictx";
 import { dict } from "../state/dict";
 import { t } from "../strings";
 import { Cod } from "./icons";
@@ -120,7 +120,8 @@ export interface RowProps {
   onDblClick?: () => void;
   onToggle?: () => void;
   onContextMenu?: (e: MouseEvent) => void;
-  /** ai: the row's item for Add to AI Chat (its right-click menu). */
+  /** ai: the row's item for Add to AI Chat (its right-click menu; the
+   * row can be dragged to the chat). */
   ai?: AIItem;
 }
 
@@ -141,6 +142,8 @@ export function Row(p: RowProps) {
       onClick={(e) => (p.twist && p.onToggle ? p.onToggle() : p.onClick?.(e))}
       onDblClick={p.onDblClick}
       onContextMenu={p.ai ? aiMenu(p.ai, p.onContextMenu) : p.onContextMenu}
+      draggable={p.ai && true}
+      onDragStart={p.ai && aiDrag(p.ai)}
       data-twist={p.twist ?? undefined}
       {...extra}
     >

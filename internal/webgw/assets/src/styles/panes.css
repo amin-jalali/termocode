@@ -391,6 +391,7 @@
 /* ---- Chat (the column on the right) ---- */
 .layout-desktop .chatcol .composer-frame { display: flex; flex-direction: column; gap: 2px; padding: 6px 6px 4px 8px; border: 1px solid var(--wb-panel-border); border-radius: 4px; background: var(--wb-input-bg); }
 .layout-desktop .chatcol .composer-frame:focus-within { border-color: var(--wb-focus); }
+.layout-desktop .chatcol .composer.ai-drop .composer-frame { border-color: var(--wb-focus); border-style: dashed; }
 .layout-desktop .chatcol .composer-frame .composer-box { min-height: 20px; padding: 0; border: 0; border-radius: 0; background: transparent; outline: none; }
 .layout-desktop .chatcol .composer-frame .composer-box:focus-visible { outline: none; }
 .composer-tools { display: flex; align-items: center; gap: 4px; height: 24px; }

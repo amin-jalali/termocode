@@ -9,6 +9,7 @@ import type { Attach } from "../../../../webproto/proto";
 import { readChat } from "../state/chat";
 import type { AIHost, AIItem, GridAt, ItemSpec } from "./api";
 import { H, setHost } from "./jsx";
+import { watchDrops } from "./drop";
 import { got, watchAt } from "./pick";
 import { watchSends } from "./secret";
 import { askSide } from "./side";
@@ -25,6 +26,7 @@ export function init(host: AIHost): void {
   host.addStrings(AS);
   watchSends(chatOf);
   watchAt(label, (it) => void add(it));
+  watchDrops((it) => void add(it));
 }
 
 /** chatOf is the chat whose composer the chips go to: the old chat the
