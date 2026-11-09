@@ -16,10 +16,10 @@ import (
 // ── AI tools for the Kubernetes view (G-K8S) ─────────────────────────────
 //
 // Read only, and they run at once: kube_list, kube_describe, kube_logs.
-// They use the view's context and namespace (the user's choice; the AI
-// can name another namespace, never another context). Restart and
-// port-forward are not tools: they stay with the user. Output passes the
-// secret redactor; logs are capped at services_max_log_kb.
+// They use the view's context and namespace unless the call names
+// another (context, namespace). kube_manage (ai_kube_manage.go) does the
+// rest of the view, asking where the view asks. Output passes the secret
+// redactor; logs are capped at services_max_log_kb.
 
 const aiKubeMaxLines = 1000
 
@@ -109,7 +109,13 @@ func aiKubeListReport(c kube.Client, pods []kube.Pod, deploys []kube.Deployment,
 func aiKubeTools(call aiIDECaller) []ai.Tool {
 	str := func(d string) map[string]any { return map[string]any{"type": "string", "description": d} }
 	nsParam := str("namespace (default: the one the Kubernetes view shows)")
+	ctxParam := str("kube context (default: the view's; kube_manage op contexts lists them)")
 	validNS := func(a map[string]any) error {
+		if kc := strings.TrimSpace(ai.ArgString(a, "context")); kc != "" {
+			if err := aiKubeContextOK(kc); err != nil {
+				return err
+			}
+		}
 		if ns := strings.TrimSpace(ai.ArgString(a, "namespace")); ns != "" {
 			return aiKubeValidName("namespace", ns)
 		}
@@ -119,12 +125,12 @@ func aiKubeTools(call aiIDECaller) []ai.Tool {
 		{
 			Name: "kube_list",
 			Description: "Read only: the pods, deployments, services and jobs of one Kubernetes namespace, through the user's kubectl, " +
-				"in the context the Kubernetes view uses. Pods: ready, status, restarts, age, containers. You cannot change the cluster.",
-			Params:   map[string]any{"namespace": nsParam},
+				"in the context the Kubernetes view uses (or context). Pods: ready, status, restarts, age, containers. kube_manage changes the cluster.",
+			Params:   map[string]any{"namespace": nsParam, "context": ctxParam},
 			Validate: validNS,
 			Describe: func(a map[string]any) string { return "List Kubernetes objects" },
 			Run: func(ctx context.Context, a map[string]any) (string, error) {
-				c, err := aiKubeClient(ctx, call, strings.TrimSpace(ai.ArgString(a, "namespace")))
+				c, err := aiKubeReadScope(ctx, call, a)
 				if err != nil {
 					return "", err
 				}
@@ -158,6 +164,7 @@ func aiKubeTools(call aiIDECaller) []ai.Tool {
 				"kind":      map[string]any{"type": "string", "enum": []string{"pod", "deployment", "service", "job"}, "description": "what name is"},
 				"name":      str("the object's name (see kube_list)"),
 				"namespace": nsParam,
+				"context":   ctxParam,
 			},
 			Required: []string{"kind", "name"},
 			Validate: func(a map[string]any) error {
@@ -175,7 +182,7 @@ func aiKubeTools(call aiIDECaller) []ai.Tool {
 				return "Describe " + ai.ArgString(a, "kind") + " " + ai.ArgString(a, "name")
 			},
 			Run: func(ctx context.Context, a map[string]any) (string, error) {
-				c, err := aiKubeClient(ctx, call, strings.TrimSpace(ai.ArgString(a, "namespace")))
+				c, err := aiKubeReadScope(ctx, call, a)
 				if err != nil {
 					return "", err
 				}
@@ -196,6 +203,7 @@ func aiKubeTools(call aiIDECaller) []ai.Tool {
 				"container": str("the container (needed when the pod has more than one)"),
 				"lines":     map[string]any{"type": "integer", "description": "how many last lines (default 100, max 1000)"},
 				"namespace": nsParam,
+				"context":   ctxParam,
 			},
 			Required: []string{"pod"},
 			Validate: func(a map[string]any) error {
@@ -211,7 +219,7 @@ func aiKubeTools(call aiIDECaller) []ai.Tool {
 			},
 			Describe: func(a map[string]any) string { return "Pod logs " + ai.ArgString(a, "pod") },
 			Run: func(ctx context.Context, a map[string]any) (string, error) {
-				c, err := aiKubeClient(ctx, call, strings.TrimSpace(ai.ArgString(a, "namespace")))
+				c, err := aiKubeReadScope(ctx, call, a)
 				if err != nil {
 					return "", err
 				}
@@ -230,5 +238,15 @@ func aiKubeTools(call aiIDECaller) []ai.Tool {
 				return head + "\n" + aiCap(text, loadServicesSettings().MaxLogKB, true), nil
 			},
 		},
+		aiKubeManageTool(call), // the rest of the view: ai_kube_manage.go
 	}
+}
+
+// aiKubeReadScope is the read tools' scope: the view's, or the context
+// and namespace a names (a context must be in kubeconfig).
+func aiKubeReadScope(ctx context.Context, call aiIDECaller, a map[string]any) (kube.Client, error) {
+	if strings.TrimSpace(ai.ArgString(a, "context")) == "" {
+		return aiKubeClient(ctx, call, strings.TrimSpace(ai.ArgString(a, "namespace")))
+	}
+	return aiKubeScope(ctx, call, a)
 }

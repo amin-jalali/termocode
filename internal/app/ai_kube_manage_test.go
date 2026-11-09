@@ -87,11 +87,11 @@ func TestAIKubeManageSwitchAndWrites(t *testing.T) {
 	run(map[string]any{"op": "set_image", "name": "api", "container": "api", "image": "ghcr.io/acme/api:1.5", "context": "dev", "namespace": "shop"})
 	run(map[string]any{"op": "cordon", "name": "node-1", "context": "dev"})
 	got := strings.Join(calls(), "\n")
-	for _, w := range []string{"--context dev --namespace shop rollout restart deployment/api",
-		"--context dev --namespace shop scale deployment/api --replicas=3",
-		"--context dev --namespace shop delete pod api-7d9f8c6b5-x2x4q",
-		"--context dev --namespace shop set image deployment/api api=ghcr.io/acme/api:1.5",
-		"cordon node-1"} {
+	for _, w := range []string{"rollout restart deployment/api --context dev --namespace shop",
+		"scale deployment/api --replicas=3 --context dev --namespace shop",
+		"delete pod api-7d9f8c6b5-x2x4q --wait=false --context dev --namespace shop",
+		"set image deployment/api api=ghcr.io/acme/api:1.5 --context dev --namespace shop",
+		"cordon node-1 --context dev"} {
 		if !strings.Contains(got, w) {
 			t.Errorf("no %q in\n%s", w, got)
 		}
@@ -125,7 +125,7 @@ func TestAIKubeManageTerminalsAndApply(t *testing.T) {
 			t.Fatalf("%v: %v", a, err)
 		}
 	}
-	if len(jobs) != 2 || !strings.Contains(jobs[0].Cmdline, "exec -it api-7d9f8c6b5-x2x4q") || !strings.Contains(jobs[1].Cmdline, "logs -f") {
+	if len(jobs) != 2 || !strings.Contains(jobs[0].Cmdline, "exec -it --context dev --namespace shop api-7d9f8c6b5-x2x4q --container api") || !strings.Contains(jobs[1].Cmdline, "logs --follow") {
 		t.Errorf("jobs = %+v", jobs)
 	}
 	t.Chdir(t.TempDir()) // the workspace
@@ -138,7 +138,7 @@ func TestAIKubeManageTerminalsAndApply(t *testing.T) {
 	if _, err := tl.Run(context.Background(), a); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(strings.Join(calls(), "\n"), "apply -f "+man) {
+	if !strings.Contains(strings.Join(calls(), "\n"), "apply --context dev --namespace shop -f "+man) {
 		t.Errorf("calls %q", calls())
 	}
 	_ = m
