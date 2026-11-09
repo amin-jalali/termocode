@@ -21,7 +21,8 @@ var aiContainersReadNames = []string{"containers_list", "containers_inspect", "c
 var aiContainersWriteNames = []string{"compose_up"}
 
 // aiContainersManageNames ask per call (their own tests pin each gate).
-var aiContainersManageNames = []string{"contexts_manage", "containers_control", "images_pull", "containers_exec", "images_manage"}
+var aiContainersManageNames = []string{"contexts_manage", "containers_control", "images_pull", "containers_exec", "images_manage",
+	"containers_storage", "containers_prune"}
 
 // aiContainersTestModel is a model on the fake docker (docker27 fixtures)
 // with a synchronous IDE caller.
@@ -104,21 +105,18 @@ func TestAIContainersToolsSchema(t *testing.T) {
 	}
 }
 
-// Never offered: remove, prune, push, tag, run, login, logout, context
-// use / default, disk usage — no tool in the whole chat list.
+// Every container tool of the chat list is known here, and each one that
+// removes, prunes, pushes or signs out asks: its gate is pinned by its
+// own test. The palette ids stay "never" for execute_action: the typed
+// tools do them, and the reason names the tool.
 func TestAIContainersNeverOfferedTools(t *testing.T) {
 	m := &Model{services: newServicesState()}
 	call := func(context.Context, aiIDEFunc) (string, error) { return "", nil }
-	bad := regexp.MustCompile(`(?i)(remove|_rm|prune|push|_tag|_run|login|logout|context_use|context_default|use_context|disk|system_df)`)
-	host := regexp.MustCompile(`^(containers|images|volumes|networks|contexts|registries|compose)_`)
+	host := regexp.MustCompile(`^(containers|images|volumes|networks|contexts|registries|registry|compose)_`)
 	found := 0
 	for _, tl := range m.aiChatTools(t.TempDir(), call) {
-		if !host.MatchString(tl.Name) {
-			continue
-		}
-		found++
-		if bad.MatchString(tl.Name) {
-			t.Errorf("tool %s must not be offered to the model", tl.Name)
+		if host.MatchString(tl.Name) {
+			found++
 		}
 	}
 	if n := len(aiContainersReadNames) + len(aiContainersWriteNames) + len(aiContainersManageNames); found != n {

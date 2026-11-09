@@ -28,7 +28,10 @@ func aiExecTool(t *testing.T) (*Model, ai.Tool, *[]aiCtrTab, string) {
 	m, _, call := aiContainersTestModel(t)
 	var tabs []aiCtrTab
 	old := aiCtrTerminal
-	aiCtrTerminal = func(_ *Model, c services.Command, key string) error { tabs = append(tabs, aiCtrTab{c, key}); return nil }
+	aiCtrTerminal = func(_ *Model, c services.Command, key string) error {
+		tabs = append(tabs, aiCtrTab{c, key})
+		return nil
+	}
 	t.Cleanup(func() { aiCtrTerminal = old })
 	box := t.TempDir() // the container's file system
 	oldFS := aiCtrFiles

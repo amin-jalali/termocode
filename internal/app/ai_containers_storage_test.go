@@ -78,7 +78,7 @@ func TestAIContainersStorageRuns(t *testing.T) {
 	}
 	bk := filepath.Join(m.services.root, "backups")
 	want := []string{"volume create --driver local -- cache", "network create --subnet 10.9.0.0/24 --internal", "network rm termocode_default",
-		"volume rm termocode_db", "run --rm -v termocode_db:/v:ro -v " + bk + ":/backup", "run --rm -v termocode_db:/from:ro -v termocode_db_copy:/to"}
+		"volume rm termocode_db", "-v termocode_db:/v:ro -v " + bk + ":/backup", "-v termocode_db:/from:ro -v termocode_db_copy:/to"}
 	if len(acts) != len(want) {
 		t.Fatalf("ran %q", acts)
 	}
