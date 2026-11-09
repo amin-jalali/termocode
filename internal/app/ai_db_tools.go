@@ -798,15 +798,19 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 
 	explain := ai.Tool{
 		Name:        "db_explain",
-		Description: "Show the query plan of ONE SQL statement (EXPLAIN without ANALYZE: the statement does not run), in a read-only session.",
-		Params:      map[string]any{"conn": str("connection id"), "sql": str("the statement, without EXPLAIN")},
-		Required:    []string{"conn", "sql"},
-		Describe:    func(a map[string]any) string { return dbAIDescribe(dbAIGet(root, a), "db_explain") },
+		Description: "Show the query plan of ONE SQL statement in a read-only session (EXPLAIN: the statement does not run). analyze: true runs a read with EXPLAIN ANALYZE for real timings; only reads.",
+		Params: map[string]any{"conn": str("connection id"), "sql": str("the statement, without EXPLAIN"),
+			"analyze": map[string]any{"type": "boolean", "description": "run the read and show real timings (EXPLAIN ANALYZE); reads only"}},
+		Required: []string{"conn", "sql"},
+		Describe: func(a map[string]any) string { return dbAIDescribe(dbAIGet(root, a), "db_explain") },
 		Validate: func(a map[string]any) error {
 			r := dbAIGet(root, a)
 			err := r.err
 			if err == nil && strings.EqualFold(firstSQLWord(dbStripComments(r.sql)), "EXPLAIN") {
-				err = errors.New("pass the statement without EXPLAIN; ANALYZE is not available to the AI")
+				err = errors.New("pass the statement without EXPLAIN; for ANALYZE pass analyze: true")
+			}
+			if err == nil && ai.ArgBool(a, "analyze") && r.kind != dbclient.KindRead {
+				err = errors.New("analyze runs the statement: only a read; db_query runs the others (it asks)")
 			}
 			if err == nil && dbAIDialect(r.conn.Driver).Explain(r.sql, false) == "" {
 				err = fmt.Errorf("%s has no EXPLAIN statement", r.conn.EngineLabel()) // DBX-71
@@ -818,7 +822,11 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 			if r.err != nil {
 				return "", r.err
 			}
-			sql := dbAIDialect(r.conn.Driver).Explain(r.sql, false)
+			analyze := ai.ArgBool(a, "analyze")
+			if analyze && r.kind != dbclient.KindRead {
+				return "", errors.New("analyze runs the statement: only a read")
+			}
+			sql := dbAIDialect(r.conn.Driver).Explain(r.sql, analyze)
 			snap := dbAITake(ctx, call, r.conn.ID)
 			ctx, cancel := timeout(ctx)
 			defer cancel()

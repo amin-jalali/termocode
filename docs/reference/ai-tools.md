@@ -148,7 +148,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`db_connections`](#db_connections) | auto | yes | List the database connections of the Databases view (id, type, target, environment, read-only, state) and the suggested ones that are not added yet. |
 | [`db_schema`](#db_schema) | auto | yes | Read a database schema. |
 | [`db_query`](#db_query) | a read (SELECT, SHOW, EXPLAIN without ANALYZE …): auto, in a read-only session<br>any other statement: confirm (db:<conn>/write) with the SQL shown<br>production connections: confirm (always asks)<br>read-only connections: writes refused | asks | Run ONE SQL statement on a connection. |
-| [`db_explain`](#db_explain) | auto | no | Show the query plan of ONE SQL statement (EXPLAIN without ANALYZE: the statement does not run), in a read-only session. |
+| [`db_explain`](#db_explain) | auto | no | Show the query plan of ONE SQL statement in a read-only session (EXPLAIN: the statement does not run). |
 | [`db_history`](#db_history) | auto | no | List recent SQL runs (the user's and yours), newest first. |
 | [`db_ddl`](#db_ddl) | auto | yes | Show the DDL (CREATE statement) of a table, with its indexes and foreign keys. |
 | [`db_search_data`](#db_search_data) | auto | no | Find a value in every column of every table of a schema (MySQL: a database), in a read-only session. |
@@ -1839,7 +1839,7 @@ Run ONE SQL statement on a connection. A read (SELECT, SHOW, EXPLAIN without ANA
 
 ### db_explain
 
-Show the query plan of ONE SQL statement (EXPLAIN without ANALYZE: the statement does not run), in a read-only session.
+Show the query plan of ONE SQL statement in a read-only session (EXPLAIN: the statement does not run). analyze: true runs a read with EXPLAIN ANALYZE for real timings; only reads.
 
 **Gate:** auto
 
@@ -1849,6 +1849,7 @@ Show the query plan of ONE SQL statement (EXPLAIN without ANALYZE: the statement
 | --- | --- | --- | --- |
 | `conn` | string | yes | connection id |
 | `sql` | string | yes | the statement, without EXPLAIN |
+| `analyze` | boolean |   | run the read and show real timings (EXPLAIN ANALYZE); reads only |
 
 ### db_history
 

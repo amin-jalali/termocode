@@ -58,7 +58,8 @@ func (s *aiDBSession) Run(_ context.Context, sql string, _ dbclient.RunOptions) 
 	}
 	s.mu.Unlock()
 	if s.readOnly {
-		if k, _ := dbclient.Classify(sql, "postgres"); k != dbclient.KindRead {
+		// A read-only transaction runs EXPLAIN ANALYZE of a read.
+		if k, _ := dbclient.Classify(strings.TrimPrefix(sql, "EXPLAIN (ANALYZE, FORMAT TEXT) "), "postgres"); k != dbclient.KindRead {
 			return dbclient.Result{Err: errors.New("ERROR: cannot execute UPDATE in a read-only transaction (SQLSTATE 25006)")}
 		}
 	}
