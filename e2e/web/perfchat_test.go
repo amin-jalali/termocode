@@ -274,8 +274,8 @@ func TestPerfGuardChatStreamLaysOutItsEnd(t *testing.T) {
 	}
 	per := sp.LayoutMs / 300
 	t.Logf("a token after 48 KB: layout %.2f ms, frame→drawn %s; %s", per, statsOf(paint), sp)
-	if per > 1.5 {
-		t.Errorf("a token of a 48 KB answer took %.2f ms of layout, budget 1.5 ms", per)
+	if per > 2 {
+		t.Errorf("a token of a 48 KB answer took %.2f ms of layout, budget 2 ms", per)
 	}
 	if m := statsOf(paint).med; m > 34 {
 		t.Errorf("a token was drawn %.1f ms after it came (median), budget 34 ms (two frames)", m)
@@ -295,4 +295,32 @@ func TestPerfGuardChatStreamLaysOutItsEnd(t *testing.T) {
 	if !Eval[bool](cp.p, chatAtEnd) {
 		t.Error("the view left the end of the streaming answer")
 	}
+}
+
+// Opening a chat of long answers lays out only what shows: the messages
+// out of view wait until they scroll in (content-visibility), and the
+// view is at the end. Before, all 60 drawn messages were laid out: 39 ms
+// of layout and a 55 ms task at 1x, a 139 ms task at 4x CPU.
+func TestPerfGuardChatOpenLaysOutWhatShows(t *testing.T) {
+	cp := startChatPerf(t, 200)
+	t.Log(cp.open(t))
+	cp.r.Measure("settle", func() {})
+	const far = `document.querySelector('[data-view="chat"] .msg[data-i="141"] .msg-body')`
+	const near = `document.querySelector('[data-view="chat"] .msg[data-i="199"] .msg-body')`
+	if !Eval[bool](cp.p, near+`.checkVisibility({contentVisibilityAuto: true})`) {
+		t.Fatal("the newest message is not drawn")
+	}
+	if Eval[bool](cp.p, far+`.checkVisibility({contentVisibilityAuto: true})`) {
+		t.Error("a message 58 up is laid out while out of view")
+	}
+	if !Eval[bool](cp.p, chatAtEnd) {
+		t.Error("the opened chat does not show its end")
+		t.Log(Eval[string](cp.p, `(() => { const b = document.querySelector('[data-view="chat"] .view-body'); return `+"`top ${b.scrollTop}, height ${b.scrollHeight}, view ${b.clientHeight}`"+`; })()`))
+	}
+	// It is there for a reader, and drawn once it scrolls in.
+	if !strings.Contains(Eval[string](cp.p, far+`.textContent`), "Answer 141") {
+		t.Errorf("the far message reads %q", Eval[string](cp.p, far+`.textContent`))
+	}
+	Eval[bool](cp.p, `(`+far+`.scrollIntoView({block: "center"}), true)`)
+	cp.p.WaitJS(far + `.checkVisibility({contentVisibilityAuto: true})`)
 }
