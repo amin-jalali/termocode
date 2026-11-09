@@ -101,21 +101,29 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`services_start`](#services_start) | confirm (services) | no | Start a service (name) or all (all: true): compose runs `docker compose up -d` in a visible terminal tab (pulls show there); a local service runs in its own tab. |
 | [`services_stop`](#services_stop) | confirm (services) | no | Stop a service (name) or all (all: true): `docker compose stop` (containers and volumes stay) or SIGTERM to a local service. |
 | [`services_restart`](#services_restart) | confirm (services) | no | Restart one service (`docker compose restart`, or stop + start for a local one). |
-| [`containers_list`](#containers_list) | auto | no | Every container on this host (all projects, running and stopped), grouped by compose project: id, name, image, state, status, published ports, compose service, command; plus which host port each container publishes. |
-| [`containers_inspect`](#containers_inspect) | auto | no | The engine's inspect JSON of one container (default), image, volume or network, with every env value, auth field and secret-looking label masked (env names stay). |
-| [`containers_logs`](#containers_logs) | auto | no | The last log lines of one host container (stdout and stderr, with timestamps), secrets redacted. |
-| [`containers_stats`](#containers_stats) | auto | no | One sample of CPU, memory, network and block I/O for one container (target) or every running one. |
-| [`images_list`](#images_list) | auto | no | Every image on this host: repository:tag, id, size, created; dangling images are marked. |
-| [`volumes_list`](#volumes_list) | auto | no | Every volume on this host: name, driver, scope, compose project. |
-| [`networks_list`](#networks_list) | auto | no | Every network on this host: name, id, driver, scope, compose project. |
-| [`contexts_list`](#contexts_list) | auto | no | The engine's contexts (docker) or connections (podman): which one is the default and which one this session uses. |
-| [`registries_list`](#registries_list) | auto | no | Registry hosts from the engine's login file: signed in or not, the user (when known) and the credential helper. |
-| [`containers_control`](#containers_control) | confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved), and busy containers or no-op actions are refused first | no | Start, stop, restart, pause or unpause one host container (any project). |
-| [`images_pull`](#images_pull) | confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved) | no | Pull an image (ref like nginx:1.27 or ghcr.io/acme/api:1.4) in a visible terminal tab "pull: <ref>". |
-| [`compose_up`](#compose_up) | confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved) | no | Run `docker compose up -d` for a compose project that has containers on this host (see containers_list), in its own folder, in a visible terminal tab. |
-| [`kube_list`](#kube_list) | auto | no | Read only: the pods, deployments, services and jobs of one Kubernetes namespace, through the user's kubectl, in the context the Kubernetes view uses. |
-| [`kube_describe`](#kube_describe) | auto | no | Read only: `kubectl describe` of one pod, deployment, service or job (events included), secrets redacted. |
-| [`kube_logs`](#kube_logs) | auto | no | Read only: the last log lines of one pod (lines default 100, max 1000), secrets redacted. |
+| [`containers_list`](#containers_list) | auto | yes | Every container on a host (all projects, running and stopped), grouped by compose project: id, name, image, state, status, published ports, compose service, command; plus which host port each container publishes. |
+| [`containers_inspect`](#containers_inspect) | auto | yes | The engine's inspect JSON of one container (default), image, volume or network, with every env value, auth field and secret-looking label masked (env names stay). |
+| [`containers_logs`](#containers_logs) | auto | yes | The last log lines of one host container (stdout and stderr, with timestamps), secrets redacted. |
+| [`containers_stats`](#containers_stats) | auto | yes | One sample of CPU, memory, network and block I/O for one container (target) or every running one. |
+| [`images_list`](#images_list) | auto | yes | Every image on a host: repository:tag, id, size, created; dangling images are marked. |
+| [`volumes_list`](#volumes_list) | auto | yes | Every volume on a host: name, driver, scope, compose project. |
+| [`networks_list`](#networks_list) | auto | yes | Every network on a host: name, id, driver, scope, compose project. |
+| [`contexts_list`](#contexts_list) | auto | yes | Every host (servers): the engine's contexts (docker) or connections (podman), each with where it points (user@host or this machine), ssh / tcp / local, which is the engine default, which one the tools use by default, and whether it answers now. |
+| [`registries_list`](#registries_list) | auto | yes | Registry hosts from this machine's login file: signed in or not, the user (when known) and the credential helper. |
+| [`containers_control`](#containers_control) | confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved), and busy containers or no-op actions are refused first | asks | Do one action on one container of a host (any project), as the Containers view's row and menu: start, stop, restart, pause, unpause, kill (signal, default KILL), remove (force: true stops a running one first), rename (name), restart_policy (policy: no, always, unless-stopped, on-failure[:N]), resources (cpus, memory, memory_swap), network_connect / network_disconnect (network), commit (image, message: a new image from it) and export (file: a tar in the workspace). |
+| [`images_pull`](#images_pull) | confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved) | yes | Pull an image (ref like nginx:1.27 or ghcr.io/acme/api:1.4) in a visible terminal tab "pull: <ref>", at once, as the Containers view pulls. |
+| [`compose_up`](#compose_up) | confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved) | asks | Run `docker compose up -d` for a compose project that has containers on a host (see containers_list), in its own folder, in a visible terminal tab. |
+| [`contexts_manage`](#contexts_manage) | add: confirm (always asks)<br>use: confirm (containers)<br>default: confirm (always asks)<br>remove: confirm (always asks)<br>inspect: auto<br>terminal: auto | some ask | Manage the hosts (servers) of the Containers view, as the GUI does. |
+| [`containers_exec`](#containers_exec) | shell: auto<br>attach: auto<br>exec: confirm (containers)<br>debug: confirm (always asks)<br>files: auto<br>read: auto<br>upload: confirm (always asks)<br>pair_sync: auto | some ask | Work inside a running container of a host, as the Containers view does. |
+| [`images_manage`](#images_manage) | push: confirm (always asks)<br>tag: confirm (containers)<br>run: confirm (always asks)<br>remove: confirm (always asks)<br>build: confirm (always asks)<br>history: auto<br>used_by: auto<br>save: confirm (containers)<br>load: confirm (always asks)<br>import: confirm (containers)<br>scan: auto<br>sbom: auto<br>search: auto<br>tags: auto<br>check_updates: auto<br>builds: auto<br>build_detail: auto<br>build_check: auto | some ask | Every image action of the Containers view on a host. |
+| [`containers_storage`](#containers_storage) | volume_create: confirm (containers)<br>network_create: confirm (containers)<br>volume_remove: confirm (always asks)<br>network_remove: confirm (always asks)<br>volume_browse: auto<br>volume_backup: confirm (containers)<br>volume_restore: confirm (always asks)<br>volume_clone: confirm (always asks)<br>disk_usage: auto | some ask | Volumes and networks of a host, as the Containers view. |
+| [`containers_prune`](#containers_prune) | confirm (always asks) | asks | Prune a host as the Containers view does: kind containers (stopped ones), images (untagged), images-all (every unused image), networks, volumes (unused; their data is deleted), system or build-cache (all: every entry). |
+| [`compose_project`](#compose_project) | up: confirm (containers)<br>stop: confirm (always asks)<br>restart: confirm (containers)<br>recreate: confirm (containers)<br>down: confirm (always asks)<br>down_volumes: confirm (always asks)<br>pull: confirm (containers)<br>scale: confirm (containers)<br>logs: auto<br>deploy_git: auto | some ask | A compose project of a host (containers_list names them), as the Containers view's project row: up, stop, restart, recreate (up --force-recreate), down (containers and networks go, volumes stay), down_volumes (volumes too: their data is lost), pull, scale (service, replicas), logs (lines) and deploy_git (url: clone a repository and start its compose project; the IDE's own Deploy card asks the user). |
+| [`registry_manage`](#registry_manage) | connect: auto<br>signout: confirm (always asks)<br>catalog: auto<br>delete_tag: confirm (always asks) | some ask | Container registries, as the Containers view's REGISTRIES. |
+| [`kube_list`](#kube_list) | auto | yes | Read only: the pods, deployments, services and jobs of one Kubernetes namespace, through the user's kubectl, in the context the Kubernetes view uses (or context). |
+| [`kube_describe`](#kube_describe) | auto | yes | Read only: `kubectl describe` of one pod, deployment, service or job (events included), secrets redacted. |
+| [`kube_logs`](#kube_logs) | auto | yes | Read only: the last log lines of one pod (lines default 100, max 1000), secrets redacted. |
+| [`kube_manage`](#kube_manage) | contexts: auto<br>namespaces: auto<br>use_context: auto<br>use_namespace: auto<br>yaml: auto<br>events: auto<br>top: auto<br>nodes: auto<br>hpa: auto<br>rbac: auto<br>report: auto<br>objects: auto<br>kustomize: auto<br>helm_list: auto<br>helm_status: auto<br>helm_history: auto<br>rollout_history: auto<br>pod_files: auto<br>snippet: auto<br>forwards: auto<br>shell: auto<br>logs_follow: auto<br>port_forward: auto<br>stop_forward: auto<br>restart: confirm (always asks)<br>scale: confirm (always asks)<br>delete: confirm (always asks)<br>rollout_undo: confirm (always asks)<br>set_image: confirm (always asks)<br>apply: confirm (always asks)<br>cordon: confirm (always asks)<br>uncordon: confirm (always asks)<br>drain: confirm (always asks)<br>helm_install: confirm (always asks)<br>helm_repo_add: confirm (always asks)<br>helm_rollback: confirm (always asks)<br>helm_uninstall: confirm (always asks)<br>upload: confirm (always asks)<br>debug: confirm (always asks)<br>download: confirm (fileWrite) | some ask | Everything of the Kubernetes view, in a kube context and namespace (default the view's). |
 | [`help_read`](#help_read) | auto | no | Read the built-in guide: with no arguments list pages; page shows headings and anchors; page and section returns that section's prepared Markdown; query searches matching sections (page can filter it). |
 | [`profiles_list`](#profiles_list) | auto | no | List the AI agent profiles: name, title, source (built-in, user, project with its trust state), which is active, budget, and each step's title, model slot, resolved model, tools preset and the first line of its prompt. |
 | [`models_list`](#models_list) | auto | no | List the connected AIs (providers: how each is connected — API key, a CLI's sign-in, a server on this machine or a server URL —, what it costs, its model ids and when they were loaded; a key from the environment says from_environment) and the model slots (main, quick, local and the user's own): provider, model, whether a key is set (set / missing / not needed; never the key) and the base URL's scheme and host. |
@@ -1328,13 +1336,15 @@ Restart one service (`docker compose restart`, or stop + start for a local one).
 
 ### containers_list
 
-Every container on this host (all projects, running and stopped), grouped by compose project: id, name, image, state, status, published ports, compose service, command; plus which host port each container publishes. Names the engine and the context. Use it for "why is port N busy?" before suggesting docker commands.
+Every container on a host (all projects, running and stopped), grouped by compose project: id, name, image, state, status, published ports, compose service, command; plus which host port each container publishes. Names the engine and the context. context reads another host (contexts_list). Use it for "why is port N busy?" or "what runs on server X?" before suggesting docker or ssh commands.
 
 **Gate:** auto
 
-**MCP server:** no
+**MCP server:** yes
 
-No arguments.
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `context` | string |   | host: a context (podman: connection) name from contexts_list; default the one this session uses |
 
 ### containers_inspect
 
@@ -1342,12 +1352,13 @@ The engine's inspect JSON of one container (default), image, volume or network, 
 
 **Gate:** auto
 
-**MCP server:** no
+**MCP server:** yes
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `target` | string | yes | container name or id; or an image reference, volume or network name with kind |
-| `kind` | string |   | what target is (default container). One of: `container`, `image`, `volume`, `network` |
+| `context` | string |   | host: a context (podman: connection) name from contexts_list; default the one this session uses |
+| `kind` | string |   | what target is (default container); changes: the files a container changed; processes: its processes. One of: `container`, `image`, `volume`, `network`, `changes`, `processes` |
 
 ### containers_logs
 
@@ -1355,11 +1366,12 @@ The last log lines of one host container (stdout and stderr, with timestamps), s
 
 **Gate:** auto
 
-**MCP server:** no
+**MCP server:** yes
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `target` | string | yes | container name or id (see containers_list) |
+| `context` | string |   | host: a context (podman: connection) name from contexts_list; default the one this session uses |
 | `lines` | integer |   | how many last lines (default 100, max 1000) |
 | `since` | string |   | only newer than this, e.g. 10m or 1h |
 
@@ -1369,111 +1381,275 @@ One sample of CPU, memory, network and block I/O for one container (target) or e
 
 **Gate:** auto
 
-**MCP server:** no
+**MCP server:** yes
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
+| `context` | string |   | host: a context (podman: connection) name from contexts_list; default the one this session uses |
 | `target` | string |   | container name or id; default every running container |
 
 ### images_list
 
-Every image on this host: repository:tag, id, size, created; dangling images are marked.
+Every image on a host: repository:tag, id, size, created; dangling images are marked.
 
 **Gate:** auto
 
-**MCP server:** no
+**MCP server:** yes
 
-No arguments.
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `context` | string |   | host: a context (podman: connection) name from contexts_list; default the one this session uses |
 
 ### volumes_list
 
-Every volume on this host: name, driver, scope, compose project.
+Every volume on a host: name, driver, scope, compose project.
 
 **Gate:** auto
 
-**MCP server:** no
+**MCP server:** yes
 
-No arguments.
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `context` | string |   | host: a context (podman: connection) name from contexts_list; default the one this session uses |
 
 ### networks_list
 
-Every network on this host: name, id, driver, scope, compose project.
+Every network on a host: name, id, driver, scope, compose project.
 
 **Gate:** auto
 
-**MCP server:** no
+**MCP server:** yes
 
-No arguments.
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `context` | string |   | host: a context (podman: connection) name from contexts_list; default the one this session uses |
 
 ### contexts_list
 
-The engine's contexts (docker) or connections (podman): which one is the default and which one this session uses. Only the user switches them.
+Every host (servers): the engine's contexts (docker) or connections (podman), each with where it points (user@host or this machine), ssh / tcp / local, which is the engine default, which one the tools use by default, and whether it answers now. Pass a name as context to the other container tools to work on that host.
 
 **Gate:** auto
 
-**MCP server:** no
+**MCP server:** yes
 
 No arguments.
 
 ### registries_list
 
-Registry hosts from the engine's login file: signed in or not, the user (when known) and the credential helper. Never a password or token.
+Registry hosts from this machine's login file: signed in or not, the user (when known) and the credential helper. Never a password or token.
 
 **Gate:** auto
 
-**MCP server:** no
+**MCP server:** yes
 
 No arguments.
 
 ### containers_control
 
-Start, stop, restart, pause or unpause one host container (any project). Asks the user first. Refused when the container is busy or already in that state. Removing and pruning are the user's.
+Do one action on one container of a host (any project), as the Containers view's row and menu: start, stop, restart, pause, unpause, kill (signal, default KILL), remove (force: true stops a running one first), rename (name), restart_policy (policy: no, always, unless-stopped, on-failure[:N]), resources (cpus, memory, memory_swap), network_connect / network_disconnect (network), commit (image, message: a new image from it) and export (file: a tar in the workspace). stop, kill, remove, restart_policy, resources and the network actions ask the user every time; the others ask (Always allow containers lasts this session). Refused when the container is busy or already in that state.
 
 **Gate:** confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved), and busy containers or no-op actions are refused first
 
-**MCP server:** no
+**MCP server:** asks
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `action` | string | yes | what to do. One of: `start`, `stop`, `restart`, `pause`, `unpause` |
+| `action` | string | yes | what to do. One of: `start`, `stop`, `restart`, `pause`, `unpause`, `kill`, `remove`, `rename`, `restart_policy`, `resources`, `network_connect`, `network_disconnect`, `commit`, `export` |
 | `target` | string | yes | container name or id (see containers_list) |
+| `context` | string |   | host: a context (podman: connection) name from contexts_list; default the one this session uses |
+| `cpus` | string |   | resources: CPUs like 1.5 |
+| `file` | string |   | export: the tar file, relative to the workspace |
+| `force` | boolean |   | remove: stop a running container first |
+| `image` | string |   | commit: the new image reference (optional) |
+| `memory` | string |   | resources: memory like 512m |
+| `memory_swap` | string |   | resources: memory+swap like 1g |
+| `message` | string |   | commit: a message (optional) |
+| `name` | string |   | rename: the new name |
+| `network` | string |   | network_connect / network_disconnect: the network (networks_list) |
+| `policy` | string |   | restart_policy: no, always, unless-stopped or on-failure[:N] |
+| `signal` | string |   | kill: the signal (default KILL; TERM stops gently) |
 
 ### images_pull
 
-Pull an image (ref like nginx:1.27 or ghcr.io/acme/api:1.4) in a visible terminal tab "pull: <ref>". Asks the user first. wait_ms waits (max 120000) for the pull to end.
+Pull an image (ref like nginx:1.27 or ghcr.io/acme/api:1.4) in a visible terminal tab "pull: <ref>", at once, as the Containers view pulls. wait_ms waits (max 120000) for the pull to end.
 
 **Gate:** confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved)
 
-**MCP server:** no
+**MCP server:** yes
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `ref` | string | yes | image reference: repo[:tag][@sha256:digest] |
+| `context` | string |   | host: a context (podman: connection) name from contexts_list; default the one this session uses |
 | `wait_ms` | integer |   | wait up to this long (ms, max 120000) for the pull to finish |
 
 ### compose_up
 
-Run `docker compose up -d` for a compose project that has containers on this host (see containers_list), in its own folder, in a visible terminal tab. services limits it to some services. Asks the user first. For this workspace's services prefer services_start.
+Run `docker compose up -d` for a compose project that has containers on a host (see containers_list), in its own folder, in a visible terminal tab. services limits it to some services. Asks the user first. For this workspace's services prefer services_start.
 
 **Gate:** confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved)
 
-**MCP server:** no
+**MCP server:** asks
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `project` | string | yes | compose project name from containers_list |
+| `context` | string |   | host: a context (podman: connection) name from contexts_list; default the one this session uses |
 | `services` | array |   | only these services (default all) |
 
-### kube_list
+### contexts_manage
 
-Read only: the pods, deployments, services and jobs of one Kubernetes namespace, through the user's kubectl, in the context the Kubernetes view uses. Pods: ready, status, restarts, age, containers. You cannot change the cluster.
+Manage the hosts (servers) of the Containers view, as the GUI does. op add is + Add Server… (name, host ssh://user@host or tcp://host:2376 or unix:///path; tls_ca / tls_cert / tls_key for tcp, identity for podman ssh); use switches this session's host (your default stays); default makes one the machine's default; remove removes one (never the built-in, the default or the session's); inspect reads its settings; terminal opens a terminal tab on the host (ssh to user@host, or a shell here). add, default and remove ask the user every time; use asks; inspect and terminal run at once.
 
-**Gate:** auto
+**Gate:** add: confirm (always asks) · use: confirm (containers) · default: confirm (always asks) · remove: confirm (always asks) · inspect: auto · terminal: auto
 
-**MCP server:** no
+**MCP server:** some ask
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
+| `name` | string | yes | the context name (add: the new one; letters, digits, . - _) |
+| `op` | string | yes | what to do. One of: `add`, `use`, `default`, `remove`, `inspect`, `terminal` |
+| `description` | string |   | add: a note shown with the context |
+| `host` | string |   | add: ssh://user@host[:port], tcp://host:2376 or unix:///path |
+| `identity` | string |   | add (podman ssh): identity file (default the ssh agent) |
+| `tls_ca` | string |   | add (tcp): CA certificate file |
+| `tls_cert` | string |   | add (tcp): client certificate file |
+| `tls_key` | string |   | add (tcp): client key file |
+
+### containers_exec
+
+Work inside a running container of a host, as the Containers view does. op shell (shell: one word like zsh; user, workdir), attach and exec (command: a list like ["ls","-la","/app"]; user, workdir) open a terminal tab in the IDE (terminal_read reads it); debug starts a toolbox container (image, default busybox) on its processes and network in a tab; files lists a folder (path), read reads a text file (path); upload copies a workspace file (file) into a folder (path; replace: true over an existing one); pair_sync starts Pair Sync of a container folder (path) with the workspace, whose card lists every change for the user. exec asks; debug and upload ask the user every time; the rest run at once.
+
+**Gate:** shell: auto · attach: auto · exec: confirm (containers) · debug: confirm (always asks) · files: auto · read: auto · upload: confirm (always asks) · pair_sync: auto
+
+**MCP server:** some ask
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `op` | string | yes | what to do. One of: `shell`, `attach`, `exec`, `debug`, `files`, `read`, `upload`, `pair_sync` |
+| `target` | string | yes | container name or id (see containers_list) |
+| `command` | array |   | exec: the command and its arguments |
+| `context` | string |   | host: a context (podman: connection) name from contexts_list; default the one this session uses |
+| `file` | string |   | upload: the file, relative to the workspace |
+| `image` | string |   | debug: the toolbox image (default busybox:stable) |
+| `path` | string |   | files / read / upload / pair_sync: an absolute path in the container |
+| `replace` | boolean |   | upload: replace a file of the same name |
+| `shell` | string |   | shell: a shell like zsh (default bash, else sh) |
+| `user` | string |   | shell / exec: a user name or uid |
+| `workdir` | string |   | shell / exec: an absolute folder to start in |
+
+### images_manage
+
+Every image action of the Containers view on a host. push, run (name, ports like ["8080:80"], volumes, env ["NAME=value"], network, restart, detach, keep, command) and build (file: a Dockerfile in the workspace, dir, tag, target, build_args) run in a terminal tab; remove; tag (tag: the new reference); save (file), load (file), import (file, ref) with workspace files; history (ENV values hidden), used_by, scan and sbom (the installed scanner), search (term: Docker Hub), tags (a repository's remote tags), check_updates (running images against their registries), builds, build_detail (ref of a build) and build_check (the Dockerfile checks). push, run, remove, build and load ask the user every time; tag, save and import ask; the reads run at once. images_pull pulls; containers_prune prunes.
+
+**Gate:** push: confirm (always asks) · tag: confirm (containers) · run: confirm (always asks) · remove: confirm (always asks) · build: confirm (always asks) · history: auto · used_by: auto · save: confirm (containers) · load: confirm (always asks) · import: confirm (containers) · scan: auto · sbom: auto · search: auto · tags: auto · check_updates: auto · builds: auto · build_detail: auto · build_check: auto
+
+**MCP server:** some ask
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `op` | string | yes | what to do. One of: `push`, `tag`, `run`, `remove`, `build`, `history`, `used_by`, `save`, `load`, `import`, `scan`, `sbom`, `search`, `tags`, `check_updates`, `builds`, `build_detail`, `build_check` |
+| `build_args` | array |   | build: KEY=value |
+| `command` | array |   | run: the command |
+| `context` | string |   | host: a context (podman: connection) name from contexts_list; default the one this session uses |
+| `detach` | boolean |   | run: in the background (default: attached in the tab) |
+| `dir` | string |   | build: the build context folder (default the Dockerfile's) |
+| `env` | array |   | run: NAME=value |
+| `file` | string |   | build: the Dockerfile; save / load / import / build_check: a file, relative to the workspace |
+| `keep` | boolean |   | run: keep the container when it stops (default --rm) |
+| `name` | string |   | run: the container name |
+| `network` | string |   | run: the network |
+| `ports` | array |   | run: published ports like 8080:80 |
+| `ref` | string |   | the image: repo:tag or id (images_list); import: the new image's name; tags: a repository; build_detail: a build ref |
+| `restart` | string |   | run: the restart policy |
+| `tag` | string |   | tag: the new reference; build: the image tag |
+| `target` | string |   | build: the stage |
+| `term` | string |   | search: what to look for on Docker Hub |
+| `volumes` | array |   | run: volumes like data:/var/lib/data |
+
+### containers_storage
+
+Volumes and networks of a host, as the Containers view. volume_create (name, driver, labels) and network_create (name, driver, subnet, gateway, internal, attachable, ipv6, labels) ask; volume_remove (never one a container uses), network_remove (never a built-in), volume_restore (name, dir, file) and volume_clone (name, to) ask the user every time; volume_backup (name, dir: a workspace folder, file: like db.tgz) asks; volume_browse (name, path) and disk_usage read at once.
+
+**Gate:** volume_create: confirm (containers) · network_create: confirm (containers) · volume_remove: confirm (always asks) · network_remove: confirm (always asks) · volume_browse: auto · volume_backup: confirm (containers) · volume_restore: confirm (always asks) · volume_clone: confirm (always asks) · disk_usage: auto
+
+**MCP server:** some ask
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `op` | string | yes | what to do. One of: `volume_create`, `network_create`, `volume_remove`, `network_remove`, `volume_browse`, `volume_backup`, `volume_restore`, `volume_clone`, `disk_usage` |
+| `attachable` | boolean |   | network_create: containers may join it by hand |
+| `context` | string |   | host: a context (podman: connection) name from contexts_list; default the one this session uses |
+| `dir` | string |   | volume_backup / volume_restore: the folder, relative to the workspace |
+| `driver` | string |   | create: the driver |
+| `file` | string |   | volume_backup / volume_restore: the archive name like db.tgz |
+| `gateway` | string |   | network_create: the gateway IP |
+| `internal` | boolean |   | network_create: no outside access |
+| `ipv6` | boolean |   | network_create: IPv6 |
+| `labels` | array |   | create: KEY=value labels |
+| `name` | string |   | the volume or network (volumes_list, networks_list) |
+| `path` | string |   | volume_browse: a folder in the volume (default /) |
+| `subnet` | string |   | network_create: a CIDR like 10.9.0.0/24 |
+| `to` | string |   | volume_clone: the target volume |
+
+### containers_prune
+
+Prune a host as the Containers view does: kind containers (stopped ones), images (untagged), images-all (every unused image), networks, volumes (unused; their data is deleted), system or build-cache (all: every entry). Asks the user every time.
+
+**Gate:** confirm (always asks)
+
+**MCP server:** asks
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `kind` | string | yes | what to prune. One of: `containers`, `images`, `images-all`, `networks`, `volumes`, `system`, `build-cache` |
+| `all` | boolean |   | build-cache: every entry, not only unused ones |
+| `context` | string |   | host: a context (podman: connection) name from contexts_list; default the one this session uses |
+
+### compose_project
+
+A compose project of a host (containers_list names them), as the Containers view's project row: up, stop, restart, recreate (up --force-recreate), down (containers and networks go, volumes stay), down_volumes (volumes too: their data is lost), pull, scale (service, replicas), logs (lines) and deploy_git (url: clone a repository and start its compose project; the IDE's own Deploy card asks the user). It runs in the project's folder in a terminal tab. services limits it to some services. stop, down and down_volumes ask the user every time; up, restart, recreate, pull and scale ask; logs run at once.
+
+**Gate:** up: confirm (containers) · stop: confirm (always asks) · restart: confirm (containers) · recreate: confirm (containers) · down: confirm (always asks) · down_volumes: confirm (always asks) · pull: confirm (containers) · scale: confirm (containers) · logs: auto · deploy_git: auto
+
+**MCP server:** some ask
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `op` | string | yes | what to do. One of: `up`, `stop`, `restart`, `recreate`, `down`, `down_volumes`, `pull`, `scale`, `logs`, `deploy_git` |
+| `context` | string |   | host: a context (podman: connection) name from contexts_list; default the one this session uses |
+| `lines` | integer |   | logs: how many last lines per service (default 100, max 1000) |
+| `project` | string |   | the compose project (containers_list) |
+| `replicas` | integer |   | scale: how many containers (0–100) |
+| `service` | string |   | scale: the service |
+| `services` | array |   | only these services (default all) |
+| `url` | string |   | deploy_git: an https://, ssh:// or user@host:path repository URL (#branch or #tag picks one) |
+
+### registry_manage
+
+Container registries, as the Containers view's REGISTRIES. op connect (host, optional) opens the IDE's sign-in prompt: the user types the user and token there and you never see them; signout (host) asks the user every time; catalog (host) lists a registry's repositories; delete_tag (ref: repository:tag) deletes it from the registry for everyone and asks the user every time. images_manage search / tags reads Docker Hub and a repository's tags.
+
+**Gate:** connect: auto · signout: confirm (always asks) · catalog: auto · delete_tag: confirm (always asks)
+
+**MCP server:** some ask
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `op` | string | yes | what to do. One of: `connect`, `signout`, `catalog`, `delete_tag` |
+| `host` | string |   | the registry host, like ghcr.io or registry.example.com:5000 |
+| `ref` | string |   | delete_tag: repository:tag |
+
+### kube_list
+
+Read only: the pods, deployments, services and jobs of one Kubernetes namespace, through the user's kubectl, in the context the Kubernetes view uses (or context). Pods: ready, status, restarts, age, containers. kube_manage changes the cluster.
+
+**Gate:** auto
+
+**MCP server:** yes
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `context` | string |   | kube context (default: the view's; kube_manage op contexts lists them) |
 | `namespace` | string |   | namespace (default: the one the Kubernetes view shows) |
 
 ### kube_describe
@@ -1482,12 +1658,13 @@ Read only: `kubectl describe` of one pod, deployment, service or job (events inc
 
 **Gate:** auto
 
-**MCP server:** no
+**MCP server:** yes
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `kind` | string | yes | what name is. One of: `pod`, `deployment`, `service`, `job` |
 | `name` | string | yes | the object's name (see kube_list) |
+| `context` | string |   | kube context (default: the view's; kube_manage op contexts lists them) |
 | `namespace` | string |   | namespace (default: the one the Kubernetes view shows) |
 
 ### kube_logs
@@ -1496,14 +1673,44 @@ Read only: the last log lines of one pod (lines default 100, max 1000), secrets 
 
 **Gate:** auto
 
-**MCP server:** no
+**MCP server:** yes
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `pod` | string | yes | the pod's name (see kube_list) |
 | `container` | string |   | the container (needed when the pod has more than one) |
+| `context` | string |   | kube context (default: the view's; kube_manage op contexts lists them) |
 | `lines` | integer |   | how many last lines (default 100, max 1000) |
 | `namespace` | string |   | namespace (default: the one the Kubernetes view shows) |
+
+### kube_manage
+
+Everything of the Kubernetes view, in a kube context and namespace (default the view's). Reads: contexts, namespaces, yaml (kind, name; never a secret), events (kind, name optional), top, nodes, hpa, rbac, report, objects (kind: any resource), kustomize (dir), helm_list, helm_status / helm_history (name: release), rollout_history (name), pod_files (pod, path), snippet (id, name: a manifest template), forwards. At once, as the view: use_context / use_namespace (name: switch the view), shell and logs_follow (pod, container: a terminal tab), port_forward (kind pod|svc|deployment, name, port) and stop_forward. The view's risky cards, asked every time: restart (name: deployment), scale (kind deployment|statefulset, name, replicas), delete (kind, name), rollout_undo (name, revision), set_image (name, container, image), apply (file: a workspace manifest; the card shows the dry-run diff size), cordon / uncordon / drain (name: node), helm_install (name: release, chart, version), helm_repo_add (name, url), helm_rollback (name, revision), helm_uninstall (name), upload (pod, file, path) and debug (pod, container: target, image). download (pod, path, file) writes a workspace file and asks.
+
+**Gate:** contexts: auto · namespaces: auto · use_context: auto · use_namespace: auto · yaml: auto · events: auto · top: auto · nodes: auto · hpa: auto · rbac: auto · report: auto · objects: auto · kustomize: auto · helm_list: auto · helm_status: auto · helm_history: auto · rollout_history: auto · pod_files: auto · snippet: auto · forwards: auto · shell: auto · logs_follow: auto · port_forward: auto · stop_forward: auto · restart: confirm (always asks) · scale: confirm (always asks) · delete: confirm (always asks) · rollout_undo: confirm (always asks) · set_image: confirm (always asks) · apply: confirm (always asks) · cordon: confirm (always asks) · uncordon: confirm (always asks) · drain: confirm (always asks) · helm_install: confirm (always asks) · helm_repo_add: confirm (always asks) · helm_rollback: confirm (always asks) · helm_uninstall: confirm (always asks) · upload: confirm (always asks) · debug: confirm (always asks) · download: confirm (fileWrite)
+
+**MCP server:** some ask
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `op` | string | yes | what to do. One of: `contexts`, `namespaces`, `use_context`, `use_namespace`, `yaml`, `events`, `top`, `nodes`, `hpa`, `rbac`, `report`, `objects`, `kustomize`, `helm_list`, `helm_status`, `helm_history`, `rollout_history`, `pod_files`, `snippet`, `forwards`, `shell`, `logs_follow`, `port_forward`, `stop_forward`, `restart`, `scale`, `delete`, `rollout_undo`, `set_image`, `apply`, `cordon`, `uncordon`, `drain`, `helm_install`, `helm_repo_add`, `helm_rollback`, `helm_uninstall`, `upload`, `debug`, `download` |
+| `chart` | string |   | helm_install: the chart like bitnami/redis |
+| `container` | string |   | the container (when the pod has more than one); set_image: the container to change |
+| `context` | string |   | kube context (default the view's; op contexts lists them) |
+| `dir` | string |   | kustomize: the folder (relative to the workspace) |
+| `file` | string |   | apply: a manifest; upload: the local file; download: where to write it (relative to the workspace) |
+| `id` | string |   | snippet: the snippet id |
+| `image` | string |   | set_image: the new image; debug: the debug image |
+| `kind` | string |   | the object kind (pod, deployment, service, configmap …) |
+| `name` | string |   | the object, node, release, repo, context or namespace name |
+| `namespace` | string |   | namespace (default the view's, or the context's own) |
+| `path` | string |   | pod_files / upload / download: an absolute path in the pod |
+| `pod` | string |   | the pod (shell, logs_follow, pod_files, upload, download, debug) |
+| `port` | integer |   | port_forward: the object's port |
+| `replicas` | integer |   | scale: how many pods |
+| `revision` | integer |   | rollout_undo / helm_rollback: the revision |
+| `url` | string |   | helm_repo_add: the repo URL |
+| `version` | string |   | helm_install: the chart version (optional) |
 
 ### help_read
 
@@ -2698,99 +2905,99 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `codebase-search` | Search: Codebase by Meaning… | never | opens a picker or prompt that only the user can answer; use a typed tool (codebase_search) |
 | `config-commands` | Open Config: User Commands | confirm (ide) |   |
 | `config-theme` | Open Config: Theme | confirm (ide) |   |
-| `containers-all-contexts` | Containers: Show All Contexts Together | never | showing every context is the user's view; the AI uses containers_list |
-| `containers-attach` | Containers: Attach | never | opens a picker or prompt that only the user can answer; use a typed tool (container attach) |
-| `containers-browse-tags` | Containers: Browse Remote Tags… | never | opens a picker or prompt that only the user can answer; use a typed tool; it asks a registry over the network on the user's behalf |
-| `containers-build-cache-prune` | Containers: Prune Build Cache… | never | pruning the build cache is the user's; nothing is offered to the model |
+| `containers-all-contexts` | Containers: Show All Contexts Together | never | use the typed tool contexts_list |
+| `containers-attach` | Containers: Attach | never | use the typed tool containers_exec op attach |
+| `containers-browse-tags` | Containers: Browse Remote Tags… | never | use the typed tool images_manage op tags |
+| `containers-build-cache-prune` | Containers: Prune Build Cache… | never | use the typed tool containers_prune kind build-cache |
 | `containers-build-check` | Containers: Check Dockerfile (Build Checks) | confirm (run) |   |
-| `containers-build-detail` | Containers: Show Build Detail… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `containers-build-detail` | Containers: Show Build Detail… | never | use the typed tool images_manage op build_detail |
 | `containers-builds` | Containers: Show Builds (History, Builders, Cache) | auto |   |
-| `containers-check-updates` | Containers: Check Running Images for Updates | never | asks every registry of the running images over the network on the user's behalf |
-| `containers-commit` | Containers: Commit Selected Container to Image… | never | opens a picker or prompt that only the user can answer; use a typed tool; committing a container is the user's |
-| `containers-compose-down` | Containers: Remove Project Containers… | never | project removal requires the user's confirm card |
+| `containers-check-updates` | Containers: Check Running Images for Updates | never | use the typed tool images_manage op check_updates |
+| `containers-commit` | Containers: Commit Selected Container to Image… | never | use the typed tool containers_control action commit |
+| `containers-compose-down` | Containers: Remove Project Containers… | never | use the typed tool compose_project op down / down_volumes |
 | `containers-compose-restart` | Containers: Restart Project | confirm (always asks) |   |
-| `containers-compose-snippet` | Containers: Add Compose Service… | never | adding a compose service is the user's; the AI writes files with its own file tools |
+| `containers-compose-snippet` | Containers: Add Compose Service… | never | use the typed tool write_file |
 | `containers-compose-stop` | Containers: Stop Project | confirm (always asks) |   |
 | `containers-compose-up` | Containers: Start Project | confirm (always asks) |   |
-| `containers-context-create` | Containers: Create Context… | never | a new context points every terminal at another host; it is the user's |
-| `containers-context-default` | Containers: Make Context Default… | never | changes the machine-wide Docker default |
-| `containers-context-inspect` | Containers: Inspect Context… | never | opens a picker or prompt that only the user can answer; use a typed tool; the AI uses containers_list |
-| `containers-context-remove` | Containers: Remove Context… | never | removing a context is the user's; it asks on a card |
-| `containers-context-use` | Containers: Switch Context… | never | a context switch is the user's choice; it moves every container action to another host |
+| `containers-context-create` | Containers: Create Context… | never | use the typed tool contexts_manage op add |
+| `containers-context-default` | Containers: Make Context Default… | never | use the typed tool contexts_manage op default |
+| `containers-context-inspect` | Containers: Inspect Context… | never | use the typed tool contexts_manage op inspect |
+| `containers-context-remove` | Containers: Remove Context… | never | use the typed tool contexts_manage op remove |
+| `containers-context-use` | Containers: Switch Context… | never | use the typed tool contexts_manage op use |
 | `containers-copy-id` | Containers: Copy ID | auto |   |
-| `containers-custom-command` | Containers: Run Custom Command on Row… | never | custom commands are the user's own programs; nothing is offered to the model |
+| `containers-custom-command` | Containers: Run Custom Command on Row… | never | use the typed tool runs one of the user's own custom commands (their file of programs); the AI runs commands with containers_exec op exec |
 | `containers-custom-commands-edit` | Containers: Edit Custom Commands | auto |   |
-| `containers-debug-toolbox` | Containers: Debug Selected with Toolbox… | never | starting a toolbox container is the user's; nothing is offered to the model |
+| `containers-debug-toolbox` | Containers: Debug Selected with Toolbox… | never | use the typed tool containers_exec op debug |
 | `containers-detail` | Containers: Show Details | auto |   |
 | `containers-diff` | Containers: Show Selected Container Changes (Diff) | auto |   |
 | `containers-engine-config` | Containers: Open Engine Config | auto |   |
-| `containers-exec-options` | Containers: Exec with Options… | never | opens a picker or prompt that only the user can answer; use a typed tool (container exec) |
-| `containers-export` | Containers: Export Selected Container to File… | never | opens a picker or prompt that only the user can answer; use a typed tool; writes a file the user picks |
-| `containers-files` | Containers: Browse Files | never | opens a picker or prompt that only the user can answer; use a typed tool (container files) |
-| `containers-filter` | Containers: Filter Rows… | never | the filter is typed by the user; the AI uses containers_list / images_list |
+| `containers-exec-options` | Containers: Exec with Options… | never | use the typed tool containers_exec op exec |
+| `containers-export` | Containers: Export Selected Container to File… | never | use the typed tool containers_control action export |
+| `containers-files` | Containers: Browse Files | never | use the typed tool containers_exec op files / read / upload |
+| `containers-filter` | Containers: Filter Rows… | never | use the typed tool containers_list |
 | `containers-focus` | Containers: Focus | auto |   |
 | `containers-help` | Containers: Open Guide | auto |   |
-| `containers-image-build` | Containers: Build Image from Dockerfile… | never | building an image is the user's; nothing is offered to the model |
+| `containers-image-build` | Containers: Build Image from Dockerfile… | never | use the typed tool images_manage op build |
 | `containers-image-history` | Containers: Show Image History | auto |   |
-| `containers-image-import` | Containers: Import Image from File System Tar… | never | opens a picker or prompt that only the user can answer; use a typed tool; importing images is the user's |
+| `containers-image-import` | Containers: Import Image from File System Tar… | never | use the typed tool images_manage op import |
 | `containers-image-inspect` | Containers: Inspect Image | auto |   |
 | `containers-image-layers` | Containers: Show Selected Image Layer Sizes | auto |   |
-| `containers-image-load` | Containers: Load Images from File… | never | opens a picker or prompt that only the user can answer; use a typed tool; loading images is the user's |
-| `containers-image-prune` | Containers: Prune Dangling Images… | never | pruning images is the user's; nothing is offered to the model |
+| `containers-image-load` | Containers: Load Images from File… | never | use the typed tool images_manage op load |
+| `containers-image-prune` | Containers: Prune Dangling Images… | never | use the typed tool containers_prune kind images |
 | `containers-image-pull` | Containers: Pull Image… | confirm (always asks) |   |
-| `containers-image-push` | Containers: Push Selected Image… | never | pushing an image is the user's; nothing is offered to the model |
-| `containers-image-remove` | Containers: Remove Selected Image… | never | removing is the user's; nothing is offered to the model |
-| `containers-image-run` | Containers: Run Selected Image… | never | running an image is the user's; nothing is offered to the model (containers_control starts existing containers) |
-| `containers-image-save` | Containers: Save Selected Image to File… | never | opens a picker or prompt that only the user can answer; use a typed tool; writes a file the user picks |
-| `containers-image-sbom` | Containers: Make SBOM of Selected Image | never | an SBOM runs an outside tool for minutes; it is the user's |
-| `containers-image-scan` | Containers: Scan Selected Image for Vulnerabilities | never | a scan runs an outside scanner for minutes and may download its database; it is the user's |
-| `containers-image-tag` | Containers: Tag Selected Image… | never | tagging an image is the user's; nothing is offered to the model |
+| `containers-image-push` | Containers: Push Selected Image… | never | use the typed tool images_manage op push |
+| `containers-image-remove` | Containers: Remove Selected Image… | never | use the typed tool images_manage op remove |
+| `containers-image-run` | Containers: Run Selected Image… | never | use the typed tool images_manage op run |
+| `containers-image-save` | Containers: Save Selected Image to File… | never | use the typed tool images_manage op save |
+| `containers-image-sbom` | Containers: Make SBOM of Selected Image | never | use the typed tool images_manage op sbom |
+| `containers-image-scan` | Containers: Scan Selected Image for Vulnerabilities | never | use the typed tool images_manage op scan |
+| `containers-image-tag` | Containers: Tag Selected Image… | never | use the typed tool images_manage op tag |
 | `containers-image-used-by` | Containers: Show Containers Using Selected Image | auto |   |
 | `containers-inspect` | Containers: Inspect | auto |   |
-| `containers-kill` | Containers: Kill Selected… | never | killing a container is the user's; it asks on a card |
+| `containers-kill` | Containers: Kill Selected… | never | use the typed tool containers_control action kill |
 | `containers-logs` | Containers: Follow Logs | auto |   |
-| `containers-logs-options` | Containers: Logs with Options… | never | opens a picker or prompt that only the user can answer; use a typed tool (container logs options; containers-logs follows logs) |
-| `containers-network-connect` | Containers: Connect Selected to Network… | never | network changes are the user's; it asks on a card |
+| `containers-logs-options` | Containers: Logs with Options… | never | use the typed tool containers_logs |
+| `containers-network-connect` | Containers: Connect Selected to Network… | never | use the typed tool containers_control action network_connect |
 | `containers-network-create` | Containers: Create Network… | confirm (always asks) |   |
-| `containers-network-create-options` | Containers: Create Network with Options… | never | opens a picker or prompt that only the user can answer; use a typed tool (containers-network-create) |
-| `containers-network-disconnect` | Containers: Disconnect Selected from Network… | never | network changes are the user's; it asks on a card |
-| `containers-network-prune` | Containers: Prune Networks… | never | pruning networks is the user's; nothing is offered to the model |
-| `containers-network-remove` | Containers: Remove Selected Network… | never | removing is the user's; nothing is offered to the model |
-| `containers-open-databases` | Containers: Open in Databases | never | use db_connection op open_container |
+| `containers-network-create-options` | Containers: Create Network with Options… | never | use the typed tool containers_storage op network_create |
+| `containers-network-disconnect` | Containers: Disconnect Selected from Network… | never | use the typed tool containers_control action network_disconnect |
+| `containers-network-prune` | Containers: Prune Networks… | never | use the typed tool containers_prune kind networks |
+| `containers-network-remove` | Containers: Remove Selected Network… | never | use the typed tool containers_storage op network_remove |
+| `containers-open-databases` | Containers: Open in Databases | never | use the typed tool db_connection op open_container |
 | `containers-open-port` | Containers: Open Published Port | auto |   |
-| `containers-pair-sync` | Containers: Pair Sync with Workspace… | never | copies and deletes files between the user's container and workspace; the user reads the card |
+| `containers-pair-sync` | Containers: Pair Sync with Workspace… | never | use the typed tool containers_exec op pair_sync |
 | `containers-pause` | Containers: Pause or Unpause Selected | confirm (always asks) |   |
-| `containers-prune` | Containers: Prune Stopped Containers… | never | pruning containers is the user's; nothing is offered to the model |
+| `containers-prune` | Containers: Prune Stopped Containers… | never | use the typed tool containers_prune kind containers |
 | `containers-refresh` | Containers: Refresh | auto |   |
-| `containers-registry-catalog` | Containers: Browse Registry Catalog… | never | opens a picker or prompt that only the user can answer; use a typed tool; it asks a registry over the network, maybe with the user's saved token |
-| `containers-registry-connect` | Containers: Connect Registry… | never | signing in to a registry takes the user's token; it is the user's |
-| `containers-registry-signout` | Containers: Sign Out of Registry… | never | signing out of a registry is the user's |
-| `containers-remove` | Containers: Remove Selected… | never | container removal requires the user's confirm card |
-| `containers-rename` | Containers: Rename Selected… | never | renaming a container is the user's |
-| `containers-resources` | Containers: Set CPU and Memory Limits… | never | CPU and memory limits are the user's; it asks on a card |
+| `containers-registry-catalog` | Containers: Browse Registry Catalog… | never | use the typed tool registry_manage op catalog |
+| `containers-registry-connect` | Containers: Connect Registry… | never | use the typed tool registry_manage op connect |
+| `containers-registry-signout` | Containers: Sign Out of Registry… | never | use the typed tool registry_manage op signout |
+| `containers-remove` | Containers: Remove Selected… | never | use the typed tool containers_control action remove |
+| `containers-rename` | Containers: Rename Selected… | never | use the typed tool containers_control action rename |
+| `containers-resources` | Containers: Set CPU and Memory Limits… | never | use the typed tool containers_control action resources |
 | `containers-restart` | Containers: Restart Selected | confirm (always asks) |   |
-| `containers-restart-policy` | Containers: Set Restart Policy… | never | the restart policy is the user's; it asks on a card |
-| `containers-run-at-cursor` | Containers: Run Dockerfile Stage or Compose Service at Cursor | never | running a build or a compose service is the user's; nothing is offered to the model |
-| `containers-scaffold` | Containers: Add Docker Files… | never | adding docker files is the user's; the AI writes files with its own file tools |
-| `containers-search` | Containers: Search Docker Hub… | never | opens a picker or prompt that only the user can answer; use a typed tool; it asks Docker Hub on the user's behalf |
-| `containers-shell` | Containers: Open Shell | never | opens a picker or prompt that only the user can answer; use a typed tool (container shell) |
-| `containers-sort` | Containers: Sort Containers… | never | opens a picker or prompt that only the user can answer; use a typed tool; the sort is the user's view setting |
+| `containers-restart-policy` | Containers: Set Restart Policy… | never | use the typed tool containers_control action restart_policy |
+| `containers-run-at-cursor` | Containers: Run Dockerfile Stage or Compose Service at Cursor | never | use the typed tool images_manage op build |
+| `containers-scaffold` | Containers: Add Docker Files… | never | use the typed tool write_file |
+| `containers-search` | Containers: Search Docker Hub… | never | use the typed tool images_manage op search |
+| `containers-shell` | Containers: Open Shell | never | use the typed tool containers_exec op shell |
+| `containers-sort` | Containers: Sort Containers… | never | use the typed tool the sort order of the user's Containers view; containers_list lists every container |
 | `containers-start` | Containers: Start Selected | confirm (always asks) |   |
 | `containers-stats` | Containers: Follow Stats | auto |   |
 | `containers-stop` | Containers: Stop Selected | confirm (always asks) |   |
 | `containers-system` | Containers: Show System Page | auto |   |
-| `containers-system-prune` | Containers: Prune System… | never | pruning the system is the user's; nothing is offered to the model |
+| `containers-system-prune` | Containers: Prune System… | never | use the typed tool containers_prune kind system |
 | `containers-templates-folder` | Containers: Open Docker Templates Folder | auto |   |
-| `containers-toggle-size` | Containers: Show or Hide the Size Column | never | the size column is the user's view setting; the AI uses containers_list |
-| `containers-volume-backup` | Containers: Back Up Selected Volume… | never | opens a picker or prompt that only the user can answer; use a typed tool; writes a backup file the user picks |
-| `containers-volume-browse` | Containers: Browse Selected Volume Files… | never | opens a picker or prompt that only the user can answer; use a typed tool (asks for a folder) |
-| `containers-volume-clone` | Containers: Clone Selected Volume… | never | cloning overwrites volume data; the user's |
+| `containers-toggle-size` | Containers: Show or Hide the Size Column | never | use the typed tool a column of the user's Containers view; containers_list and containers_inspect give the sizes |
+| `containers-volume-backup` | Containers: Back Up Selected Volume… | never | use the typed tool containers_storage op volume_backup |
+| `containers-volume-browse` | Containers: Browse Selected Volume Files… | never | use the typed tool containers_storage op volume_browse |
+| `containers-volume-clone` | Containers: Clone Selected Volume… | never | use the typed tool containers_storage op volume_clone |
 | `containers-volume-create` | Containers: Create Volume… | confirm (always asks) |   |
-| `containers-volume-create-options` | Containers: Create Volume with Options… | never | opens a picker or prompt that only the user can answer; use a typed tool (containers-volume-create) |
-| `containers-volume-disk-usage` | Containers: Read Volume Disk Usage | never | disk usage is the user's; nothing is offered to the model |
-| `containers-volume-prune` | Containers: Prune Volumes… | never | pruning volumes is the user's; nothing is offered to the model |
-| `containers-volume-remove` | Containers: Remove Selected Volume… | never | removing is the user's; nothing is offered to the model |
-| `containers-volume-restore` | Containers: Restore Selected Volume from Backup… | never | restoring overwrites volume data; the user's |
+| `containers-volume-create-options` | Containers: Create Volume with Options… | never | use the typed tool containers_storage op volume_create |
+| `containers-volume-disk-usage` | Containers: Read Volume Disk Usage | never | use the typed tool containers_storage op disk_usage |
+| `containers-volume-prune` | Containers: Prune Volumes… | never | use the typed tool containers_prune kind volumes |
+| `containers-volume-remove` | Containers: Remove Selected Volume… | never | use the typed tool containers_storage op volume_remove |
+| `containers-volume-restore` | Containers: Restore Selected Volume from Backup… | never | use the typed tool containers_storage op volume_restore |
 | `copy-file-ref` | Copy: File:Line Reference | confirm (ide) |   |
 | `customize-keybindings` | Preferences: Customize Keybindings | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `dap-install` | DAP: Install Adapter... | never | opens a picker or prompt that only the user can answer; use a typed tool (dap_adapters) |
@@ -3170,21 +3377,21 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `itermoc-profiles` | Itermoc: Profiles | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
 | `itermoc-services` | Itermoc: Services | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
 | `join-lines` | Edit: Join Lines | confirm (fileWrite) |   |
-| `kubernetes-apply-file` | Kubernetes: Apply Current File… | never | writes to the cluster; only the user applies a file, after the diff |
-| `kubernetes-context` | Kubernetes: Switch Context… | never | opens a picker or prompt that only the user can answer; use a typed tool; the context is the user's choice |
-| `kubernetes-helm` | Kubernetes: Helm Releases… | never | opens a picker or prompt that only the user can answer; use a typed tool |
-| `kubernetes-helm-install` | Kubernetes: Install Helm Chart… | never | installs a chart into the cluster; asks the user first |
-| `kubernetes-helm-repo-add` | Kubernetes: Add Helm Repo… | never | changes the user's helm repo list; asks the user first |
+| `kubernetes-apply-file` | Kubernetes: Apply Current File… | never | use the typed tool kube_manage op apply |
+| `kubernetes-context` | Kubernetes: Switch Context… | never | use the typed tool kube_manage op use_context |
+| `kubernetes-helm` | Kubernetes: Helm Releases… | never | use the typed tool kube_manage op helm_list / helm_status / helm_history / helm_rollback / helm_uninstall |
+| `kubernetes-helm-install` | Kubernetes: Install Helm Chart… | never | use the typed tool kube_manage op helm_install |
+| `kubernetes-helm-repo-add` | Kubernetes: Add Helm Repo… | never | use the typed tool kube_manage op helm_repo_add |
 | `kubernetes-hpa` | Kubernetes: Autoscalers (HPA) | auto |   |
-| `kubernetes-kind` | Kubernetes: Show Kind… | never | opens a picker or prompt that only the user can answer; use a typed tool |
-| `kubernetes-kustomize` | Kubernetes: Kustomize Preview | never | builds the user's current file's folder into a page; the AI reads files itself |
-| `kubernetes-namespace` | Kubernetes: Switch Namespace… | never | opens a picker or prompt that only the user can answer; use a typed tool |
-| `kubernetes-nodes` | Kubernetes: Nodes… | never | opens a picker or prompt that only the user can answer; use a typed tool; cordon and drain are the user's choice |
+| `kubernetes-kind` | Kubernetes: Show Kind… | never | use the typed tool kube_manage op objects |
+| `kubernetes-kustomize` | Kubernetes: Kustomize Preview | never | use the typed tool kube_manage op kustomize |
+| `kubernetes-namespace` | Kubernetes: Switch Namespace… | never | use the typed tool kube_manage op use_namespace |
+| `kubernetes-nodes` | Kubernetes: Nodes… | never | use the typed tool kube_manage op nodes / cordon / uncordon / drain |
 | `kubernetes-rbac` | Kubernetes: Permissions (RBAC) | auto |   |
 | `kubernetes-refresh` | Kubernetes: Refresh | auto |   |
 | `kubernetes-report` | Kubernetes: Cluster Report | auto |   |
 | `kubernetes-show` | Kubernetes: Show | auto |   |
-| `kubernetes-snippet` | Kubernetes: New Manifest from Snippet… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `kubernetes-snippet` | Kubernetes: New Manifest from Snippet… | never | use the typed tool kube_manage op snippet |
 | `kubernetes-top` | Kubernetes: Show Metrics | auto |   |
 | `layout-delete` | Layout: Delete… | never | the AI changes the layout with the layout_set tool |
 | `layout-open` | Layout: Open… | never | the AI changes the layout with the layout_set tool |
@@ -3273,7 +3480,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `services-compose-run` | Containers: Run One-Off Command in Service… | never | opens a picker or prompt that only the user can answer; use a typed tool (services tools) |
 | `services-compose-watch` | Containers: Watch Project (Rebuild on Change) | never | starts a long-running watch that rebuilds services; the user's |
 | `services-configure` | Containers: Configure Services (services.json) | confirm (ide) |   |
-| `services-deploy-git` | Containers: Deploy Stack from Git… | never | runs a compose project from a remote repository; the user's choice |
+| `services-deploy-git` | Containers: Deploy Stack from Git… | never | use the typed tool compose_project op deploy_git |
 | `services-env-file` | Containers: Choose Compose Env File… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `services-focus` | Containers: Focus Project Services | auto |   |
 | `services-logs` | Containers: Show Service Logs… | never | opens a picker or prompt that only the user can answer; use a typed tool (services_logs) |
