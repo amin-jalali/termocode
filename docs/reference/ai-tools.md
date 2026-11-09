@@ -138,7 +138,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`service_set_access`](#service_set_access) | confirm (always asks): Deny (first) · Change | no | Allow writes for a connected MCP service, or make it read only (known services with a read-only endpoint or scopes, such as GitHub and Linear). |
 | [`outside_agent_start`](#outside_agent_start) | confirm (always asks): Deny (first) · Start | no | Start an outside coding agent (claude, codex, gemini, opencode, aider, cursor, amp, goose, qwen, crush, copilot, kimi, droid, pi, kiro, auggie, grok, cline, continue, vibe) in a new terminal tab, with termocode's tools when the agent supports it. |
 | [`agent_race_start`](#agent_race_start) | confirm (always asks): Deny (first) · Start race | no | Race one task across 2-8 lanes of outside coding agents (claude, codex, gemini, opencode, aider): each works in its own git worktree and terminal tab; the user compares the lanes and merges the winner (Agent: Race Compare). |
-| [`agent_races`](#agent_races) | auto | no | The agent races and splits of this repository (the race compare page). |
+| [`agent_races`](#agent_races) | discard: confirm (always asks)<br>judge: auto<br>list: auto<br>merge: auto<br>restack: confirm (always asks)<br>stop: auto<br>summary: auto<br>verify: auto | no | The agent races and splits of this repository (the race compare page). |
 | [`agent_split_start`](#agent_split_start) | confirm (always asks): Deny (first) · Start split | no | Coordinate outside coding agents (claude, codex, gemini, opencode, aider): split one goal into 2-4 independent parts, each done by its own agent in its own git worktree and terminal tab, at the same time. |
 | [`agent_split_status`](#agent_split_status) | auto | no | The newest split started with agent_split_start (or the one named): the goal, each lane's id, agent, state (starting, working, waiting, done, stopped, failed, merged, discarded), part, changed files and branch. |
 | [`agent_race_models`](#agent_race_models) | confirm (always asks): Deny (first) · Start race | no | Compare 2-4 models on one task: a race where every lane runs the same outside coding agent (claude, codex) on another model, each in its own git worktree and terminal tab; the user compares the lanes and merges the winner (Agent: Race Compare). |
@@ -1895,16 +1895,19 @@ Race one task across 2-8 lanes of outside coding agents (claude, codex, gemini, 
 
 ### agent_races
 
-The agent races and splits of this repository (the race compare page). op list (each race's lanes, their state, changed files and verify result), summary (race: the quick model compares the finished lanes; it costs a little AI money), verify (race: run its verify command in the finished lanes) and stop (race: Ctrl+C into the working lanes; their work stays). None asks; agent_race_start starts one (it asks).
+The agent races and splits of this repository (the race compare page). op list (each race's lanes, their state, changed files and verify result), summary (race: the quick model compares the finished lanes; it costs a little AI money), judge (race: the main model ranks the finished lanes; it costs AI money), verify (race: run its verify command in the finished lanes), stop (race: Ctrl+C into the working lanes; their work stays) and merge (race, lane: write a finished lane into the user's files; a conflict writes nothing and the user chooses) run at once; discard (race, lane) and restack (race, lane, mode keep|squash, message) ask the user every time. agent_race_start starts one (it asks).
 
-**Gate:** auto
+**Gate:** discard: confirm (always asks) · judge: auto · list: auto · merge: auto · restack: confirm (always asks) · stop: auto · summary: auto · verify: auto
 
 **MCP server:** no
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `op` | string | yes | what to do. One of: `list`, `stop`, `summary`, `verify` |
-| `race` | string |   | summary, verify, stop: the race id from op list |
+| `op` | string | yes | what to do. One of: `discard`, `judge`, `list`, `merge`, `restack`, `stop`, `summary`, `verify` |
+| `lane` | string |   | merge, discard, restack: the lane id |
+| `message` | string |   | restack squash: the commit message (default: the task) |
+| `mode` | string |   | restack: keep the commits or squash them into one. One of: `keep`, `squash` |
+| `race` | string |   | every op but list: the race id from op list |
 
 ### agent_split_start
 
