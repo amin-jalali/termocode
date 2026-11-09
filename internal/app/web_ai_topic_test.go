@@ -135,6 +135,9 @@ func TestWebAIUseProfileAndModelThroughTheLaptop(t *testing.T) {
 		t.Errorf("untrusted project profile: %s", code)
 	}
 
+	// The main model is the default profile's (Review's two steps have
+	// their own: see TestWebAIPickerFollowsTheProfile).
+	m.storeAIProfile(ai.ProfileDefault)
 	want := ai.SuggestedModels(ai.KindAnthropic)[1]
 	if code := webErrCode(r.call(webproto.OpAIUseModel, &webproto.AIUseArgs{Name: "my-own-model"})); code != "not_found" {
 		t.Errorf("typed model: %s", code)

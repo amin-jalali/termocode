@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"reflect"
 	"slices"
 	"time"
@@ -115,42 +116,24 @@ func (s *aiState) webAIKind() string {
 	return ""
 }
 
-// webAIModels are the models the page may pick: the laptop's model
+// webAIModels are the main model's picker list: the laptop's model
 // picker's list for the provider, the model in use first when it is not
 // on it.
-func (s *aiState) webAIModels() []string {
-	kind := s.webAIKind()
-	if kind == "" {
-		return []string{}
-	}
-	out := []string{}
-	if s.cfg.Model != "" && !slices.Contains(ai.SuggestedModels(kind), s.cfg.Model) {
-		out = append(out, s.cfg.Model)
-	}
-	for _, id := range ai.SuggestedModels(kind) {
-		if len(out) == webproto.MaxAIModels {
-			break
-		}
-		out = append(out, id)
-	}
-	return out
-}
+func (s *aiState) webAIModels() []string { return webAIModelsOf(s.webAIKind(), s.cfg.Model) }
 
 // webAIBuild is the ai topic's data.
 func (m *Model) webAIBuild() webproto.AISnap {
 	s := m.aiS()
-	out := webproto.AISnap{Configured: m.aiConfigured(), Model: webName(s.cfg.Model), Models: []string{},
+	pick := s.webAIPick()
+	out := webproto.AISnap{Configured: m.aiConfigured(), Provider: webName(pick.provider), Model: webName(pick.model), Models: []string{}, Steps: pick.steps,
 		Profile: webName(s.activeProfile().Name), Profiles: []webproto.AIProfile{},
 		Inline: s.settings.InlineEnabled(), NextEdit: s.settings.NextEditEnabled(), Worktrees: s.settings.UseWorktrees()}
-	if kind := s.webAIKind(); kind != "" {
-		out.Provider = ai.KindLabel(kind)
-	}
 	web := loadAIWebSettings()
 	out.WebFetch = web.Fetch
 	if p, ok := webtools.ProviderByName(web.Search); ok {
 		out.WebSearch = webName(p.Title)
 	}
-	for _, id := range s.webAIModels() {
+	for _, id := range pick.models {
 		out.Models = append(out.Models, webName(id))
 	}
 	for _, n := range s.profiles.Names() {
@@ -226,17 +209,21 @@ func (m *Model) webAIUseProfile(call *webCall) *webAsk {
 	}
 }
 
-// webAIUseModel asks the laptop to use another model of its provider
-// (one of the laptop's picker's models, never a typed id).
+// webAIUseModel asks the laptop to use another model of the active
+// profile's provider (one of the picker's models, never a typed id): the
+// main model, or the model of a one-step user profile's step.
 func (m *Model) webAIUseModel(call *webCall) *webAsk {
 	name := call.args.(*webproto.AIUseArgs).Name
-	s := m.aiS()
+	pick := m.aiS().webAIPick()
 	switch {
-	case !slices.Contains(s.webAIModels(), name):
-		call.fail(webproto.CodeNotFound, "Pick one of the laptop's models.")
+	case !slices.Contains(pick.models, name):
+		call.fail(webproto.CodeNotFound, "Pick one of the profile's models.")
 		return nil
-	case s.cfg.Model == name:
+	case pick.model == name:
 		call.fail(webproto.CodeConflict, "That model is in use already.")
+		return nil
+	case pick.save == nil:
+		call.fail(webproto.CodeForbidden, "This profile's model is set in its file.")
 		return nil
 	}
 	return &webAsk{
@@ -244,6 +231,115 @@ func (m *Model) webAIUseModel(call *webCall) *webAsk {
 		title:   "Use model " + name + "?",
 		body:    "The AI chat uses model " + name + " from now on.",
 		action:  "Use",
-		run:     func(m *Model) tea.Cmd { return m.saveAIModel(name) },
+		run:     func(m *Model) tea.Cmd { return pick.save(m, name) },
 	}
+}
+
+// webAIPick is what the chat's model picker offers for the active
+// profile: the provider (a CLI step's CLI), the model the answers really
+// use, the models to pick, and how a pick is kept. A profile of several
+// steps (a plan, a loop) has its steps instead of a model list.
+type webAIPick struct {
+	provider, model string
+	models          []string
+	steps           []webproto.AIStep
+	// save keeps a picked model; nil: the picker only shows.
+	save func(m *Model, id string) tea.Cmd
+}
+
+func (s *aiState) webAIPick() webAIPick {
+	p := s.activeProfile()
+	if s.profile == "" || p.Name == ai.ProfileDefault && p.Source == ai.ProfileSourceBuiltin {
+		return s.webAIMainPick()
+	}
+	if len(p.Steps) != 1 || p.Loop != nil || p.Steps[0].Plan {
+		out := webAIPick{models: []string{}}
+		for _, st := range s.aiProfileSteps(p) {
+			if len(out.steps) == webproto.MaxAIModels {
+				break
+			}
+			out.steps = append(out.steps, webproto.AIStep{Title: webName(st.name), Model: webName(st.modelText(false))})
+		}
+		return out
+	}
+	st := p.Steps[0]
+	out := webAIPick{models: []string{}}
+	switch slot := p.SlotFor(st); {
+	case st.CLI != "":
+		out.provider, out.model = ai.CLITitle(st.CLI), st.Model
+		for _, mi := range ai.CLIModels(st.CLI) {
+			out.models = append(out.models, mi.ID)
+		}
+	case slot == "" || slot == ai.SlotMain:
+		if st.Model == "" {
+			return s.webAIMainPick()
+		}
+		out = s.webAIMainPick()
+		out.model, out.models = st.Model, webAIModelsOf(s.webAIKind(), st.Model)
+	default: // another slot: its model, shown only
+		cfg, _ := s.aiSlotConfig(slot)
+		out.model = cfg.Model
+		if st.Model != "" {
+			out.model = st.Model
+		}
+		if cfg.Kind != "" {
+			out.provider = ai.KindLabel(cfg.Kind)
+		}
+		return out
+	}
+	if p.Source == ai.ProfileSourceUser {
+		name := p.Name
+		out.save = func(m *Model, id string) tea.Cmd { return m.webAISaveStepModel(name, id) }
+	}
+	return out
+}
+
+// webAIMainPick is the main model's picker: the provider's suggestions,
+// and a pick is the main model.
+func (s *aiState) webAIMainPick() webAIPick {
+	out := webAIPick{model: s.cfg.Model, models: s.webAIModels(), save: func(m *Model, id string) tea.Cmd { return m.saveAIModel(id) }}
+	if kind := s.webAIKind(); kind != "" {
+		out.provider = ai.KindLabel(kind)
+	}
+	return out
+}
+
+// webAIModelsOf is the picker's list for kind, model first when it is
+// not on it.
+func webAIModelsOf(kind, model string) []string {
+	out := []string{}
+	if kind == "" {
+		return out
+	}
+	if model != "" && !slices.Contains(ai.SuggestedModels(kind), model) {
+		out = append(out, model)
+	}
+	for _, id := range ai.SuggestedModels(kind) {
+		if len(out) == webproto.MaxAIModels {
+			break
+		}
+		out = append(out, id)
+	}
+	return out
+}
+
+// webAISaveStepModel saves id as the model of the one step of the user
+// profile name (the laptop said yes).
+func (m *Model) webAISaveStepModel(name, id string) tea.Cmd {
+	s := m.aiS()
+	p, ok := s.profiles.Get(name)
+	if !ok || len(p.Steps) != 1 {
+		return m.aiToastErr("Profile not saved", fmt.Errorf("profile %q changed", name))
+	}
+	p.Steps = slices.Clone(p.Steps)
+	p.Steps[0].Model = id
+	path, err := ai.ProfilesPath()
+	if err == nil {
+		err = ai.SaveProfile(path, name, p, true)
+	}
+	if err != nil {
+		return m.aiToastErr("Profile not saved", err)
+	}
+	s.reloadProfiles()
+	return m.aiInfo("Profile " + name + ": " + id)
 }
