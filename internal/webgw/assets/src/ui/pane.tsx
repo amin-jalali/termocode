@@ -6,6 +6,8 @@
 // one tab stop, Up/Down move, Right/Left open and close, Enter acts.
 import { h, type ComponentChildren } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
+import type { AIItem } from "../aictx/api";
+import { aiMenu } from "../lib/aictx";
 import { dict } from "../state/dict";
 import { t } from "../strings";
 import { Cod } from "./icons";
@@ -118,6 +120,8 @@ export interface RowProps {
   onDblClick?: () => void;
   onToggle?: () => void;
   onContextMenu?: (e: MouseEvent) => void;
+  /** ai: the row's item for Add to AI Chat (its right-click menu). */
+  ai?: AIItem;
 }
 
 /** Row is one tree row. */
@@ -136,7 +140,7 @@ export function Row(p: RowProps) {
       style={{ "--lv": String(p.level ?? 0) }}
       onClick={(e) => (p.twist && p.onToggle ? p.onToggle() : p.onClick?.(e))}
       onDblClick={p.onDblClick}
-      onContextMenu={p.onContextMenu}
+      onContextMenu={p.ai ? aiMenu(p.ai, p.onContextMenu) : p.onContextMenu}
       data-twist={p.twist ?? undefined}
       {...extra}
     >

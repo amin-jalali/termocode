@@ -127,7 +127,8 @@ func TestDeskContainersContextsAndFilter(t *testing.T) {
 // laptop's keys have: the reads run at once, Copy ID puts the ID on the
 // clipboard, Restart asks in the view (Cancel first), Stop and Remove ask
 // the laptop. A compose project offers its own actions, and a viewer
-// gets only the reads.
+// gets only the reads. Add to AI Chat comes last (not for a viewer, who
+// cannot send in the chat).
 func TestDeskContainersContextMenu(t *testing.T) {
 	p, c := openDeskCtr(t, nil)
 	fakeClipboard(p, "")
@@ -135,7 +136,7 @@ func TestDeskContainersContextMenu(t *testing.T) {
 	api, old := row(`[data-id="9f3c2e1a1234"]`), row(`[data-id="aabbccdd1122"]`)
 
 	rightClick(p, api)
-	if got, want := menuLabels(p), "Logs|Inspect|Stats|Open Published Port|Copy ID|Copy Name|Open Shell…|Attach…|Pause|Restart|Stop…"; got != want {
+	if got, want := menuLabels(p), "Logs|Inspect|Stats|Open Published Port|Copy ID|Copy Name|Open Shell…|Attach…|Pause|Restart|Stop…|Add to AI Chat"; got != want {
 		t.Errorf("running container menu %q, want %q", got, want)
 	}
 	menuPick(p, "Copy ID")
@@ -148,7 +149,7 @@ func TestDeskContainersContextMenu(t *testing.T) {
 	p.WaitJS(`!` + deskCtr + `.querySelector(".pv-ask")`)
 
 	rightClick(p, old)
-	if got, want := menuLabels(p), "Logs|Inspect|Copy ID|Copy Name|Start|Remove…"; got != want {
+	if got, want := menuLabels(p), "Logs|Inspect|Copy ID|Copy Name|Start|Remove…|Add to AI Chat"; got != want {
 		t.Errorf("stopped container menu %q, want %q", got, want)
 	}
 	menuPick(p, "Remove…")
@@ -159,7 +160,7 @@ func TestDeskContainersContextMenu(t *testing.T) {
 	reply(t, c, expectOp(t, c, webproto.OpContainersHost, `{}`), ctrHost())
 
 	rightClick(p, row(`[data-project="shop"]`))
-	if got, want := menuLabels(p), "Start Project|Restart Project|Stop Project…|Remove Project Containers…"; got != want {
+	if got, want := menuLabels(p), "Start Project|Restart Project|Stop Project…|Remove Project Containers…|Add to AI Chat"; got != want {
 		t.Errorf("project menu %q, want %q", got, want)
 	}
 	menuPick(p, "Remove Project Containers…")

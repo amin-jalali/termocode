@@ -28,11 +28,10 @@ import { DBFormView } from "./DBForms";
 import { DBNeedAsk } from "./DBNeed";
 import { AddServerRow, HostRows, termAsk } from "./DeskHosts";
 import { hosts, loadHosts, openNext, pickDB, type HostCtr, type HostView } from "../../state/hosts";
-import { canAct, conns, dbErr, dbFilter, dbForm, dbNeed, loadConns, type Load } from "./dbstate";
+import { canAct, conns, dbErr, dbFilter, dbForm, dbNeed, loadConns, tables, type Load } from "./dbstate";
 
 type Tables = ReturnType<typeof readDBTables>;
 
-const tables = signal<ReadonlyMap<string, Load<Tables | RedisKeys>>>(new Map());
 /** open: the tree nodes shown open (conn, conn/schema, conn/schema/kind). */
 const open = signal<ReadonlySet<string>>(new Set());
 /** laptop is the question for the laptop a menu item asked. */
@@ -149,6 +148,7 @@ function ConnRows({ c }: { c: DBConnView }) {
         desc={desc}
         title={[c.name || c.id, desc, c.env, c.readonly ? t("db.readonly") : "", c.connected ? t("dbv.connected") : "", c.problem || (!opens ? t("db.not_sql") : "")].filter(Boolean).join(" — ")}
         data={{ conn: c.id }}
+        ai={{ item: "db_conn", conn: c.id }}
         onContextMenu={onMenu(t("scm.more_actions"), () => connItems(c))}
         end={
           <>
@@ -248,6 +248,7 @@ function SchemaRows({ c, v }: { c: DBConnView; v: Tables }) {
                     label={x.name}
                     title={`${v.schema ? v.schema + "." : ""}${x.name}`}
                     data={{ table: x.name }}
+                    ai={{ item: "db_table", conn, table: x.name }}
                     onClick={() => showFile(dbTab(conn, x.name), true)}
                     onDblClick={() => showFile(dbTab(conn, x.name))}
                     onContextMenu={onMenu(x.name, () => tableItems(c, x.name, x.view))}

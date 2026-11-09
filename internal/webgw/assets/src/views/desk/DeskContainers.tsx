@@ -264,7 +264,7 @@ function menuOf(label: string, items: () => readonly Item[]): ((e: MouseEvent) =
   });
 }
 
-function CtrRows({ cs, level, x }: { cs: CtrView[]; level: number; x: Ctx }) {
+function CtrRows({ cs, level, x, host }: { cs: CtrView[]; level: number; x: Ctx; host?: string }) {
   const ask = (c: CtrView, op: "start" | "restart" | "pause") => {
     const paused = c.state === "paused";
     const q: StringKey = op === "start" ? "ctr.start_q" : op === "restart" ? "ctr.restart_q" : paused ? "ctr.unpause_q" : "ctr.pause_q";
@@ -324,6 +324,7 @@ function CtrRows({ cs, level, x }: { cs: CtrView[]; level: number; x: Ctx }) {
                 selected={ctrSel.value?.id === c.id}
                 title={[c.name, c.image, c.status, c.ports].filter(Boolean).join(" — ")}
                 data={{ id: c.id, state: c.state }}
+                ai={host ? { item: "container", host, project: c.project || undefined, container: c.name } : undefined}
                 onClick={() => ((ctrSel.value = c), showLogs(c))}
                 onContextMenu={menuOf(c.name, () => items(c))}
                 end={<span class="tr-age">{c.status}</span>}
@@ -343,7 +344,7 @@ function CtrRows({ cs, level, x }: { cs: CtrView[]; level: number; x: Ctx }) {
   );
 }
 
-function ProjectRow({ p, cs, x, level }: { p: string; cs: CtrView[]; x: Ctx; level: number }) {
+function ProjectRow({ p, cs, x, level, host }: { p: string; cs: CtrView[]; x: Ctx; level: number; host?: string }) {
   const up = (verb: "up" | "restart") =>
     x.setPending({ key: "p:" + p, text: t(verb === "up" ? "ctr.compose_up_q" : "ctr.compose_restart_q", { name: p }), verb: t(verb === "up" ? "ctr.start" : "ctr.restart"), run: () => act("containers.compose", { project: p, verb }, t("ctr.compose_done", { name: p })) });
   const ask = (verb: "stop" | "down") =>
@@ -363,6 +364,7 @@ function ProjectRow({ p, cs, x, level }: { p: string; cs: CtrView[]; x: Ctx; lev
         icon={<Cod name="package" />}
         label={p}
         data={{ project: p }}
+        ai={host ? { item: "compose_project", host, project: p } : undefined}
         end={<span class="count">{upOf(cs)}</span>}
         onContextMenu={x.canAct ? menuOf(p, () => items) : undefined}
         actions={x.canAct && <>{buttons(items)}</>}
@@ -450,6 +452,7 @@ function HostTree({ x }: { x: Ctx }) {
         desc={v?.engine}
         title={here ? describe(here) : undefined}
         data={{ context: here?.name ?? "", "host-in-use": "1" }}
+        ai={here ? { item: "host", host: here.name } : undefined}
         end={v ? <span class="count">{upOf(v.containers)}</span> : undefined}
         onContextMenu={its.length ? menuOf(here?.name ?? "", () => its) : undefined}
         actions={buttons(its)}
@@ -466,14 +469,14 @@ function HostTree({ x }: { x: Ctx }) {
           <>
             {[...projects].map(([p, cs]) => (
               <Fragment key={p}>
-                <ProjectRow p={p} cs={cs} x={x} level={1} />
-                {!shut.value.has(p) && <CtrRows cs={cs} level={2} x={x} />}
+                <ProjectRow p={p} cs={cs} x={x} level={1} host={here?.name} />
+                {!shut.value.has(p) && <CtrRows cs={cs} level={2} x={x} host={here?.name} />}
               </Fragment>
             ))}
             {loose.length > 0 && (
               <>
                 <Row level={1} twist={shut.value.has("@other") ? "closed" : "open"} onToggle={() => flip("@other")} icon={<Cod name="package" />} label={t("srv.other")} data={{ project: "" }} end={<span class="count">{upOf(loose)}</span>} />
-                {!shut.value.has("@other") && <CtrRows cs={loose} level={2} x={x} />}
+                {!shut.value.has("@other") && <CtrRows cs={loose} level={2} x={x} host={here?.name} />}
               </>
             )}
             {v && v.more > 0 && <p class="tr-note">{t("ctr.more", { n: v.more })}</p>}

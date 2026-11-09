@@ -77,6 +77,7 @@ export function HostRows(p: Props) {
         desc={p.desc}
         title={p.title ?? hostLabel(p.h)}
         data={{ context: p.h.name, host: p.h.name }}
+        ai={{ item: "host", host: p.h.name }}
         end={l?.s === "ok" ? <span class="count">{upOf(shown)}</span> : undefined}
         onContextMenu={p.onMenu}
         actions={p.actions}
@@ -93,7 +94,7 @@ export function HostRows(p: Props) {
         l?.s === "ok" &&
         groups(shown).map(([proj, cs]) => (
           <Fragment key={proj}>
-            <Row level={lv + 1} twist={null} icon={<Cod name="package" />} label={proj} data={{ "host-project": p.h.name + "/" + proj }} end={<span class="count">{cs.length}</span>} />
+            <Row level={lv + 1} twist={null} icon={<Cod name="package" />} label={proj} data={{ "host-project": p.h.name + "/" + proj }} ai={cs[0].project ? { item: "compose_project", host: p.h.name, project: proj } : undefined} end={<span class="count">{cs.length}</span>} />
             {cs.map((c) => (
               <Row
                 key={c.id}
@@ -104,6 +105,7 @@ export function HostRows(p: Props) {
                 desc={c.image}
                 title={[c.name, c.image, c.status].filter(Boolean).join(" — ")}
                 data={{ "host-ctr": c.id, db: c.db }}
+                ai={{ item: "container", host: p.h.name, project: c.project || undefined, container: c.name }}
                 onClick={p.onPick ? () => p.onPick?.(c) : undefined}
                 end={<span class="tr-age">{c.status}</span>}
                 actions={p.ctrActions?.(c)}

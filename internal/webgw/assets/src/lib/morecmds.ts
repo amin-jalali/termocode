@@ -1,6 +1,7 @@
 // More commands of the workbench's command list (WEBP-9): laptop palette
 // commands the page does too, each through its own op or on the page.
 // Only the desktop workbench loads this file (lib/commands.ts).
+import { withAI } from "./aictx";
 import type { DebugLaunch, KeyBindings, KeyBound, LayoutEntry, LayoutList, LayoutSaved, LSPServer, LSPServerList, MCPItems, ThemeColor, ThemeColors, ThemeList } from "../../../../webproto/proto";
 import { link } from "../session";
 import { t } from "../strings";
@@ -12,7 +13,6 @@ import { store } from "../session";
 import type { Command } from "./commands";
 import { collapseTests } from "../views/run/TestingView";
 import { logs } from "../views/desk/DeskContainers";
-import { askSide } from "../views/desk/SideChat";
 import { askHere, askLaptop } from "../ui/AskHere";
 import { THEME_TAB, UCMD_TAB } from "./vtabs";
 
@@ -334,7 +334,7 @@ export function moreCommands(): Command[] {
   return [
     { id: "debugOpenLaunch", label: "cmd.debug_open_launch", when: canAct, run: openLaunch },
     { id: "testingCollapse", label: "cmd.testing_collapse", run: collapseTests },
-    { id: "aiSide", label: "cmd.ai_side", when: canAct, run: askSide },
+    { id: "aiSide", label: "cmd.ai_side", when: canAct, run: () => withAI((m) => m.side()) },
     { id: "aiMcpInsert", label: "cmd.ai_mcp_insert", when: canAct, run: pickMCP },
     { id: "pickTheme", label: "cmd.pick_theme", when: canAct, run: pickTheme },
     { id: "editTheme", label: "cmd.edit_theme", when: canAct, run: editTheme },

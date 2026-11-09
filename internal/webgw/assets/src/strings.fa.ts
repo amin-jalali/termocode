@@ -1527,6 +1527,7 @@ export const FA: Record<TranslatedKey, string> = {
   "aiinfo.bug_report": "راهنما: گزارش اشکال",
   "ai.attach": "افزودن به گفتگوی هوش مصنوعی",
   "ai.attached": "به پیام بعدی گفتگوی هوش مصنوعی افزوده شد",
+  "ai.ctx_full": "یک پیام تا ۸ مورد می‌گیرد. اول یکی را بردارید.",
   "ai.attach_list": "با پیام فرستاده می‌شود",
   "dictate.start": "به‌جای نوشتن، بگویید",
   "dictate.stop": "توقف شنیدن",

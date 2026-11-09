@@ -12,6 +12,8 @@
 // (what the grid shows: masked values stay masked).
 import { Fragment, h, type ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
+import type { Fmt } from "../../aictx/export";
+import { aiGrid, withAI } from "../../lib/aictx";
 import { mountDesk, setDesk, type DeskHandle } from "../../lib/deskeditor";
 import { sqlTab } from "../../lib/vtabs";
 import { modKey } from "../../lib/platform";
@@ -48,30 +50,10 @@ function numeric(r: DBRowsView, j: number): boolean {
 
 // ── Export ──────────────────────────────────────────────────────────────
 
-type Fmt = "csv" | "json" | "md";
-const cellText = (c: DBCellView | undefined) => (!c || c.n ? "" : c.m ? "••••••" : c.v);
-
-/** exportText writes rows as CSV (a formula-like cell gets a ' first),
- * JSON (NULL as null) or a Markdown table. */
-export function exportText(r: DBRowsView, f: Fmt): string {
-  if (f === "json")
-    return JSON.stringify(r.rows.map((row) => Object.fromEntries(r.columns.map((c, j) => [c, row[j]?.n ? null : cellText(row[j])]))), null, 2) + "\n";
-  if (f === "md") {
-    const esc = (s: string) => s.replace(/\|/g, "\\|").replace(/\n/g, " ");
-    const line = (cells: string[]) => "| " + cells.map(esc).join(" | ") + " |";
-    return [line(r.columns), "|" + r.columns.map(() => " --- |").join(""), ...r.rows.map((row) => line(r.columns.map((_, j) => (row[j]?.n ? "NULL" : cellText(row[j])))))].join("\n") + "\n";
-  }
-  const q = (s: string) => {
-    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
-    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-  };
-  return [r.columns.map(q).join(","), ...r.rows.map((row) => r.columns.map((_, j) => q(cellText(row[j]))).join(","))].join("\r\n") + "\r\n";
-}
-
 /** exportMenu offers the formats under the button (or at x, y). */
 function exportMenu(e: MouseEvent | { x: number; y: number }, r: DBRowsView, name: string): void {
   const b = "currentTarget" in e ? (e.currentTarget as HTMLElement).getBoundingClientRect() : { left: e.x, bottom: e.y };
-  const save = (f: Fmt) => saveBlob(new Blob([exportText(r, f)], { type: "text/plain" }), name + "." + f);
+  const save = (f: Fmt) => withAI((m) => saveBlob(new Blob([m.exportText(r, f)], { type: "text/plain" }), name + "." + f));
   openMenu(b.left, b.bottom, t("dbv.export"), [
     { label: "CSV", run: () => save("csv") },
     { label: "JSON", run: () => save("json") },
@@ -122,7 +104,8 @@ function EditCell({ v, done }: { v: string; done: (v: string | null) => void }) 
 }
 
 /** DBGrid draws rows as a grid; from is the first row's number - 1. */
-export function DBGrid({ r, from = 0, edit }: { r: DBRowsView; from?: number; edit?: GridEdit }) {
+/** ai: the grid is a table's rows (Add to AI Chat on a right click). */
+export function DBGrid({ r, from = 0, edit, ai }: { r: DBRowsView; from?: number; edit?: GridEdit; ai?: { conn: string; table: string } }) {
   const [widths, setWidths] = useState<number[]>([]);
   const [at, setAt] = useState<string | null>(null);
   const drag = useRef<{ j: number; x: number; w: number } | null>(null);
@@ -142,7 +125,7 @@ export function DBGrid({ r, from = 0, edit }: { r: DBRowsView; from?: number; ed
   const rows: (DBCellView | null)[][] = [...r.rows, ...(edit?.e.add ?? [])];
   return (
     <div class="dbg" role="region" aria-label={t("dbv.results")} tabIndex={0}>
-      <table class="dbg-table" style={{ width: 48 + r.columns.reduce((a, _, j) => a + widthOf(j), 0) + "px" }}>
+      <table class="dbg-table" onContextMenu={ai && aiGrid({ ...ai, r, from })} style={{ width: 48 + r.columns.reduce((a, _, j) => a + widthOf(j), 0) + "px" }}>
         <colgroup>
           <col style={{ width: "48px" }} />
           {r.columns.map((_, j) => (
@@ -382,7 +365,7 @@ export function DBTableTab({ conn, table, slot }: { conn: string; table: string;
         <p class="dbg-empty">{t("loading")}</p>
       ) : (
         <>
-          <DBGrid r={r} from={from} edit={grid} />
+          <DBGrid r={r} from={from} edit={grid} ai={{ conn, table }} />
           <Meta r={r}>
             <span class="dbg-pages">
               <Act icon="chevron-left" label={t("db.prev_rows")} disabled={from === 0 || dirty > 0} onClick={() => setFrom(Math.max(0, from - 100))} />

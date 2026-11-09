@@ -4,7 +4,8 @@
 import { signal } from "@preact/signals";
 import { OfflineError, ReqError } from "../../net/link";
 import { link } from "../../session";
-import { readDBConns, type DBConnView } from "../../state/more";
+import { readDBConns, type DBConnView, type readDBTables } from "../../state/more";
+import type { RedisKeys } from "../../../../../webproto/proto";
 import { t } from "../../strings";
 import { errText } from "../../ui/CardSheet";
 
@@ -31,6 +32,10 @@ export function dbNeed(e: unknown): DBNeed | undefined {
 }
 
 export const conns = signal<Load<DBConnView[]> | null>(null);
+
+/** tables is the tree's read children of each connection (its tables,
+ * or a Redis connection's keys), by connection id. */
+export const tables = signal<ReadonlyMap<string, Load<ReturnType<typeof readDBTables> | RedisKeys>>>(new Map());
 
 /** loadConns asks for the connections again. */
 export function loadConns(): void {

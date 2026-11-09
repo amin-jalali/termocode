@@ -34,7 +34,8 @@ func TestPerfGuardEditorBudget(t *testing.T) {
 // The page's only dynamic imports are the editor file, the desktop
 // workbench, the phone views (home.js: Home, This phone, All tools) and the Persian strings, each by a fixed path, all in
 // lib/lazy.ts; the desktop editor's frame has one, its Vim mode
-// (monaco-vim.js, WEBP-1).
+// (monaco-vim.js, WEBP-1); the workbench has one, Add to AI Chat
+// (aictx.js, lib/aictx.ts).
 func TestTheOnlyDynamicImportsAreTheEditorAndTheWorkbench(t *testing.T) {
 	re := regexp.MustCompile(`\bimport\s*\(([^)]*)\)`)
 	var found []string
@@ -56,8 +57,8 @@ func TestTheOnlyDynamicImportsAreTheEditorAndTheWorkbench(t *testing.T) {
 		t.Fatal(err)
 	}
 	sort.Strings(found)
-	if len(found) != 5 || found[0] != `src/lib/lazy.ts "/assets/editor.js"` || found[1] != `src/lib/lazy.ts "/assets/home.js"` || found[2] != `src/lib/lazy.ts "/assets/strings-fa.js"` || found[3] != `src/lib/lazy.ts "/assets/workbench.js"` || found[4] != `src/monaco/frame.ts "/assets/monaco-vim.js"` {
-		t.Errorf("dynamic imports %q, want only lib/lazy.ts loading /assets/editor.js, /assets/home.js, /assets/strings-fa.js and /assets/workbench.js, and monaco/frame.ts loading /assets/monaco-vim.js", found)
+	if len(found) != 6 || found[0] != `src/lib/aictx.ts "/assets/aictx.js"` || found[1] != `src/lib/lazy.ts "/assets/editor.js"` || found[2] != `src/lib/lazy.ts "/assets/home.js"` || found[3] != `src/lib/lazy.ts "/assets/strings-fa.js"` || found[4] != `src/lib/lazy.ts "/assets/workbench.js"` || found[5] != `src/monaco/frame.ts "/assets/monaco-vim.js"` {
+		t.Errorf("dynamic imports %q, want only lib/lazy.ts loading /assets/editor.js, /assets/home.js, /assets/strings-fa.js and /assets/workbench.js, lib/aictx.ts loading /assets/aictx.js, and monaco/frame.ts loading /assets/monaco-vim.js", found)
 	}
 }
 

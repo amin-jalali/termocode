@@ -82,7 +82,6 @@ import { PeekHost } from "../views/git/PeekCard";
 import { AgentsView } from "../views/AgentsView";
 import { ItermocView } from "../views/ItermocView";
 import { QuickInput } from "./QuickInput";
-import { SideChat } from "../views/desk/SideChat";
 import { RefsPeek } from "./RefsPeek";
 import { diags, panelTab, toggleProblems, type PanelTab } from "../lib/lsp";
 import { ProblemsView } from "../views/ProblemsView";
@@ -579,7 +578,6 @@ export function Workbench() {
         <div class="wb-editor">
           {quick.value && <QuickInput key={quick.value.mode + (quick.value.ask?.title ?? quick.value.pick?.title ?? "")} />}
           {asking.value && <LaptopCommand id={asking.value.id} name={asking.value.title} />}
-          <SideChat />
           {askHere.value && <AskHere ask={askHere.value} />}
           {askLaptop.value && <AskLaptop key={askLaptop.value.text} label={askLaptop.value.label} text={askLaptop.value.text} send={askLaptop.value.send} onDone={() => (askLaptop.value = null)} />}
           <RemoteAskHost />
