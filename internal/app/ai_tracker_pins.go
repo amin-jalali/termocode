@@ -427,5 +427,5 @@ func aiTrackerTools(profName string) []ai.Tool {
 			}
 			return fmt.Sprintf("Pinned %q to the phone's Home.", p.Title), nil
 		},
-	}}
+	}, aiTrackerPinsTool(prof)} // AI parity: list, run, unpin (ai_tracker_manage_tools.go)
 }
