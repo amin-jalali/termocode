@@ -109,6 +109,8 @@ export class Link {
   private readonly evHandlers = new Set<(kind: string, data: unknown) => void>();
   private door: DoorSink | null = null;
   private metaSeen = false;
+  /** build is the termocode build the first meta named (meta.build). */
+  private build = "";
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
   private pingTimer: ReturnType<typeof setInterval> | undefined;
   private helloTimer: ReturnType<typeof setTimeout> | undefined;
@@ -275,6 +277,10 @@ export class Link {
       case "meta": {
         clearTimeout(this.helloTimer);
         this.metaSeen = true;
+        // termocode reloaded into a new build and kept this session: load
+        // its page (the tab keeps its token).
+        if (msg.build && this.build && msg.build !== this.build) return location.reload();
+        this.build ||= msg.build ?? "";
         const resumed = this.conn !== "" && msg.conn === this.conn;
         this.conn = msg.conn;
         this.attempt = 0;
