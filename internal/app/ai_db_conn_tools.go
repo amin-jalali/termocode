@@ -619,22 +619,25 @@ func aiDBConnectionTool(root string, call aiIDECaller) ai.Tool {
 func aiDBTestConn(ctx context.Context, root string, call aiIDECaller, c dbclient.Conn) (string, error) {
 	snap := dbAITake(ctx, call, root, c)
 	snap.user = nil
-	ctx, cancel := context.WithTimeout(ctx, loadDBConsoleSettings().timeout())
-	defer cancel()
+	d := loadDBConsoleSettings().timeout()
 	start := time.Now()
 	var sess dbclient.Session
 	var err error
 	switch {
 	case c.Driver == "redis":
-		sess, err = redisAIOpen(ctx, root, c, &snap, true)
+		rctx, rcancel := context.WithTimeout(ctx, d)
+		defer rcancel()
+		sess, err = redisAIOpen(rctx, root, c, &snap, true)
 	default:
 		if _, cerr := dbAIConn(root, c.ID); cerr != nil {
 			return "", errors.New("test works on SQL and Redis connections; use op connect for " + c.EngineLabel())
 		}
-		sess, err = dbAIOpen(ctx, root, c, &snap, true)
+		sess, err = dbAIOpen(ctx, root, c, &snap, true) // a password asked on the way is not counted in the timeout
 	}
 	if err == nil {
-		err = sess.Ping(ctx)
+		pctx, pcancel := context.WithTimeout(ctx, d)
+		err = sess.Ping(pctx)
+		pcancel()
 		_ = sess.Close()
 	}
 	if err != nil {

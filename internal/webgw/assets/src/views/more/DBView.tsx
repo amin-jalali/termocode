@@ -16,7 +16,8 @@ import { Button } from "../../ui/Button";
 import { SkeletonRows } from "../../ui/Skeleton";
 import { gitFailed as failed } from "../git/errors";
 import { SubView } from "./SubView";
-import { dbErr, dbNeed, type DBNeed } from "../desk/dbstate";
+import { dbNeed, type DBNeed } from "../desk/dbstate";
+import { DBAsk } from "../../ui/DBAsk";
 import { PhoneHosts } from "./Hosts";
 
 const to = (rest: string) => go({ tab: "more", rest, query: {} });
@@ -41,81 +42,6 @@ function useAsk<T>(op: string, args: Record<string, unknown>, read: (r: unknown)
     );
   }, [key, n]);
   return { data, err, need, again: () => setN((x) => x + 1) };
-}
-
-/** Need asks what a read needs (Cancel first): to trust an unknown SSH
- * host key, or a secret the laptop does not have, sent once in a masked
- * field to stay in the laptop's secret store only. Then it reads again. */
-function Need({ conn, need, msg, onDone }: { conn: string; need: DBNeed; msg: string; onDone: () => void }) {
-  const [no, setNo] = useState(false);
-  const [err, setErr] = useState("");
-  const [busy, setBusy] = useState(false);
-  const safe = useRef<HTMLButtonElement | null>(null);
-  const field = useRef<HTMLInputElement | null>(null);
-  useEffect(() => (need.need === "host_key" ? safe.current : field.current)?.focus(), [need]);
-  if (no) return <p class="empty refused" dir="auto">{msg}</p>;
-  if (need.need === "host_key") {
-    const q = t(need.jump ? "dbv.jump_q" : "dbv.host_q", { host: need.host });
-    const trust = () => {
-      setBusy(true);
-      link.request("db.trust_host", { conn, fingerprint: need.fingerprint }).then(onDone, (e: unknown) => {
-        setBusy(false);
-        setErr(dbErr(e));
-      });
-    };
-    return (
-      <div class="row-ask db-need" role="group" aria-label={q}>
-        <p class="row-ask-text" dir="auto">
-          {q}
-        </p>
-        <p class="dbn-key" dir="ltr">
-          {[need.key_type, need.fingerprint].filter(Boolean).join(" ")}
-        </p>
-        <p class="view-note">{t("dbv.check_key") + " " + t("dbv.trust_note")}</p>
-        {err && <p class="db-note">{err}</p>}
-        <div class="choices">
-          <button type="button" class="btn btn-neutral" ref={safe} onClick={() => setNo(true)}>
-            {t("cancel")}
-          </button>
-          <Button kind="primary" needsLink disabled={busy} onClick={trust}>
-            {t("dbv.trust")}
-          </Button>
-        </div>
-      </div>
-    );
-  }
-  const kind = need.need;
-  const label = kind === "password" ? t("dbv.pw_db") : kind === "ssh_password" ? t("dbv.pw_ssh") : t("dbv.pw_key", { key: need.key ?? "" });
-  const send = (e: Event) => {
-    e.preventDefault();
-    const el = field.current;
-    const value = el?.value ?? "";
-    if (!el || !value || busy) return;
-    el.value = ""; // the page keeps no copy
-    setBusy(true);
-    link.request("db.secret", { conn, kind, value }).then(onDone, (x: unknown) => {
-      setBusy(false);
-      setErr(dbErr(x));
-    });
-  };
-  return (
-    <form class="row-ask db-need" aria-label={label} onSubmit={send}>
-      <p class="row-ask-text" dir="auto">
-        {msg}
-      </p>
-      <input ref={field} class="field-box" type="password" aria-label={label} placeholder={label} autocomplete="off" spellcheck={false} autocapitalize="off" />
-      <p class="view-note">{t("dbv.pw_note")}</p>
-      {err && <p class="db-note">{err}</p>}
-      <div class="choices">
-        <button type="button" class="btn btn-neutral" onClick={() => setNo(true)}>
-          {t("cancel")}
-        </button>
-        <button type="submit" class="btn btn-primary" disabled={busy}>
-          {t("dbv.pw_send")}
-        </button>
-      </div>
-    </form>
-  );
 }
 
 function Conns() {
@@ -275,7 +201,7 @@ function Tables({ conn }: { conn: string }) {
   return (
     <div class="dbv-body">
       {err && need && canQuery ? (
-        <Need key={err} conn={conn} need={need} msg={err} onDone={again} />
+        <DBAsk key={err} conn={conn} need={need} msg={err} onDone={again} />
       ) : err ? (
         <p class="empty refused" dir="auto">
           {err}

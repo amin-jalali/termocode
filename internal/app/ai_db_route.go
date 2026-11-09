@@ -36,6 +36,7 @@ var errDBAIAskBusy = errors.New("another question is open on the screen; once it
 // dbAIPasswordAsk is the AI's open database password prompt.
 type dbAIPasswordAsk struct {
 	conn, name string // the connection; the secret store name it is kept as
+	wrong      bool   // the one tried was not accepted
 	done       chan string
 }
 
@@ -193,7 +194,7 @@ func dbAIAskPassword(ctx context.Context, call aiIDECaller, c dbclient.Conn, nam
 		if wrong {
 			title += " · not accepted, try again"
 		}
-		m.databases.pendingSecretAI = &dbAIPasswordAsk{conn: c.ID, name: name, done: ch}
+		m.databases.pendingSecretAI = &dbAIPasswordAsk{conn: c.ID, name: name, wrong: wrong, done: ch}
 		m.databaseAddPrompt(promptKindDBPassword, title, "Password for "+sanitizeDBText(dbAITarget(c))+" (kept in the secret store):", "", true)
 		return ch, nil
 	}, func(m *Model, ch chan string) {
@@ -211,6 +212,20 @@ func dbAIAskPassword(ctx context.Context, call aiIDECaller, c dbclient.Conn, nam
 		return "", errors.New("no database password was typed (the user cancelled)")
 	}
 	return v, nil
+}
+
+// dbAILogin logs in to c with pw. A db_* tool opens its session before
+// its statement timeout starts (the user may be asked for the password
+// on the way, and that wait is not counted): each login it tries is
+// bounded by that timeout on its own. The web page's opens (no call)
+// are bounded by their caller.
+func dbAILogin(ctx context.Context, c dbclient.Conn, snap *dbAISnapshot, pw string) (dbclient.Session, error) {
+	if snap.call == nil {
+		return dbSQLSessionFactory(ctx, c, pw)
+	}
+	lctx, cancel := context.WithTimeout(ctx, loadDBConsoleSettings().timeout())
+	defer cancel()
+	return dbSQLSessionFactory(lctx, c, pw)
 }
 
 // databaseAIPasswordTyped answers the AI's database password prompt:

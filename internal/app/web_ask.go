@@ -80,6 +80,10 @@ type webAsk struct {
 	// dialog: its safe answer, web_ask_parity.go).
 	cancel func(m *Model) tea.Cmd
 	kind   confirmKindEnum // a laptop dialog shown in the page: its kind (web_ask_parity.go)
+	// dbConn and dbNeed: an AI db_* tool's question (web_ask_aidb.go); the
+	// page shows the Databases view's own card for it.
+	dbConn string
+	dbNeed *webproto.DBNeed
 }
 
 // webAskState is the line of laptop cards (Update only).
@@ -93,6 +97,7 @@ type webAskState struct {
 	direct []*webAsk
 	origin *webAskOrigin // the last page that acted (web_ask_parity.go)
 	mirror *webAsk       // the laptop dialog shown in that page now
+	aidb   *webAIDBAsk   // the AI db_* tool question the pages are asked (web_ask_aidb.go)
 }
 
 // askHere: a request on c is confirmed by its own page, not the laptop.
@@ -161,7 +166,7 @@ func (m *Model) webAskHereAdd(c *webConn, a *webAsk, ask bool) (string, webproto
 	}
 	s.n++
 	id := fmt.Sprintf("ask-%d", s.n)
-	data, err := webData(webproto.AskCard{ID: id, Title: a.title, Body: a.body, Action: a.action})
+	data, err := webData(webproto.AskCard{ID: id, Title: a.title, Body: a.body, Action: a.action, Conn: a.dbConn, Need: a.dbNeed})
 	if err != nil {
 		recordError("[web] " + a.op + ": ask: " + err.Error())
 		return "", webproto.CodeInternal, "Something went wrong."

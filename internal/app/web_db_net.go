@@ -620,10 +620,19 @@ func (m *Model) webDBSecret(call *webCall) tea.Cmd {
 	}
 	ai.RegisterSecret(a.Value)
 	kind, value, net := a.Kind, a.Value, &m.web.dbNet
+	// A db_* tool that waits on this secret gets it now (web_ask_aidb.go).
+	gave := m.webAIDBGiven(webName(call.conn.device), c.ID, kind, "", value)
 	call.later()
 	return func() tea.Msg {
 		store := databaseSecretStore()
 		if store == nil || store.Locked() {
+			if gave {
+				return applyMsg(func(m *Model) tea.Cmd {
+					m.webAuditOp(call, c.ID+" "+kind, "used once (the secret store is locked)")
+					call.reply(webproto.DBDone{Text: "Used for this read only: the secret store is locked."})
+					return nil
+				})
+			}
 			call.fail(webproto.CodeConflict, "The secret store is locked. Unlock it on the laptop first.")
 			return nil
 		}
@@ -657,6 +666,7 @@ func (m *Model) webDBTrustHost(call *webCall) tea.Cmd {
 		return nil
 	}
 	m.webAuditOp(call, a.Conn+" "+host+" "+ask.Fingerprint, "trusted")
+	_ = m.webAIDBGiven(webName(call.conn.device), a.Conn, "host_key", ask.Fingerprint, "") // a db_* tool waits on it (web_ask_aidb.go)
 	call.reply(webproto.DBDone{Text: "Host key of " + host + " saved."})
 	return nil
 }

@@ -437,7 +437,7 @@ func dbAIOpenAs(ctx context.Context, root string, c dbclient.Conn, snap *dbAISna
 		}
 		snap.password, snap.hasPW = pw, true
 	}
-	base, err := dbSQLSessionFactory(ctx, c, snap.password)
+	base, err := dbAILogin(ctx, c, snap, snap.password)
 	if name := webDBPasswordName(c); err != nil && snap.call != nil && name != "" && webDBAuthFailed(err) {
 		// The view's password prompt, as its own connect asks (the model
 		// never sees the value); the login is tried once more with it.
@@ -446,7 +446,7 @@ func dbAIOpenAs(ctx context.Context, root string, c dbclient.Conn, snap *dbAISna
 			return nil, aerr
 		}
 		snap.password, snap.hasPW = pw, true
-		base, err = dbSQLSessionFactory(ctx, c, pw)
+		base, err = dbAILogin(ctx, c, snap, pw)
 	}
 	if err != nil {
 		return nil, err
@@ -760,12 +760,12 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 				target = dbAITargetDatabase(c, database)
 				snap.user = nil // the user's session is on another database
 			}
-			ctx, cancel := timeout(ctx)
-			defer cancel()
-			sess, err := dbAIOpen(ctx, root, target, &snap, true)
+			sess, err := dbAIOpen(ctx, root, target, &snap, true) // a question to the user on the way is not counted in the timeout
 			if err != nil {
 				return "", dbAIError(err, snap.password)
 			}
+			ctx, cancel := timeout(ctx)
+			defer cancel()
 			defer sess.Close()
 			req := dbclient.IntrospectionRequest{Schema: schemaName, Object: table}
 			if c.Driver == "mysql" {
@@ -891,12 +891,12 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 			}
 			rows = min(rows, dbAIMaxRows)
 			snap := dbAITake(ctx, call, root, r.conn)
-			ctx, cancel := timeout(ctx)
-			defer cancel()
-			sess, err := dbAIOpen(ctx, root, r.conn, &snap, read)
+			sess, err := dbAIOpen(ctx, root, r.conn, &snap, read) // a question to the user on the way is not counted in the timeout
 			if err != nil {
 				return "", dbAIError(err, snap.password)
 			}
+			ctx, cancel := timeout(ctx)
+			defer cancel()
 			res := sess.Run(ctx, r.sql, dbclient.RunOptions{MaxRows: rows})
 			_ = sess.Close()
 			run := &dbRun{conn: r.conn.ID, sql: r.sql, by: "ai", line: 1, statements: []string{r.sql}, result: res}
@@ -942,12 +942,12 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 			}
 			sql := dbAIDialect(r.conn.Driver).Explain(r.sql, analyze)
 			snap := dbAITake(ctx, call, root, r.conn)
-			ctx, cancel := timeout(ctx)
-			defer cancel()
-			sess, err := dbAIOpen(ctx, root, r.conn, &snap, true)
+			sess, err := dbAIOpen(ctx, root, r.conn, &snap, true) // a question to the user on the way is not counted in the timeout
 			if err != nil {
 				return "", dbAIError(err, snap.password)
 			}
+			ctx, cancel := timeout(ctx)
+			defer cancel()
 			res := sess.Run(ctx, sql, dbclient.RunOptions{MaxRows: dbAIMaxRows})
 			_ = sess.Close()
 			run := &dbRun{conn: r.conn.ID, sql: sql, by: "ai", line: 1, statements: []string{sql}, result: res}
@@ -1048,12 +1048,12 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 				schemaName = c.Database
 			}
 			snap := dbAITake(ctx, call, root, c)
-			ctx, cancel := timeout(ctx)
-			defer cancel()
-			sess, err := dbAIOpen(ctx, root, c, &snap, true)
+			sess, err := dbAIOpen(ctx, root, c, &snap, true) // a question to the user on the way is not counted in the timeout
 			if err != nil {
 				return "", dbAIError(err, snap.password)
 			}
+			ctx, cancel := timeout(ctx)
+			defer cancel()
 			defer sess.Close()
 			res, err := sess.Introspect(ctx, dbclient.IntrospectionRequest{Schema: schemaName, Object: table})
 			if err != nil {
@@ -1121,12 +1121,12 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 			exact, _ := a["exact"].(bool)
 			opt := dbclient.DataSearchOptions{Value: strings.TrimSpace(ai.ArgString(a, "value")), Exact: exact}
 			snap := dbAITake(ctx, call, root, c)
-			ctx, cancel := timeout(ctx)
-			defer cancel()
-			sess, err := dbAIOpen(ctx, root, c, &snap, true)
+			sess, err := dbAIOpen(ctx, root, c, &snap, true) // a question to the user on the way is not counted in the timeout
 			if err != nil {
 				return "", dbAIError(err, snap.password)
 			}
+			ctx, cancel := timeout(ctx)
+			defer cancel()
 			defer sess.Close()
 			res, err := dbDataSearch(ctx, sess, tgt, opt, nil)
 			if err != nil {

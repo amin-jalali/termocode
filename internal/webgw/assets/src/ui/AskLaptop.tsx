@@ -16,6 +16,8 @@ import { gitFailed as failed } from "../views/git/errors";
 import { useArming } from "./arming";
 import { Sheet } from "./Sheet";
 import { WaitingLaptop } from "./Waiting";
+import { DBAsk } from "./DBAsk";
+import type { DBNeed } from "../views/desk/dbstate";
 
 type Step = { s: "ask" } | { s: "sending" } | { s: "here" } | { s: "wait"; card: string; since: number };
 
@@ -75,7 +77,9 @@ export function AskLaptop({ label, text, send, onDone, onConfirmed, cls = "ask" 
 }
 
 /** HereAsks shows this page's own questions (ask evs), one at a time:
- * the card's exact text, Cancel first; the answer is this page's. */
+ * the card's exact text, Cancel first; the answer is this page's. A
+ * question an AI db_* tool waits on (conn and need) is the Databases
+ * view's own card (DBAsk): Trust and save, or a masked field. */
 export function HereAsks() {
   const a = asked.value[0];
   if (!a) return null;
@@ -86,7 +90,14 @@ export function HereAsks() {
   const no = () => cancelAsk(a.id).catch(end);
   return (
     <Sheet onLater={no} label={a.title}>
-      <Ask key={a.id} cls="ask" text={a.body} verb={a.action} onNo={no} onYes={() => link.request("cards.answer", { id: a.id, choice: "confirm" }).catch(end)} />
+      {a.need && a.conn ? (
+        <div class="ask">
+          <p class="ask-note">{a.title}</p>
+          <DBAsk key={a.id} conn={a.conn} need={a.need as DBNeed} msg={a.body} onDone={() => ended(a.id, { confirmed: true, by: "" })} onNo={no} />
+        </div>
+      ) : (
+        <Ask key={a.id} cls="ask" text={a.body} verb={a.action} onNo={no} onYes={() => link.request("cards.answer", { id: a.id, choice: "confirm" }).catch(end)} />
+      )}
     </Sheet>
   );
 }

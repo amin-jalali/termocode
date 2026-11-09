@@ -98,6 +98,8 @@ type dbHostAsk struct {
 type dbSecretAsk struct {
 	conn, kind, then string      // kind: "password" | "passphrase"
 	done             chan string // a db_* tool waits for the typed value (dbThenAI)
+	key              string      // the key file's name (a passphrase); the page asks with it
+	wrong            bool        // the last one was not accepted
 }
 
 // dbSSHEdit is the Add SSH Tunnel / SSL Settings prompt chain.
@@ -279,7 +281,7 @@ func (m *Model) databaseTunnelError(err error, conn, then string) (tea.Cmd, bool
 	}
 	var need *dbclient.SSHSecretError
 	if errors.As(err, &need) {
-		m.databases.secretAsk = &dbSecretAsk{conn: conn, kind: need.Kind, then: then}
+		m.databases.secretAsk = &dbSecretAsk{conn: conn, kind: need.Kind, then: then, key: sanitizeDBText(filepath.Base(need.KeyFile)), wrong: need.Wrong}
 		title, label := "SSH password", "Password for the SSH server:"
 		if need.Kind == "passphrase" {
 			title, label = "SSH key passphrase", "Passphrase for "+sanitizeDBText(filepath.Base(need.KeyFile))+":"

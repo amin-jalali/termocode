@@ -252,12 +252,12 @@ func aiDBDataTool(root string, call aiIDECaller) ai.Tool {
 
 func aiDBExport(ctx context.Context, root string, call aiIDECaller, r *aiDBDataReq) (string, error) {
 	snap := dbAITake(ctx, call, root, r.conn)
-	ctx, cancel := context.WithTimeout(ctx, 10*loadDBConsoleSettings().timeout())
-	defer cancel()
-	sess, err := dbAIOpen(ctx, root, r.conn, &snap, true)
+	sess, err := dbAIOpen(ctx, root, r.conn, &snap, true) // a question to the user on the way is not counted in the timeout
 	if err != nil {
 		return "", dbAIError(err, snap.password)
 	}
+	ctx, cancel := context.WithTimeout(ctx, 10*loadDBConsoleSettings().timeout())
+	defer cancel()
 	defer sess.Close()
 	if err := os.MkdirAll(filepath.Dir(r.abs), 0o755); err != nil {
 		return "", errors.New("could not make the folder")
@@ -275,12 +275,12 @@ func aiDBExport(ctx context.Context, root string, call aiIDECaller, r *aiDBDataR
 
 func aiDBImport(ctx context.Context, root string, call aiIDECaller, r *aiDBDataReq) (string, error) {
 	snap := dbAITake(ctx, call, root, r.conn)
-	ctx, cancel := context.WithTimeout(ctx, 10*loadDBConsoleSettings().timeout())
-	defer cancel()
-	ro, err := dbAIOpen(ctx, root, r.conn, &snap, true)
+	ro, err := dbAIOpen(ctx, root, r.conn, &snap, true) // a question to the user on the way is not counted in the timeout
 	if err != nil {
 		return "", dbAIError(err, snap.password)
 	}
+	ctx, cancel := context.WithTimeout(ctx, 10*loadDBConsoleSettings().timeout())
+	defer cancel()
 	ir, err := ro.Introspect(ctx, r.table.request())
 	_ = ro.Close()
 	if err != nil {
