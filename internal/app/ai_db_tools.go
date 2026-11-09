@@ -1206,4 +1206,4 @@ func (m *Model) dbAutoApproveItems(saved []string) []picker.Item {
 
 // aiDBNotConnectedState is db_connections' state of a connection that is
 // not open now.
-const aiDBNotConnectedState = "not connected (db_* tools connect as needed)"
+const aiDBNotConnectedState = "not connected yet"
