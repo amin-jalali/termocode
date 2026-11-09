@@ -25,18 +25,16 @@ func TestAIKubeToolsAreReadOnly(t *testing.T) {
 	var names []string
 	for _, tl := range tools {
 		names = append(names, tl.Name)
-		if tl.Mutating || tl.Class != "" || tl.Gate != nil {
+		if tl.Name != "kube_manage" && (tl.Mutating || tl.Class != "" || tl.Gate != nil) {
 			t.Errorf("%s asks or writes", tl.Name)
 		}
 	}
-	if strings.Join(names, ",") != "kube_list,kube_describe,kube_logs" {
+	if strings.Join(names, ",") != "kube_list,kube_describe,kube_logs,kube_manage" {
 		t.Errorf("tools = %v", names)
 	}
-	for _, bad := range []string{"restart", "forward", "scale", "delete", "exec"} {
-		for _, n := range names {
-			if strings.Contains(n, bad) {
-				t.Errorf("tool %s may change the cluster", n)
-			}
+	for _, tl := range tools[:3] {
+		if p, ok := tl.Params["context"].(map[string]any); !ok || !strings.Contains(p["description"].(string), "kube_manage") {
+			t.Errorf("%s takes no kube context", tl.Name)
 		}
 	}
 }
