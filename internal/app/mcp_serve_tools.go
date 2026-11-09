@@ -24,8 +24,12 @@ import (
 // asks every time on a Cancel-first card, and a typed name stays on the
 // GUI's own card), settings,
 // credentials, LSP rename / code actions, service starts, .http file
-// writes, database writes, containers and every tool of the user's own
-// MCP servers (mcp__*: never re-exported, MC-11). The agent has its own
+// writes, database writes and every tool of the user's own MCP servers
+// (mcp__*: never re-exported, MC-11). Containers, servers and Kubernetes
+// are open with the chat's own gates: what the GUI asks on a card asks
+// every time on the card (no "always" key: their class is ""), the rest
+// asks or runs as in the chat; mcpServeDestructive marks the tools that
+// can remove or end something. The agent has its own
 // shell and editor; we add the IDE, not a second agent. One tool is the
 // server's own: agent_task_start hands a task to a new background agent
 // in a new worktree, and the user says yes on the New worktree card.
@@ -113,6 +117,37 @@ var mcpServeAllowList = []mcpServeToolRow{
 	{name: "redis_keys"},
 	{name: "redis_get"},     // asks: it reads a value
 	{name: "redis_command"}, // read commands only, each asks
+	// Containers, servers (hosts) and Kubernetes: the chat's tools and gates
+	{name: "containers_list"},
+	{name: "containers_inspect"},
+	{name: "containers_logs"},
+	{name: "containers_stats"},
+	{name: "images_list"},
+	{name: "volumes_list"},
+	{name: "networks_list"},
+	{name: "contexts_list"},
+	{name: "registries_list"},
+	{name: "contexts_manage"},
+	{name: "containers_control"},
+	{name: "containers_exec"},
+	{name: "images_pull"},
+	{name: "images_manage"},
+	{name: "containers_storage"},
+	{name: "containers_prune"},
+	{name: "compose_up"},
+	{name: "compose_project"},
+	{name: "registry_manage"},
+	{name: "kube_list"},
+	{name: "kube_describe"},
+	{name: "kube_logs"},
+	{name: "kube_manage"},
+}
+
+// mcpServeDestructive are the exposed tools with an op that removes or
+// ends something (each such op asks on the card every time).
+var mcpServeDestructive = map[string]bool{
+	"contexts_manage": true, "containers_control": true, "images_manage": true, "containers_storage": true,
+	"containers_prune": true, "compose_project": true, "registry_manage": true, "kube_manage": true,
 }
 
 // mcpServeRow returns the allow-list row of name. Names of the user's
@@ -184,17 +219,17 @@ func mcpServeCatalog() []ai.Tool {
 }
 
 // MCPServeToolSpecs are the tools/list entries of the MCP server (the
-// relay answers with them when no UI runs, MS-2). Nothing exposed is
-// destructive; readOnlyHint is set for tools that never ask.
+// relay answers with them when no UI runs, MS-2). destructiveHint marks
+// mcpServeDestructive; readOnlyHint is set for tools that never ask.
 func MCPServeToolSpecs() []mcp.Tool {
 	tools := mcpServeCatalog()
 	out := make([]mcp.Tool, 0, len(tools))
-	no := false
 	for _, t := range tools {
 		spec := t.Spec()
 		readOnly := !t.Mutating && t.Gate == nil
+		destructive := mcpServeDestructive[t.Name]
 		out = append(out, mcp.Tool{Name: spec.Name, Description: spec.Description, InputSchema: spec.Schema,
-			Annotations: &mcp.ToolAnnotations{ReadOnlyHint: &readOnly, DestructiveHint: &no}})
+			Annotations: &mcp.ToolAnnotations{ReadOnlyHint: &readOnly, DestructiveHint: &destructive}})
 	}
 	return out
 }
