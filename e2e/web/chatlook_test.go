@@ -84,3 +84,46 @@ func TestDeskChatAnswerBeingWrittenSaysThinking(t *testing.T) {
 	p.TapJS(ai + `.querySelector(".msg-think button")`)
 	expectReq(t, c, "chat.stop")
 }
+
+// A run of several steps shows a small strip of its steps above the
+// answer; Show opens the Run view beside the chat with each step's
+// model, time, state, output, tool calls and error.
+func TestDeskChatRunStripAndRunView(t *testing.T) {
+	run := map[string]any{"i": 1, "role": "assistant", "streaming": true, "text": "",
+		"run": map[string]any{"id": "r-3", "profile": "plan-code-review", "state": "running", "started_ms": time.Now().Add(-40 * time.Second).UnixMilli()},
+		"steps": []any{
+			map[string]any{"id": "plan", "title": "Plan", "state": "completed", "model": "claude-opus-5-5", "elapsed_ms": 12000, "md": md("doc", mdPara("1. Add the column."))},
+			map[string]any{"id": "code", "title": "Code", "state": "running", "model": "Codex · gpt-6-sol", "tools": []any{"⚙ Edit db.go → 3 lines"}, "text": "Adding the column"},
+			map[string]any{"id": "review", "title": "Review", "state": "failed", "model": "claude-haiku-4-5", "error": "HTTP 400: no credit"},
+		}}
+	p, _ := openChat(t, Desktop, chatWith(true, userMsg(0, "Add a created_at column"), run))
+	const ai = deskChat + `.querySelector('.msg-ai[data-i="1"]')`
+	p.WaitJS(ai + `?.querySelector(".run-strip")`)
+	if Eval[bool](p, ai+`.querySelector(".run-head, details.step") !== null`) {
+		t.Error("the run still shows its old card in the chat")
+	}
+	if got := Eval[[]string](p, `[...`+ai+`.querySelectorAll(".run-strip .strip-step")].map((e) => e.textContent.trim())`); strings.Join(got, "|") != "Plan|Code|Review" {
+		t.Errorf("strip steps %q", got)
+	}
+	if got := Eval[string](p, ai+`.querySelector(".run-strip .strip-where").textContent`); !strings.HasPrefix(got, "step 2 of 3 · 4") {
+		t.Errorf("strip says %q, want step 2 of 3 · 40s", got)
+	}
+	if Eval[bool](p, ai+`.querySelector(".run-strip").compareDocumentPosition(`+ai+`.querySelector(".msg-body")) & Node.DOCUMENT_POSITION_PRECEDING`) {
+		t.Error("the strip is not above the answer")
+	}
+	if Eval[bool](p, `document.querySelector(".run-view") !== null`) {
+		t.Fatal("the Run view is open before Show")
+	}
+	p.TapJS(ai + `.querySelector(".run-strip .strip-show")`)
+	const rv = `document.querySelector(".run-view")`
+	p.WaitJS(rv + `?.querySelectorAll(".rv-step").length === 3`)
+	text := Eval[string](p, rv+`.innerText`)
+	for _, want := range []string{"Run view", "plan-code-review", "Plan", "claude-opus-5-5", "12s", "1. Add the column.", "Code", "gpt-6-sol", "Edit db.go", "Adding the column", "Review", "HTTP 400: no credit"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the Run view has no %q:\n%s", want, text)
+		}
+	}
+	chatShot(t, p, "run", rv)
+	p.TapJS(rv + `.querySelector(".rv-close")`)
+	p.WaitJS(`!document.querySelector(".run-view")`)
+}
