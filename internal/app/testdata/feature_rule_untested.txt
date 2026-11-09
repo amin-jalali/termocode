@@ -161,11 +161,8 @@ palette/transfer-upload
 palette/trim-blanks
 palette/trim-whitespace
 palette/web-totp
-palette/workflow-dry-run
 palette/workflow-edit-file
-palette/workflow-enable
 palette/workflow-history
-palette/workflow-stop
 palette/worktree-new
 palette/worktree-notes
 palette/worktree-setup-log

@@ -61,8 +61,8 @@ func TestAIAdminToolGates(t *testing.T) {
 		{"extensions", "run", gate{true, ai.ClassRun}},
 		{"extensions", "reload", gate{true, ai.ClassRun}},
 		{"workspace_folders", "list", gate{false, ""}},
-		{"workspace_folders", "add", gate{true, ai.ClassIDE}},
-		{"workspace_folders", "remove", gate{true, ai.ClassIDE}},
+		{"workspace_folders", "add", gate{true, ""}},    // asks every time, as the GUI
+		{"workspace_folders", "remove", gate{true, ""}}, // asks every time, as the GUI
 	}
 	for _, c := range cases {
 		tl := aiAdminTool(t, c.tool)
