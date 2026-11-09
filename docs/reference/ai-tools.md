@@ -192,6 +192,8 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`tracker_tasks`](#tracker_tasks) | auto | no | The shared task list of this repository (Tracker: Show Tasks…; Markdown files in .termocode/tasks that agents and people edit). |
 | [`chat_manage`](#chat_manage) | delete: confirm (always asks)<br>rename: auto | no | Rename a saved AI chat (at once) or delete one (asks the user every time). |
 | [`ide_op`](#ide_op) | bookmarks.clear: auto<br>bookmarks.list: auto<br>bookmarks.toggle: auto<br>buf.close: auto<br>buf.head: auto<br>buf.markdown: auto<br>buf.reload: auto<br>buf.undo: auto<br>debug.expand: auto<br>debug.frame: auto<br>debug.run: auto<br>debug.select: auto<br>debug.sources: auto<br>debug.watch: auto<br>editor.vim_buf_maps: auto<br>editor.vim_maps: auto<br>ext.panel: auto<br>ext.select: auto<br>files.recent: auto<br>http.cancel: auto<br>http.curl: auto<br>http.env_file: auto<br>http.import_curl: auto<br>http.save_body: auto<br>http.saved: auto<br>keys.bind: auto<br>keys.list: auto<br>layout.delete: confirm (always asks)<br>layout.list: auto<br>layout.open: auto<br>layout.reset: auto<br>layout.save: auto<br>lsp.inlay_hints: auto<br>search.replace: confirm (always asks)<br>services.configure: auto<br>services.refresh: auto<br>snippets.delete: auto<br>snippets.list: auto<br>snippets.save: auto<br>snippets.user: auto<br>tasks.terminate: auto<br>term.colors: auto<br>tests.debug: auto<br>tests.refresh: auto<br>tests.stop: auto<br>theme.color_set: auto<br>theme.colors: auto<br>theme.list: auto<br>usercmds.list: auto<br>usercmds.save: auto<br>web.devices: auto | no | Run one of termocode's own IDE operations, exactly as its web page runs it (the result is JSON). |
+| [`specs`](#specs) | auto | no | The project's specs (.termocode/specs: requirements → design → tasks → build → review, and bugfix specs). |
+| [`prompt_actions`](#prompt_actions) | add: auto<br>export: auto<br>import: confirm (always asks)<br>list: auto<br>read: auto | no | The user's saved prompts (Prompt Actions). |
 | [`view_catalog`](#view_catalog) | auto | no | List the views termocode can show the user (on the phone and in the chat): id, params, typed fields (which can be sorted or filtered) and layouts. |
 | [`view_save`](#view_save) | auto | no | Save a view spec on this laptop under a name, for every paired phone (and pin it to the phones' Home when pin is true). |
 | [`view_manage`](#view_manage) | delete: confirm (always asks)<br>list: auto<br>pin: auto<br>rename: auto<br>unpin: auto | no | The views saved for the phones (view_save saves one). |
@@ -2702,6 +2704,36 @@ web.devices — the paired devices
 | --- | --- | --- | --- |
 | `op` | string | yes | the operation. One of: `bookmarks.clear`, `bookmarks.list`, `bookmarks.toggle`, `buf.close`, `buf.head`, `buf.markdown`, `buf.reload`, `buf.undo`, `debug.expand`, `debug.frame`, `debug.run`, `debug.select`, `debug.sources`, `debug.watch`, `editor.vim_buf_maps`, `editor.vim_maps`, `ext.panel`, `ext.select`, `files.recent`, `http.cancel`, `http.curl`, `http.env_file`, `http.import_curl`, `http.save_body`, `http.saved`, `keys.bind`, `keys.list`, `layout.delete`, `layout.list`, `layout.open`, `layout.reset`, `layout.save`, `lsp.inlay_hints`, `search.replace`, `services.configure`, `services.refresh`, `snippets.delete`, `snippets.list`, `snippets.save`, `snippets.user`, `tasks.terminate`, `term.colors`, `tests.debug`, `tests.refresh`, `tests.stop`, `theme.color_set`, `theme.colors`, `theme.list`, `usercmds.list`, `usercmds.save`, `web.devices` |
 | `args` | object |   | the operation's args (see the list) |
+
+### specs
+
+The project's specs (.termocode/specs: requirements → design → tasks → build → review, and bugfix specs). op list (each spec, its phase and state), new (goal: a feature spec), new_bugfix (goal: a bugfix spec to fill in), read (name: its files and what the next phase needs). Write the phase files with the file tools; only the user approves a phase.
+
+**Gate:** auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `op` | string | yes | what to do. One of: `list`, `new`, `new_bugfix`, `read` |
+| `goal` | string |   | new, new_bugfix: the goal or the bug |
+| `name` | string |   | read: the spec's name |
+
+### prompt_actions
+
+The user's saved prompts (Prompt Actions). op list, read (name: its text; do it yourself, or type a terminal one with terminal_send), add (name Group/Name, prompt, target chat|terminal: adds or changes one), export (path) and import (path: asks the user every time). Export asks only before it writes over a file.
+
+**Gate:** add: auto · export: auto · import: confirm (always asks) · list: auto · read: auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `op` | string | yes | what to do. One of: `add`, `export`, `import`, `list`, `read` |
+| `name` | string |   | read, add: Group/Name (the group is optional) |
+| `path` | string |   | import, export: the JSON file |
+| `prompt` | string |   | add: the prompt |
+| `target` | string |   | add: where it runs. One of: `chat`, `terminal` |
 
 ### view_catalog
 
