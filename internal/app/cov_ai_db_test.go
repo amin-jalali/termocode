@@ -78,6 +78,7 @@ const covDBConns = `{"connections":[` +
 func covDBSetup(t *testing.T) *covDBEnv {
 	t.Helper()
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	dbNoSSHForTest(t)
 	root := t.TempDir()
 	_ = os.MkdirAll(filepath.Join(root, ".termocode"), 0o755)
 	if err := os.WriteFile(filepath.Join(root, ".termocode", "databases.json"), []byte(covDBConns), 0o644); err != nil {
@@ -208,10 +209,10 @@ func TestCovAIDBSchemaReads(t *testing.T) {
 	if got := e.tools["db_schema"].Describe(map[string]any{"conn": "pg", "schema": "public", "table": "t"}); got != "Read the schema of pg schema public table t" {
 		t.Errorf("card = %q", got)
 	}
-	// A tunnel that is not open: ask the user to connect.
+	// A tunnel the tool cannot open: the SSH error, no "ask the user".
 	e.openErr = nil
-	if _, err := e.run(t, "db_schema", map[string]any{"conn": "tunnel"}); err == nil || !strings.Contains(err.Error(), "SSH tunnel that is not open") {
-		t.Errorf("closed tunnel: %v", err)
+	if _, err := e.run(t, "db_schema", map[string]any{"conn": "tunnel"}); err == nil || !strings.Contains(err.Error(), "no SSH server here") || strings.Contains(err.Error(), "Databases view") {
+		t.Errorf("tunnel that does not open: %v", err)
 	}
 }
 

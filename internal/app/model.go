@@ -918,6 +918,9 @@ type Model struct {
 	// web is the web hub (web_hub.go): the web gateway's way into this
 	// UI; nil unless the web side is on.
 	web *webHub
+	// aiDBNet holds the SSH tunnels the AI's db_* tools open while no web
+	// hub is on (with one, they share its dbNet: ai_db_route.go).
+	aiDBNet *webDBNet
 	// viewRun is the phone's view registry and in-process view.run (MOB-9
 	// sets it with the web hub); view_show is offered only while it is set
 	// (ai_view_show_tool.go, MOBUX-17).

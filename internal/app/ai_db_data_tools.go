@@ -251,7 +251,7 @@ func aiDBDataTool(root string, call aiIDECaller) ai.Tool {
 }
 
 func aiDBExport(ctx context.Context, root string, call aiIDECaller, r *aiDBDataReq) (string, error) {
-	snap := dbAITake(ctx, call, r.conn.ID)
+	snap := dbAITake(ctx, call, root, r.conn)
 	ctx, cancel := context.WithTimeout(ctx, 10*loadDBConsoleSettings().timeout())
 	defer cancel()
 	sess, err := dbAIOpen(ctx, root, r.conn, &snap, true)
@@ -274,7 +274,7 @@ func aiDBExport(ctx context.Context, root string, call aiIDECaller, r *aiDBDataR
 }
 
 func aiDBImport(ctx context.Context, root string, call aiIDECaller, r *aiDBDataReq) (string, error) {
-	snap := dbAITake(ctx, call, r.conn.ID)
+	snap := dbAITake(ctx, call, root, r.conn)
 	ctx, cancel := context.WithTimeout(ctx, 10*loadDBConsoleSettings().timeout())
 	defer cancel()
 	ro, err := dbAIOpen(ctx, root, r.conn, &snap, true)

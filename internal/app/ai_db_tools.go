@@ -333,27 +333,46 @@ type dbAISnapshot struct {
 	password string
 	hasPW    bool
 	user     dbclient.Session
-	// dial is the open SSH tunnel of the connection (nil: none). The AI
-	// rides the user's tunnel; it never opens one or sees its secrets.
-	dial dbclient.DialFunc
+	// dial is the SSH tunnel of the connection (nil: none): the view's
+	// open one, else the one the AI opened on demand (ai_db_route.go),
+	// as the web page does. routeErr is why it could not be opened.
+	dial     dbclient.DialFunc
+	routeErr error
+	// call and askCtx let a login that needs the user's password ask
+	// for it with the view's own prompt (nil call: never asks).
+	call   aiIDECaller
+	askCtx context.Context
 }
 
-func dbAITake(ctx context.Context, call aiIDECaller, id string) dbAISnapshot {
+// dbAITake is what the AI's session of c starts from: the view's
+// password and session, and the SSH tunnel c needs, opened first when
+// none is open (asking the user what the view would ask: an unknown
+// host key, an SSH secret). It runs before a call's statement timeout:
+// the user may take a while to answer.
+func dbAITake(ctx context.Context, call aiIDECaller, root string, c dbclient.Conn) dbAISnapshot {
 	var snap dbAISnapshot
 	if call == nil {
 		return snap
 	}
+	snap.call, snap.askCtx = call, ctx
+	var net *webDBNet
+	var sec dbSSHSecrets
 	_, _ = call(ctx, func(m *Model) (string, tea.Cmd, error) {
-		if m.databases == nil {
-			return "", nil, nil
+		if d := m.databases; d != nil {
+			snap.password, snap.hasPW = d.passwords[c.ID]
+			snap.user = d.sessions[c.ID]
+			if vc, ok := d.connection(c.ID); ok && vc.SSH != nil {
+				snap.dial, _ = d.dbDialFor(vc)
+			}
 		}
-		snap.password, snap.hasPW = m.databases.passwords[id]
-		snap.user = m.databases.sessions[id]
-		if c, ok := m.databases.connection(id); ok && c.SSH != nil {
-			snap.dial, _ = m.databases.dbDialFor(c)
+		if snap.dial == nil && dbAINeedsTunnel(c) {
+			net, sec = m.dbSharedNet(), dbStoredSSHSecrets(c)
 		}
 		return "", nil, nil
 	})
+	if net != nil {
+		snap.dial, snap.routeErr = dbAIReach(ctx, root, call, net, c, sec)
+	}
 	return snap
 }
 
@@ -419,6 +438,16 @@ func dbAIOpenAs(ctx context.Context, root string, c dbclient.Conn, snap *dbAISna
 		snap.password, snap.hasPW = pw, true
 	}
 	base, err := dbSQLSessionFactory(ctx, c, snap.password)
+	if name := webDBPasswordName(c); err != nil && snap.call != nil && name != "" && webDBAuthFailed(err) {
+		// The view's password prompt, as its own connect asks (the model
+		// never sees the value); the login is tried once more with it.
+		pw, aerr := dbAIAskPassword(snap.askCtx, snap.call, c, name, snap.password != "")
+		if aerr != nil {
+			return nil, aerr
+		}
+		snap.password, snap.hasPW = pw, true
+		base, err = dbSQLSessionFactory(ctx, c, pw)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -439,21 +468,18 @@ func dbAIOpenAs(ctx context.Context, root string, c dbclient.Conn, snap *dbAISna
 	return ro, nil
 }
 
-// dbAITunnelClosed is what the model does about a closed SSH tunnel: the
-// AI rides the view's tunnel and never opens one itself.
-const dbAITunnelClosed = "open the tunnel with db_connection (op connect, conn <id>), then call the db_* tool again; " +
-	"without db_connection, ask the owner to connect it in the Databases view (one key there), then try again"
-
-// dbAIRoute resolves c's file paths and sends it through the user's open
-// SSH tunnel; with a tunnel configured but not open the AI is told how
-// to open it (dbAITunnelClosed).
+// dbAIRoute resolves c's file paths and sends it through its SSH tunnel
+// (snap.dial: the view's, or the one dbAITake opened).
 func dbAIRoute(root string, c dbclient.Conn, snap *dbAISnapshot) (dbclient.Conn, error) {
 	c = dbResolveConnPaths(c, root, dbSSHHome())
 	if c.SSH == nil {
 		return c, nil
 	}
 	if snap.dial == nil {
-		return c, errors.New("connection " + c.ID + " goes through an SSH tunnel that is not open: " + strings.ReplaceAll(dbAITunnelClosed, "<id>", c.ID))
+		if snap.routeErr != nil {
+			return c, snap.routeErr
+		}
+		return c, errors.New("connection " + c.ID + " goes through an SSH tunnel, which could not be opened here")
 	}
 	c.Dial = snap.dial
 	return c, nil
@@ -641,10 +667,6 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 							state[c.ID] = "connecting"
 						case n.problem != "":
 							state[c.ID] = "error: " + n.problem
-						case c.SSH != nil:
-							if _, err := s.dbDialFor(c); err != nil {
-								state[c.ID] = "not connected (SSH tunnel closed)"
-							}
 						}
 					}
 					for _, row := range s.rows() {
@@ -696,12 +718,6 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 				}
 				b.WriteString(strings.Join(parts, " · ") + "\n")
 			}
-			for _, st := range state {
-				if st == "not connected (SSH tunnel closed)" {
-					b.WriteString("SSH tunnel closed: " + dbAITunnelClosed + "\n")
-					break
-				}
-			}
 			if len(suggestions) > 0 {
 				b.WriteString("suggested (not added; the user adds them in the Databases view):\n")
 				for _, sg := range suggestions {
@@ -738,7 +754,7 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 				return "", err
 			}
 			database, schemaName, table := ai.ArgString(a, "database"), ai.ArgString(a, "schema"), ai.ArgString(a, "table")
-			snap := dbAITake(ctx, call, c.ID)
+			snap := dbAITake(ctx, call, root, c)
 			target := c
 			if c.Driver == "postgres" && database != "" && database != c.Database {
 				target = dbAITargetDatabase(c, database)
@@ -874,7 +890,7 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 				rows = dbAIDefaultRows
 			}
 			rows = min(rows, dbAIMaxRows)
-			snap := dbAITake(ctx, call, r.conn.ID)
+			snap := dbAITake(ctx, call, root, r.conn)
 			ctx, cancel := timeout(ctx)
 			defer cancel()
 			sess, err := dbAIOpen(ctx, root, r.conn, &snap, read)
@@ -925,7 +941,7 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 				return "", errors.New("analyze runs the statement: only a read")
 			}
 			sql := dbAIDialect(r.conn.Driver).Explain(r.sql, analyze)
-			snap := dbAITake(ctx, call, r.conn.ID)
+			snap := dbAITake(ctx, call, root, r.conn)
 			ctx, cancel := timeout(ctx)
 			defer cancel()
 			sess, err := dbAIOpen(ctx, root, r.conn, &snap, true)
@@ -1031,7 +1047,7 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 			if c.Driver == "mysql" && schemaName == "" {
 				schemaName = c.Database
 			}
-			snap := dbAITake(ctx, call, c.ID)
+			snap := dbAITake(ctx, call, root, c)
 			ctx, cancel := timeout(ctx)
 			defer cancel()
 			sess, err := dbAIOpen(ctx, root, c, &snap, true)
@@ -1104,7 +1120,7 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 			}
 			exact, _ := a["exact"].(bool)
 			opt := dbclient.DataSearchOptions{Value: strings.TrimSpace(ai.ArgString(a, "value")), Exact: exact}
-			snap := dbAITake(ctx, call, c.ID)
+			snap := dbAITake(ctx, call, root, c)
 			ctx, cancel := timeout(ctx)
 			defer cancel()
 			sess, err := dbAIOpen(ctx, root, c, &snap, true)

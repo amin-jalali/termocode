@@ -215,7 +215,7 @@ func aiRedisTools(root string, call aiIDECaller) []ai.Tool {
 				n = redisAIDefaultKeys
 			}
 			n = min(n, redisAIMaxKeys)
-			snap := dbAITake(ctx, call, c.ID)
+			snap := dbAITake(ctx, call, root, c)
 			ctx, cancel := timeout(ctx)
 			defer cancel()
 			sess, err := redisAIOpen(ctx, root, c, &snap, true)
@@ -285,7 +285,7 @@ func aiRedisTools(root string, call aiIDECaller) []ai.Tool {
 				n = dbAIDefaultRows
 			}
 			n = min(n, dbAIMaxRows)
-			snap := dbAITake(ctx, call, c.ID)
+			snap := dbAITake(ctx, call, root, c)
 			ctx, cancel := timeout(ctx)
 			defer cancel()
 			sess, err := redisAIOpen(ctx, root, c, &snap, true)
@@ -352,7 +352,7 @@ func aiRedisTools(root string, call aiIDECaller) []ai.Tool {
 			if err := redisAIValidate(r); err != nil {
 				return "", err
 			}
-			snap := dbAITake(ctx, call, r.conn.ID)
+			snap := dbAITake(ctx, call, root, r.conn)
 			ctx, cancel := timeout(ctx)
 			defer cancel()
 			sess, err := redisAIOpen(ctx, root, r.conn, &snap, r.read)

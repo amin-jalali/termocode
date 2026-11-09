@@ -617,7 +617,7 @@ func aiDBConnectionTool(root string, call aiIDECaller) ai.Tool {
 // aiDBTestConn logs in fresh (never a clone of the user's session) and
 // pings, as db.test does.
 func aiDBTestConn(ctx context.Context, root string, call aiIDECaller, c dbclient.Conn) (string, error) {
-	snap := dbAITake(ctx, call, c.ID)
+	snap := dbAITake(ctx, call, root, c)
 	snap.user = nil
 	ctx, cancel := context.WithTimeout(ctx, loadDBConsoleSettings().timeout())
 	defer cancel()

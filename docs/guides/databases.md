@@ -186,6 +186,7 @@ A connection can go through an SSH server (a bastion), and through jump hosts be
 - `ssh.auth` is `agent` (keys in your agent), `key` (with `keyFile`) or `password`. The key passphrase and the SSH password are kept in the secret store as `db.<id>.sshkey` and `db.<id>.ssh`, never in a file. A key file that other users can read is refused; run `chmod 600` on it.
 - Host keys are checked against `~/.ssh/known_hosts` (or `knownHosts`). An unknown server shows a card with its `SHA256:` fingerprint: **Trust and save to known_hosts** adds it, **Cancel** stops. A server whose key changed is refused with no way around it; check with your admin.
 - The tunnel opens with the connection and closes when you disconnect, leave the view, refresh or quit; every jump host closes with it. There is no keepalive: a dropped tunnel shows `SSH tunnel closed · R reconnect` on the next query. When a jump host goes away, the whole chain closes and the message names it.
+- The AI's `db_*` tools do not need you to connect first. When the view has no tunnel open, a tool opens one itself, the same way the web page does, and keeps it for its next calls. A container on an `ssh://` context is found by its name. If the server's key is unknown, or an SSH secret or the database password is missing, you get the same trust card or masked prompt as in the view, and the tool waits for your answer. The AI never sees the secret. **Cancel** or `Esc` ends the tool with a short error.
 
 ## SSL and TLS
 

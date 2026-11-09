@@ -1959,6 +1959,9 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 		s.pendingConn.Name = s.pendingConn.ID
 		return m.databaseRetestPending()
 	case promptKindDBPassword:
+		if cmd, ok := m.databaseAIPasswordTyped(value); ok { // a db_* tool waits (ai_db_route.go)
+			return cmd
+		}
 		if s.pendingConn.ID != "" {
 			// A typed reference is resolved for the test and saved as text.
 			resolved, err := resolveTypedSecret(s.root, value)

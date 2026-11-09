@@ -45,6 +45,7 @@ func remoteSetup(t *testing.T, root, user string) {
 	if !strings.HasPrefix(os.Getenv("XDG_CONFIG_HOME"), os.TempDir()) {
 		t.Fatal("XDG_CONFIG_HOME is not a temp dir: the test would touch the real config")
 	}
+	dbNoSSHForTest(t) // the db_* tools open tunnels themselves: never to the real server
 	cfg := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "termocode", "db")
 	if err := os.MkdirAll(cfg, 0o700); err != nil {
 		t.Fatal(err)
@@ -162,8 +163,8 @@ func TestAIIdentityActsNotAsks(t *testing.T) {
 // Scripted: "how many tables do we have on remote?" The fake model reads
 // the rules in its system prompt, lists the connections (BaaytonaDB and
 // the containers show remote: yes) and goes straight to db_schema on
-// BaaytonaDB, no card. Its tunnel is closed here, so the error says how
-// to open it (db_connection op connect), not "ask the user".
+// BaaytonaDB, no card. db_schema opens the tunnel itself; here no SSH
+// server answers, so the model gets that error, never "ask the owner".
 func TestAIRemoteTablesScripted(t *testing.T) {
 	p := &scriptedAIProvider{replies: []ai.Chunk{
 		toolCall("db_connections", nil),
@@ -195,12 +196,15 @@ func TestAIRemoteTablesScripted(t *testing.T) {
 	if len(results) != 2 {
 		t.Fatalf("%d tool results, want 2: %q", len(results), results)
 	}
-	if !strings.Contains(results[1], "SSH tunnel") || !strings.Contains(results[1], "db_connection (op connect") {
-		t.Errorf("db_schema on a closed tunnel: %s", results[1])
+	if !strings.Contains(results[1], "no SSH server here") || strings.Contains(results[1], "Databases view") || strings.Contains(results[1], "ask the owner") {
+		t.Errorf("db_schema opens the tunnel itself (here it cannot): %s", results[1])
 	}
 	res := strings.Join(results, "\n---\n")
+	if strings.Contains(res, "SSH tunnel closed") {
+		t.Errorf("db_connections still says SSH tunnel closed:\n%s", res)
+	}
 	for _, w := range []string{
-		"baaytonadb · name BaaytonaDB · ", "SSH tunnel closed", "where: via ssh deploy@65.109.212.14 · remote: yes",
+		"baaytonadb · name BaaytonaDB · ", "where: via ssh deploy@65.109.212.14 · remote: yes",
 		"baaytona-db-1 · ", "container baaytona-db-1 on context Baaytona",
 		"rentcar-db-1 · ",
 	} {

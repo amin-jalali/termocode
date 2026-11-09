@@ -92,10 +92,12 @@ type dbHostAsk struct {
 	err  *dbclient.UnknownHostKeyError
 	conn string
 	then string
+	done chan bool // a db_* tool waits for the answer (dbThenAI; ai_db_route.go)
 }
 
 type dbSecretAsk struct {
-	conn, kind, then string // kind: "password" | "passphrase"
+	conn, kind, then string      // kind: "password" | "passphrase"
+	done             chan string // a db_* tool waits for the typed value (dbThenAI)
 }
 
 // dbSSHEdit is the Add SSH Tunnel / SSL Settings prompt chain.
@@ -330,6 +332,18 @@ func (m *Model) databaseSSHConfirm(id string) (tea.Cmd, bool) {
 	}
 	ask := s.hostAsk
 	s.hostAsk = nil
+	if ask.done != nil { // a db_* tool waits (ai_db_route.go)
+		if id != "trust" {
+			ask.done <- false
+			return nil, true
+		}
+		if err := dbclient.TrustHostKey(ask.err.KnownHosts, ask.err.Host, ask.err.Key); err != nil {
+			ask.done <- false
+			return m.pushToastDetail(toast.Errr, "Could not save the host key", sanitizeDBText(err.Error())), true
+		}
+		ask.done <- true
+		return m.pushToastDetail(toast.Info, "Host key saved", sanitizeDBText(ask.err.Fingerprint)), true
+	}
 	if id != "trust" {
 		if n, ok := s.nodes[ask.conn]; ok && ask.then == dbThenConnect {
 			n.problem = "SSH host not trusted · Enter to check its key again"
@@ -365,6 +379,9 @@ func (m *Model) databaseSSHSecretTyped(value string) tea.Cmd {
 	}
 	ask := s.secretAsk
 	s.secretAsk = nil
+	if cmd, ok := m.databaseAISSHSecretTyped(ask, value); ok {
+		return cmd
+	}
 	if value == "" {
 		return m.pushToastDetail(toast.Warn, "Nothing typed", "The SSH tunnel was not opened.")
 	}

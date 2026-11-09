@@ -566,7 +566,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.handleConfirmSelect(msg.ID)
 	case confirm.CloseMsg:
 		m.confirmOpen = false
-		m.updateCardClosed() // G-UPD: Esc drops a staged download
+		m.databaseAIAskClosed() // Esc on a card a db_* tool waits on: a cancel (ai_db_route.go)
+		m.updateCardClosed()    // G-UPD: Esc drops a staged download
 		if m.confirmKind == confirmKindKeyCard {
 			return m, m.closeKeyCard()
 		}
@@ -661,6 +662,7 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.handlePromptSubmit(msg.Value)
 	case prompt.CloseMsg:
 		m.promptOpen = false
+		m.databaseAIAskClosed() // a db_* tool's password prompt: a cancel
 		// Group G / Group I / secret store: no-op unless theirs
 		m.prPromptClosed() // pr_state.go: back to the thread or create card
 		return m, tea.Batch(m.handleClonePromptClose(), m.extOverlayClosed(), m.secretsPromptClosed(), m.aiMCPElicitPromptClosed(), m.databaseImportPromptClosed())

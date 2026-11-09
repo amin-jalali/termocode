@@ -381,10 +381,16 @@ func TestDBSSLSettingsFlowWritesObject(t *testing.T) {
 	}
 }
 
-func TestDBAIRidesTheOpenTunnelOnly(t *testing.T) {
+// The AI's session dials through the tunnel of its snapshot (the view's
+// or the one dbAITake opened); with none, the open's error, never "ask
+// the user to connect".
+func TestDBAIRidesTheSnapshotTunnel(t *testing.T) {
 	c := dbclient.Conn{ID: "cache", Driver: "redis", SSH: &dbclient.SSHConfig{Host: "b"}}
-	if _, err := dbAIRoute(t.TempDir(), c, &dbAISnapshot{}); err == nil || !strings.Contains(err.Error(), "ask the user to connect") {
-		t.Fatalf("closed tunnel: err = %v", err)
+	if _, err := dbAIRoute(t.TempDir(), c, &dbAISnapshot{routeErr: errors.New("ssh: handshake failed")}); err == nil || err.Error() != "ssh: handshake failed" {
+		t.Fatalf("tunnel that did not open: err = %v", err)
+	}
+	if _, err := dbAIRoute(t.TempDir(), c, &dbAISnapshot{}); err == nil || strings.Contains(err.Error(), "Databases view") {
+		t.Fatalf("no tunnel: err = %v", err)
 	}
 	called := false
 	snap := &dbAISnapshot{dial: func(context.Context, string, string) (net.Conn, error) { called = true; return nil, errors.New("x") }}

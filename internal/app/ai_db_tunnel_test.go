@@ -84,6 +84,20 @@ func newAITunEnv(t *testing.T, srv *dbtest.SSHServer, c dbclient.Conn, trusted b
 	return e
 }
 
+// dbNoSSHForTest makes SSH tunnels read ~/.ssh from a temp home and
+// refuses every dial to an SSH server: a db_* tool that opens a tunnel
+// on its own never reaches a real host from a test.
+func dbNoSSHForTest(t *testing.T) {
+	t.Helper()
+	home := t.TempDir()
+	oldHome, oldDial := dbSSHHome, dbTunnelDial
+	dbSSHHome = func() string { return home }
+	dbTunnelDial = func(context.Context, string, string) (net.Conn, error) {
+		return nil, errors.New("test: no SSH server here")
+	}
+	t.Cleanup(func() { dbSSHHome, dbTunnelDial = oldHome, oldDial })
+}
+
 // ui runs fn on the model as Update would.
 func (e *aiTunEnv) ui(fn func(m *Model)) {
 	e.mu.Lock()
