@@ -25,7 +25,10 @@ func aiImagesTool(t *testing.T) (*Model, *servicestest.Fake, ai.Tool, *[]aiCtrTa
 	m, f, call := aiContainersTestModel(t)
 	var tabs []aiCtrTab
 	old := aiCtrTerminal
-	aiCtrTerminal = func(_ *Model, c services.Command, key string) error { tabs = append(tabs, aiCtrTab{c, key}); return nil }
+	aiCtrTerminal = func(_ *Model, c services.Command, key string) error {
+		tabs = append(tabs, aiCtrTab{c, key})
+		return nil
+	}
 	t.Cleanup(func() { aiCtrTerminal = old })
 	acts := func() []string {
 		var out []string
@@ -40,7 +43,9 @@ func aiImagesTool(t *testing.T) (*Model, *servicestest.Fake, ai.Tool, *[]aiCtrTa
 }
 
 func TestAIImagesManageGates(t *testing.T) {
-	m, _, tl, _, _ := aiImagesTool(t)
+	m, f, tl, _, _ := aiImagesTool(t)
+	f.Set(t, "images.json", `{"ID":"sha256:111","Repository":"postgres","Tag":"16","Size":"421MB"}`+"\n"+
+		`{"ID":"sha256:444","Repository":"nginx","Tag":"1.27","Size":"50MB"}`+"\n")
 	want := "push,tag,run,remove,build,history,used_by,save,load,import,scan,sbom,search,tags,check_updates,builds,build_detail,build_check"
 	if got := aiParamEnum(tl.Params["op"]); strings.Join(got, ",") != want {
 		t.Errorf("ops = %v", got)
@@ -101,7 +106,7 @@ func TestAIImagesManageWrites(t *testing.T) {
 	if len(*tabs) != 3 {
 		t.Fatalf("tabs = %+v", *tabs)
 	}
-	for i, w := range []string{"push postgres:16", "run --name pg -p 5433:5432 -d", "build -t api:dev"} {
+	for i, w := range []string{"push postgres:16", "run --rm -d --name pg -p 5433:5432 postgres:16", "-t api:dev"} {
 		if got := strings.Join((*tabs)[i].cmd.Argv, " "); !strings.Contains(got, w) {
 			t.Errorf("tab %d argv %q, want %q", i, got, w)
 		}
@@ -111,9 +116,9 @@ func TestAIImagesManageWrites(t *testing.T) {
 		t.Errorf("ran %q\nwant %q", got, want)
 	}
 	for _, bad := range []map[string]any{
-		{"op": "push", "ref": "nope:1"},                       // not on the host
-		{"op": "push", "ref": "sha256:111"},                   // not a tag
-		{"op": "remove", "ref": "ghcr.io/acme/api:1.4"},       // a container uses it
+		{"op": "push", "ref": "nope:1"},                 // not on the host
+		{"op": "push", "ref": "sha256:111"},             // not a tag
+		{"op": "remove", "ref": "ghcr.io/acme/api:1.4"}, // a container uses it
 		{"op": "run", "ref": "postgres:16", "ports": []any{"-p"}},
 		{"op": "tag", "ref": "postgres:16", "tag": "-x"},
 		{"op": "build", "file": "../Dockerfile"},
@@ -128,6 +133,8 @@ func TestAIImagesManageWrites(t *testing.T) {
 
 func TestAIImagesManageReads(t *testing.T) {
 	_, f, tl, _, _ := aiImagesTool(t)
+	f.Set(t, "images.json", `{"ID":"sha256:111","Repository":"postgres","Tag":"16","Size":"421MB"}`+"\n"+
+		`{"ID":"sha256:333","Repository":"ghcr.io/acme/api","Tag":"1.4","Size":"90MB"}`+"\n")
 	f.Set(t, "history.json", `{"ID":"sha256:aaa","CreatedBy":"ENV POSTGRES_PASSWORD=hunter2hunter2","Size":"0B"}`+"\n"+
 		`{"ID":"sha256:bbb","CreatedBy":"RUN apt-get install -y libpq","Size":"20MB"}`+"\n")
 	out, err := tl.Run(context.Background(), map[string]any{"op": "history", "ref": "postgres:16"})
