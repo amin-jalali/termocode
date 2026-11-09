@@ -127,3 +127,21 @@ func TestDeskChatRunStripAndRunView(t *testing.T) {
 	p.TapJS(rv + `.querySelector(".runv-close")`)
 	p.WaitJS(`!document.querySelector(".run-view")`)
 }
+
+// The rules file a turn used shows once, at the top of the chat, not
+// on every message.
+func TestDeskChatRulesOnceAtTop(t *testing.T) {
+	u0, u2 := userMsg(0, "hi"), userMsg(2, "and now?")
+	u0["rules"], u2["rules"] = "AGENTS.md (679 B)", "AGENTS.md (679 B)"
+	p, _ := openChat(t, Desktop, chatWith(false, u0, aiMsg(1, md("doc", mdPara("Hello."))), u2))
+	p.WaitJS(deskChat + `?.querySelector(".chat-rules")`)
+	if got := Eval[string](p, deskChat+`.querySelector(".chat-rules").textContent.trim()`); got != "Rules: AGENTS.md (679 B)" {
+		t.Errorf("the rules line reads %q", got)
+	}
+	if n := Eval[int](p, `[...`+deskChat+`.querySelectorAll(".msg-extras .chip")].filter((c) => c.offsetParent && c.textContent.includes("AGENTS.md")).length`); n != 0 {
+		t.Errorf("%d messages still show the rules chip", n)
+	}
+	if n := Eval[int](p, deskChat+`.querySelectorAll(".chat-rules").length`); n != 1 {
+		t.Errorf("%d rules lines, want 1", n)
+	}
+}
