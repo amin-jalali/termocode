@@ -41,7 +41,9 @@ import { AddServerRow, HostRows, termAsk } from "./DeskHosts";
 
 type Load<T> = { s: "loading" } | { s: "ok"; v: T } | { s: "err"; msg: string };
 
+/** list is the containers of the host in use (ctrList outside). */
 const list = signal<Load<ContainersView> | null>(null);
+export { list as ctrList };
 const host = signal<Load<ContainersHost> | null>(null);
 const shut = signal<ReadonlySet<string>>(new Set(["#networks", "#volumes", "#registries"]));
 

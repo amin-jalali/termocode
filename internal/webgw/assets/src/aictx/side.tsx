@@ -23,7 +23,7 @@ let el: HTMLElement | null = null;
 
 /** askSide opens the question box. */
 export function askSide(): void {
-  H.ask(H.t("side.ask"), sendSide);
+  H.quick.value = { mode: "ask", ask: { title: H.t("side.ask"), run: sendSide } };
 }
 
 function sendSide(q: string): void {

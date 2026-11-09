@@ -8,4 +8,10 @@ export const AS = {
   "ai.secret_body": "The rows you send to the AI have columns that may hold secrets:",
   "ai.secret_mask": "Mask and send",
   "ai.secret_all": "Send all",
+  "ai.pick": "Search items to add to the AI chat",
+  "ai.k_db": "database",
+  "ai.k_table": "table",
+  "ai.k_host": "host",
+  "ai.k_project": "compose project",
+  "ai.k_container": "container",
 } as const;

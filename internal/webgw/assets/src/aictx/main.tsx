@@ -9,6 +9,7 @@ import type { Attach } from "../../../../webproto/proto";
 import { readChat } from "../state/chat";
 import type { AIHost, AIItem, GridAt, ItemSpec } from "./api";
 import { H, setHost } from "./jsx";
+import { got, watchAt } from "./pick";
 import { watchSends } from "./secret";
 import { askSide } from "./side";
 import { AS } from "./strings";
@@ -22,6 +23,7 @@ export function init(host: AIHost): void {
   setHost(host);
   host.addStrings(AS);
   watchSends(chatOf);
+  watchAt(label, (it) => void add(it));
 }
 
 /** chatOf is the chat whose composer the chips go to: the old chat the
@@ -34,14 +36,11 @@ const MAX_DDL = 16 << 10;
 /** MAX_SPEC keeps a spec under webproto MaxItemSpec (32 KiB). */
 const MAX_SPEC = 30 << 10;
 
-/** got is a load's value (undefined: not read). */
-const got = <T,>(l: { s: string; v?: T } | null | undefined): T | undefined => (l?.s === "ok" ? l.v : undefined);
-
 const connName = (id: string): string => (got(H.conns.peek()) ?? []).find((c) => c.id === id)?.name || id;
 
 /** schemaOf is the schema the tree read for conn ("" when none). */
 function schemaOf(conn: string): string {
-  const v = got(H.dbTables.peek().get(conn));
+  const v = got(H.tables.peek().get(conn));
   return v && "schema" in v ? v.schema : "";
 }
 

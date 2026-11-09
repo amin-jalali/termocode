@@ -12,11 +12,15 @@ import type { Attach, ChatSnap } from "../../../../webproto/proto";
 import type { Link } from "../net/link";
 import type { DBRowsView } from "../state/more";
 import type { Store } from "../state/store";
+import type { effect as PEffect } from "@preact/signals";
+import type { quick as Quick } from "../lib/workbench";
+import type { loadHosts as LoadHosts } from "../state/hosts";
+import type { ctrList as CtrList } from "../views/desk/DeskContainers";
 import type { HostCtr, HostLoad, HostView } from "../state/hosts";
 import type { StringKey } from "../strings";
 import type { MenuItems } from "../ui/ContextMenu";
 import type { Sheet as PSheet } from "../ui/Sheet";
-import type { conns as Conns, tables as Tables } from "../views/desk/dbstate";
+import type { conns as Conns, loadConns as LoadConns, tables as Tables } from "../views/desk/dbstate";
 
 /** ItemKind is an item of Add to AI Chat (webproto ItemSpec.item). */
 export type ItemKind = "db_conn" | "db_table" | "db_column" | "db_rows" | "db_cell" | "host" | "compose_project" | "container";
@@ -66,8 +70,9 @@ export interface AIHost {
   addStrings(d: Readonly<Record<string, string>>): void;
   toast(kind: "ok" | "info" | "warn", text: string): void;
   openMenu(x: number, y: number, label: string, items: MenuItems): void;
-  /** ask opens the quick input for one line of text. */
-  ask(title: string, run: (text: string) => void): void;
+  effect: typeof PEffect;
+  /** quick is the open quick input (a question, a picker). */
+  quick: typeof Quick;
   Sheet: typeof PSheet;
   /** store and pinned say whose composer the chips go to: the old chat
    * the page reads (pinned), else the laptop's open one. */
@@ -77,9 +82,13 @@ export interface AIHost {
   addAttach(chat: string, a: Attach): boolean;
   /** showChat opens the chat pane. */
   showChat(): void;
+  loadConns: typeof LoadConns;
+  loadHosts: typeof LoadHosts;
+  /** ctrs is the Containers view's list of the host in use. */
+  ctrs: typeof CtrList;
   conns: typeof Conns;
-  /** dbTables is the Databases tree's read tables, by connection. */
-  dbTables: typeof Tables;
+  /** tables is the Databases tree's read tables, by connection. */
+  tables: typeof Tables;
   hosts: ReadonlySignal<HostLoad<HostView[]> | null>;
   hostCtrs: ReadonlySignal<ReadonlyMap<string, HostLoad<HostCtr[]>>>;
 }

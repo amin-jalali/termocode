@@ -1,17 +1,20 @@
 // The workbench's side of the AI chat's extras (aictx.js, loaded on
 // first use; contract in aictx/api.ts): a row's right-click menu gets Add
 // to AI Chat after its own items, and a table grid's right click opens
-// the item under it. Nothing loads until the user asks.
+// the item under it. aictx.js loads when the user asks, or once the chat
+// input takes the focus (there it watches for @ and for a send).
 import { h, render } from "preact";
+import { effect } from "@preact/signals";
 import type { AIHost, AIItem, GridAt } from "../aictx/api";
 import type * as AICtx from "../aictx/main";
 import { link, store } from "../session";
-import { hostCtrs, hosts } from "../state/hosts";
+import { hostCtrs, hosts, loadHosts } from "../state/hosts";
 import { addStrings, t } from "../strings";
 import { menu, openMenu } from "../ui/ContextMenu";
 import { Sheet } from "../ui/Sheet";
 import { pinned } from "../views/Chat";
-import { conns, tables } from "../views/desk/dbstate";
+import { ctrList } from "../views/desk/DeskContainers";
+import { conns, loadConns, tables } from "../views/desk/dbstate";
 import { addAttach, attaches } from "./attach";
 import { toast } from "./toasts";
 import { quick, setPanes } from "./workbench";
@@ -26,7 +29,8 @@ const host = (): AIHost => ({
   addStrings,
   toast,
   openMenu,
-  ask: (title, run) => (quick.value = { mode: "ask", ask: { title, run } }),
+  effect,
+  quick,
   Sheet,
   store,
   pinned,
@@ -34,7 +38,10 @@ const host = (): AIHost => ({
   addAttach,
   showChat: () => setPanes({ chat: true }),
   conns,
-  dbTables: tables,
+  tables,
+  loadConns,
+  loadHosts,
+  ctrs: ctrList,
   hosts,
   hostCtrs,
 });
@@ -81,3 +88,7 @@ export function aiGrid(at: Omit<GridAt, "el" | "x" | "y">): (e: MouseEvent) => v
     withAI((m) => m.grid(g));
   };
 }
+
+// The chat input's @ and its sends are watched by aictx.js: it loads once
+// the input takes the focus.
+addEventListener("focusin", (e) => (e.target as Element).matches?.(".composer-box") && withAI(() => 0));
