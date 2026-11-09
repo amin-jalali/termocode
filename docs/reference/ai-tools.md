@@ -74,6 +74,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`git_lines`](#git_lines) | discard: confirm (always asks)<br>stage: confirm (git)<br>unstage: confirm (git) | no | Stage, unstage or discard the changes on lines start..end (1-based, of the working file) of one file, as Stage / Unstage / Discard Line do. |
 | [`git_discard`](#git_discard) | confirm (always asks) | no | Throw changes away; each asks every time (Cancel first). |
 | [`git_repo`](#git_repo) | bisect_mark: confirm (always asks)<br>bisect_reset: confirm (always asks)<br>bisect_start: confirm (always asks)<br>bisect_status: auto<br>contributors: auto<br>identity: auto<br>ignore: confirm (git)<br>init: confirm (always asks)<br>lfs_files: auto<br>submodule_update: confirm (git)<br>submodules: auto<br>unshallow: confirm (git)<br>untrack: confirm (git) | no | The repository. |
+| [`git_pr`](#git_pr) | checkout: confirm (always asks)<br>checks: auto<br>ci_log: auto<br>close: confirm (always asks)<br>comment: confirm (always asks)<br>create: confirm (always asks)<br>diff: auto<br>draft: confirm (always asks)<br>list: auto<br>merge: confirm (always asks)<br>ready: confirm (always asks)<br>reopen: confirm (always asks)<br>reply: confirm (always asks)<br>rerun: confirm (always asks)<br>resolve_thread: confirm (always asks)<br>review: confirm (always asks)<br>threads: auto<br>view: auto | no | GitHub pull requests and CI (gh, signed in on this machine). |
 | [`tasks_list`](#tasks_list) | auto | yes | List the workspace tasks (.termocode/tasks.json, user commands, auto-detected build/test tasks): label, group (build/test, default), command and the state of the last run. |
 | [`tasks_run`](#tasks_run) | confirm (run) | asks | Run a task in its own VISIBLE terminal tab (like Tasks: Run Task). |
 | [`tasks_status`](#tasks_status) | auto | yes | State of a task run: running or the exit code, and the last output lines. |
@@ -948,6 +949,38 @@ The repository. At once: identity (the name and e-mail on commits), submodules, 
 | `path` | string |   | untrack / submodule_update: the file or submodule |
 | `pattern` | string |   | ignore: a .gitignore pattern |
 | `verdict` | string |   | bisect_mark: the commit under test. One of: `good`, `bad`, `skip` |
+
+### git_pr
+
+GitHub pull requests and CI (gh, signed in on this machine). At once: list (state open|closed|merged|all, author, search: GitHub search words, mine=true), view (number: state, branches, mergeable, checks, files, reviews), diff (number), threads (number: review threads with their comment ids), checks (number, or none: the current branch's CI runs and its PR), ci_log (run: the failed log of a workflow run). Asking every time: create (title, body, base, draft, reviewers, labels; the current branch, pushed), checkout (number), merge (number, method squash|merge|rebase), review (number, kind approve|request_changes|comment, body), reply (number, comment_id, body), resolve_thread (thread_id, resolved), comment (number, path, line, side RIGHT|LEFT, body), draft / ready / close / reopen (number), rerun (number, or none: the branch's failed runs).
+
+**Gate:** checkout: confirm (always asks) · checks: auto · ci_log: auto · close: confirm (always asks) · comment: confirm (always asks) · create: confirm (always asks) · diff: auto · draft: confirm (always asks) · list: auto · merge: confirm (always asks) · ready: confirm (always asks) · reopen: confirm (always asks) · reply: confirm (always asks) · rerun: confirm (always asks) · resolve_thread: confirm (always asks) · review: confirm (always asks) · threads: auto · view: auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `author` | string |   | list: a login or @me |
+| `base` | string |   | create: the base branch |
+| `body` | string |   | create / review / reply / comment: the text |
+| `comment_id` | integer |   | reply: the comment id from threads |
+| `draft` | boolean |   | create: as a draft |
+| `kind` | string |   | review: which. One of: `approve`, `request_changes`, `comment` |
+| `labels` | array |   | create: labels |
+| `line` | integer |   | comment: the line |
+| `method` | string |   | merge: how (default squash). One of: `squash`, `merge`, `rebase` |
+| `mine` | boolean |   | list: the ones asking for my review and mine |
+| `number` | integer |   | the pull request number |
+| `op` | string |   | what to do. One of: `checkout`, `checks`, `ci_log`, `close`, `comment`, `create`, `diff`, `draft`, `list`, `merge`, `ready`, `reopen`, `reply`, `rerun`, `resolve_thread`, `review`, `threads`, `view` |
+| `path` | string |   | comment: the file |
+| `resolved` | boolean |   | resolve_thread: true resolves, false opens it again |
+| `reviewers` | array |   | create: logins or org/team |
+| `run` | integer |   | ci_log: the workflow run id (from checks) |
+| `search` | string |   | list: GitHub search words |
+| `side` | string |   | comment: the new (RIGHT) or old (LEFT) file. One of: `RIGHT`, `LEFT` |
+| `state` | string |   | list: which. One of: `open`, `closed`, `merged`, `all` |
+| `thread_id` | string |   | resolve_thread: the thread id from threads |
+| `title` | string |   | create: the title |
 
 ### tasks_list
 

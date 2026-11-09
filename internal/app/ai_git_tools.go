@@ -479,5 +479,6 @@ func aiGitMoreTools(root string, call aiIDECaller) []ai.Tool {
 		aiGitLinesTool(root, call),
 		aiGitDiscardTool(root, call),
 		aiGitRepoTool(root, call),
+		aiGitPRTool(root, call),
 	}
 }
