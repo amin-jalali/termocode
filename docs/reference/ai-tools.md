@@ -75,6 +75,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`git_discard`](#git_discard) | confirm (always asks) | no | Throw changes away; each asks every time (Cancel first). |
 | [`git_repo`](#git_repo) | bisect_mark: confirm (always asks)<br>bisect_reset: confirm (always asks)<br>bisect_start: confirm (always asks)<br>bisect_status: auto<br>contributors: auto<br>identity: auto<br>ignore: confirm (git)<br>init: confirm (always asks)<br>lfs_files: auto<br>submodule_update: confirm (git)<br>submodules: auto<br>unshallow: confirm (git)<br>untrack: confirm (git) | no | The repository. |
 | [`git_pr`](#git_pr) | checkout: confirm (always asks)<br>checks: auto<br>ci_log: auto<br>close: confirm (always asks)<br>comment: confirm (always asks)<br>create: confirm (always asks)<br>diff: auto<br>draft: confirm (always asks)<br>list: auto<br>merge: confirm (always asks)<br>ready: confirm (always asks)<br>reopen: confirm (always asks)<br>reply: confirm (always asks)<br>rerun: confirm (always asks)<br>resolve_thread: confirm (always asks)<br>review: confirm (always asks)<br>threads: auto<br>view: auto | no | GitHub pull requests and CI (gh, signed in on this machine). |
+| [`worktree`](#worktree) | add_folder: confirm (git)<br>archive: confirm (always asks)<br>create: confirm (git)<br>delete: confirm (always asks)<br>diff: auto<br>link: auto<br>notes: auto<br>pin: auto<br>restack: confirm (always asks)<br>restore: confirm (always asks)<br>sleep: auto<br>switch: confirm (always asks)<br>unpin: auto<br>wake: auto | no | One worktree of the WORKTREES view (worktree: a path, branch or name from worktrees_list; default this workspace's). |
 | [`tasks_list`](#tasks_list) | auto | yes | List the workspace tasks (.termocode/tasks.json, user commands, auto-detected build/test tasks): label, group (build/test, default), command and the state of the last run. |
 | [`tasks_run`](#tasks_run) | confirm (run) | asks | Run a task in its own VISIBLE terminal tab (like Tasks: Run Task). |
 | [`tasks_status`](#tasks_status) | auto | yes | State of a task run: running or the exit code, and the last output lines. |
@@ -981,6 +982,24 @@ GitHub pull requests and CI (gh, signed in on this machine). At once: list (stat
 | `state` | string |   | list: which. One of: `open`, `closed`, `merged`, `all` |
 | `thread_id` | string |   | resolve_thread: the thread id from threads |
 | `title` | string |   | create: the title |
+
+### worktree
+
+One worktree of the WORKTREES view (worktree: a path, branch or name from worktrees_list; default this workspace's). At once: notes (its notes), diff (its changes vs its base), pin / unpin, sleep / wake, link (kind issue|pr|none, number). With Always allow git: create (name or branch, from: where it starts; the folder goes next to the repository), add_folder (add it to this window). Asking every time: switch (reopen this window in it), archive (its folder goes, the branch stays) / restore, restack (replay a child onto its parent's branch), delete (folder and branch). After yes the view's own cards follow: a delete with changes or unmerged commits asks the user there, and they type the branch name.
+
+**Gate:** add_folder: confirm (git) · archive: confirm (always asks) · create: confirm (git) · delete: confirm (always asks) · diff: auto · link: auto · notes: auto · pin: auto · restack: confirm (always asks) · restore: confirm (always asks) · sleep: auto · switch: confirm (always asks) · unpin: auto · wake: auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `op` | string | yes | what to do. One of: `add_folder`, `archive`, `create`, `delete`, `diff`, `link`, `notes`, `pin`, `restack`, `restore`, `sleep`, `switch`, `unpin`, `wake` |
+| `branch` | string |   | create: the branch (default from the name) |
+| `from` | string |   | create: the branch, tag or commit it starts from (default the current branch) |
+| `kind` | string |   | link: what number is. One of: `issue`, `pr`, `none` |
+| `name` | string |   | create: its name (the branch is made from it) |
+| `number` | integer |   | link: the issue or pull request number |
+| `worktree` | string |   | a path, branch or name from worktrees_list (default: this workspace's) |
 
 ### tasks_list
 
