@@ -43,5 +43,9 @@ func (w *webDBConn) fail(call *webCall, err error) {
 		webFailData(call, webproto.CodeConflict, msg, need)
 		return
 	}
+	if p := dbConnectProblem(w.c, err); p != "" { // the step that failed, with its configured values
+		call.fail(webproto.CodeConflict, strings.TrimSpace(dbOneLine(dbAIClean(p, w.snap.password))))
+		return
+	}
 	call.fail(webproto.CodeConflict, webDBReason(err, w.snap.password))
 }

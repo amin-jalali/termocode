@@ -155,7 +155,7 @@ func (s *dbState) dbDialFor(c dbclient.Conn) (dbclient.DialFunc, error) {
 	if !t.Alive() {
 		return nil, dbclient.ErrTunnelClosed
 	}
-	return t.DialContext, nil
+	return dbHintDial(c, t, t.DialContext), nil
 }
 
 // dbResolveConnPaths gives c absolute key, known_hosts and certificate

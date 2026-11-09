@@ -1685,6 +1685,9 @@ func (m *Model) onDBConnect(msg dbConnectMsg) tea.Cmd {
 			s.console.waiting = nil
 		}
 		n.problem = dbErrorText(msg.err)
+		if c, ok := s.connection(msg.id); ok {
+			n.problem = dbConnErrorText(c, msg.err) // the step that failed, with its configured values
+		}
 		if p := dbTunnelProblem(msg.err); p != "" {
 			n.problem = p
 		}
@@ -1710,7 +1713,7 @@ func (m *Model) onDBConnect(msg dbConnectMsg) tea.Cmd {
 		if cmd, ok := m.dbReconnectFailed(msg.id); ok {
 			return cmd
 		}
-		fail := m.pushToastDetail(toast.Errr, "Database connection failed", dbErrorText(msg.err))
+		fail := m.pushToastDetail(toast.Errr, "Database connection failed", n.problem)
 		if _, isConn := s.connection(msg.id); isConn && !n.loaded {
 			return tea.Batch(fail, m.databaseOfflineTree(msg.id)) // DBX-29: show the cached tree
 		}
@@ -2000,7 +2003,7 @@ func (m *Model) onDBTest(msg dbTestMsg) tea.Cmd {
 			if cmd, ok := m.databaseTunnelError(msg.err, msg.conn.ID, dbThenTest); ok {
 				return cmd
 			}
-			return m.pushToastDetail(toast.Errr, "Connection test failed · "+sanitizeDBText(dbConnName(msg.conn)), dbErrorText(msg.err))
+			return m.pushToastDetail(toast.Errr, "Connection test failed · "+sanitizeDBText(dbConnName(msg.conn)), dbConnErrorText(msg.conn, msg.err))
 		}
 		detail := sanitizeDBText(dbConnName(msg.conn))
 		if msg.via != "" {
@@ -2027,7 +2030,7 @@ func (m *Model) onDBTest(msg dbTestMsg) tea.Cmd {
 		m.picker.SetSize(m.w, m.h)
 		m.pickerOpen = true
 		m.pickerKind = pickerKindDBTestResult
-		return m.pushToastDetail(toast.Warn, "Connection test failed", dbErrorText(msg.err))
+		return m.pushToastDetail(toast.Warn, "Connection test failed", dbConnErrorText(msg.conn, msg.err))
 	}
 	m.databases.pendingConn = msg.conn
 	m.databases.pendingPassword = msg.password

@@ -418,7 +418,15 @@ func dbAITake(ctx context.Context, call aiIDECaller, root string, c dbclient.Con
 // auto-commit one for writes. The caller closes it. snap.password is set
 // to the password used, so callers can keep it out of every text.
 func dbAIOpen(ctx context.Context, root string, c dbclient.Conn, snap *dbAISnapshot, readOnly bool) (dbclient.Session, error) {
-	return dbAIOpenAs(ctx, root, c, snap, readOnly, false)
+	sess, err := dbAIOpenAs(ctx, root, c, snap, readOnly, false)
+	if err != nil {
+		if p := dbConnectProblem(c, err); p != "" {
+			// The step that failed, with its configured values: the model
+			// relays it and stops (no other connection is tried).
+			return nil, &dbConnectFail{text: p, err: err}
+		}
+	}
+	return sess, err
 }
 
 // dbReadKeeper is a session that can be made read-only in place and keep
@@ -642,6 +650,13 @@ func dbAIError(err error, password string) error {
 	var none dbAINoAnswer
 	if errors.As(err, &none) {
 		return none
+	}
+	var fail *dbConnectFail
+	if errors.As(err, &fail) {
+		return errors.New(dbAIClean(fail.text, password))
+	}
+	if t := dbclient.ReachText(err); t != "" { // e.g. Redis: the address that did not answer, in one line
+		return errors.New(dbAIClean(t, password))
 	}
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return errors.New(dbErrorText(err))

@@ -106,7 +106,7 @@ func (t *Tunnel) Output(ctx context.Context, cmd string) (string, int, error) {
 	sess.Stdout = &limitWriter{w: &out, n: maxCommandOutput}
 	err = sess.Run(cmd)
 	if ctx.Err() != nil {
-		return "", 0, &ReachError{Addr: "the container engine", Via: t.target.Host, Timeout: true}
+		return "", 0, &ReachError{Addr: "the container engine", Via: SSHLabel(t.target.User, t.target.Host, t.target.Port), Timeout: true, Err: ctx.Err()}
 	}
 	var exit *ssh.ExitError
 	if errors.As(err, &exit) {

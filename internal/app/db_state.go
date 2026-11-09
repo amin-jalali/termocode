@@ -782,7 +782,7 @@ func dbOpenBounded(timeout time.Duration, c dbclient.Conn, root, password string
 func dbNoAnswer(c dbclient.Conn, throughSSH bool) error {
 	e := &dbclient.ReachError{Addr: dbConnAddr(c), Timeout: true}
 	if throughSSH && c.SSH != nil {
-		e.Via = c.SSH.Host
+		e.Via = dbSSHLabel(*c.SSH)
 	}
 	return e
 }
@@ -823,7 +823,7 @@ func dbOpenSession(ctx context.Context, c dbclient.Conn, root, password string, 
 			_ = tun.Close()
 			return nil, nil, err
 		}
-		c.Dial = tun.DialContext
+		c.Dial = dbHintDial(c, tun, tun.DialContext)
 	}
 	sess, err := dbKubeOpen(ctx, c, func(c dbclient.Conn) (dbclient.Session, error) { // db_cloud.go
 		return dbOpenDriverSession(ctx, c, root, password)

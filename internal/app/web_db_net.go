@@ -300,7 +300,7 @@ func (n *webDBNet) dial(ctx context.Context, c dbclient.Conn, root string, sec d
 		return nil, nil, err
 	}
 	if c.Container == nil {
-		return t.DialContext, t, nil
+		return dbHintDial(c, t, t.DialContext), t, nil
 	}
 	host, mu := webDBContainerHost(c), n.resolver(webDBTunnelKey(c))
 	// resolve asks for the IP unless the tunnel points host somewhere

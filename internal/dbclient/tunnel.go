@@ -391,10 +391,14 @@ func (t *Tunnel) DialContext(ctx context.Context, network, addr string) (net.Con
 		if !t.Alive() {
 			return nil, t.closedErr()
 		}
+		via := SSHLabel(t.target.User, t.target.Host, t.target.Port)
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			return nil, &ReachError{Addr: addr, Via: via, Timeout: true, Err: ctx.Err()}
+		}
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		return nil, tunnelReachError(addr, t.target.Host, err)
+		return nil, tunnelReachError(addr, via, err)
 	}
 	return &tunnelConn{Conn: c}, nil
 }

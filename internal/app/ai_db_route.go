@@ -323,7 +323,11 @@ func dbAILogin(ctx context.Context, c dbclient.Conn, snap *dbAISnapshot, pw stri
 	}
 	lctx, cancel := context.WithTimeout(ctx, loadDBConsoleSettings().timeout())
 	defer cancel()
-	return dbSQLSessionFactory(lctx, c, pw)
+	sess, err := dbSQLSessionFactory(lctx, c, pw)
+	if err != nil && ctx.Err() == nil && errors.Is(lctx.Err(), context.DeadlineExceeded) && dbclient.ReachText(err) == "" {
+		err = dbNoAnswer(c, c.SSH != nil) // the database said nothing in time
+	}
+	return sess, err
 }
 
 // databaseAIPasswordTyped answers the AI's database password prompt:
