@@ -454,5 +454,7 @@ func aiGitMoreTools(root string, call aiIDECaller) []ai.Tool {
 		aiGitBranchTool(root, call),
 		aiGitTagTool(root, call),
 		aiGitRemoteTool(root, call),
+		aiGitHistoryTool(root, call),
+		aiGitRebaseTool(root, call),
 	}
 }

@@ -68,6 +68,8 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`git_branch`](#git_branch) | compare: auto<br>create: confirm (git)<br>delete: confirm (always asks)<br>delete_remote: auto<br>list: auto<br>merge: confirm (always asks)<br>rename: confirm (git)<br>set_upstream: confirm (git)<br>unset_upstream: confirm (git) | some ask | Branches: list (default; remote=true adds remote branches), compare (base, head: the commits and files head has that base lacks), create (name, from: a branch, tag or commit; it switches to the new branch), rename (name, default the current one; new_name), set_upstream (upstream like origin/main; branch default current) and unset_upstream ask with Always allow git; delete (name; force=true for a branch with commits of its own, they are lost) and merge (name into the current branch; no_ff) ask every time; delete_remote (name like origin/x) opens the user's card, where they type the branch name. |
 | [`git_tag`](#git_tag) | checkout: confirm (always asks)<br>create: confirm (git)<br>delete: confirm (always asks)<br>delete_remote: auto<br>list: auto<br>push: confirm (always asks)<br>show: auto | no | Tags: list (default) and show (name: its commit, tagger, message) run at once; create (name, rev default HEAD, message: annotated, empty: lightweight) asks with Always allow git; delete (local only), push (name, or all=true; to the branch's remote or remote) and checkout (name: a detached HEAD) ask every time; delete_remote (name) opens the user's card, where they type the tag name. |
 | [`git_remote`](#git_remote) | add: confirm (git)<br>fetch_all: confirm (git)<br>force_push: auto<br>incoming: auto<br>list: auto<br>outgoing: auto<br>pull_from: confirm (git)<br>push_to: confirm (always asks)<br>remove: confirm (always asks)<br>rename: confirm (git)<br>set_url: confirm (git) | no | Remotes: list (default), incoming (the upstream's commits HEAD lacks, as of the last fetch) and outgoing (what a push sends) run at once; add (name, url), rename (name, new_name), set_url (name, url), fetch_all (every remote, prune) and pull_from (remote, branch; rebase=true) ask with Always allow git; remove (name) and push_to (remote, branch: HEAD to that branch) ask every time; force_push opens the user's Force Push card for the current branch (with lease), where they type the branch name. |
+| [`git_history`](#git_history) | apply_patch: confirm (always asks)<br>cherry_pick: confirm (always asks)<br>file_at: auto<br>line_history: auto<br>move_commit: confirm (always asks)<br>move_to: confirm (always asks)<br>patch: auto<br>redo: confirm (always asks)<br>reflog: auto<br>reset: confirm (always asks)<br>restore_file: confirm (always asks)<br>revert: confirm (always asks)<br>search: auto<br>show: auto<br>uncommit: confirm (git)<br>undo: confirm (always asks) | no | Commit history. |
+| [`git_rebase`](#git_rebase) | abort: confirm (always asks)<br>autosquash: confirm (always asks)<br>continue: confirm (always asks)<br>drop: confirm (always asks)<br>fixup: confirm (always asks)<br>onto: confirm (always asks)<br>plan: auto<br>reword: confirm (always asks)<br>skip: confirm (always asks)<br>squash: confirm (always asks)<br>start: confirm (always asks)<br>status: auto | no | Rebase. |
 | [`tasks_list`](#tasks_list) | auto | yes | List the workspace tasks (.termocode/tasks.json, user commands, auto-detected build/test tasks): label, group (build/test, default), command and the state of the last run. |
 | [`tasks_run`](#tasks_run) | confirm (run) | asks | Run a task in its own VISIBLE terminal tab (like Tasks: Run Task). |
 | [`tasks_status`](#tasks_status) | auto | yes | State of a task run: running or the exit code, and the last output lines. |
@@ -834,6 +836,52 @@ Remotes: list (default), incoming (the upstream's commits HEAD lacks, as of the 
 | `rebase` | boolean |   | pull_from: rebase instead of a merge |
 | `remote` | string |   | push_to / pull_from: the remote |
 | `url` | string |   | add / set_url: the URL |
+
+### git_history
+
+Commit history. At once: show (rev, default HEAD: the commit and its diff; path limits it), file_at (rev, path: the file then), search (query in the Search Log words: text, author:, since:, until:, path:, branch:, changes:, all), line_history (path, start, end), reflog (n; index 0 is the newest), patch (rev: a commit as a mail patch; no rev: the uncommitted changes). uncommit (undo the last commit, keep its changes staged) asks with Always allow git. Asking every time: cherry_pick (revs, in order), revert (rev; parent for a merge commit), reset (rev, mode soft|mixed|keep|hard; hard keeps a backup ref and stashes the changes), undo (the last git action; stash=true when local changes are in the way), redo, move_to (index: move HEAD to that reflog line), restore_file (path, rev: the file as it was; its changes go to a stash first), move_commit (branch, create: the last commit to another branch), apply_patch (patch text, nothing is committed).
+
+**Gate:** apply_patch: confirm (always asks) · cherry_pick: confirm (always asks) · file_at: auto · line_history: auto · move_commit: confirm (always asks) · move_to: confirm (always asks) · patch: auto · redo: confirm (always asks) · reflog: auto · reset: confirm (always asks) · restore_file: confirm (always asks) · revert: confirm (always asks) · search: auto · show: auto · uncommit: confirm (git) · undo: confirm (always asks)
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `op` | string | yes | what to do. One of: `apply_patch`, `cherry_pick`, `file_at`, `line_history`, `move_commit`, `move_to`, `patch`, `redo`, `reflog`, `reset`, `restore_file`, `revert`, `search`, `show`, `uncommit`, `undo` |
+| `branch` | string |   | move_commit: the target branch |
+| `create` | boolean |   | move_commit: make the branch |
+| `end` | integer |   | line_history: last line |
+| `index` | integer |   | move_to: the reflog line |
+| `keep` | boolean |   | move_commit: keep the commit on the current branch too |
+| `mode` | string |   | reset: how (default mixed). One of: `soft`, `mixed`, `keep`, `hard` |
+| `n` | integer |   | search / reflog: how many (default 30) |
+| `parent` | integer |   | revert of a merge commit: the parent to keep (1 = the branch it was merged into) |
+| `patch` | string |   | apply_patch: the patch text |
+| `path` | string |   | a file |
+| `query` | string |   | search: the Search Log words |
+| `rev` | string |   | a commit, branch or tag |
+| `revs` | array |   | cherry_pick: the commits, applied in this order |
+| `start` | integer |   | line_history: first line |
+| `stash` | boolean |   | undo / move_to: stash local changes first, put them back after |
+
+### git_rebase
+
+Rebase. At once: status (a rebase, merge, cherry-pick or revert in progress, its step and conflicts), plan (base: the commits after it, oldest first, as rows to rebase). Asking every time: start (base, todo: rows {hash, action pick|reword|edit|squash|fixup|drop, message for reword}; rows not named stay pick; naming every row sets the order), onto (onto, keep_merges), continue, skip, abort, fixup (rev: fold the staged changes into it), autosquash (fold the fixup!/squash! commits), reword (rev, message), drop (rev), squash (rev into the commit before it). autostash=true stashes uncommitted changes first. A conflict stops it: resolve with git_conflicts, then continue.
+
+**Gate:** abort: confirm (always asks) · autosquash: confirm (always asks) · continue: confirm (always asks) · drop: confirm (always asks) · fixup: confirm (always asks) · onto: confirm (always asks) · plan: auto · reword: confirm (always asks) · skip: confirm (always asks) · squash: confirm (always asks) · start: confirm (always asks) · status: auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `op` | string | yes | what to do. One of: `abort`, `autosquash`, `continue`, `drop`, `fixup`, `onto`, `plan`, `reword`, `skip`, `squash`, `start`, `status` |
+| `autostash` | boolean |   | stash uncommitted changes first, put them back after |
+| `base` | string |   | plan / start: the commit the rows come after |
+| `keep_merges` | boolean |   | onto: keep merge commits |
+| `message` | string |   | reword: the new message |
+| `onto` | string |   | onto: the branch, tag or commit |
+| `rev` | string |   | fixup / reword / drop / squash: the commit |
+| `todo` | array |   | start: the rows to change |
 
 ### tasks_list
 
