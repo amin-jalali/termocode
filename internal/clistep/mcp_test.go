@@ -19,6 +19,7 @@ var stepMCP = &MCPServer{Name: "termocode", Command: "/bin/tc", Args: []string{"
 func TestArgsMCP(t *testing.T) {
 	codex := Args(Spec{CLI: ai.CLICodex, Dir: "/w", Write: true, Model: "gpt-6-sol", MCP: stepMCP})
 	want := []string{"exec", "--json", "--color", "never", "-m", "gpt-6-sol", "--sandbox", "workspace-write",
+		"-c", "sandbox_workspace_write.network_access=false",
 		"-c", `approval_policy="never"`,
 		"-c", `mcp_servers.termocode.command="/bin/tc"`,
 		"-c", `mcp_servers.termocode.args=["mcp","--socket","/s/a.sock"]`,

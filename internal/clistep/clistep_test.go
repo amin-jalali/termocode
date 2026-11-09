@@ -134,7 +134,7 @@ func TestArgs(t *testing.T) {
 		// Codex never waits for an approval it cannot get (exec has no
 		// one to ask): its shell stays in the sandbox Write picks.
 		{Spec{CLI: ai.CLICodex, Dir: "/w"}, []string{"exec", "--json", "--color", "never", "--sandbox", "read-only", "-c", `approval_policy="never"`, "-C", "/w", "-"}},
-		{Spec{CLI: ai.CLICodex, Dir: "/w", Write: true}, []string{"exec", "--json", "--color", "never", "--sandbox", "workspace-write", "-c", `approval_policy="never"`, "-C", "/w", "-"}},
+		{Spec{CLI: ai.CLICodex, Dir: "/w", Write: true}, []string{"exec", "--json", "--color", "never", "--sandbox", "workspace-write", "-c", "sandbox_workspace_write.network_access=false", "-c", `approval_policy="never"`, "-C", "/w", "-"}},
 		// AIP-2: a step's model goes in as --model / -m.
 		{Spec{CLI: ai.CLIClaude, Model: "opus"}, []string{"-p", "--output-format", "stream-json", "--verbose", "--model", "opus", "--tools", "Read,Grep,Glob"}},
 		{Spec{CLI: ai.CLICodex, Dir: "/w", Model: "gpt-5-codex"}, []string{"exec", "--json", "--color", "never", "-m", "gpt-5-codex", "--sandbox", "read-only", "-c", `approval_policy="never"`, "-C", "/w", "-"}},
