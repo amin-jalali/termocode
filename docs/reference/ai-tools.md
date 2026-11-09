@@ -190,6 +190,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`tracker_pin`](#tracker_pin) | confirm (always asks) | no | Pin a read-only MCP tool call (for example a tracker's open issues) to the phone's Home as a live block. |
 | [`tracker_pins`](#tracker_pins) | list: auto<br>run: auto<br>unpin: confirm (always asks) | no | The blocks pinned to the phone's Home (tracker_pin pins one). |
 | [`tracker_tasks`](#tracker_tasks) | auto | no | The shared task list of this repository (Tracker: Show Tasks…; Markdown files in .termocode/tasks that agents and people edit). |
+| [`chat_manage`](#chat_manage) | delete: confirm (always asks)<br>rename: auto | no | Rename a saved AI chat (at once) or delete one (asks the user every time). |
 | [`view_catalog`](#view_catalog) | auto | no | List the views termocode can show the user (on the phone and in the chat): id, params, typed fields (which can be sorted or filtered) and layouts. |
 | [`view_save`](#view_save) | auto | no | Save a view spec on this laptop under a name, for every paired phone (and pin it to the phones' Home when pin is true). |
 | [`view_manage`](#view_manage) | delete: confirm (always asks)<br>list: auto<br>pin: auto<br>rename: auto<br>unpin: auto | no | The views saved for the phones (view_save saves one). |
@@ -2619,6 +2620,20 @@ The shared task list of this repository (Tracker: Show Tasks…; Markdown files 
 | `status` | string |   | status: the new status. One of: `todo`, `doing`, `blocked`, `done` |
 | `text` | string |   | note: the note |
 | `title` | string |   | add: the title |
+
+### chat_manage
+
+Rename a saved AI chat (at once) or delete one (asks the user every time). chats_search finds the ids; chat_read reads one.
+
+**Gate:** delete: confirm (always asks) · rename: auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | string | yes | the chat id |
+| `op` | string | yes | what to do. One of: `delete`, `rename` |
+| `title` | string |   | rename: the new title |
 
 ### view_catalog
 
