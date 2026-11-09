@@ -31,7 +31,11 @@ func TestServicesToolGate(t *testing.T) {
 		if tl.Class != ai.ClassServices || tl.Gate == nil {
 			t.Fatalf("%s: class %q gate %v", tl.Name, tl.Class, tl.Gate != nil)
 		}
-		if ask, class := tl.Gate(nil); !ask || class != ai.ClassServices {
+		want := ai.ClassServices
+		if tl.Name == "services_stop" {
+			want = "" // services.stop / stop_all ask every time on the web
+		}
+		if ask, class := tl.Gate(nil); !ask || class != want {
 			t.Errorf("%s not allowed: gate = %v %q", tl.Name, ask, class)
 		}
 		st.aiAllowed.Store(true)

@@ -719,18 +719,18 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// again on the gate card); on/off changes what runs unattended.
 	"workflows":           aiAuto(),
 	"workflow-new":        aiNever("starts a chat with the user; the AI drafts workflows with workflow_draft"),
-	"workflow-run":        aiConfirm(ai.ClassRun),
-	"workflow-dry-run":    aiConfirm(ai.ClassRun),
+	"workflow-run":        aiDestructive(), // the view's run card asks every time
+	"workflow-dry-run":    aiDestructive(),
 	"workflow-enable":     aiDestructive(),
-	"workflow-stop":       aiConfirm(ai.ClassRun),
+	"workflow-stop":       aiDestructive(),
 	"workflow-edit-file":  aiAuto(),
 	"workflow-history":    aiAuto(),
 	"workflow-undo-write": aiConfirm(""), // writes to outside systems again; the undo card asks
 	// CMP-38: the list of trigger events only reads; each event's card
 	// is the user's to answer.
 	"workflow-triggers": aiAuto(),
-	"workflow-pause":    aiConfirm(ai.ClassRun),
-	"workflow-retry":    aiConfirm(ai.ClassRun), // runs again; its writes still ask on the gate card
+	"workflow-pause":    aiAuto(),        // a pause only waits: no card in the view
+	"workflow-retry":    aiDestructive(), // the retry card asks; its writes still ask on the gate card
 	// The secret store (secrets_ui.go): unlocking and locking are the
 	// user's; the AI never reads, sets or lists secrets.
 	"secrets-unlock": aiNever(aiNoAIConfig),

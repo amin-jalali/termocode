@@ -218,7 +218,7 @@ func TestK9AIDeleteDropsClosedRecentsBackups(t *testing.T) {
 	pushRecent(keep)
 	k9Backup(t, prev, keep, "unsaved")
 	m.openFileAtLine(filepath.Join(dir, "d", "x.txt"), 1)
-	driveAIChat(t, m, m.sendAIChat("delete"), nil)
+	driveAIChat(t, m, m.sendAIChat("delete"), func(aiChatConfirmMsg) string { return "allow" }) // delete asks every time (no Always allow)
 	k9Check(t, m, prev, keep)
 }
 

@@ -644,7 +644,8 @@ func localWorkspaceTools(w Workspace) []Tool {
 			Name: "delete", Description: "Delete a file or directory.",
 			Params: map[string]any{"path": strParam("path to delete")}, Required: []string{"path"},
 			Validate: inside,
-			Mutating: true, Class: ClassFileWrite,
+			// No Always allow: the explorer's Delete asks every time (AI parity).
+			Mutating: true,
 			Describe: func(a map[string]any) string { return "Delete " + path(a) },
 			Run: func(_ context.Context, a map[string]any) (string, error) {
 				abs, err := w.Resolve(path(a))

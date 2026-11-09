@@ -782,7 +782,7 @@ func aiWorkspaceFoldersTool(root string, call aiIDECaller) ai.Tool {
 		Gate: func(a map[string]any) (bool, string) {
 			switch ai.ArgString(a, "op") {
 			case "add", "remove":
-				return true, ai.ClassIDE
+				return true, "" // the GUI asks every time (workspace.add_folder / remove_folder)
 			}
 			return false, "" // list; open is refused by Validate
 		},

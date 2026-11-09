@@ -29,7 +29,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`edit_file`](#edit_file) | confirm (review) | no | Change part of a file: replace old_text (copied exactly from the file, unique in it) with new_text. |
 | [`create_file`](#create_file) | confirm (review) | no | Create a new file, optionally with content. |
 | [`create_dir`](#create_dir) | confirm (fileWrite) | no | Create a directory (and missing parents). |
-| [`delete`](#delete) | confirm (fileWrite) | no | Delete a file or directory. |
+| [`delete`](#delete) | confirm (always asks) | no | Delete a file or directory. |
 | [`rename`](#rename) | confirm (fileWrite) | no | Rename or move a file / directory. |
 | [`git_stage`](#git_stage) | confirm (git) | no | Stage a file for the next commit. |
 | [`git_commit`](#git_commit) | confirm (git) | no | Commit the staged changes with a message. |
@@ -89,7 +89,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`lsp_servers`](#lsp_servers) | list: auto<br>install: confirm (run)<br>uninstall: confirm (always asks) | no | Manage the language servers termocode installs (like the manager picker). |
 | [`dap_adapters`](#dap_adapters) | list: auto<br>install: confirm (run)<br>uninstall: confirm (always asks) | no | Manage the debug adapters termocode installs (like the manager picker). |
 | [`extensions`](#extensions) | list: auto<br>run: confirm (run)<br>reload: confirm (run)<br>log: auto | no | termocode's Lua extensions (~/.config/termocode/extensions). |
-| [`workspace_folders`](#workspace_folders) | list: auto<br>add: confirm (ide)<br>remove: confirm (ide)<br>open: never (refused) | yes | The folders shown in the explorer (multi-root workspace). |
+| [`workspace_folders`](#workspace_folders) | list: auto<br>add: confirm (always asks)<br>remove: confirm (always asks)<br>open: never (refused) | yes | The folders shown in the explorer (multi-root workspace). |
 | [`debug_breakpoint`](#debug_breakpoint) | list: auto<br>set: auto<br>remove: auto<br>clear: confirm (ide) | some ask | Breakpoints of the debugger (also used by a running session). |
 | [`debug_state`](#debug_state) | auto | yes | The debug session: running or paused, stop reason, thread, top stack frames (file:line, function), the variables of the top frame (depth: child levels, default 1, max 3; capped) and the watch values. |
 | [`debug_start`](#debug_start) | confirm (run) | asks | Start debugging (Run & Debug). |
@@ -99,7 +99,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`services_status`](#services_status) | auto | yes | Current state of one service (name) or all: running / healthy / unhealthy / exited (code), up since, docker's status text, published ports and whether they accept a TCP connection. |
 | [`services_logs`](#services_logs) | auto | yes | The last log lines of a service (name, or "all" for every compose service), with secrets redacted. |
 | [`services_start`](#services_start) | confirm (services) | no | Start a service (name) or all (all: true): compose runs `docker compose up -d` in a visible terminal tab (pulls show there); a local service runs in its own tab. |
-| [`services_stop`](#services_stop) | confirm (services) | no | Stop a service (name) or all (all: true): `docker compose stop` (containers and volumes stay) or SIGTERM to a local service. |
+| [`services_stop`](#services_stop) | confirm (always asks) | no | Stop a service (name) or all (all: true): `docker compose stop` (containers and volumes stay) or SIGTERM to a local service. |
 | [`services_restart`](#services_restart) | confirm (services) | no | Restart one service (`docker compose restart`, or stop + start for a local one). |
 | [`containers_list`](#containers_list) | auto | yes | Every container on a host (all projects, running and stopped), grouped by compose project: id, name, image, state, status, published ports, compose service, command; plus which host port each container publishes. |
 | [`containers_inspect`](#containers_inspect) | auto | yes | The engine's inspect JSON of one container (default), image, volume or network, with every env value, auth field and secret-looking label masked (env names stay). |
@@ -341,7 +341,7 @@ Create a directory (and missing parents).
 
 Delete a file or directory. Its editor tabs are closed; a file with unsaved edits in the editor is refused.
 
-**Gate:** confirm (fileWrite)
+**Gate:** confirm (always asks)
 
 **MCP server:** no
 
@@ -1189,7 +1189,7 @@ termocode's Lua extensions (~/.config/termocode/extensions). op list: each exten
 
 The folders shown in the explorer (multi-root workspace). op list: every folder; the first is the primary one (file tools, git and the terminal work there). op add: show another folder as a new root in the explorer (asks). op remove: take an added folder out again (asks). Opening a different workspace is not possible: it restarts termocode and ends this chat.
 
-**Gate:** list: auto · add: confirm (ide) · remove: confirm (ide) · open: never (refused)
+**Gate:** list: auto · add: confirm (always asks) · remove: confirm (always asks) · open: never (refused)
 
 **MCP server:** yes
 
@@ -1320,7 +1320,7 @@ Start a service (name) or all (all: true): compose runs `docker compose up -d` i
 
 Stop a service (name) or all (all: true): `docker compose stop` (containers and volumes stay) or SIGTERM to a local service. Returns the new state.
 
-**Gate:** confirm (services)
+**Gate:** confirm (always asks)
 
 **MCP server:** no
 
@@ -3685,15 +3685,15 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `web-start-panel` | Web: Start Panel | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web-stop` | Web: Stop Panel | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web-totp` | Web: Set Up Sign-in Code… | never | the web panel gives shell access from a browser; only the user changes it, in config.json (a second factor of the web sign-in) |
-| `workflow-dry-run` | Workflows: Dry Run Selected… | confirm (run) |   |
+| `workflow-dry-run` | Workflows: Dry Run Selected… | confirm (always asks) |   |
 | `workflow-edit-file` | Workflows: Edit Selected File | auto |   |
 | `workflow-enable` | Workflows: Turn Selected On/Off… | confirm (always asks) |   |
 | `workflow-history` | Workflows: History of Selected | auto |   |
 | `workflow-new` | AI: New Workflow… | never | starts a chat with the user; the AI drafts workflows with workflow_draft |
-| `workflow-pause` | Workflows: Pause / Continue Selected Run | confirm (run) |   |
-| `workflow-retry` | Workflows: Retry Failed Part of Selected Run… | confirm (run) |   |
-| `workflow-run` | Workflows: Run Selected… | confirm (run) |   |
-| `workflow-stop` | Workflows: Stop Selected Run… | confirm (run) |   |
+| `workflow-pause` | Workflows: Pause / Continue Selected Run | auto |   |
+| `workflow-retry` | Workflows: Retry Failed Part of Selected Run… | confirm (always asks) |   |
+| `workflow-run` | Workflows: Run Selected… | confirm (always asks) |   |
+| `workflow-stop` | Workflows: Stop Selected Run… | confirm (always asks) |   |
 | `workflow-triggers` | Workflows: Trigger Events… | auto |   |
 | `workflow-undo-write` | Workflows: Undo a Write of Selected Run… | confirm (always asks) |   |
 | `workflows` | Workflows: Open | auto |   |

@@ -756,13 +756,7 @@ func aiTerminalTools(call aiIDECaller) []ai.Tool {
 				if ai.ArgString(a, "op") != "close" {
 					return false, "" // list / new / focus: an idle shell or a view change
 				}
-				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-				defer cancel()
-				pid, err := aiTermTabPid(ctx, call, ai.ArgString(a, "tab"))
-				if err != nil || aiTermBusy(ctx, pid) != 0 {
-					return true, "" // a running command would be killed: always ask
-				}
-				return true, ai.ClassIDE
+				return true, "" // the GUI's term.close asks every time, idle or not
 			},
 			Run: func(ctx context.Context, a map[string]any) (string, error) {
 				op, tab := ai.ArgString(a, "op"), ai.ArgString(a, "tab")

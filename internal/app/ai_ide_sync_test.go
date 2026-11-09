@@ -191,7 +191,7 @@ func TestAIDeleteClosesOpenTabs(t *testing.T) {
 			m.openFileAtLine(filepath.Join(dir, "b.txt"), 1)
 			m.openFileAtLine(filepath.Join(dir, "dir/x.txt"), 1)
 			m.openFileAtLine(filepath.Join(dir, "dir/y.txt"), 1)
-			driveAIChat(t, m, m.sendAIChat("delete it"), nil)
+			driveAIChat(t, m, m.sendAIChat("delete it"), func(aiChatConfirmMsg) string { return "allow" }) // delete asks every time (no Always allow)
 			r := oneResult(t, p)
 			if strings.Contains(r, "error") || !strings.Contains(r, "closed its editor tab") {
 				t.Fatalf("result %q", r)
@@ -217,7 +217,7 @@ func TestAIDeleteRefusesUnsavedTab(t *testing.T) {
 	path := filepath.Join(dir, "dir/x.txt")
 	m.openFileAtLine(path, 1)
 	_ = c.Command("normal! Imine ")
-	driveAIChat(t, m, m.sendAIChat("delete it"), nil)
+	driveAIChat(t, m, m.sendAIChat("delete it"), func(aiChatConfirmMsg) string { return "allow" }) // delete asks every time (no Always allow)
 	if r := oneResult(t, p); !strings.Contains(r, "error") || !strings.Contains(r, "unsaved changes") || !strings.Contains(r, "dir/x.txt") {
 		t.Fatalf("result %q, want a refusal naming dir/x.txt", r)
 	}

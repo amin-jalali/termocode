@@ -438,6 +438,18 @@ func aiServicesGate(st *servicesState) func(map[string]any) (bool, string) {
 	}
 }
 
+// aiServicesStopGate is the stop rule: the web's services.stop and
+// stop_all ask every time, so stop has no Always allow class; Services
+// Trust (the user lets the AI run services) still runs it at once.
+func aiServicesStopGate(st *servicesState) func(map[string]any) (bool, string) {
+	return func(map[string]any) (bool, string) {
+		if st != nil && st.aiAllowed.Load() {
+			return false, ""
+		}
+		return true, ""
+	}
+}
+
 // aiServicesDescribe is the confirm card line of a mutating call.
 func aiServicesDescribe(verb string, a map[string]any) string {
 	name := ai.ArgString(a, "name")
@@ -746,7 +758,7 @@ func (m *Model) aiServicesTools(call aiIDECaller) []ai.Tool {
 				"name": str("service name from services_list"),
 				"all":  boolean("stop every service"),
 			},
-			Mutating: true, Class: ai.ClassServices, Gate: gate,
+			Mutating: true, Class: ai.ClassServices, Gate: aiServicesStopGate(st),
 			Validate: func(a map[string]any) error { return aiServicesValidate(call, a, true) },
 			Describe: func(a map[string]any) string { return aiServicesDescribe("stop", a) },
 			Run: func(ctx context.Context, a map[string]any) (string, error) {
