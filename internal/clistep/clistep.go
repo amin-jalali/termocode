@@ -68,6 +68,11 @@ type Spec struct {
 	// Reasoning is the step's reasoning level (ai.ReasoningLow …; "":
 	// the CLI's own). Codex gets it as model_reasoning_effort.
 	Reasoning string
+	// Instructions (optional) is who the step is and what it has
+	// (termocode's identity and tool guide): Codex gets it as
+	// developer_instructions (its own skills list off), Claude Code with
+	// --append-system-prompt. It is plain text, never a secret.
+	Instructions string
 }
 
 // codexEffort is Codex's model_reasoning_effort for a level ("": none).

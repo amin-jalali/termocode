@@ -7,6 +7,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/clistep"
 )
 
 // Every step on every provider knows who it is: the AI inside termocode
@@ -87,4 +88,51 @@ func TestAIIdentityModelStep(t *testing.T) {
 		t.Fatal("no request")
 	}
 	checkIdentity(t, "system prompt", rec.reqs[0].Messages[0].Content, dir, "RULE-OWNER-42")
+}
+
+// A Codex step also gets termocode's identity and tool guide as its
+// Instructions (developer_instructions above the prompt, not only in the
+// user's text, where Codex's own skills list won: "I cannot change
+// files — these are Codex's main jobs (OpenAI docs)"). Its own shell
+// follows the Tools setting; termocode's tools do the changes, and the
+// owner never gets a command to run in place of a tool.
+func TestAIIdentityCodexStepInstructions(t *testing.T) {
+	for _, c := range []struct {
+		preset string
+		want   []string
+		not    []string
+	}{
+		{agentdag.PresetAll, []string{"write_file", "can change files in the project folder"}, []string{"read-only"}},
+		{agentdag.PresetReadOnly, []string{"read-only", "db_query"}, []string{"write_file"}},
+	} {
+		_, dir, spec := stepMCPRun(t, c.preset, nil, nil)
+		text := spec.Instructions
+		for _, want := range append([]string{
+			"You are the AI inside termocode", "project " + filepath.Base(dir),
+			"Do not read your own docs, skills or config",
+			`MCP server "termocode"`, "mcp__termocode__", "db_query",
+			"never give the owner a command to run",
+		}, c.want...) {
+			if !strings.Contains(text, want) {
+				t.Errorf("%s: instructions miss %q:\n%s", c.preset, want, text)
+			}
+		}
+		for _, not := range c.not {
+			if strings.Contains(text, not) {
+				t.Errorf("%s: instructions have %q:\n%s", c.preset, not, text)
+			}
+		}
+		argv := strings.Join(clistep.Args(spec), "\n")
+		for _, want := range []string{"developer_instructions=\"You are the AI inside termocode", "skills.include_instructions=false",
+			"mcp_servers.termocode.command=", `mcp_servers.termocode.default_tools_approval_mode="approve"`} {
+			if !strings.Contains(argv, want) {
+				t.Errorf("%s: argv misses %q:\n%s", c.preset, want, argv)
+			}
+		}
+	}
+	// Tools: none: who it is, no tool guide, no server
+	_, _, spec := stepMCPRun(t, agentdag.PresetNone, nil, nil)
+	if !strings.Contains(spec.Instructions, "You are the AI inside termocode") || strings.Contains(spec.Instructions, "mcp__termocode__") {
+		t.Errorf("none: %q", spec.Instructions)
+	}
 }
