@@ -15,7 +15,7 @@ import (
 func TestAIContainersToolsTakeContext(t *testing.T) {
 	m := &Model{services: newServicesState()}
 	for _, tl := range m.aiContainersTools(nil) {
-		if tl.Name == "registries_list" || tl.Name == "contexts_list" || tl.Name == "contexts_manage" {
+		if tl.Name == "registries_list" || tl.Name == "contexts_list" || tl.Name == "contexts_manage" || tl.Name == "registry_manage" {
 			continue // the login file and the context list are this machine's
 		}
 		p, ok := tl.Params["context"].(map[string]any)
