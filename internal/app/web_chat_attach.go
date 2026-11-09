@@ -228,6 +228,12 @@ func (m *Model) webAttachPlan(a *webproto.Attach) (webAttachJob, error) {
 		j.text = "The view the user looks at, as its spec:\n" + ai.RedactSecrets(a.Spec)
 	case webproto.AttachIssue, webproto.AttachPR, webproto.AttachProject: // MOB-55 (web_chat_attach_ws.go)
 		return m.webAttachProjectPlan(a, j)
+	case webproto.AttachItem: // Add to AI Chat (web_chat_item.go)
+		text, err := webItemText(a.Spec)
+		if err != nil {
+			return j, err
+		}
+		j.text = text
 	case webproto.AttachResource:
 		j.text = "The MCP resource " + ai.RedactSecrets(a.ID) + ". Read it with your MCP tools when you need it."
 	case webproto.AttachBlock: // MOB-10: a tool's block in the open chat
