@@ -68,7 +68,7 @@ func TestAIGitToolValidate(t *testing.T) {
 		{"git_hunk", map[string]any{"op": "revert", "path": "a", "line": 1}, "stage, unstage, discard"},
 		{"git_hunk", map[string]any{"op": "stage", "path": "a", "line": 0}, "line"},
 		{"git_hunk", map[string]any{"op": "stage", "path": "../x", "line": 1}, "outside"},
-		{"git_stash", map[string]any{"op": "clear"}, "list, save, apply, pop, drop"},
+		{"git_stash", map[string]any{"op": "clear"}, "list, show, save, apply, pop, drop, branch"},
 		{"git_stash", map[string]any{"op": "drop", "index": -1}, "index"},
 		{"git_unstage", map[string]any{"paths": []any{}}, "empty"},
 	}

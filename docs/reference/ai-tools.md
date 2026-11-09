@@ -64,12 +64,16 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`git_unstage`](#git_unstage) | confirm (git) | no | Unstage files (keep their changes in the working tree). |
 | [`git_fetch`](#git_fetch) | confirm (git) | no | Fetch from the remotes (updates remote branches; the working tree is not touched). |
 | [`git_hunk`](#git_hunk) | stage: confirm (git)<br>unstage: confirm (git)<br>discard: confirm (always asks) | no | Stage, unstage or discard the one diff hunk that contains line (1-based; for unstage, the line in the staged version). |
-| [`git_stash`](#git_stash) | list: auto<br>save: confirm (git)<br>apply: confirm (git)<br>pop: confirm (always asks)<br>drop: confirm (always asks) | some ask | Stash: list; save (tracked changes, optional message, untracked=true adds new files; cleans the working tree); apply / pop / drop the entry at index (default 0). |
+| [`git_stash`](#git_stash) | list: auto<br>show: auto<br>save: confirm (git)<br>apply: confirm (git)<br>pop: confirm (always asks)<br>drop: confirm (always asks)<br>branch: confirm (git) | some ask | Stash: list; show (the entry at index as a diff); save (tracked changes, optional message, untracked=true adds new files; cleans the working tree); apply / pop / drop the entry at index (default 0); branch (name: a new branch from the entry's commit, with its changes; the entry goes). |
 | [`git_branch`](#git_branch) | compare: auto<br>create: confirm (git)<br>delete: confirm (always asks)<br>delete_remote: auto<br>list: auto<br>merge: confirm (always asks)<br>rename: confirm (git)<br>set_upstream: confirm (git)<br>unset_upstream: confirm (git) | some ask | Branches: list (default; remote=true adds remote branches), compare (base, head: the commits and files head has that base lacks), create (name, from: a branch, tag or commit; it switches to the new branch), rename (name, default the current one; new_name), set_upstream (upstream like origin/main; branch default current) and unset_upstream ask with Always allow git; delete (name; force=true for a branch with commits of its own, they are lost) and merge (name into the current branch; no_ff) ask every time; delete_remote (name like origin/x) opens the user's card, where they type the branch name. |
 | [`git_tag`](#git_tag) | checkout: confirm (always asks)<br>create: confirm (git)<br>delete: confirm (always asks)<br>delete_remote: auto<br>list: auto<br>push: confirm (always asks)<br>show: auto | no | Tags: list (default) and show (name: its commit, tagger, message) run at once; create (name, rev default HEAD, message: annotated, empty: lightweight) asks with Always allow git; delete (local only), push (name, or all=true; to the branch's remote or remote) and checkout (name: a detached HEAD) ask every time; delete_remote (name) opens the user's card, where they type the tag name. |
 | [`git_remote`](#git_remote) | add: confirm (git)<br>fetch_all: confirm (git)<br>force_push: auto<br>incoming: auto<br>list: auto<br>outgoing: auto<br>pull_from: confirm (git)<br>push_to: confirm (always asks)<br>remove: confirm (always asks)<br>rename: confirm (git)<br>set_url: confirm (git) | no | Remotes: list (default), incoming (the upstream's commits HEAD lacks, as of the last fetch) and outgoing (what a push sends) run at once; add (name, url), rename (name, new_name), set_url (name, url), fetch_all (every remote, prune) and pull_from (remote, branch; rebase=true) ask with Always allow git; remove (name) and push_to (remote, branch: HEAD to that branch) ask every time; force_push opens the user's Force Push card for the current branch (with lease), where they type the branch name. |
 | [`git_history`](#git_history) | apply_patch: confirm (always asks)<br>cherry_pick: confirm (always asks)<br>file_at: auto<br>line_history: auto<br>move_commit: confirm (always asks)<br>move_to: confirm (always asks)<br>patch: auto<br>redo: confirm (always asks)<br>reflog: auto<br>reset: confirm (always asks)<br>restore_file: confirm (always asks)<br>revert: confirm (always asks)<br>search: auto<br>show: auto<br>uncommit: confirm (git)<br>undo: confirm (always asks) | no | Commit history. |
 | [`git_rebase`](#git_rebase) | abort: confirm (always asks)<br>autosquash: confirm (always asks)<br>continue: confirm (always asks)<br>drop: confirm (always asks)<br>fixup: confirm (always asks)<br>onto: confirm (always asks)<br>plan: auto<br>reword: confirm (always asks)<br>skip: confirm (always asks)<br>squash: confirm (always asks)<br>start: confirm (always asks)<br>status: auto | no | Rebase. |
+| [`git_conflicts`](#git_conflicts) | abort: confirm (always asks)<br>continue: confirm (always asks)<br>list: auto<br>resolve: confirm (git)<br>show: auto<br>take: confirm (always asks)<br>take_file: confirm (always asks) | no | Merge conflicts of a stopped merge, cherry-pick or revert (a rebase: git_rebase continues it). |
+| [`git_lines`](#git_lines) | discard: confirm (always asks)<br>stage: confirm (git)<br>unstage: confirm (git) | no | Stage, unstage or discard the changes on lines start..end (1-based, of the working file) of one file, as Stage / Unstage / Discard Line do. |
+| [`git_discard`](#git_discard) | confirm (always asks) | no | Throw changes away; each asks every time (Cancel first). |
+| [`git_repo`](#git_repo) | bisect_mark: confirm (always asks)<br>bisect_reset: confirm (always asks)<br>bisect_start: confirm (always asks)<br>bisect_status: auto<br>contributors: auto<br>identity: auto<br>ignore: confirm (git)<br>init: confirm (always asks)<br>lfs_files: auto<br>submodule_update: confirm (git)<br>submodules: auto<br>unshallow: confirm (git)<br>untrack: confirm (git) | no | The repository. |
 | [`tasks_list`](#tasks_list) | auto | yes | List the workspace tasks (.termocode/tasks.json, user commands, auto-detected build/test tasks): label, group (build/test, default), command and the state of the last run. |
 | [`tasks_run`](#tasks_run) | confirm (run) | asks | Run a task in its own VISIBLE terminal tab (like Tasks: Run Task). |
 | [`tasks_status`](#tasks_status) | auto | yes | State of a task run: running or the exit code, and the last output lines. |
@@ -767,17 +771,18 @@ Stage, unstage or discard the one diff hunk that contains line (1-based; for uns
 
 ### git_stash
 
-Stash: list; save (tracked changes, optional message, untracked=true adds new files; cleans the working tree); apply / pop / drop the entry at index (default 0). save/apply/pop are refused while a file has unsaved edits in the editor; drop can not be undone.
+Stash: list; show (the entry at index as a diff); save (tracked changes, optional message, untracked=true adds new files; cleans the working tree); apply / pop / drop the entry at index (default 0); branch (name: a new branch from the entry's commit, with its changes; the entry goes). save/apply/pop/branch are refused while a file has unsaved edits in the editor; drop can not be undone.
 
-**Gate:** list: auto · save: confirm (git) · apply: confirm (git) · pop: confirm (always asks) · drop: confirm (always asks)
+**Gate:** list: auto · show: auto · save: confirm (git) · apply: confirm (git) · pop: confirm (always asks) · drop: confirm (always asks) · branch: confirm (git)
 
 **MCP server:** some ask
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `op` | string | yes | what to do. One of: `list`, `save`, `apply`, `pop`, `drop` |
-| `index` | integer |   | apply/pop/drop: stash index (stash@{index}) |
+| `op` | string | yes | what to do. One of: `list`, `show`, `save`, `apply`, `pop`, `drop`, `branch` |
+| `index` | integer |   | show/apply/pop/drop/branch: stash index (stash@{index}) |
 | `message` | string |   | save: stash message |
+| `name` | string |   | branch: the new branch |
 | `untracked` | boolean |   | save: stash new (untracked) files too |
 
 ### git_branch
@@ -882,6 +887,67 @@ Rebase. At once: status (a rebase, merge, cherry-pick or revert in progress, its
 | `onto` | string |   | onto: the branch, tag or commit |
 | `rev` | string |   | fixup / reword / drop / squash: the commit |
 | `todo` | array |   | start: the rows to change |
+
+### git_conflicts
+
+Merge conflicts of a stopped merge, cherry-pick or revert (a rebase: git_rebase continues it). At once: list (the conflicted files and what stopped), show (path: each block numbered, with ours, base and theirs). Asking every time: take (path, side ours|theirs|both|both_theirs_first|base, block: its number, 0 = every block), take_file (path, side ours|theirs|delete: the whole file, for a binary or deleted one), continue (stages the fixed files and makes the commit) and abort (back to before it). resolve (path: mark it resolved; refused while markers are left) asks with Always allow git.
+
+**Gate:** abort: confirm (always asks) · continue: confirm (always asks) · list: auto · resolve: confirm (git) · show: auto · take: confirm (always asks) · take_file: confirm (always asks)
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `block` | integer |   | take: the block number from show (0 = every block) |
+| `op` | string |   | what to do. One of: `abort`, `continue`, `list`, `resolve`, `show`, `take`, `take_file` |
+| `path` | string |   | the conflicted file |
+| `side` | string |   | take / take_file: which side. One of: `ours`, `theirs`, `both`, `both_theirs_first`, `base`, `delete` |
+
+### git_lines
+
+Stage, unstage or discard the changes on lines start..end (1-based, of the working file) of one file, as Stage / Unstage / Discard Line do. stage and unstage ask with Always allow git; discard asks every time (it rewrites the file and cannot be undone).
+
+**Gate:** discard: confirm (always asks) · stage: confirm (git) · unstage: confirm (git)
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `op` | string | yes | what to do. One of: `discard`, `stage`, `unstage` |
+| `end` | integer |   | last line (default start) |
+| `path` | string |   | the file |
+| `start` | integer |   | first line |
+
+### git_discard
+
+Throw changes away; each asks every time (Cancel first). files (paths: their uncommitted changes, staged too; cannot be undone), all (every tracked change into a safety stash; untracked=true takes the new files too), untracked (only the new files into a safety stash).
+
+**Gate:** confirm (always asks)
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `op` | string | yes | what to do. One of: `all`, `files`, `untracked` |
+| `paths` | array |   | files: the files |
+| `untracked` | boolean |   | all: the new (untracked) files too |
+
+### git_repo
+
+The repository. At once: identity (the name and e-mail on commits), submodules, contributors, lfs_files, bisect_status. With Always allow git: ignore (pattern into .gitignore), untrack (path: stop tracking, the file stays), submodule_update (path, or all), unshallow (fetch the full history). Asking every time: init (a new repository here), bisect_start (bad, good), bisect_mark (verdict good|bad|skip), bisect_reset.
+
+**Gate:** bisect_mark: confirm (always asks) · bisect_reset: confirm (always asks) · bisect_start: confirm (always asks) · bisect_status: auto · contributors: auto · identity: auto · ignore: confirm (git) · init: confirm (always asks) · lfs_files: auto · submodule_update: confirm (git) · submodules: auto · unshallow: confirm (git) · untrack: confirm (git)
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `op` | string | yes | what to do. One of: `bisect_mark`, `bisect_reset`, `bisect_start`, `bisect_status`, `contributors`, `identity`, `ignore`, `init`, `lfs_files`, `submodule_update`, `submodules`, `unshallow`, `untrack` |
+| `bad` | string |   | bisect_start: a bad commit (default HEAD) |
+| `good` | string |   | bisect_start: a good commit |
+| `path` | string |   | untrack / submodule_update: the file or submodule |
+| `pattern` | string |   | ignore: a .gitignore pattern |
+| `verdict` | string |   | bisect_mark: the commit under test. One of: `good`, `bad`, `skip` |
 
 ### tasks_list
 

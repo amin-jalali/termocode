@@ -31,7 +31,7 @@ const (
 
 var (
 	aiHunkOps  = []string{"stage", "unstage", "discard"}
-	aiStashOps = []string{"list", "save", "apply", "pop", "drop"}
+	aiStashOps = []string{"list", "show", "save", "apply", "pop", "drop", "branch"}
 )
 
 func aiOneOf(what, v string, ok []string) error {
@@ -346,17 +346,18 @@ func aiGitTools(root string, call aiIDECaller) []ai.Tool {
 		},
 		{
 			Name: "git_stash",
-			Description: "Stash: list; save (tracked changes, optional message, untracked=true adds new files; " +
-				"cleans the working tree); apply / pop / drop the entry at index (default 0). save/apply/pop are " +
-				"refused while a file has unsaved edits in the editor; drop can not be undone.",
+			Description: "Stash: list; show (the entry at index as a diff); save (tracked changes, optional message, untracked=true adds new files; " +
+				"cleans the working tree); apply / pop / drop the entry at index (default 0); branch (name: a new branch from the entry's commit, " +
+				"with its changes; the entry goes). save/apply/pop/branch are refused while a file has unsaved edits in the editor; drop can not be undone.",
 			Params: map[string]any{"op": enum("what to do", aiStashOps), "message": str("save: stash message"),
 				"untracked": map[string]any{"type": "boolean", "description": "save: stash new (untracked) files too"},
-				"index":     num("apply/pop/drop: stash index (stash@{index})")},
+				"index":     num("show/apply/pop/drop/branch: stash index (stash@{index})"),
+				"name":      str("branch: the new branch")},
 			Required: []string{"op"},
 			Mutating: true, Class: ai.ClassGit,
 			Gate: func(a map[string]any) (bool, string) {
 				switch aiStashOp(a) {
-				case "list":
+				case "list", "show":
 					return false, ""
 				case "drop", "pop":
 					return true, "" // drop loses the entry, pop removes it: Cancel-first, no "Always allow"
@@ -372,6 +373,8 @@ func aiGitTools(root string, call aiIDECaller) []ai.Tool {
 						return fmt.Sprintf("Stash changes: %q", msg)
 					}
 					return "Stash changes"
+				case "branch":
+					return "Make branch " + ai.ArgString(a, "name") + " from " + aiStashRef(a)
 				default:
 					return "Stash " + op + " " + aiStashRef(a)
 				}
@@ -384,7 +387,12 @@ func aiGitTools(root string, call aiIDECaller) []ai.Tool {
 				if ai.ArgInt(a, "index") < 0 {
 					return errors.New("index must be 0 or more")
 				}
-				if op == "list" || op == "drop" {
+				if op == "branch" {
+					if n := strings.TrimSpace(ai.ArgString(a, "name")); n == "" || strings.HasPrefix(n, "-") {
+						return errors.New("branch needs name (not starting with -)")
+					}
+				}
+				if op == "list" || op == "drop" || op == "show" {
 					return nil
 				}
 				return aiPrecheck(call, func(m *Model) error { return m.aiRefuseUnsaved(root, "stash "+op, rel) })
@@ -396,7 +404,7 @@ func aiGitTools(root string, call aiIDECaller) []ai.Tool {
 				// itself runs here, off Update.
 				var repo git.StashRepo
 				if _, err := call(ctx, func(m *Model) (string, tea.Cmd, error) {
-					if op != "list" && op != "drop" {
+					if op != "list" && op != "drop" && op != "show" {
 						if err := m.aiRefuseUnsaved(root, "stash "+op, rel); err != nil {
 							return "", nil, err
 						}
@@ -421,6 +429,13 @@ func aiGitTools(root string, call aiIDECaller) []ai.Tool {
 					}
 					return strings.Join(lines, "\n"), nil
 				}
+				if op == "show" {
+					d, err := repo.Diff(ref)
+					if err != nil {
+						return "", err
+					}
+					return aiGitCap(d, aiGitPatchMax), nil
+				}
 				var err error
 				var out string
 				lvl := aiSyncDisk
@@ -435,6 +450,10 @@ func aiGitTools(root string, call aiIDECaller) []ai.Tool {
 					out = "popped " + ref + ": its changes are back and it is removed from the stash list"
 				case "drop":
 					err, out, lvl = repo.Drop(ref), "dropped "+ref, aiSyncGit
+				case "branch":
+					name := strings.TrimSpace(ai.ArgString(a, "name"))
+					err = repo.Branch(name, ref)
+					out = "made branch " + name + " from " + ref + " and switched to it; its changes are back and the entry is gone"
 				}
 				note := sync(ctx, lvl)
 				if err != nil {
@@ -456,5 +475,9 @@ func aiGitMoreTools(root string, call aiIDECaller) []ai.Tool {
 		aiGitRemoteTool(root, call),
 		aiGitHistoryTool(root, call),
 		aiGitRebaseTool(root, call),
+		aiGitConflictsTool(root, call),
+		aiGitLinesTool(root, call),
+		aiGitDiscardTool(root, call),
+		aiGitRepoTool(root, call),
 	}
 }
