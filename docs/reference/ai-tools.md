@@ -138,7 +138,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`service_set_access`](#service_set_access) | confirm (always asks): Deny (first) · Change | no | Allow writes for a connected MCP service, or make it read only (known services with a read-only endpoint or scopes, such as GitHub and Linear). |
 | [`outside_agent_start`](#outside_agent_start) | confirm (always asks): Deny (first) · Start | no | Start an outside coding agent (claude, codex, gemini, opencode, aider, cursor, amp, goose, qwen, crush, copilot, kimi, droid, pi, kiro, auggie, grok, cline, continue, vibe) in a new terminal tab, with termocode's tools when the agent supports it. |
 | [`agent_race_start`](#agent_race_start) | confirm (always asks): Deny (first) · Start race | no | Race one task across 2-8 lanes of outside coding agents (claude, codex, gemini, opencode, aider): each works in its own git worktree and terminal tab; the user compares the lanes and merges the winner (Agent: Race Compare). |
-| [`agent_races`](#agent_races) | discard: confirm (always asks)<br>judge: auto<br>list: auto<br>merge: auto<br>restack: confirm (always asks)<br>stop: auto<br>summary: auto<br>verify: auto | no | The agent races and splits of this repository (the race compare page). |
+| [`agent_races`](#agent_races) | discard: confirm (always asks)<br>judge: auto<br>list: auto<br>merge: auto<br>restack: confirm (always asks)<br>stop: auto<br>summary: auto<br>verify: auto | yes | The agent races and splits of this repository (the race compare page). |
 | [`agent_split_start`](#agent_split_start) | confirm (always asks): Deny (first) · Start split | no | Coordinate outside coding agents (claude, codex, gemini, opencode, aider): split one goal into 2-4 independent parts, each done by its own agent in its own git worktree and terminal tab, at the same time. |
 | [`agent_split_status`](#agent_split_status) | auto | no | The newest split started with agent_split_start (or the one named): the goal, each lane's id, agent, state (starting, working, waiting, done, stopped, failed, merged, discarded), part, changed files and branch. |
 | [`agent_race_models`](#agent_race_models) | confirm (always asks): Deny (first) · Start race | no | Compare 2-4 models on one task: a race where every lane runs the same outside coding agent (claude, codex) on another model, each in its own git worktree and terminal tab; the user compares the lanes and merges the winner (Agent: Race Compare). |
@@ -149,7 +149,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`agent_run_stop`](#agent_run_stop) | confirm (always asks): Deny (first) · Stop run | no | Stop an agent run of this chat: one that waits to start is dropped, a running one stops its steps. |
 | [`agent_run_wait`](#agent_run_wait) | auto | no | Wait until a background agent run of this chat ends (or timeout_s passes), then return its status and, when it ended, its result. |
 | [`agent_run_send`](#agent_run_send) | auto | no | Send a message to a running step of an agent run of this chat (to steer it: a hint, a narrower task, a question to answer in its result). |
-| [`agent_runs`](#agent_runs) | discard: confirm (always asks)<br>list: auto<br>merge: confirm (always asks)<br>output: auto<br>pause: auto<br>resume: auto | no | The agent runs of every chat (the Runs view) and the agent worktrees. |
+| [`agent_runs`](#agent_runs) | discard: confirm (always asks)<br>list: auto<br>merge: confirm (always asks)<br>output: auto<br>pause: auto<br>resume: auto | yes | The agent runs of every chat (the Runs view) and the agent worktrees. |
 | [`workflow_list`](#workflow_list) | auto | no | List the workflows of this workspace (.termocode/workflows/*.jsonc) and of the user's own folder: name, title, state (file error, not trusted, on, off, runs by hand), steps, writes and the last run. |
 | [`workflow_read`](#workflow_read) | auto | no | Read one workflow file: where it is, whether it is trusted, its problems and warnings, its write steps (and whether each asks), and the file text. |
 | [`workflow_runs`](#workflow_runs) | auto | no | The recent runs of the workflows (or of one), newest first: id, dry run or run, state, writes. |
@@ -188,15 +188,15 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`chats_search`](#chats_search) | auto | no | Search the user's saved AI chats of this machine (newest first) by words in their title or messages. |
 | [`chat_read`](#chat_read) | auto | no | Read one saved AI chat by its id (from chats_search): the user's messages, tool lines and answers. |
 | [`tracker_pin`](#tracker_pin) | confirm (always asks) | no | Pin a read-only MCP tool call (for example a tracker's open issues) to the phone's Home as a live block. |
-| [`tracker_pins`](#tracker_pins) | list: auto<br>run: auto<br>unpin: confirm (always asks) | no | The blocks pinned to the phone's Home (tracker_pin pins one). |
-| [`tracker_tasks`](#tracker_tasks) | auto | no | The shared task list of this repository (Tracker: Show Tasks…; Markdown files in .termocode/tasks that agents and people edit). |
+| [`tracker_pins`](#tracker_pins) | list: auto<br>run: auto<br>unpin: confirm (always asks) | yes | The blocks pinned to the phone's Home (tracker_pin pins one). |
+| [`tracker_tasks`](#tracker_tasks) | auto | yes | The shared task list of this repository (Tracker: Show Tasks…; Markdown files in .termocode/tasks that agents and people edit). |
 | [`chat_manage`](#chat_manage) | delete: confirm (always asks)<br>rename: auto | no | Rename a saved AI chat (at once) or delete one (asks the user every time). |
 | [`ide_op`](#ide_op) | bookmarks.clear: auto<br>bookmarks.list: auto<br>bookmarks.toggle: auto<br>buf.close: auto<br>buf.head: auto<br>buf.markdown: auto<br>buf.reload: auto<br>buf.undo: auto<br>debug.expand: auto<br>debug.frame: auto<br>debug.run: auto<br>debug.select: auto<br>debug.sources: auto<br>debug.watch: auto<br>editor.vim_buf_maps: auto<br>editor.vim_maps: auto<br>ext.panel: auto<br>ext.select: auto<br>files.recent: auto<br>http.cancel: auto<br>http.curl: auto<br>http.env_file: auto<br>http.import_curl: auto<br>http.save_body: auto<br>http.saved: auto<br>keys.bind: auto<br>keys.list: auto<br>layout.delete: confirm (always asks)<br>layout.list: auto<br>layout.open: auto<br>layout.reset: auto<br>layout.save: auto<br>lsp.inlay_hints: auto<br>search.replace: confirm (always asks)<br>services.configure: auto<br>services.refresh: auto<br>snippets.delete: auto<br>snippets.list: auto<br>snippets.save: auto<br>snippets.user: auto<br>tasks.terminate: auto<br>term.colors: auto<br>tests.debug: auto<br>tests.refresh: auto<br>tests.stop: auto<br>theme.color_set: auto<br>theme.colors: auto<br>theme.list: auto<br>usercmds.list: auto<br>usercmds.save: auto<br>web.devices: auto | no | Run one of termocode's own IDE operations, exactly as its web page runs it (the result is JSON). |
 | [`specs`](#specs) | auto | no | The project's specs (.termocode/specs: requirements → design → tasks → build → review, and bugfix specs). |
 | [`prompt_actions`](#prompt_actions) | add: auto<br>export: auto<br>import: confirm (always asks)<br>list: auto<br>read: auto | no | The user's saved prompts (Prompt Actions). |
 | [`view_catalog`](#view_catalog) | auto | no | List the views termocode can show the user (on the phone and in the chat): id, params, typed fields (which can be sorted or filtered) and layouts. |
 | [`view_save`](#view_save) | auto | no | Save a view spec on this laptop under a name, for every paired phone (and pin it to the phones' Home when pin is true). |
-| [`view_manage`](#view_manage) | delete: confirm (always asks)<br>list: auto<br>pin: auto<br>rename: auto<br>unpin: auto | no | The views saved for the phones (view_save saves one). |
+| [`view_manage`](#view_manage) | delete: confirm (always asks)<br>list: auto<br>pin: auto<br>rename: auto<br>unpin: auto | yes | The views saved for the phones (view_save saves one). |
 | [`repo_fetch`](#repo_fetch) | confirm (always asks) before the first clone of a repository and ref: Deny (first) · Allow<br>a copy fetched before (kept a day): auto | no | Fetch an outside public git repository (not the workspace) to read it: a shallow clone into a temp folder, read only. |
 | [`repo_list`](#repo_list) | auto | no | List a folder of an outside repository fetched with repo_fetch. |
 | [`repo_read`](#repo_read) | auto | no | Read a file of an outside repository fetched with repo_fetch. |
@@ -1901,7 +1901,7 @@ The agent races and splits of this repository (the race compare page). op list (
 
 **Gate:** discard: confirm (always asks) · judge: auto · list: auto · merge: auto · restack: confirm (always asks) · stop: auto · summary: auto · verify: auto
 
-**MCP server:** no
+**MCP server:** yes
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -2052,7 +2052,7 @@ The agent runs of every chat (the Runs view) and the agent worktrees. op list (r
 
 **Gate:** discard: confirm (always asks) · list: auto · merge: confirm (always asks) · output: auto · pause: auto · resume: auto
 
-**MCP server:** no
+**MCP server:** yes
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -2603,7 +2603,7 @@ The blocks pinned to the phone's Home (tracker_pin pins one). op list and run (i
 
 **Gate:** list: auto · run: auto · unpin: confirm (always asks)
 
-**MCP server:** no
+**MCP server:** yes
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -2616,7 +2616,7 @@ The shared task list of this repository (Tracker: Show Tasks…; Markdown files 
 
 **Gate:** auto
 
-**MCP server:** no
+**MCP server:** yes
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -2768,7 +2768,7 @@ The views saved for the phones (view_save saves one). op list, rename (id, name)
 
 **Gate:** delete: confirm (always asks) · list: auto · pin: auto · rename: auto · unpin: auto
 
-**MCP server:** no
+**MCP server:** yes
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |

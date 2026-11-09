@@ -148,6 +148,11 @@ var mcpServeGateCases = []mcpServeGateCase{
 	{"kube_manage", map[string]any{"op": "namespaces"}, false},
 	{"kube_manage", map[string]any{"op": "restart", "name": "api"}, true},
 	{"kube_manage", map[string]any{"op": "delete", "kind": "pod", "name": "api-7d9f8c6b5-x2x4q"}, true},
+	{"agent_runs", map[string]any{"op": "list"}, false},
+	{"agent_races", map[string]any{"op": "list"}, false},
+	{"tracker_tasks", map[string]any{"op": "list"}, false},
+	{"tracker_pins", map[string]any{"op": "list"}, false},
+	{"view_manage", map[string]any{"op": "list"}, false},
 }
 
 // mcpServeGateDBs are the connections of mcpServeGateWorkspace: a local

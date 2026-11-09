@@ -141,6 +141,16 @@ var mcpServeAllowList = []mcpServeToolRow{
 	{name: "kube_describe"},
 	{name: "kube_logs"},
 	{name: "kube_manage"},
+	// Agents, races, shared tasks, phone pins and saved views: reads only
+	// (owner 2026-11-09). Their writes (pause, resume, merge, discard,
+	// stop, add, claim, unpin, rename, delete) and workflow_control,
+	// chat_manage, ide_op, specs and prompt_actions stay out: they act in
+	// the user's name or change the user's setup.
+	{name: "agent_runs", only: []string{"list", "output"}},
+	{name: "agent_races", only: []string{"list", "summary"}}, // summary spends the quick model's tokens, as on the page
+	{name: "tracker_tasks", only: []string{"list", "read"}},
+	{name: "tracker_pins", only: []string{"list"}},
+	{name: "view_manage", only: []string{"list"}},
 }
 
 // mcpServeDestructive are the exposed tools with an op that removes or
