@@ -165,6 +165,43 @@ termocode service uninstall
 - `--yes` skips the question; `--dir d` picks another folder.
 - Termux (Android) has no user services; the command says so.
 
+## Start it from a script (no terminal)
+
+`termocode serve [--web] [dir]` starts the session of a folder with no
+terminal and returns at once. The UI runs in its own pty, the same way
+as at login. Use it from the web panel or the phone. `--web` also starts
+the web panel (it needs `"web_panel": "on"`).
+
+```
+termocode serve --web ~/proj   # start it; the web panel comes up too
+termocode attach ~/proj        # see it in this terminal (detach to leave it)
+termocode kill ~/proj          # stop it
+```
+
+## Reload into a new build
+
+When you build termocode yourself, the running termocode sees the new
+program file and moves into it by itself. You never restart it by hand.
+
+- It checks its own program file every 3 seconds. Only a complete file
+  counts: it must not change for one check, it must run, and
+  `termocode --version` must answer. A half-written or broken file is
+  ignored.
+- It waits for a quiet moment: no AI turn, no agent at work, no command
+  in a terminal tab, no open dialog or card. Until then the status bar shows **⬆ new build** and a
+  toast says *New build ready — reloading when idle*.
+- **termocode: Reload Into New Build** reloads now (on a page it asks
+  first). **termocode: Reload New Build Later** keeps the build that runs.
+  Both are in the laptop palette and in the page's palette.
+- A reload works like **Developer: Reload Window**: the same process,
+  terminal, folder and arguments. Unsaved text, the session and the web
+  panel stay; programs in terminal tabs end, as on Reload Window. The
+  web panel comes back on the same port, and each open page reconnects
+  with its own sign-in: no new link, no new pairing. A page of the old
+  build loads the new page by itself.
+- The setting `reload_on_new_build` is on for dev builds (`dev`,
+  `+dirty`, `v0.0.0-…`) and off for releases.
+
 ## Sessions in your menu bar
 
 `termocode bar` prints a short summary of all running sessions and the
