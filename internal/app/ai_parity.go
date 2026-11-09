@@ -471,6 +471,8 @@ var aiRestNotForAI = map[string]string{
 	"push.unsubscribe":              "the phone's own push subscription",
 	"quit":                          "quits termocode",
 	"reload-window":                 "ends or resets the user's session",
+	"reload-new-build":              "ends or resets the user's session",
+	"reload-new-build-later":        "the user's choice of the build that runs",
 	"reset-session":                 "ends or resets the user's session",
 	"reveal-fs":                     "acts outside the IDE (OS shell, file manager or browser)",
 	"search.stop":                   "stops the page's own search; search has no running part",

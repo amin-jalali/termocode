@@ -3665,6 +3665,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `redis-slowlog` | Databases: Show Redis Slow Log | never | it runs in the user's console; use redis_command (SLOWLOG GET) |
 | `redis-stream-groups` | Databases: Show Redis Stream Groups | never | it shows on the user's result page; use redis_command (XINFO GROUPS) |
 | `reload-buffer` | File: Revert / Reload from Disk | confirm (always asks) |   |
+| `reload-new-build` | termocode: Reload Into New Build | never | ends or resets the user's session |
+| `reload-new-build-later` | termocode: Reload New Build Later | never | the user's choice of the build that runs |
 | `reload-window` | Developer: Reload Window | never | ends or resets the user's session |
 | `reopen-closed` | View: Reopen Closed Editor | auto |   |
 | `replace-in-file` | Edit: Replace in File | never | opens a picker or prompt that only the user can answer; use a typed tool (write_file) |
@@ -3980,6 +3982,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `mouse_hover` | never | a file-only terminal setting read at start; the user edits it in config.json |
 | `notifications` | never | the user controls desktop notifications |
 | `persistent_session` | confirm (settings) |   |
+| `reload_on_new_build` | confirm (settings) |   |
 | `rtl` | never | a file-only display setting read at start; the user edits it in config.json |
 | `search_max_results` | confirm (settings) |   |
 | `secret_lock_minutes` | never | AI provider, credentials and approvals stay with the user |

@@ -62,6 +62,10 @@ var webPaletteAllow = map[string]bool{
 	"ai-mcp-reset-cache":   false,
 	"ai-mcp-updates":       false,
 	"ai-checkpoint-save":   false, // CMP-62: saves a private git ref, changes no file
+	// A new build of termocode (selfreload.go): the web user is often the
+	// only user; the page asks first (Cancel first), the session is kept.
+	"reload-new-build":       true,
+	"reload-new-build-later": false,
 }
 
 // webPaletteUserOnly are the commands the AI itself may never run (its
@@ -71,29 +75,31 @@ var webPaletteAllow = map[string]bool{
 // that is safe; the ones marked true above wait for a laptop card, so a
 // setting, a paid turn or a push changes only after the laptop's yes.
 var webPaletteUserOnly = map[string]string{
-	"ai-plan-approval":    "the user's own chat setting, after a laptop card",
-	"ai-autopilot":        "the user's own approval setting, raised only after a laptop card",
-	"ai-reasoning-next":   "the user's own chat setting (more thinking costs more), after a laptop card",
-	"ai-dial-next":        "the user's own profile and chat setting (more effort costs more), after a laptop card",
-	"ai-auto-model":       "the user's own model setting (which model answers each turn), after a laptop card",
-	"ai-keep-going":       "the user's own chat setting (extra paid turns), after a laptop card",
-	"ai-chat-schedule":    "the user schedules their own chat (paid turns at set times), after a laptop card and the schedule card",
-	"ai-chat-unschedule":  "the user stops their own chat's schedule, after a laptop card",
-	"ai-edit-review":      "the user's own review setting, after a laptop card",
-	"ai-review-order":     "the user's own review setting (the order of the files), after a laptop card",
-	"ai-worktrees-toggle": "the user's own agent setting, after a laptop card",
-	"ai-critic-toggle":    "the user's own agent setting (a critic review costs tokens), after a laptop card",
-	"ai-memory-toggle":    "the user's own workspace setting, after a laptop card",
-	"ai-memory-learn":     "the user's own workspace setting, after a laptop card",
-	"ai-undo-turn":        "the user undoes the AI's changes, after a laptop card (and the laptop's restore card)",
-	"ai-apply-code":       "the user proposes the last code block as an edit to review, after a laptop card",
-	"ai-handoff":          "the user's own handoff (one paid request), after a laptop card",
-	"ai-ship":             "the user starts or stops shipping (push, pull request), after a laptop card",
-	"ai-ship-merge":       "the user starts or stops the CI babysitter (push, pull request, merge card), after a laptop card",
-	"ai-plan-worktree":    "the user arms or stops a plan run in a worktree, after a laptop card",
-	"ai-mcp-background":   "moves a running MCP call to the background; nothing is lost",
-	"ai-mcp-reset-cache":  "lists the MCP servers' tools again; changes no setting",
-	"ai-mcp-updates":      "only checks the MCP catalog for newer versions; installs nothing",
+	"ai-plan-approval":       "the user's own chat setting, after a laptop card",
+	"ai-autopilot":           "the user's own approval setting, raised only after a laptop card",
+	"ai-reasoning-next":      "the user's own chat setting (more thinking costs more), after a laptop card",
+	"ai-dial-next":           "the user's own profile and chat setting (more effort costs more), after a laptop card",
+	"ai-auto-model":          "the user's own model setting (which model answers each turn), after a laptop card",
+	"ai-keep-going":          "the user's own chat setting (extra paid turns), after a laptop card",
+	"ai-chat-schedule":       "the user schedules their own chat (paid turns at set times), after a laptop card and the schedule card",
+	"ai-chat-unschedule":     "the user stops their own chat's schedule, after a laptop card",
+	"ai-edit-review":         "the user's own review setting, after a laptop card",
+	"ai-review-order":        "the user's own review setting (the order of the files), after a laptop card",
+	"ai-worktrees-toggle":    "the user's own agent setting, after a laptop card",
+	"ai-critic-toggle":       "the user's own agent setting (a critic review costs tokens), after a laptop card",
+	"ai-memory-toggle":       "the user's own workspace setting, after a laptop card",
+	"ai-memory-learn":        "the user's own workspace setting, after a laptop card",
+	"ai-undo-turn":           "the user undoes the AI's changes, after a laptop card (and the laptop's restore card)",
+	"ai-apply-code":          "the user proposes the last code block as an edit to review, after a laptop card",
+	"ai-handoff":             "the user's own handoff (one paid request), after a laptop card",
+	"ai-ship":                "the user starts or stops shipping (push, pull request), after a laptop card",
+	"ai-ship-merge":          "the user starts or stops the CI babysitter (push, pull request, merge card), after a laptop card",
+	"ai-plan-worktree":       "the user arms or stops a plan run in a worktree, after a laptop card",
+	"ai-mcp-background":      "moves a running MCP call to the background; nothing is lost",
+	"ai-mcp-reset-cache":     "lists the MCP servers' tools again; changes no setting",
+	"ai-mcp-updates":         "only checks the MCP catalog for newer versions; installs nothing",
+	"reload-new-build":       "the user reloads into the build they made, after the page's own question; unsaved text, the session and the page's sign-in are kept",
+	"reload-new-build-later": "keeps the build that runs; changes nothing",
 }
 
 // webPaletteDispatch runs a laptop palette command (a seam for tests).
@@ -109,7 +115,7 @@ func init() {
 // palette's order, with the live keymap's hints.
 func (m *Model) webPaletteEntries() []webproto.PaletteItem {
 	var out []webproto.PaletteItem
-	for _, it := range withKeyHints(paletteItems(), m.keys) {
+	for _, it := range withKeyHints(m.selfReloadPaletteFilter(paletteItems()), m.keys) {
 		if _, form := webPaletteLaptopForms[it.ID]; form { // its form opens on the laptop (web_palette_forms.go)
 			out = append(out, webproto.PaletteItem{ID: it.ID, Title: it.Title, Keys: it.Hint, Ask: true})
 			continue

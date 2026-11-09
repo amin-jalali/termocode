@@ -123,11 +123,23 @@ var errResumeStale = errors.New("the resume file is stale")
 // ReadResume reads and removes the resume file. A stale or damaged one
 // is removed too and refused.
 func ReadResume(path string, now time.Time) (Resume, error) {
+	return readResume(path, now, true)
+}
+
+// PeekResume reads the resume file and leaves it for the gateway (the
+// UI needs the port to start it).
+func PeekResume(path string, now time.Time) (Resume, error) {
+	return readResume(path, now, false)
+}
+
+func readResume(path string, now time.Time, take bool) (Resume, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return Resume{}, err
 	}
-	_ = os.Remove(path)
+	if take {
+		_ = os.Remove(path)
+	}
 	var r Resume
 	if err := json.Unmarshal(b, &r); err != nil {
 		return Resume{}, fmt.Errorf("the resume file is damaged: %w", err)

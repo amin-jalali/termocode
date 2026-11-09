@@ -138,6 +138,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 			return m, m.openCICard()
 		}
 		if msg.Type == tea.MouseLeft && m.statusHitAt(msg.X, msg.Y) == "status:update" { // G-UPD
+			if _, ok := m.selfReloadReady(); ok && (m.upd == nil || m.upd.state.Available(termocodeVersion) == "") {
+				return m, m.openSelfReloadCard() // a new build (selfreload.go)
+			}
 			return m, m.openUpdateCard()
 		}
 		if msg.Type == tea.MouseLeft && m.statusHitAt(msg.X, msg.Y) == "status:blame" { // git_blame_view.go

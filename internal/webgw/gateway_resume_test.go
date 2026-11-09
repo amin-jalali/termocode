@@ -77,11 +77,17 @@ func TestGatewayRestartHandsOverTheSessions(t *testing.T) {
 		t.Errorf("the resume file is still there after it was read: %v", err)
 	}
 
-	r2 := startedGateway(t, func(c *RunConfig) { c.Port, c.Resume = res.Port, &res })
+	if err := WriteResume(resume, res); err != nil { // as the reload left it
+		t.Fatal(err)
+	}
+	r2 := startedGateway(t, func(c *RunConfig) { c.Port, c.ResumeFrom = res.Port, resume })
 	if r2.port != r.port {
 		t.Fatalf("the next gateway serves on %d, want the same port %d", r2.port, r.port)
 	}
 	r2.connectToken(tok) // the old token: the page's reconnect
+	if _, err := os.Stat(resume); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("the next gateway left the hand-over file: %v", err)
+	}
 	st, err := ReadStatus(r2.cfg.StatusPath)
 	if err != nil || !st.Started.Equal(res.Started) {
 		t.Errorf("the next gateway's start %v, want the first one's %v (Max counts on): %v", st.Started, res.Started, err)

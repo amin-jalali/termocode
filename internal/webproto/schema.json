@@ -14230,6 +14230,9 @@
         "approve_here": {
           "type": "boolean"
         },
+        "build": {
+          "type": "string"
+        },
         "caps": {
           "items": {
             "type": "string"

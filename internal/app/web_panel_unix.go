@@ -34,6 +34,26 @@ var webHTTPSocketPath = func() (string, error) {
 	return p.WebHTTPSocket, err
 }
 
+// webResumeFile is the gateway's hand-over across a reload. Tests swap it.
+var webResumeFile = func() (string, error) {
+	p, err := session.PathsFor(aiWorkspaceRoot())
+	return p.WebResume, err
+}
+
+// webPeekResume reads the hand-over's ports, leaving the file for the
+// gateway; a stale or damaged file is removed.
+func webPeekResume(path string) (port, sshPort int, ok bool) {
+	r, err := webgw.PeekResume(path, time.Now())
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			_ = os.Remove(path)
+			recordError("[web] " + err.Error())
+		}
+		return 0, 0, false
+	}
+	return r.Port, r.SSHPort, true
+}
+
 // webHandoffWait bounds the gateway's start (listen, hub, first link).
 const webHandoffWait = 15 * time.Second
 

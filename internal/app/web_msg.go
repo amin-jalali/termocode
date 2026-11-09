@@ -60,6 +60,8 @@ func (m *Model) handleWebMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return waitWeb(msg.hub), true
 	case webPanelUpMsg, webPanelFailMsg, webPanelExitMsg:
 		return m.handleWebPanelMsg(msg)
+	case webResumeMsg: // from a tea.Cmd at start (web_reload.go): no waitWeb
+		return m.startWebPanelResume(msg), true
 	case webLinkCopyMsg:
 		return m.webCopyLink(msg.link), true
 	case webChatAttachedMsg: // from a tea.Cmd, not the hub: no waitWeb
@@ -91,6 +93,9 @@ func (m *Model) onWebHello(msg webHelloMsg) {
 		Viewers: msg.hub.browsers(),
 		UI:      webproto.MetaUI{Theme: m.themeID},
 		Caps:    webproto.CapsFor(c.role),
+		// The running build: a page of another build reloads (a reload
+		// into a new build kept its session, selfreload.go).
+		Build: selfBuildID(),
 		// The page confirms its own actions (web_ask.go).
 		ApproveHere: msg.hub.askHere(c),
 	})

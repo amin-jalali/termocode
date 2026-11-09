@@ -56,6 +56,12 @@ type webPanelState struct {
 	// a unix socket for the user's ssh forward of 127.0.0.1:sshPort, and
 	// each waiter gets its own one-time secret instead of a browser here.
 	sshPort int
+	// resumed: started again after a reload with the last gateway's
+	// browser sessions (web_reload.go); no link is shown. resumePort and
+	// resumeTry are for another try when the start fails.
+	resumed    bool
+	resumePort int
+	resumeTry  int
 }
 
 // webGatewayProc is a started gateway process.
@@ -125,6 +131,21 @@ func (m *Model) startWebPanel(open, copyLink bool) tea.Cmd {
 
 // startWebPanelOn is startWebPanel; sshPort > 0 is SSH mode.
 func (m *Model) startWebPanelOn(open, copyLink bool, sshPort int) tea.Cmd {
+	return m.startWebPanelWith(webStartOpts{open: open, copy: copyLink, sshPort: sshPort})
+}
+
+// webStartOpts is how the panel starts. resume: after a reload, on
+// resumePort, with the last gateway's sessions (web_reload.go).
+type webStartOpts struct {
+	open, copy bool
+	sshPort    int
+	resume     bool
+	resumePort int
+	try        int
+}
+
+func (m *Model) startWebPanelWith(o webStartOpts) tea.Cmd {
+	open, copyLink, sshPort := o.open, o.copy, o.sshPort
 	cfg := webSettings()
 	if !cfg.On {
 		return m.webToast(toast.Warn, webOffText)
@@ -158,6 +179,9 @@ func (m *Model) startWebPanelOn(open, copyLink bool, sshPort int) tea.Cmd {
 		return m.webToast(toast.Errr, "Web panel not started: no config folder")
 	}
 	args := webGatewayArgs(cfg, aiWorkspaceRoot(), audit, devices, sshPort)
+	if o.resume {
+		args = webArgsResume(args, o.resumePort)
+	}
 	if sshPort > 0 {
 		open, copyLink = false, false // the browser is on the user's computer
 	}
@@ -168,7 +192,11 @@ func (m *Model) startWebPanelOn(open, copyLink bool, sshPort int) tea.Cmd {
 		m.toast, c = m.toast.PushDetail(toast.Errr, "Web panel not started", ai.Redact(err.Error()))
 		return c
 	}
-	m.webPanel = &webPanelState{proc: proc, plain: plain, open: open && cfg.OpenBrowser, copy: copyLink, sshPort: sshPort}
+	m.webPanel = &webPanelState{proc: proc, plain: plain, open: open && cfg.OpenBrowser, copy: copyLink, sshPort: sshPort,
+		resumed: o.resume, resumePort: o.resumePort, resumeTry: o.try}
+	if o.resume {
+		return tea.Batch(cmds...) // quiet: the panel only comes back
+	}
 	for _, p := range cfg.Problems {
 		cmds = append(cmds, m.webToast(toast.Warn, "config.json: "+p))
 	}
@@ -211,6 +239,10 @@ func (m *Model) onWebPanelUp(msg webPanelUpMsg) tea.Cmd {
 		m.webCtlReply(w)
 	}
 	st.waiters = nil
+	if st.resumed {
+		st.plain = "" // nobody gets this link: the pages come back with their tokens
+		return m.webToast(toast.Info, "Web panel is back after the reload. The pages reconnect by themselves.")
+	}
 	if st.sshPort > 0 {
 		return m.webToast(toast.Info, "Web panel is on, through your ssh connection.")
 	}
@@ -319,6 +351,9 @@ func (m *Model) onWebPanelFail(msg webPanelFailMsg) tea.Cmd {
 	m.webPanel = nil
 	m.closeWebForwards() // web_forward.go: forwards end with the panel
 	msg.proc.terminate()
+	if again, ok := webResumeRetry(st); ok && len(st.waiters) == 0 { // web_reload.go
+		return again
+	}
 	for _, w := range st.waiters {
 		w.fail(webproto.CodeInternal, "The web panel did not start.")
 	}

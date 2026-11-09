@@ -997,6 +997,9 @@ func aiSettingValue(id string) (string, bool) {
 	if v, ok := updateSettingValue(id); ok { // G-UPD (update_settings.go)
 		return v, true
 	}
+	if v, ok := reloadBuildSettingValue(id); ok { // selfreload.go
+		return v, true
+	}
 	if v, ok := workflowSettingValue(id); ok { // WFX-0 (workflow_settings.go)
 		return v, true
 	}
@@ -1056,6 +1059,9 @@ func (m *Model) applyAISetting(id, value string) (tea.Cmd, bool) {
 		return c, true
 	}
 	if c, ok := m.applyUpdateSetting(id, value); ok { // G-UPD (update_settings.go)
+		return c, true
+	}
+	if c, ok := m.applyReloadBuildSetting(id, value); ok { // selfreload.go
 		return c, true
 	}
 	if c, ok := m.applyWorkflowSetting(id, value); ok { // WFX-0 (workflow_settings.go)

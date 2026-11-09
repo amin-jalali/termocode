@@ -114,6 +114,10 @@ type Meta struct {
 	// ev) instead of waiting for a laptop card; off when the laptop's
 	// web_approve_on_laptop is on, never for a viewer.
 	ApproveHere bool `json:"approve_here,omitempty"`
+	// Build names the termocode build that answers (its Go build id). A
+	// page that saw another build on this link reloads itself: termocode
+	// reloaded into a new build and the page's files changed with it.
+	Build string `json:"build,omitempty"`
 }
 
 // MetaUI is the laptop's look, so the page can match it.

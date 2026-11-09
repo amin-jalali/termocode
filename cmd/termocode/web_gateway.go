@@ -4,7 +4,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -116,11 +115,7 @@ func webGatewayConfig(args []string, errw io.Writer) (webgw.RunConfig, bool) {
 	// path from argv. Written on a restart bye, read (and removed) once.
 	cfg.ResumePath = paths.WebResume
 	if *resume {
-		if r, err := webgw.ReadResume(paths.WebResume, time.Now()); err == nil {
-			cfg.Resume = &r
-		} else if !errors.Is(err, os.ErrNotExist) {
-			fmt.Fprintf(errw, "termocode web gateway: %v; the browsers need a new link\n", err)
-		}
+		cfg.ResumeFrom = paths.WebResume // read once the gateway holds the lock
 	}
 	return cfg, true
 }

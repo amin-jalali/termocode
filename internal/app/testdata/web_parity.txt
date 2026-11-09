@@ -313,6 +313,8 @@ web	quick-open	cmd:quickOpen
 web	redis-delete-key	op:redis.key
 web	redis-set-ttl	op:redis.key
 web	reload-buffer	cmd:revertFile
+web	reload-new-build	palette
+web	reload-new-build-later	palette
 web	reopen-closed	cmd:reopenClosed
 web	replace-in-file	cmd:replaceInFile
 web	replace-workspace	cmd:replaceWorkspace

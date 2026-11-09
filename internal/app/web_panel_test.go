@@ -83,9 +83,7 @@ func newWebPanelRig(t *testing.T) *webPanelRig {
 			case a == "--port" && i+1 < len(args):
 				cfg.Port, _ = strconv.Atoi(args[i+1])
 			case a == "--resume":
-				if res, err := webgw.ReadResume(resumePath, time.Now()); err == nil {
-					cfg.Resume = &res
-				}
+				cfg.ResumeFrom = resumePath
 			}
 		}
 		go func() {

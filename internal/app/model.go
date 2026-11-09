@@ -892,6 +892,9 @@ type Model struct {
 	ci *ciWatch
 	// upd is the termocode update state (update_check.go, G-UPD).
 	upd *updateWatch
+	// selfReload watches termocode's own program file for a new build
+	// (reload_on_new_build, selfreload.go).
+	selfReload *selfReloadState
 	// pr is the pull request UI state (pr_state.go, G-PR).
 	pr *prState
 	// mcpServe is termocode as an MCP server: the socket listener and the
@@ -1129,6 +1132,8 @@ func (m Model) Init() tea.Cmd {
 	cmds = append(cmds, aiRunsStartupCmd())           // prune old agent run snapshots
 	cmds = append(cmds, m.secretsMigrateStartCmd())   // plain credentials.json → safer store (SS-4)
 	cmds = append(cmds, m.updateInitCmd())            // G-UPD: a newer release? (update_check.go)
+	cmds = append(cmds, m.selfReloadInitCmd())        // a new build of the program file? (selfreload.go)
+	cmds = append(cmds, m.webResumeInitCmd())         // the web panel after a reload (web_reload.go)
 	gitxAutoFetchInit()                               // GITX-12: git_auto_fetch (gitx_autofetch_setting.go)
 	gitGraphColsInit()                                // GITX-39: git_graph_columns (gitx_graph_columns.go)
 	cmds = append(cmds, m.crash.waitCmd())            // recovered panics (crash_ui.go)

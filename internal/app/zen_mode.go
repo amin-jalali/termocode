@@ -105,31 +105,10 @@ func (m *Model) resetSession() tea.Cmd {
 
 // reloadWindow re-execs termocode in the same cwd. Useful when the user
 // has changed config files or installed a new LSP server and wants a
-// fresh process without dropping back to the shell.
-func (m *Model) reloadWindow() tea.Cmd {
-	if headless() {
-		var toastCmd tea.Cmd
-		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Reload failed", errHeadless.Error())
-		return toastCmd
-	}
-	// Unsaved text: back it up to the last key and tell the new image to
-	// put it back (hot_exit.go). A reload is no unclean quit.
-	m.flushHotExitForReload()
-	if m.nvim != nil {
-		_ = m.nvim.Close()
-	}
-	bin, err := spawn.Executable()
-	if err != nil {
-		bin = os.Args[0]
-	}
-	args := []string{bin}
-	if err := spawn.Exec(bin, args, os.Environ()); err != nil {
-		var toastCmd tea.Cmd
-		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Reload failed", err.Error())
-		return toastCmd
-	}
-	return nil
-}
+// fresh process without dropping back to the shell. It is the reload of
+// a new build too (execReload, selfreload.go): the unsaved text and the
+// web panel's browser sessions are kept.
+func (m *Model) reloadWindow() tea.Cmd { return m.execReload() }
 
 // toggleAutoSave installs (or removes) an idle-write autocmd. nvim's
 // CursorHold fires after `updatetime` ms (1000) of no input — once a

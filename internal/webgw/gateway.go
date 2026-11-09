@@ -94,8 +94,10 @@ type RunConfig struct {
 	// (termocode reloads into a new build: resume.go); "" writes none.
 	ResumePath string
 	// Resume, when set, is the last gateway's hand-over: its browser
-	// sessions go on here, and Max counts from its start.
-	Resume *Resume
+	// sessions go on here, and Max counts from its start. ResumeFrom is
+	// a hand-over file read (and removed) once the lock is held.
+	Resume     *Resume
+	ResumeFrom string
 }
 
 // Status is what the gateway writes to its status file. It holds no
@@ -148,6 +150,13 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 		return 0, err
 	}
 	defer unlock()
+	if cfg.Resume == nil && cfg.ResumeFrom != "" {
+		// Only now, with the lock: a start that fails on a gateway still
+		// ending leaves the hand-over for the next try.
+		if r, err := ReadResume(cfg.ResumeFrom, now()); err == nil {
+			cfg.Resume = &r
+		}
+	}
 	audit, err := OpenAudit(cfg.AuditPath, now)
 	if err != nil {
 		return 0, err

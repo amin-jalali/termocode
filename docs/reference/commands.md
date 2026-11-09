@@ -1119,6 +1119,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | termocode: Check for Updates | `update-check` |   |   |
+| termocode: Reload Into New Build | `reload-new-build` |   |   |
+| termocode: Reload New Build Later | `reload-new-build-later` |   |   |
 | termocode: Roll Back Update | `update-rollback` |   |   |
 
 ## Commands added at run time

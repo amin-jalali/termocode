@@ -39,6 +39,7 @@ func updateCheckOn() bool {
 // updateSettingsCategories puts the row in its own Settings group.
 func updateSettingsCategories(cats map[string]string) map[string]string {
 	cats[updateCheckRowID] = "Updates"
+	cats[reloadBuildRowID] = "Updates" // selfreload.go
 	return cats
 }
 

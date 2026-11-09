@@ -140,4 +140,7 @@ func (m Model) fillUpdateStatus(st *statusbar.State) {
 	if m.upd != nil && m.upd.installed == "" {
 		st.Update = m.upd.state.Available(termocodeVersion)
 	}
+	if st.Update == "" && m.selfReload != nil && m.selfReload.ready.ID != "" {
+		st.Update = "new build" // selfreload.go: the chip opens its card
+	}
 }

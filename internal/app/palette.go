@@ -463,6 +463,7 @@ func paletteItems() []picker.Item {
 	items = append(items, acpPaletteItems()...)        // CMP-83 (acp_thread.go)
 	items = append(items, layoutPaletteItems()...)     // G-LAY (layout_palette.go)
 	items = append(items, updatePaletteItems()...)     // G-UPD (update_palette.go)
+	items = append(items, selfReloadPaletteItems()...) // a new build (selfreload.go)
 	items = append(items, prPaletteItems()...)         // G-PR (pr_list.go)
 	items = append(items, termPanePaletteItems()...)   // terminal splits (terminal_split.go)
 	items = append(items, gitxPaletteItems()...)       // GITX features (gitx_hub.go)
@@ -1015,6 +1016,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 			return cmd
 		}
 		if cmd, ok := m.dispatchUpdatePalette(id); ok { // update_palette.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchSelfReloadPalette(id); ok { // selfreload.go
 			return cmd
 		}
 		if cmd, ok := m.dispatchPRPalette(id); ok { // pr_list.go

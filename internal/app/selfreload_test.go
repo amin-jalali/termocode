@@ -159,8 +159,9 @@ func TestReloadOnNewBuildWaitsForTheAI(t *testing.T) {
 	}
 }
 
-// Spec: an open dialog (a card, a prompt, the unsaved-changes question)
-// or an agent at work postpones the reload too.
+// Spec: an open dialog (a card, a prompt, the unsaved-changes question),
+// an agent at work or a command in a terminal tab postpones the reload
+// too.
 func TestReloadOnNewBuildWaitsForADialog(t *testing.T) {
 	r := newReloadRig(t)
 	r.m.confirmOpen = true
@@ -181,6 +182,12 @@ func TestReloadOnNewBuildWaitsForADialog(t *testing.T) {
 		t.Fatal("reloaded under an open prompt")
 	}
 	r.m.promptOpen = false
+	r.m.terminalTabs = []terminalTab{{Busy: true}} // `go test` runs in a tab
+	r.poll()
+	if len(r.execs) != 0 {
+		t.Fatal("reloaded while a command ran in a terminal tab")
+	}
+	r.m.terminalTabs = []terminalTab{{}}
 	r.poll()
 	if len(r.execs) != 1 {
 		t.Fatalf("execs %v once idle, want one", r.execs)

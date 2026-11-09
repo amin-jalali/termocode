@@ -26,3 +26,7 @@ func startWebGatewayProcess(*webHub, []string) (*webGatewayProc, error) {
 
 // webLANAddr: no LAN mode without unix sockets.
 var webLANAddr = func() (net.IP, bool) { return nil, false }
+
+var webResumeFile = func() (string, error) { return "", errWebPanelOS }
+
+func webPeekResume(string) (int, int, bool) { return 0, 0, false }

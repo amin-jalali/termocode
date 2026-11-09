@@ -104,6 +104,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
+| `reload_on_new_build` | bool | `true for dev builds, false for releases` | When the termocode program file is replaced by a new build (you rebuilt it), reload into it at the next idle moment, as Reload Window does: unsaved text, the session and the web panel's browser sessions are kept. It waits while an AI turn, an agent or a dialog is busy. Dev builds: on; releases: off. |
 | `update_check` | bool | `true` | Look for a newer termocode release once a day, in the background (GitHub, no account needed). A newer one shows a quiet ⬆ chip in the status bar and one toast. Dev builds never look. termocode: Check for Updates works with it off too. |
 
 ## Workflows

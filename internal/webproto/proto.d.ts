@@ -93,6 +93,7 @@ export interface Meta {
   caps: string[];
   ws?: string;
   approve_here?: boolean;
+  build?: string;
 }
 
 export interface MetaUI {

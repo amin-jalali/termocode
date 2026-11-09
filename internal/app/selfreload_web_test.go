@@ -42,19 +42,29 @@ func TestReloadHandsTheWebPanelOver(t *testing.T) {
 		d.allowed = func() bool { return true }
 		return d
 	}
+	// The page reads all the time, as a browser does (it answers the
+	// close frame at once).
+	closed := make(chan websocket.StatusCode, 1)
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		for {
+			if _, _, err := c.Read(ctx); err != nil {
+				closed <- websocket.CloseStatus(err)
+				return
+			}
+		}
+	}()
+	start := time.Now()
 	r.m.execReload()
 	if execs != 1 {
 		t.Fatalf("execs %d", execs)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	for {
-		if _, _, err := c.Read(ctx); err != nil {
-			if got := websocket.CloseStatus(err); got != websocket.StatusCode(webproto.CloseRestarting) {
-				t.Fatalf("browser closed with %d (%v), want 1012", got, err)
-			}
-			break
-		}
+	if d := time.Since(start); d > 2*time.Second {
+		t.Errorf("the hand-over took %v", d)
+	}
+	if got := <-closed; got != websocket.StatusCode(webproto.CloseRestarting) {
+		t.Fatalf("browser closed with %d, want 1012", got)
 	}
 	r.pumpUntil("the old panel gone", func() bool { return r.m.webPanel == nil })
 
