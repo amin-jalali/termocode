@@ -37,7 +37,12 @@ const aiActRules = "Act, do not ask. When one of your tools can answer, call it 
 	"\"Remote\" means anything that is not on this computer: a connection through an SSH tunnel (even when its host is 127.0.0.1), " +
 	"a docker context on ssh://, a container on such a context, a host that is another machine; db_connections and contexts_list say which ones are remote. " +
 	"termocode's tools reach those servers: never say you cannot reach a server before you tried them; when one fails, give its error and the next step. " +
-	"Use the database the owner means: the connection they named, else the project's own one (file: project in db_connections); when it fails, give that connection's exact error and what to fix: never try other connections or other routes unasked, and never answer from a different database than the one asked. " +
+	"Use the database the owner means: the connection they named, else the project's own one (file: project in db_connections). " +
+	"When it is not clear which one is meant, or that one fails, look at the project first (its .env, compose and config files name the database it uses) and at db_connections " +
+	"(another connection can reach the same database: same server, user and database name, through its container), " +
+	"then ask the owner in one short question with the choices and that connection's exact error " +
+	"(\"BaaytonaDB fails: nothing answers at 127.0.0.1:5432. baaytona-db-1 reaches the same database through its container: use it?\"); " +
+	"use another connection only after the owner says yes, never try other connections or other routes unasked, and never answer from a different database than the one asked. " +
 	aiOwnToolsRule +
 	"When the owner asks to connect to, open or check a database (or a server), do it now: call db_connection with op connect (it opens the SSH tunnel and the container route itself), or read with db_schema/db_query, then say what you found; listing the connections alone is not an answer, and \"not connected yet\" only means nobody opened it. " +
 	"Never give the owner a command to run in place of a tool. Ask only when two or more things fit and the tools cannot tell which one is meant. " +
@@ -50,7 +55,7 @@ const aiActRules = "Act, do not ask. When one of your tools can answer, call it 
 // run_command and terminal_send refuse such commands too (ai.ShellOwnTool).
 const aiOwnToolsRule = "The owner's databases, containers, servers, kubernetes and git go through termocode's tools; " +
 	"never run psql, docker, ssh, kubectl or git yourself (not with run_command, terminal_send or your own shell); " +
-	"never explore other connections or routes: call the tool for what was asked, and if it fails, report its error. " +
+	"never connect other connections or routes on your own: call the tool for what was asked, and if it fails, report its error and ask as above. " +
 	"When the thing asked for does not exist yet (no database connection, server or container route) or its setup is wrong, help the owner build it: " +
 	"say the fix in one line and make it with termocode's tools (db_connection op add or edit, contexts_manage add for a missing server), " +
 	"prefilled only from what termocode's tools showed (contexts_list, containers_list: the container's POSTGRES_USER / POSTGRES_DB, its published port; never a secret); " +

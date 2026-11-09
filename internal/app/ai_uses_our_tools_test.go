@@ -128,7 +128,7 @@ func TestAIDBConnectionsProjectFirstAndContainerMadeMarked(t *testing.T) {
 func TestAIInstructionsSayOnlyOurTools(t *testing.T) {
 	for _, text := range []string{aiIdentityPrompt("/p"), aiCLIInstructions("/p", nil, false), aiCLIInstructions("/p", nil, true)} {
 		for _, want := range []string{"databases, containers, servers, kubernetes and git go through termocode's tools",
-			"never run psql, docker, ssh, kubectl or git yourself", "never explore other connections or routes", "report its error",
+			"never run psql, docker, ssh, kubectl or git yourself", "never connect other connections or routes on your own", "report its error",
 			// "or if it doesn't exist, help the user build it"
 			"help the owner build it", "db_connection op add or edit", "contexts_manage add",
 			"never edit config files by hand", "never invent a value"} {
