@@ -711,7 +711,11 @@ kbd {
 .wb-panel .key:hover { background: var(--wb-toolbar-hover); }
 
 /* ---- Chat in the side column ---- */
-.layout-desktop .chatcol .msg { font-size: var(--fs-ui); line-height: 1.5; }
+/* A message out of view is not laid out or drawn (content-visibility):
+   opening a chat of long answers lays out what shows. The newest ten
+   always are, so the view opens at the real end. */
+.layout-desktop .chatcol .msg { font-size: var(--fs-ui); line-height: 1.5; content-visibility: auto; contain-intrinsic-size: auto 160px; }
+.layout-desktop .chatcol .msg:nth-last-child(-n+10) { content-visibility: visible; }
 .layout-desktop .chatcol .msg-user .bubble { border-radius: 4px; background: var(--wb-input-bg); }
 
 /* ---- The desktop editor (a frame of its own) ---- */
