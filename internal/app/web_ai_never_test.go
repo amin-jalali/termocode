@@ -91,6 +91,12 @@ func TestAICannotAnswerWebCards(t *testing.T) {
 		"dispatchWebForwardPalette": {"web_access.go"},
 		"onWebForwardPort":          {"ai_config_ui.go"},
 		"answerWebForward":          {"web_access.go"},
+		// An AI db_* tool's question in the page (web_ask_aidb.go): only a
+		// human's request on a controller page answers it (db.trust_host,
+		// db.secret, cards.answer); the model never does.
+		"webAIDBGiven":   {"web_db_net.go"},
+		"webAIDBAnswer":  {"web_ask_aidb.go"},
+		"webAIDBResolve": {"web_ask_aidb.go"},
 	}
 	fset := token.NewFileSet()
 	files, _ := filepath.Glob("*.go")

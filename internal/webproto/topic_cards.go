@@ -149,4 +149,12 @@ type AskCard struct {
 	Title  string `json:"title"`  // "Discard changes?"
 	Body   string `json:"body"`   // what runs, exactly (paths, the command argv, the SQL)
 	Action string `json:"action"` // the confirm button's label ("Discard")
+	// Conn and Need: a question an AI db_* tool waits on (an unknown SSH
+	// host key, an SSH secret, the database's password), sent to every
+	// controller page while the laptop asks it too. The page shows the
+	// Databases view's own card and answers with db.trust_host or
+	// db.secret (the value goes to the laptop only, never to the model),
+	// or cancels with cards.answer. The first answer on any side wins.
+	Conn string  `json:"conn,omitempty"`
+	Need *DBNeed `json:"need,omitempty"`
 }

@@ -2164,6 +2164,18 @@ export interface AskCard {
   title: string;
   body: string;
   action: string;
+  conn?: string;
+  need?: DBNeed;
+}
+
+export interface DBNeed {
+  need: string;
+  host?: string;
+  key_type?: string;
+  fingerprint?: string;
+  jump?: boolean;
+  key?: string;
+  wrong?: boolean;
 }
 
 export interface Attention {

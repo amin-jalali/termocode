@@ -6096,8 +6096,14 @@
         "body": {
           "type": "string"
         },
+        "conn": {
+          "type": "string"
+        },
         "id": {
           "type": "string"
+        },
+        "need": {
+          "$ref": "#/defs/DBNeed"
         },
         "title": {
           "type": "string"
@@ -9017,6 +9023,36 @@
         "path"
       ],
       "additionalProperties": false
+    },
+    "DBNeed": {
+      "type": "object",
+      "properties": {
+        "fingerprint": {
+          "type": "string"
+        },
+        "host": {
+          "type": "string"
+        },
+        "jump": {
+          "type": "boolean"
+        },
+        "key": {
+          "type": "string"
+        },
+        "key_type": {
+          "type": "string"
+        },
+        "need": {
+          "type": "string"
+        },
+        "wrong": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "need"
+      ],
+      "additionalProperties": true
     },
     "DBPlan": {
       "type": "object",

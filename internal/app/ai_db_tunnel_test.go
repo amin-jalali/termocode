@@ -31,6 +31,7 @@ type aiTunEnv struct {
 	call   aiIDECaller
 	tools  map[string]ai.Tool
 	home   string
+	root   string
 	dials  atomic.Int32 // TCP dials to the SSH server (one per tunnel)
 	logins atomic.Int32 // database logins
 }
@@ -48,6 +49,7 @@ func newAITunEnv(t *testing.T, srv *dbtest.SSHServer, c dbclient.Conn, trusted b
 		}
 	}
 	root := t.TempDir()
+	e.root = root
 	if err := os.MkdirAll(filepath.Join(root, ".termocode"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -61,6 +63,9 @@ func newAITunEnv(t *testing.T, srv *dbtest.SSHServer, c dbclient.Conn, trusted b
 		e.mu.Lock()
 		defer e.mu.Unlock()
 		out, _, err := fn(e.m)
+		if e.m.web != nil {
+			e.m.webAfterUpdate(nil) // as Update does after every message
+		}
 		return out, err
 	}
 	old := dbSQLSessionFactory
