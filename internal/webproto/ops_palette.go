@@ -42,6 +42,9 @@ type PaletteItem struct {
 	Keys string `json:"keys,omitempty"`
 	// Ask: it runs only after the laptop confirms (palette.ask).
 	Ask bool `json:"ask,omitempty"`
+	// Page: the page opens it itself, in its own dialog (Pair a Device…,
+	// Devices…), never with palette.run; only a controller gets it.
+	Page bool `json:"page,omitempty"`
 }
 
 // PaletteList is the result of palette.list, in the laptop palette's order.

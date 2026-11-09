@@ -141,7 +141,11 @@ func (m *Model) webPaletteFind(id string) (webproto.PaletteItem, bool) {
 }
 
 func (m *Model) webPaletteList(call *webCall) tea.Cmd {
-	call.reply(webproto.PaletteList{Items: m.webPaletteEntries()})
+	items := m.webPaletteEntries()
+	if call.conn.role == webproto.RoleController {
+		items = append(webPalettePageItems(), items...) // the page opens these itself (web_pair_page.go)
+	}
+	call.reply(webproto.PaletteList{Items: items})
 	return nil
 }
 

@@ -45,10 +45,13 @@ const (
 // webAccessState is the open pairing link, the waiting pairing question
 // and the device a card is about.
 type webAccessState struct {
-	link      string // the open pairing link (for Copy link), "" when none
-	guest     bool   // the open link is a share (WEB-50)
-	pairCall  *webCall
-	pairArgs  webproto.PairAskArgs
+	link     string // the open pairing link (for Copy link), "" when none
+	guest    bool   // the open link is a share (WEB-50)
+	pairCall *webCall
+	pairArgs webproto.PairAskArgs
+	// page is the web page whose pairing link is open, or whose pairing
+	// question waits (web_pair_page.go); nil: the laptop's own.
+	page      *webConn
 	grantCall *webCall
 	device    string
 	fwds      []*webFwd // open port previews (web_forward.go)
@@ -121,20 +124,12 @@ func (m *Model) openWebPair(guest bool) tea.Cmd {
 	if m.confirmOpen {
 		return m.webToast(toast.Warn, "Answer the open card first.")
 	}
-	plain, digest, err := webNewLinkSecret()
+	link, err := m.webPairNewLink(st, guest, nil)
 	if err != nil {
 		return m.webToast(toast.Errr, "No pairing link: no random numbers")
 	}
-	ttl := webPairTTL
-	if guest {
-		ttl = webShareTTL
-	}
-	data, _ := json.Marshal(map[string]any{"sha256": hex.EncodeToString(digest[:]), "ttl_s": int(ttl / time.Second), "guest": guest})
-	for _, c := range m.web.ctlConns() {
-		c.send(&webproto.Event{T: webproto.KindEv, Kind: "pair", Data: data})
-	}
 	acc := m.webAccess()
-	acc.link, acc.guest = webPairLink(st, plain), guest
+	acc.link, acc.guest = link, guest
 	title := "Pair a phone or tablet"
 	body := "Scan this code with the phone's camera. It works once, for 2 minutes.\n" +
 		"The phone then shows a 6-digit code; you check it here."
@@ -153,6 +148,30 @@ func (m *Model) openWebPair(guest bool) tea.Cmd {
 	m.confirmOpen = true
 	m.confirmKind = confirmKindWebPairQR
 	return nil
+}
+
+// webPairNewLink opens a new pairing link: a fresh one-time secret whose
+// digest alone goes to the gateway (the old link closes there), for
+// webPairTTL (a share: webShareTTL). A web page's open link ends (the
+// pair.end ev), unless it is by's, the page that asks for the new one.
+func (m *Model) webPairNewLink(st *webPanelState, guest bool, by *webConn) (string, error) {
+	plain, digest, err := webNewLinkSecret()
+	if err != nil {
+		return "", err
+	}
+	ttl := webPairTTL
+	if guest {
+		ttl = webShareTTL
+	}
+	data, _ := json.Marshal(map[string]any{"sha256": hex.EncodeToString(digest[:]), "ttl_s": int(ttl / time.Second), "guest": guest})
+	for _, c := range m.web.ctlConns() {
+		c.send(&webproto.Event{T: webproto.KindEv, Kind: "pair", Data: data})
+	}
+	if p := m.webPairPageLive(); p != nil && p != by {
+		webPairPageSend(p, webproto.EventPairEnd, webproto.PairEnd{Why: "closed"})
+	}
+	m.webAccess().page = nil
+	return webPairLink(st, plain), nil
 }
 
 // webPairLink is the pairing link: <url>#p=<secret>, and in LAN mode
@@ -235,11 +254,14 @@ func init() {
 
 // webPairAsk shows "Pair this device?" with the phone's code. It refuses
 // (busy) while another card is open, so no key meant for that card can
-// answer this one.
+// answer this one; a link a web page opened asks that page too (the
+// pair.ask ev), and there the page alone asks while the laptop is busy.
 func (m *Model) webPairAsk(call *webCall) tea.Cmd {
 	args, _ := call.args.(*webproto.PairAskArgs)
 	acc := m.webAccess()
-	if args == nil || acc.pairCall != nil || (m.confirmOpen && m.confirmKind != confirmKindWebPairQR) {
+	page := m.webPairPageLive()
+	busy := m.confirmOpen && m.confirmKind != confirmKindWebPairQR
+	if args == nil || acc.pairCall != nil || (busy && page == nil) {
 		call.fail(webproto.CodeBusy, "The laptop is busy with another question. Try again in a moment.")
 		return nil
 	}
@@ -248,6 +270,12 @@ func (m *Model) webPairAsk(call *webCall) tea.Cmd {
 	call.later()
 	name := webdevices.CleanName(args.Name)
 	code := args.Code[:3] + " " + args.Code[3:]
+	if page != nil {
+		webPairPageSend(page, webproto.EventPairAsk, webproto.PairAsk{Name: name, Code: args.Code, Laptop: !m.web.askHere(page)})
+		if busy {
+			return nil
+		}
+	}
 	var body strings.Builder
 	actions := []confirm.Button{}
 	title := "Pair this device?"
@@ -274,31 +302,17 @@ func (m *Model) webPairAsk(call *webCall) tea.Cmd {
 
 // answerWebPairAsk sends the owner's pick to the gateway; anything but a
 // role (Esc included) is Not now.
+// A web page that asked too hears the answer (webPairDecide).
 func (m *Model) answerWebPairAsk(id string) tea.Cmd {
-	acc := m.webAccess()
-	call, args := acc.pairCall, acc.pairArgs
-	acc.pairCall = nil
-	if call == nil {
-		return nil
-	}
 	role := ""
 	switch id {
 	case "viewer":
 		role = webdevices.RoleViewer
 	case "control":
-		if !args.Guest {
-			role = webdevices.RoleControl
-		}
+		role = webdevices.RoleControl
 	}
-	if role == "" {
-		call.fail(webproto.CodeForbidden, "Not paired: the answer on the laptop was Not now.")
-		return nil
-	}
-	if call.ctx.Err() != nil {
-		return m.webToast(toast.Warn, "That pairing ended before you answered. Make a new link.")
-	}
-	call.reply(map[string]string{"role": role})
-	return m.webToast(toast.Info, webdevices.CleanName(args.Name)+" may pair now. The device finishes it.")
+	cmd, _ := m.webPairDecide(role, "laptop")
+	return cmd
 }
 
 // openWebDevices lists the paired devices.
@@ -428,7 +442,7 @@ func (m *Model) answerWebDevice(id string) tea.Cmd {
 	if !ok {
 		return nil
 	}
-	m.confirm = confirm.Risky("Remove "+d.Name+"?", "It is disconnected at once and must pair again to come back.",
+	m.confirm = confirm.Risky("Remove "+d.Name+"?", webDeviceRemoveText,
 		confirm.Button{ID: "keep", Title: "Keep"},
 		confirm.Button{ID: "remove", Title: "Remove", Style: confirm.StyleDestructive})
 	m.confirm.SetSize(m.w, m.h)
@@ -436,6 +450,9 @@ func (m *Model) answerWebDevice(id string) tea.Cmd {
 	m.confirmKind = confirmKindWebDeviceRm
 	return nil
 }
+
+// webDeviceRemoveText is what Remove asks, on the laptop and in the page.
+const webDeviceRemoveText = "It is disconnected at once and must pair again to come back."
 
 // answerWebDeviceRemove removes the device and tells the gateway to drop
 // it now (4003); Keep and Esc keep it.
@@ -446,6 +463,12 @@ func (m *Model) answerWebDeviceRemove(id string) tea.Cmd {
 	if id != "remove" || dev == "" {
 		return nil
 	}
+	return m.webRemoveDevice(dev)
+}
+
+// webRemoveDevice removes a device from the store and drops it at the
+// gateway at once.
+func (m *Model) webRemoveDevice(dev string) tea.Cmd {
 	dir, _ := webDevicesDir()
 	d, ok, err := webdevices.Open(dir).Remove(dev)
 	if err != nil {

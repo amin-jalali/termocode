@@ -243,6 +243,7 @@ func (m *Model) onWebGone(msg webGoneMsg) {
 	}
 	delete(h.live, msg.conn)
 	m.webAskHereGone(h, msg.conn)
+	m.webPairGone(h, msg.conn)
 	h.viewsDrop(msg.conn)
 	h.keepForResume(msg.conn)
 	h.pruneResume()

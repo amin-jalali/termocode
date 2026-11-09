@@ -343,6 +343,8 @@
     "answered": "Answered",
     "ask": "AskCard",
     "attention": "Attention",
+    "pair.ask": "PairAsk",
+    "pair.end": "PairEnd",
     "search.batch": "SearchBatch",
     "view_update": "ViewUpdate",
     "views_saved": "SavedViewList",
@@ -4577,6 +4579,75 @@
     {
       "op": "containers.remove",
       "args": "ContainerArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "web.pair_open",
+      "args": "EmptyArgs",
+      "result": "PairLink",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 2000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "web.pair_close",
+      "args": "EmptyArgs",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "web.pair_answer",
+      "args": "PairAnswerArgs",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "web.devices",
+      "args": "EmptyArgs",
+      "result": "WebDeviceList",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "web.device_remove",
+      "args": "DeviceArgs",
       "result": "AskRef",
       "role": "controller",
       "rate": {
@@ -9758,6 +9829,18 @@
       ],
       "additionalProperties": true
     },
+    "DeviceArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
     "Diag": {
       "type": "object",
       "properties": {
@@ -14393,6 +14476,38 @@
       ],
       "additionalProperties": true
     },
+    "PairAnswerArgs": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "enum": [
+            "viewer",
+            "control"
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "PairAsk": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "laptop": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "code"
+      ],
+      "additionalProperties": true
+    },
     "PairAskArgs": {
       "type": "object",
       "properties": {
@@ -14415,6 +14530,55 @@
         "code"
       ],
       "additionalProperties": false
+    },
+    "PairEnd": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "enum": [
+            "viewer",
+            "control"
+          ]
+        },
+        "why": {
+          "enum": [
+            "answered",
+            "closed"
+          ]
+        }
+      },
+      "required": [
+        "why"
+      ],
+      "additionalProperties": true
+    },
+    "PairLink": {
+      "type": "object",
+      "properties": {
+        "addr": {
+          "type": "string"
+        },
+        "link": {
+          "type": "string"
+        },
+        "qr": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        },
+        "ttl_s": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "link",
+        "qr",
+        "size",
+        "ttl_s",
+        "addr"
+      ],
+      "additionalProperties": true
     },
     "PaletteArgs": {
       "type": "object",
@@ -14439,6 +14603,9 @@
         },
         "keys": {
           "type": "string"
+        },
+        "page": {
+          "type": "boolean"
         },
         "title": {
           "type": "string"
@@ -18483,6 +18650,66 @@
         "on"
       ],
       "additionalProperties": false
+    },
+    "WebDevice": {
+      "type": "object",
+      "properties": {
+        "bookmark": {
+          "type": "boolean"
+        },
+        "created": {
+          "type": "integer"
+        },
+        "guest": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "last_seen": {
+          "type": "integer"
+        },
+        "live": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "repair": {
+          "type": "boolean"
+        },
+        "role": {
+          "enum": [
+            "viewer",
+            "control"
+          ]
+        },
+        "self": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "role",
+        "created"
+      ],
+      "additionalProperties": true
+    },
+    "WebDeviceList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/WebDevice"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
     },
     "WebOpenArgs": {
       "type": "object",

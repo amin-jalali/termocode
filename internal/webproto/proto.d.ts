@@ -1045,6 +1045,14 @@ export interface ContainerLogsArgs {
   lines?: number;
 }
 
+export interface PairAnswerArgs {
+  role?: "viewer" | "control";
+}
+
+export interface DeviceArgs {
+  id: string;
+}
+
 export interface PaletteArgs {
   id: string;
 }
@@ -2143,6 +2151,17 @@ export interface AskCard {
 export interface Attention {
   kind: "card" | "run_done" | "run_failed" | "task_done" | "bell";
   id?: string;
+}
+
+export interface PairAsk {
+  name: string;
+  code: string;
+  laptop?: boolean;
+}
+
+export interface PairEnd {
+  why: "answered" | "closed";
+  role?: "viewer" | "control";
 }
 
 export interface SearchBatch {
@@ -3604,6 +3623,31 @@ export interface ContainerLogs {
   truncated?: boolean;
 }
 
+export interface PairLink {
+  link: string;
+  qr: string;
+  size: number;
+  ttl_s: number;
+  addr: string;
+}
+
+export interface WebDeviceList {
+  items: WebDevice[];
+}
+
+export interface WebDevice {
+  id: string;
+  name: string;
+  role: "viewer" | "control";
+  guest?: boolean;
+  bookmark?: boolean;
+  live?: boolean;
+  self?: boolean;
+  repair?: boolean;
+  created: number;
+  last_seen?: number;
+}
+
 export interface PaletteList {
   items: PaletteItem[];
 }
@@ -3613,6 +3657,7 @@ export interface PaletteItem {
   title: string;
   keys?: string;
   ask?: boolean;
+  page?: boolean;
 }
 
 export interface PRList {
@@ -4176,6 +4221,11 @@ export interface OpArgs {
   "containers.restart": ContainerArgs;
   "containers.stop": ContainerArgs;
   "containers.remove": ContainerArgs;
+  "web.pair_open": EmptyArgs;
+  "web.pair_close": EmptyArgs;
+  "web.pair_answer": PairAnswerArgs;
+  "web.devices": EmptyArgs;
+  "web.device_remove": DeviceArgs;
   "palette.list": EmptyArgs;
   "palette.run": PaletteArgs;
   "palette.ask": PaletteArgs;
@@ -4246,6 +4296,8 @@ export interface EventData {
   "answered": Answered;
   "ask": AskCard;
   "attention": Attention;
+  "pair.ask": PairAsk;
+  "pair.end": PairEnd;
   "search.batch": SearchBatch;
   "view_update": ViewUpdate;
   "views_saved": SavedViewList;
@@ -4497,6 +4549,9 @@ export interface OpResult {
   "containers.restart": ContainerDone;
   "containers.stop": AskRef;
   "containers.remove": AskRef;
+  "web.pair_open": PairLink;
+  "web.devices": WebDeviceList;
+  "web.device_remove": AskRef;
   "palette.list": PaletteList;
   "palette.ask": AskRef;
   "pr.list": PRList;
