@@ -1968,6 +1968,7 @@ export interface AISnap {
   provider?: string;
   model?: string;
   models: string[];
+  steps?: AIStep[];
   profile: string;
   profiles: AIProfile[];
   inline: boolean;
@@ -1976,6 +1977,11 @@ export interface AISnap {
   webFetch?: boolean;
   webSearch?: string;
   raceAgents?: AIRaceAgent[];
+}
+
+export interface AIStep {
+  title: string;
+  model?: string;
 }
 
 export interface AIProfile {

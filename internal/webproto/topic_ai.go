@@ -35,15 +35,18 @@ const (
 
 // AISnap is the ai topic.
 type AISnap struct {
-	Configured bool        `json:"configured"`
-	Provider   string      `json:"provider,omitempty"` // "Anthropic", "OpenAI", "Ollama" …
-	Model      string      `json:"model,omitempty"`
-	Models     []string    `json:"models"` // the laptop's suggestions for the provider (the model first when it is not one)
-	Profile    string      `json:"profile"`
-	Profiles   []AIProfile `json:"profiles"`
-	Inline     bool        `json:"inline"`    // ai_inline: ghost text while typing
-	NextEdit   bool        `json:"nextEdit"`  // ai_next_edit
-	Worktrees  bool        `json:"worktrees"` // ai_worktrees: parallel steps in their own worktree
+	Configured bool     `json:"configured"`
+	Provider   string   `json:"provider,omitempty"` // the active profile's: "Anthropic", "OpenAI", "Codex" (a CLI step) …
+	Model      string   `json:"model,omitempty"`    // the model the chat's answers really use ("" for a profile of several steps)
+	Models     []string `json:"models"`             // that provider's models to pick (the one in use first when it is not one); none for several steps
+	// Steps are a profile of several steps (or a plan, a loop): each
+	// step and its model, where the picker shows no flat model list.
+	Steps     []AIStep    `json:"steps,omitempty"`
+	Profile   string      `json:"profile"`
+	Profiles  []AIProfile `json:"profiles"`
+	Inline    bool        `json:"inline"`    // ai_inline: ghost text while typing
+	NextEdit  bool        `json:"nextEdit"`  // ai_next_edit
+	Worktrees bool        `json:"worktrees"` // ai_worktrees: parallel steps in their own worktree
 	// The laptop's web tools (MOB-15): the phone's Research chip is off
 	// while both are off. WebSearch is the search provider's title
 	// ("" = off), never its key.
@@ -52,6 +55,12 @@ type AISnap struct {
 	// RaceAgents are the outside agents a race may use (MOBUX-8): the
 	// ones installed on the laptop whose screen termocode reads.
 	RaceAgents []AIRaceAgent `json:"raceAgents,omitempty"`
+}
+
+// AIStep is one step of the active profile and the model it runs on.
+type AIStep struct {
+	Title string `json:"title"`
+	Model string `json:"model,omitempty"`
 }
 
 // AIRaceAgent is one agent a race may use: its id for ai.race_start and

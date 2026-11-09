@@ -5780,6 +5780,12 @@
           },
           "type": "array"
         },
+        "steps": {
+          "items": {
+            "$ref": "#/defs/AIStep"
+          },
+          "type": "array"
+        },
         "webFetch": {
           "type": "boolean"
         },
@@ -5798,6 +5804,21 @@
         "inline",
         "nextEdit",
         "worktrees"
+      ],
+      "additionalProperties": true
+    },
+    "AIStep": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
       ],
       "additionalProperties": true
     },

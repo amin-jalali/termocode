@@ -155,3 +155,56 @@ func TestWebAIUseProfileAndModelThroughTheLaptop(t *testing.T) {
 		t.Fatalf("model setting %q", m.ai.settings.Model)
 	}
 }
+
+// The chat's model picker follows the active profile (the owner's GPT:
+// one Codex step on gpt-6-sol, the main model Claude): it lists Codex's
+// models and the one in use is the step's, not the main model. Picking
+// another asks the laptop and saves it into the profile's step. A
+// profile of several steps lists its steps and their models instead.
+func TestWebAIPickerFollowsTheProfile(t *testing.T) {
+	m := webAITopicModel(t)
+	m.ai.cfg.Model = "claude-opus-5-5"
+	m.ai.profFake = []ai.Profile{gptProfile()}
+	m.ai.reloadProfiles()
+	m.storeAIProfile("gpt")
+	s := m.webAIBuild()
+	var codex []string
+	for _, mi := range ai.CLIModels(ai.CLICodex) {
+		codex = append(codex, mi.ID)
+	}
+	if s.Provider != "Codex" || s.Model != "gpt-6-sol" || strings.Join(s.Models, " ") != strings.Join(codex, " ") || len(s.Steps) != 0 {
+		t.Errorf("one Codex step: provider %q model %q models %v steps %v", s.Provider, s.Model, s.Models, s.Steps)
+	}
+
+	h := newWebHub()
+	t.Cleanup(h.stop)
+	m.web = h
+	r := &webFilesRig{t: t, m: m, h: h, kept: map[*webConn][]map[string]any{}}
+	r.c = r.conn("c-1", webproto.RoleController)
+	if code := webErrCode(r.call(webproto.OpAIUseModel, &webproto.AIUseArgs{Name: "claude-sonnet-5-5"})); code != "not_found" {
+		t.Errorf("a model of another provider: %s", code)
+	}
+	if code := webErrCode(r.call(webproto.OpAIUseModel, &webproto.AIUseArgs{Name: "gpt-6-sol"})); code != "conflict" {
+		t.Errorf("the model in use: %s", code)
+	}
+	r.call(webproto.OpAIUseModel, &webproto.AIUseArgs{Name: "gpt-6-astra"})
+	if !m.confirmOpen {
+		t.Fatal("no laptop card")
+	}
+	m.confirmOpen = false
+	m.answerWebAsk(webproto.ChoiceConfirm)
+	path, _ := ai.ProfilesPath()
+	saved := ai.LoadProfiles(path, "", map[string]bool{ai.SlotMain: true}, 1)
+	if p, ok := saved.Get("gpt"); !ok || len(p.Steps) != 1 || p.Steps[0].Model != "gpt-6-astra" || p.Steps[0].CLI != ai.CLICodex {
+		t.Errorf("saved profile %+v (ok %v)", p, ok)
+	}
+	if m.ai.cfg.Model != "claude-opus-5-5" {
+		t.Errorf("the main model changed to %q", m.ai.cfg.Model)
+	}
+
+	m.storeAIProfile(ai.ProfileReview)
+	s = m.webAIBuild()
+	if len(s.Models) != 0 || s.Model != "" || len(s.Steps) != 2 || s.Steps[0].Title != "Reviewer" || s.Steps[1].Title != "Fixer" {
+		t.Errorf("two steps: model %q models %v steps %+v", s.Model, s.Models, s.Steps)
+	}
+}
