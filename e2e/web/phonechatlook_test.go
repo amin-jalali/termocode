@@ -156,6 +156,8 @@ func TestPhonePickerListsTheProfilesModels(t *testing.T) {
 	snap.Profile, snap.Provider, snap.Model = "review", "Codex", "gpt-6-sol"
 	snap.Models = []string{"gpt-6.1-sol", "gpt-6-astra", "gpt-6-sol"}
 	c.Send(t, Snap("ai", 1, snap))
+	// The picker waits behind ✦ at the composer's start (phonecompact_test.go).
+	p.TapJS(phoneChat + `.querySelector('.composer .pick-toggle')`)
 	const model = phoneChat + `.querySelector('.composer .ai-pick[data-pick="model"]')`
 	p.WaitJS(model + `?.textContent.includes("gpt-6-sol")`)
 	if !Eval[bool](p, phoneChat+`.querySelector('.composer .ai-pick[data-pick="profile"]')?.textContent.includes("review")`) {
