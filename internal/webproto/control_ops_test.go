@@ -41,3 +41,19 @@ func TestCloseRoleChanged(t *testing.T) {
 		t.Fatalf("4013 %q", CloseRoleChanged.Reason())
 	}
 }
+
+// Spec (reload on a new build): 1012 (the WebSocket "service restart")
+// is the gateway handing over to the next build: the page retries, its
+// session kept.
+func TestCloseRestarting(t *testing.T) {
+	if CloseRestarting != 1012 || CloseRestarting.Reason() == "" {
+		t.Fatalf("1012 %q", CloseRestarting.Reason())
+	}
+	found := false
+	for _, c := range CloseCodes() {
+		found = found || c == CloseRestarting
+	}
+	if !found {
+		t.Fatal("1012 is not in CloseCodes")
+	}
+}

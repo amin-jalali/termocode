@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"net"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/session"
+	"github.com/amin-jalali/termocode/internal/webgw"
 )
 
 // fakeWebHub answers control requests on ws's hub socket with reply
@@ -400,5 +402,36 @@ func TestWebGatewayPhoneWatchFlag(t *testing.T) {
 	}
 	if cfg, _ := webGatewayConfig([]string{"--dir", ws, "--audit", "/a.jsonl"}, &errb); cfg.PhoneWatch {
 		t.Error("phone watch on without the flag")
+	}
+}
+
+// Spec (reload on a new build): every gateway writes its resume file to
+// the folder's own path on a restart (never a path from argv); --resume
+// takes the sessions the last one left there, once. Without the file
+// --resume starts as a fresh gateway.
+func TestWebGatewayResume(t *testing.T) {
+	sessionEnv(t)
+	ws := shortTemp(t)
+	p, _ := session.PathsFor(ws)
+	var errb bytes.Buffer
+	cfg, ok := webGatewayConfig([]string{"--dir", ws, "--audit", "/a.jsonl"}, &errb)
+	if !ok || cfg.ResumePath != p.WebResume || cfg.Resume != nil {
+		t.Fatalf("ok %v resume path %q (want %q) resume %v: %s", ok, cfg.ResumePath, p.WebResume, cfg.Resume, errb.String())
+	}
+	if err := webgw.WriteResume(p.WebResume, webgw.Resume{At: time.Now(), Port: 41500}); err != nil {
+		t.Fatal(err)
+	}
+	if cfg, _ := webGatewayConfig([]string{"--dir", ws, "--audit", "/a.jsonl"}, &errb); cfg.Resume != nil {
+		t.Fatal("the resume file was taken without --resume")
+	}
+	cfg, ok = webGatewayConfig([]string{"--dir", ws, "--audit", "/a.jsonl", "--port", "41500", "--resume"}, &errb)
+	if !ok || cfg.Resume == nil || cfg.Resume.Port != 41500 {
+		t.Fatalf("--resume: ok %v resume %+v: %s", ok, cfg.Resume, errb.String())
+	}
+	if _, err := os.Stat(p.WebResume); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("the resume file was left after --resume")
+	}
+	if cfg, ok := webGatewayConfig([]string{"--dir", ws, "--audit", "/a.jsonl", "--resume"}, &errb); !ok || cfg.Resume != nil {
+		t.Fatalf("--resume with no file: ok %v resume %+v", ok, cfg.Resume)
 	}
 }
