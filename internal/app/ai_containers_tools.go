@@ -1119,6 +1119,7 @@ func (m *Model) aiContainersTools(call aiIDECaller) []ai.Tool {
 	tools = append(tools, m.aiContainersExecTool(call))        // inside a container: ai_containers_exec.go
 	tools = append(tools, m.aiImagesManageTool(call))          // images: ai_images_manage.go
 	tools = append(tools, m.aiContainersStorageTools(call)...) // volumes, networks, prune: ai_containers_storage.go
+	tools = append(tools, m.aiComposeProjectTool(call))        // compose projects: ai_compose_project.go
 	return tools
 }
 

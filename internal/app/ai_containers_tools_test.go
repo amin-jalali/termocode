@@ -22,7 +22,7 @@ var aiContainersWriteNames = []string{"compose_up"}
 
 // aiContainersManageNames ask per call (their own tests pin each gate).
 var aiContainersManageNames = []string{"contexts_manage", "containers_control", "images_pull", "containers_exec", "images_manage",
-	"containers_storage", "containers_prune"}
+	"containers_storage", "containers_prune", "compose_project"}
 
 // aiContainersTestModel is a model on the fake docker (docker27 fixtures)
 // with a synchronous IDE caller.

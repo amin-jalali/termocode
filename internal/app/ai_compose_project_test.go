@@ -25,7 +25,10 @@ func TestAIComposeProject(t *testing.T) {
 	f.Set(t, "logs-api.txt", "api | listening on :8080\n")
 	var tabs []aiCtrTab
 	old := aiCtrTerminal
-	aiCtrTerminal = func(_ *Model, c services.Command, key string) error { tabs = append(tabs, aiCtrTab{c, key}); return nil }
+	aiCtrTerminal = func(_ *Model, c services.Command, key string) error {
+		tabs = append(tabs, aiCtrTab{c, key})
+		return nil
+	}
 	t.Cleanup(func() { aiCtrTerminal = old })
 	tl := aiContainersTool(t, m.aiContainersTools(call), "compose_project")
 	if got := aiParamEnum(tl.Params["op"]); strings.Join(got, ",") != "up,stop,restart,recreate,down,down_volumes,pull,scale,logs,deploy_git" {
@@ -67,7 +70,7 @@ func TestAIComposeProject(t *testing.T) {
 	}
 	covAIMustContain(t, "logs", out, "listening on :8080")
 	for _, bad := range []map[string]any{
-		{"op": "scale", "project": "shop", "service": "api", "replicas": 99},
+		{"op": "scale", "project": "shop", "service": "api", "replicas": 101},
 		{"op": "scale", "project": "shop", "service": "-x", "replicas": 1},
 		{"op": "stop", "project": "nope"},
 		{"op": "deploy_git", "url": "ftp://x"},
