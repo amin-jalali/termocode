@@ -364,3 +364,52 @@ func TestDeskAddToAIChatAtPickerLoads(t *testing.T) {
 		t.Fatalf("sent %+v", sent)
 	}
 }
+
+// aiDrag drags src (a JS expression) onto the chat: dragstart on it,
+// then dragover on the chat until the chat takes it (it marks the
+// composer), then drop.
+func aiDrag(p *Page, src string) {
+	p.T.Helper()
+	p.WaitJS(src)
+	Eval[bool](p, `(() => { const dt = new DataTransfer(); window.__dt = dt; `+src+`.dispatchEvent(new DragEvent("dragstart", {bubbles: true, cancelable: true, dataTransfer: dt})); return true; })()`)
+	const over = `(() => { const el = document.querySelector('[data-view="chat"] .msgs') ?? document.querySelector('[data-view="chat"]'); const e = new DragEvent("dragover", {bubbles: true, cancelable: true, dataTransfer: window.__dt}); el.dispatchEvent(e); return e.defaultPrevented && !!document.querySelector('[data-view="chat"] .composer.ai-drop'); })()`
+	p.WaitJS(over)
+	Eval[bool](p, `(document.querySelector('[data-view="chat"]').dispatchEvent(new DragEvent("drop", {bubbles: true, cancelable: true, dataTransfer: window.__dt})), true)`)
+	p.WaitJS(`!document.querySelector('[data-view="chat"] .composer.ai-drop')`)
+}
+
+// An item dragged from the trees and dropped on the chat waits as a chip
+// too: rows of the Databases and Containers views can be dragged; a drop
+// of anything else (a file from outside) adds nothing.
+func TestDeskAddToAIChatDragAndDrop(t *testing.T) {
+	p, c := aiOpenChat(t)
+	Eval[bool](p, `(location.hash = "#/more/containers", true)`)
+	reply(t, c, expectOp(t, c, webproto.OpContainersList, `{}`), ctrList())
+	reply(t, c, expectOp(t, c, webproto.OpContainersHost, `{}`), hostsCtrHost())
+	api := deskCtr + `?.querySelector('.tr[data-id="9f3c2e1a1234"]')`
+	p.WaitJS(api)
+	if !Eval[bool](p, api+`.draggable && `+deskCtr+`.querySelector('.tr[data-project="shop"]').draggable && `+deskCtr+`.querySelector('.tr[data-context="default"]').draggable`) {
+		t.Error("the host, project and container rows cannot be dragged")
+	}
+	aiDrag(p, api)
+	aiWaitChips(t, p, "default › shop › api-1")
+
+	Eval[bool](p, `(location.hash = "#/more/db", true)`)
+	reply(t, c, expectOp(t, c, webproto.OpDBConns, `{}`), dbConns())
+	p.WaitJS(dbxSide + `?.querySelectorAll(".tr[data-conn]").length === 3`)
+	p.TapJS(dbxSide + `.querySelector('.tr[data-conn="local"]')`)
+	reply(t, c, expectOp(t, c, webproto.OpDBTables, `{"conn":"local"}`), webproto.DBTables{Conn: "local", Tables: []webproto.DBTable{{Name: "users"}}})
+	aiDrag(p, dbxSide+`.querySelector('.tr[data-table="users"]')`)
+	reply(t, c, expectOp(t, c, webproto.OpDBDDL, `{"conn":"local","table":"users"}`), webproto.DBText{Text: "CREATE TABLE users (id int);"})
+	aiWaitChips(t, p, "default › shop › api-1", "local › users")
+
+	// A plain text drop (not one of our items) adds nothing.
+	Eval[bool](p, `(() => { const dt = new DataTransfer(); dt.setData("text/plain", "hello"); document.querySelector('[data-view="chat"]').dispatchEvent(new DragEvent("drop", {bubbles: true, cancelable: true, dataTransfer: dt})); return true; })()`)
+	c.Quiet(t, 200*time.Millisecond)
+	aiWaitChips(t, p, "default › shop › api-1", "local › users")
+
+	got := aiSend(t, p, c, "how do they talk?")
+	if got["default › shop › api-1"].Container != "api-1" || got["local › users"].DDL != "CREATE TABLE users (id int);" {
+		t.Fatalf("sent %+v", got)
+	}
+}
