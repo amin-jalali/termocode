@@ -387,7 +387,7 @@ func TestCovAIControlBusyAndFailure(t *testing.T) {
 			t.Errorf("%s: %q %v", c[0], out, err)
 		}
 	}
-	if got := aiControlDescribe(nil, map[string]any{"action": "kill", "target": "x"}); got != "Control container x" {
+	if got := aiControlDescribe(nil, map[string]any{"action": "explode", "target": "x"}); got != "Control container x" {
 		t.Errorf("nil caller card = %q", got)
 	}
 }

@@ -48,7 +48,7 @@ import (
 const aiContainersPrompt = "Containers tools (containers_*, images_*, volumes_list, networks_list, contexts_list, registries_list, compose_up) " +
 	"show every container, image, volume and network on this host or on any server: contexts_list lists the hosts (user@host, reachable) " +
 	"and the context argument reads or acts on one; never ssh to a server yourself; use them before suggesting `docker` commands; " +
-	"you cannot remove or prune anything."
+	"what the GUI asks on a card (stop, kill, remove, prune, push, down …) asks the user every time."
 
 const (
 	aiContainersMaxLines   = 1000
@@ -56,8 +56,6 @@ const (
 	aiContainersListLimit  = 200
 	aiContainersCommandMax = 80
 )
-
-var aiContainersActions = []string{"start", "stop", "restart", "pause", "unpause"}
 
 // ── Session trust: "Always allow containers" ─────────────────────────────
 
@@ -337,35 +335,6 @@ func aiControlNoop(action, state string) string {
 	return ""
 }
 
-func aiValidAction(a string) bool {
-	for _, x := range aiContainersActions {
-		if x == a {
-			return true
-		}
-	}
-	return false
-}
-
-// aiControlValidate checks a containers_control call against a fresh list.
-func aiControlValidate(ctx context.Context, call aiIDECaller, a map[string]any) (aiContainersHost, containers.Container, error) {
-	action := strings.TrimSpace(ai.ArgString(a, "action"))
-	if !aiValidAction(action) {
-		return aiContainersHost{}, containers.Container{}, fmt.Errorf("action must be one of %s (remove and prune are the user's)", strings.Join(aiContainersActions, ", "))
-	}
-	h, c, err := aiResolveContainer(ctx, call, a, strings.TrimSpace(ai.ArgString(a, "target")))
-	if err != nil {
-		return h, c, err
-	}
-	name := aiContainerName(c)
-	if h.busy[c.ID] {
-		return h, c, fmt.Errorf("%s is busy with another action; try again in a moment", name)
-	}
-	if why := aiControlNoop(action, c.State); why != "" {
-		return h, c, fmt.Errorf("%s %s — no change, nothing to %s", name, why, action)
-	}
-	return h, c, nil
-}
-
 // ── Reports ──────────────────────────────────────────────────────────────
 
 func aiContainerLine(c containers.Container) string {
@@ -490,7 +459,9 @@ func aiCap(text string, maxKB int, keepEnd bool) string {
 
 // ── Read tools ───────────────────────────────────────────────────────────
 
-func aiInspectKinds() []string { return []string{"container", "image", "volume", "network"} }
+func aiInspectKinds() []string {
+	return []string{"container", "image", "volume", "network", "changes", "processes"}
+}
 
 func aiValidInspectTarget(kind, target string) error {
 	if target == "" {
@@ -500,7 +471,7 @@ func aiValidInspectTarget(kind, target string) error {
 		return errors.New("target cannot start with \"-\"")
 	}
 	switch kind {
-	case "", "container", "volume", "network":
+	case "", "container", "volume", "network", "changes", "processes":
 		return containers.ValidName(target)
 	case "image":
 		if strings.HasPrefix(target, "sha256:") && isHex(strings.TrimPrefix(target, "sha256:")) {
@@ -523,6 +494,9 @@ func aiContainersInspect(ctx context.Context, call aiIDECaller, a map[string]any
 	var h aiContainersHost
 	var err error
 	id, label := target, target
+	if kind == "changes" || kind == "processes" {
+		return aiContainerChangesOrTop(ctx, call, a, kind, target)
+	}
 	if kind == "" || kind == "container" {
 		var c containers.Container
 		h, c, err = aiResolveContainer(ctx, call, a, target)
@@ -728,71 +702,10 @@ func aiContainersDescribeCtx() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), 15*time.Second)
 }
 
-func aiControlDescribe(call aiIDECaller, a map[string]any) string {
-	action := strings.TrimSpace(ai.ArgString(a, "action"))
-	target := strings.TrimSpace(ai.ArgString(a, "target"))
-	verb := action
-	if !aiValidAction(action) {
-		verb = "control"
-	}
-	if call == nil {
-		return aiTitle(verb) + " container " + target
-	}
-	ctx, cancel := aiContainersDescribeCtx()
-	defer cancel()
-	h, c, err := aiControlValidate(ctx, call, a)
-	if err != nil {
-		return aiTitle(verb) + " container " + target + " (refused: " + aiOneLineClip(err.Error(), 120) + ")"
-	}
-	return aiControlCardText(action, c, h.bin(), h.contextLabel(ctx))
-}
-
 // aiControlCardText is the text of the control card: the name the list
 // shows, the command with the short id, and the context.
 func aiControlCardText(action string, c containers.Container, bin, contextLabel string) string {
 	return fmt.Sprintf("%s container %s (%s %s %s) · %s", aiTitle(action), containerShownName(c), bin, action, aiShortID(c.ID), contextLabel)
-}
-
-func aiControlRun(ctx context.Context, call aiIDECaller, a map[string]any) (string, error) {
-	h, c, err := aiControlValidate(ctx, call, a)
-	if err != nil {
-		return "", err
-	}
-	action := strings.TrimSpace(ai.ArgString(a, "action"))
-	run := map[string]func(context.Context, string) error{"start": h.e.Start, "stop": h.e.Stop, "restart": h.e.Restart,
-		"pause": h.e.Pause, "unpause": h.e.Unpause}[action]
-	key := containerBusyPrefix + c.ID
-	state := services.Restarting
-	switch action {
-	case "start":
-		state = services.Starting
-	case "stop":
-		state = services.Stopping
-	}
-	_, _ = call(ctx, func(m *Model) (string, tea.Cmd, error) {
-		m.services.busy[key] = state
-		m.services.touch()
-		return "", nil, nil
-	})
-	actx, cancel := context.WithTimeout(ctx, aiContainersCallWait)
-	runErr := run(actx, c.ID)
-	cancel()
-	_, _ = call(ctx, func(m *Model) (string, tea.Cmd, error) {
-		delete(m.services.busy, key)
-		m.services.touch()
-		return "", m.containersRefresh("containers"), nil
-	})
-	name := aiContainerName(c)
-	if runErr != nil {
-		return "", fmt.Errorf("%s %s failed: %s", action, name, aiContainersRedact(runErr.Error()))
-	}
-	now := ""
-	if list, err := h.e.ListContainers(ctx); err == nil {
-		if c2, err := aiFindContainer(list, c.ID); err == nil {
-			now = " Now: " + strings.TrimPrefix(aiContainerLine(c2), "- ")
-		}
-	}
-	return aiContainersRedact(fmt.Sprintf("ran `%s %s %s` (%s) · %s.%s", h.bin(), action, aiShortID(c.ID), name, h.contextLabel(ctx), now)), nil
 }
 
 func aiPullDescribe(call aiIDECaller, a map[string]any) string {
@@ -1025,7 +938,7 @@ func (m *Model) aiContainersTools(call aiIDECaller) []ai.Tool {
 				"auth field and secret-looking label masked (env names stay). Capped at containers_max_inspect_kb.",
 			Params: map[string]any{
 				"target":  str("container name or id; or an image reference, volume or network name with kind"),
-				"kind":    map[string]any{"type": "string", "enum": aiInspectKinds(), "description": "what target is (default container)"},
+				"kind":    map[string]any{"type": "string", "enum": aiInspectKinds(), "description": "what target is (default container); changes: the files a container changed; processes: its processes"},
 				"context": host,
 			},
 			Required: []string{"target"},
@@ -1121,19 +1034,31 @@ func (m *Model) aiContainersTools(call aiIDECaller) []ai.Tool {
 		},
 		{
 			Name: "containers_control",
-			Description: "Start, stop, restart, pause or unpause one host container (any project). Asks the user first. " +
-				"Refused when the container is busy or already in that state. Removing and pruning are the user's.",
+			Description: "Do one action on one container of a host (any project), as the Containers view's row and menu: " +
+				"start, stop, restart, pause, unpause, kill (signal, default KILL), remove (force: true stops a running one first), " +
+				"rename (name), restart_policy (policy: no, always, unless-stopped, on-failure[:N]), resources (cpus, memory, memory_swap), " +
+				"network_connect / network_disconnect (network), commit (image, message: a new image from it) and export (file: a tar " +
+				"in the workspace). stop, kill, remove, restart_policy, resources and the network actions ask the user every time; " +
+				"the others ask (Always allow containers lasts this session). Refused when the container is busy or already in that state.",
 			Params: map[string]any{
 				"action":  map[string]any{"type": "string", "enum": aiContainersActions, "description": "what to do"},
 				"target":  target,
 				"context": host,
+				"signal":  str("kill: the signal (default KILL; TERM stops gently)"),
+				"force":   map[string]any{"type": "boolean", "description": "remove: stop a running container first"},
+				"name":    str("rename: the new name"),
+				"policy":  str("restart_policy: no, always, unless-stopped or on-failure[:N]"),
+				"cpus":    str("resources: CPUs like 1.5"), "memory": str("resources: memory like 512m"), "memory_swap": str("resources: memory+swap like 1g"),
+				"network": str("network_connect / network_disconnect: the network (networks_list)"),
+				"image":   str("commit: the new image reference (optional)"), "message": str("commit: a message (optional)"),
+				"file": str("export: the tar file, relative to the workspace"),
 			},
 			Required: []string{"action", "target"},
-			Mutating: true, Class: ai.ClassContainers, Gate: gate,
+			Mutating: true, Class: ai.ClassContainers, Gate: aiControlGate(m.services),
 			Validate: func(a map[string]any) error {
 				ctx, cancel := context.WithTimeout(context.Background(), aiContainersCallWait)
 				defer cancel()
-				_, _, err := aiControlValidate(ctx, call, a)
+				_, err := aiControlValidate(ctx, call, a)
 				return err
 			},
 			Describe: func(a map[string]any) string { return aiControlDescribe(call, a) },
@@ -1143,15 +1068,15 @@ func (m *Model) aiContainersTools(call aiIDECaller) []ai.Tool {
 		},
 		{
 			Name: "images_pull",
-			Description: "Pull an image (ref like nginx:1.27 or ghcr.io/acme/api:1.4) in a visible terminal tab \"pull: <ref>\". " +
-				"Asks the user first. wait_ms waits (max 120000) for the pull to end.",
+			Description: "Pull an image (ref like nginx:1.27 or ghcr.io/acme/api:1.4) in a visible terminal tab \"pull: <ref>\", " +
+				"at once, as the Containers view pulls. wait_ms waits (max 120000) for the pull to end.",
 			Params: map[string]any{
 				"ref":     str("image reference: repo[:tag][@sha256:digest]"),
 				"wait_ms": num("wait up to this long (ms, max 120000) for the pull to finish"),
 				"context": host,
 			},
 			Required: []string{"ref"},
-			Mutating: true, Class: ai.ClassContainers, Gate: gate,
+			Mutating: true, Gate: func(map[string]any) (bool, string) { return false, "" }, // the GUI pulls without a question
 			Validate: func(a map[string]any) error {
 				if err := containers.ValidImageRef(strings.TrimSpace(ai.ArgString(a, "ref"))); err != nil {
 					return err

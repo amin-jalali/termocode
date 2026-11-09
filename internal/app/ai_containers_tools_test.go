@@ -364,7 +364,7 @@ func TestAIContainersHonourSessionContext(t *testing.T) {
 // The system prompt line is there only when an engine is on PATH.
 func TestAIContainersPromptLineOnlyWithEngine(t *testing.T) {
 	m, _, _ := aiContainersTestModel(t)
-	if line := m.aiContainersPromptLine(); !strings.Contains(line, "Containers tools") || !strings.Contains(line, "cannot remove or prune") {
+	if line := m.aiContainersPromptLine(); !strings.Contains(line, "Containers tools") || !strings.Contains(line, "asks the user every time") {
 		t.Errorf("with docker: %q", line)
 	}
 	t.Setenv("PATH", t.TempDir())
