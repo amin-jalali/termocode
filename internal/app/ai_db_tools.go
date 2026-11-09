@@ -704,7 +704,7 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 					st = "problem: " + dbFriendlyProblem(c.Problem)
 				}
 				if st == "" {
-					st = "not connected (db_* tools connect as needed)"
+					st = aiDBNotConnectedState
 				}
 				parts = append(parts, st)
 				where, remote := dbAIWhere(c)
@@ -1203,3 +1203,7 @@ func (m *Model) dbAutoApproveItems(saved []string) []picker.Item {
 	}
 	return items
 }
+
+// aiDBNotConnectedState is db_connections' state of a connection that is
+// not open now.
+const aiDBNotConnectedState = "not connected (db_* tools connect as needed)"
