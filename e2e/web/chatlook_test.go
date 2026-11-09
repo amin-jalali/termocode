@@ -19,7 +19,7 @@ import (
 // with its model and time (the rest in its tooltip); a tool call is one
 // short line in the answer that opens to show the call and its result;
 // while it writes, the answer says Thinking… with its time and a Stop.
-// The phone keeps its own look (TestChatRunSteps).
+// The phone has the same look, phone-sized (phonechatlook_test.go).
 
 const deskChat = `document.querySelector('.chatcol [data-view="chat"]')`
 

@@ -549,28 +549,6 @@ func TestChatPersianRTL(t *testing.T) {
 	}
 }
 
-// A pipeline answer shows its run and its steps; a step opens to show
-// its tool lines and its answer.
-func TestChatRunSteps(t *testing.T) {
-	msg := map[string]any{"i": 1, "role": "assistant", "text": "Done.",
-		"run": map[string]any{"id": "r-1", "profile": "review", "state": "done", "elapsed_ms": 125000},
-		"steps": []any{
-			map[string]any{"id": "s-1", "title": "Planner", "state": "done", "model": "m-small", "tools": []any{"⚙ Read a.go → 10 lines"}, "md": md("doc", mdPara("plan text"))},
-			map[string]any{"id": "s-2", "title": "Coder", "state": "failed", "error": "tool refused"},
-		}}
-	p, _ := openChat(t, Phone, chatWith(false, userMsg(0, "go"), msg))
-	const run = `document.querySelector('[data-view="chat"] .msg-ai .run')`
-	p.WaitJS(run + `?.innerText.includes("review") && ` + run + `.innerText.includes("2m 05s")`)
-	if n := Eval[int](p, run+`.querySelectorAll("details.step").length`); n != 2 {
-		t.Fatalf("%d steps, want 2", n)
-	}
-	p.TapJS(run + `.querySelector("details.step summary")`)
-	p.WaitJS(run + `.querySelector("details.step[open]")?.innerText.includes("Read a.go") && ` + run + `.querySelector("details.step[open]").innerText.includes("plan text")`)
-	if !Eval[bool](p, run+`.innerText.includes("tool refused")`) {
-		t.Error("the failed step's error is not shown")
-	}
-}
-
 // On the desktop the chat looks like the laptop editor's: icon buttons
 // for the chat list and a new chat, the agent's profile and model under
 // the input, Send as an icon; a code block's Insert into the Editor puts
