@@ -31,6 +31,7 @@ func TestMCPServeAllowListGolden(t *testing.T) {
 		"services_list", "services_status", "services_logs", "http_list_requests", "http_environments", "http_history", "http_send",
 		"db_connections", "db_schema", "db_ddl", "db_query", "redis_keys", "redis_get", "redis_command",
 		"containers_list", "containers_inspect", "containers_logs", "containers_stats", "images_list", "volumes_list", "networks_list", "contexts_list", "registries_list", "contexts_manage", "containers_control", "containers_exec", "images_pull", "images_manage", "containers_storage", "containers_prune", "compose_up", "compose_project", "registry_manage", "kube_list", "kube_describe", "kube_logs", "kube_manage",
+		"agent_runs", "agent_races", "tracker_tasks", "tracker_pins", "view_manage",
 	}
 	aiTestModel(t)
 	got := mcpServeCatalog()
@@ -187,5 +188,25 @@ func TestMCPServeListActionsFiltered(t *testing.T) {
 	}
 	if strings.Contains(out, "- save:") || strings.Contains(out, "save-all") {
 		t.Fatalf("list_actions offered save: %s", out)
+	}
+}
+
+// Spec (AI parity, owner 2026-11-09): outside agents get only the reads
+// of the agent runs, races, shared tasks, phone pins and saved views;
+// their writes (pause, merge, discard, add, unpin, delete …) and
+// workflow_control stay out.
+func TestMCPServeParityReadsOnly(t *testing.T) {
+	want := map[string]string{"agent_runs": "list,output", "agent_races": "list,summary", "tracker_tasks": "list,read",
+		"tracker_pins": "list", "view_manage": "list"}
+	for name, ops := range want {
+		r, ok := mcpServeRow(name)
+		if !ok || strings.Join(r.only, ",") != ops {
+			t.Errorf("%s: %v %v, want only %s", name, ok, r.only, ops)
+		}
+	}
+	for _, name := range []string{"workflow_control", "chat_manage", "ide_op", "prompt_actions", "specs"} {
+		if _, ok := mcpServeRow(name); ok {
+			t.Errorf("%s is offered to outside agents", name)
+		}
 	}
 }

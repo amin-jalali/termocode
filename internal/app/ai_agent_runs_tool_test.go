@@ -50,8 +50,8 @@ func TestAIAgentRunsGateMatchesTheGUI(t *testing.T) {
 	if card := tl.Describe(map[string]any{"op": "discard", "worktree": "old-y"}); !strings.Contains(card, "cannot be undone") || !strings.Contains(card, git.AgentBranchPrefix+"old-y") {
 		t.Errorf("discard card: %s", card)
 	}
-	if _, ok := mcpServeRow("agent_runs"); ok {
-		t.Error("outside agents get agent_runs")
+	if r, ok := mcpServeRow("agent_runs"); !ok || strings.Join(r.only, ",") != "list,output" {
+		t.Errorf("outside agents get agent_runs %v (%v); want its reads only: list, output", r.only, ok)
 	}
 }
 
