@@ -52,11 +52,10 @@ func TestAIViewToolsAreListed(t *testing.T) {
 				t.Errorf("%s must be read-only", tl.Name)
 			}
 		case "view_save":
-			if !tl.Mutating || tl.ReadOnly {
-				t.Errorf("view_save must ask")
-			}
-			if tl.Class != "" {
-				t.Errorf("view_save class %q: it always asks, with no Always allow", tl.Class)
+			// AI parity: the phone's "Save as view" has no card (a name
+			// form only), so view_save does not ask either.
+			if tl.Mutating || tl.ReadOnly || tl.Gate != nil {
+				t.Errorf("view_save: mutating %v read-only %v; the GUI saves a view with no card", tl.Mutating, tl.ReadOnly)
 			}
 		}
 	}
