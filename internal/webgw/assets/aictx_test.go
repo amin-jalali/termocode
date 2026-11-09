@@ -21,10 +21,20 @@ func TestAICtxChunkIsLazyAndHoldsNoState(t *testing.T) {
 	if !strings.Contains(readBuilt(t, "workbench.js"), `import("/assets/aictx.js")`) {
 		t.Error("workbench.js does not load /assets/aictx.js")
 	}
-	if strings.Contains(readPage(t), "aictx.js") || strings.Contains(readBuilt(t, "index.html"), "aictx.js") {
+	page, wb := readPage(t), readBuilt(t, "workbench.js")
+	if strings.Contains(page, "aictx.js") || strings.Contains(readBuilt(t, "index.html"), "aictx.js") {
 		t.Error("the page's first files name aictx.js: only the workbench loads it")
 	}
-	pure := map[string]bool{"state/chat.ts": true, "aictx/export.ts": true}
+	// Its strings ship in it (init adds them), not in the page or the workbench.
+	for _, e := range parseStrings(t, "src/aictx/strings.ts", "AS") {
+		if !strings.Contains(ai, `"`+e.key+`"`) {
+			t.Errorf("aictx.js has no %s", e.key)
+		}
+		if strings.Contains(page, `"`+e.key+`"`) || strings.Contains(wb, `"`+e.key+`"`) {
+			t.Errorf("%s is in the page's or the workbench's files: it belongs in aictx.js", e.key)
+		}
+	}
+	pure := map[string]bool{"state/chat.ts": true}
 	importLine := regexp.MustCompile(`(?m)^import\s+(type\s+)?[^;]*?from\s+"([^"]+)"`)
 	files, err := filepath.Glob("src/aictx/*")
 	if err != nil || len(files) == 0 {

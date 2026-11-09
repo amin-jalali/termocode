@@ -63,6 +63,7 @@ export interface AIHost {
   render: typeof PRender;
   link: Link;
   t(key: StringKey, vars?: Record<string, string | number>): string;
+  addStrings(d: Readonly<Record<string, string>>): void;
   toast(kind: "ok" | "info" | "warn", text: string): void;
   openMenu(x: number, y: number, label: string, items: MenuItems): void;
   /** ask opens the quick input for one line of text. */

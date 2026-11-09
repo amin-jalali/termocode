@@ -9,7 +9,9 @@ import type { Attach } from "../../../../webproto/proto";
 import { readChat } from "../state/chat";
 import type { AIHost, AIItem, GridAt, ItemSpec } from "./api";
 import { H, setHost } from "./jsx";
+import { watchSends } from "./secret";
 import { askSide } from "./side";
+import { AS } from "./strings";
 
 export { exportText } from "./export";
 /** side is AI: Side Question… (side.tsx). */
@@ -18,7 +20,13 @@ export { askSide as side };
 /** init takes the workbench's host (once, on the first load). */
 export function init(host: AIHost): void {
   setHost(host);
+  host.addStrings(AS);
+  watchSends(chatOf);
 }
+
+/** chatOf is the chat whose composer the chips go to: the old chat the
+ * page reads, else the laptop's open one. */
+const chatOf = (): string => H.pinned.peek()?.id ?? readChat(H.store.topic("chat").peek()?.data)?.id ?? "";
 
 /** MAX_ROWS is how many rows one item carries (webproto MaxItemRows). */
 const MAX_ROWS = 50;
@@ -71,7 +79,7 @@ export async function add(it: AIItem): Promise<void> {
     }
   }
   while (spec.rows && spec.rows.length > 1 && JSON.stringify(spec).length > MAX_SPEC) spec.rows = spec.rows.slice(0, -1);
-  const chat = H.pinned.peek()?.id ?? readChat(H.store.topic("chat").peek()?.data)?.id ?? "";
+  const chat = chatOf();
   const key = address(spec);
   const name = label({ ...spec, row });
   if ((H.attaches.peek()[chat] ?? []).some((a) => a.kind === "item" && same(a, key))) return void H.showChat();

@@ -7,7 +7,7 @@ import type { AIHost, AIItem, GridAt } from "../aictx/api";
 import type * as AICtx from "../aictx/main";
 import { link, store } from "../session";
 import { hostCtrs, hosts } from "../state/hosts";
-import { t } from "../strings";
+import { addStrings, t } from "../strings";
 import { menu, openMenu } from "../ui/ContextMenu";
 import { Sheet } from "../ui/Sheet";
 import { pinned } from "../views/Chat";
@@ -23,6 +23,7 @@ const host = (): AIHost => ({
   render,
   link,
   t,
+  addStrings,
   toast,
   openMenu,
   ask: (title, run) => (quick.value = { mode: "ask", ask: { title, run } }),

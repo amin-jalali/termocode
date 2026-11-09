@@ -7,8 +7,6 @@
 import { addStrings } from "./strings";
 
 export const SD = {
-  // Add to AI Chat
-  "ai.ctx_full": "The message takes up to 8 items. Remove one first.",
   // Workflows (desktop side bar and run tab)
   "wfv.list": "All workflows",
   "wfv.no_runs": "No runs yet.",

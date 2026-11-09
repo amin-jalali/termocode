@@ -75,10 +75,12 @@ func englishStrings(t *testing.T) []entry {
 }
 
 // translatedStrings are the English strings that have a Persian text:
-// all but the phone views' (the phone app is English only).
+// all but the phone views' (the phone app is English only). The AI
+// chat's extras ship theirs in aictx.js (src/aictx/strings.ts).
 func translatedStrings(t *testing.T) []entry {
 	t.Helper()
-	return append(parseStrings(t, "src/strings.ts", "S"), parseStrings(t, "src/strings.desk.ts", "SD")...)
+	out := append(parseStrings(t, "src/strings.ts", "S"), parseStrings(t, "src/strings.desk.ts", "SD")...)
+	return append(out, parseStrings(t, "src/aictx/strings.ts", "AS")...)
 }
 
 // allEnglishStrings adds the phone app's lazy views' strings
