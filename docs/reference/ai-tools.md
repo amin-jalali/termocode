@@ -153,6 +153,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`db_ddl`](#db_ddl) | auto | yes | Show the DDL (CREATE statement) of a table, with its indexes and foreign keys. |
 | [`db_search_data`](#db_search_data) | auto | no | Find a value in every column of every table of a schema (MySQL: a database), in a read-only session. |
 | [`db_connection`](#db_connection) | add: confirm (always asks)<br>connect: auto<br>delete: confirm (always asks)<br>disconnect: confirm (always asks)<br>edit: confirm (always asks)<br>open_container: auto<br>ssh: confirm (always asks)<br>ssl: confirm (always asks)<br>test: auto | no | Manage a connection of the Databases view, in the file that holds it (.termocode/databases.json or your connections file). |
+| [`db_session`](#db_session) | cancel: auto<br>commit: confirm (always asks)<br>rollback: confirm (always asks)<br>rollback_savepoint: confirm (always asks)<br>savepoint: auto<br>status: auto<br>tx_mode: confirm (always asks) | no | Control the user's own session of a connection in the Databases view (not yours: db_query has its own). |
 | [`ast_grep`](#ast_grep) | search: auto<br>with rewrite: confirm (review), or confirm (fileWrite) when AI file changes are not reviewed | no | Structural code search with ast-grep: pattern is code with $VAR wildcards ("fmt.Println($A)"). |
 | [`codebase_search`](#codebase_search) | auto | no | Find code by meaning: describe what it does in plain words ("where the password is checked") and get the best matching places as file:line with a score, best first. |
 | [`look_at`](#look_at) | auto<br>an image is sent to the main model in one extra request (a PDF is read locally) | no | Look at an image file (png, jpg, gif, webp) and answer a question about it, or read the text of a PDF file. |
@@ -1926,6 +1927,21 @@ Manage a connection of the Databases view, in the file that holds it (.termocode
 | `ssl_key` | string |   | ssl: client key file |
 | `ssl_mode` | string |   | ssl: the mode. One of: `disable`, `require`, `verify-ca`, `verify-full` |
 | `user` | string |   | add / edit: the login name |
+
+### db_session
+
+Control the user's own session of a connection in the Databases view (not yours: db_query has its own). op status (commit mode, open transaction, uncommitted changes, savepoints, running query), savepoint (name) and cancel (stop the console's running query) run at once; commit, rollback, tx_mode (mode manual|auto) and rollback_savepoint (name) ask the user every time.
+
+**Gate:** cancel: auto · commit: confirm (always asks) · rollback: confirm (always asks) · rollback_savepoint: confirm (always asks) · savepoint: auto · status: auto · tx_mode: confirm (always asks)
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conn` | string | yes | connection id (db_connections) |
+| `op` | string | yes | what to do. One of: `cancel`, `commit`, `rollback`, `rollback_savepoint`, `savepoint`, `status`, `tx_mode` |
+| `mode` | string |   | tx_mode: manual commit or auto-commit. One of: `manual`, `auto` |
+| `name` | string |   | savepoint / rollback_savepoint: the savepoint name |
 
 ### ast_grep
 
