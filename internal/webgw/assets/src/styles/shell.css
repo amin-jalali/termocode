@@ -265,7 +265,9 @@ html[data-kb="up"] .layout-phone .pill-wrap { display: none; }
   padding: var(--s3) var(--gutter) var(--s6);
   scroll-padding-bottom: var(--s6);
 }
-.layout-phone .view-head { padding-top: var(--s2); }
+.layout-phone .view-head { min-height: var(--tap); padding-block: 0; align-items: center; }
+.layout-phone .view-title { font-size: var(--fs-title); line-height: var(--lh-title); }
+.layout-phone .hint-x { width: var(--tap); height: var(--tap); margin-block: calc(-1 * var(--s2)); }
 
 @media (min-width: 1200px) {
   .desk-only { display: inline-flex; }

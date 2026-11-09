@@ -15,7 +15,7 @@ import { isStub, readChat } from "../state/chat";
 import { t } from "../strings";
 import { BlobImg } from "../ui/BlobImg";
 import { Md } from "../ui/Markdown";
-import { Cod, face } from "../ui/icons";
+import { Cod, face, IconChevronDown, IconMore, IconPlus } from "../ui/icons";
 import { layout } from "../lib/layout";
 import { loadHome } from "../lib/lazy";
 import { hasBlocks, look, toolBlocks } from "../lib/toolblocks";
@@ -326,12 +326,19 @@ export function ChatView() {
     <View
       tab="chat"
       title={t("tab.chat")}
-      sub={chat?.title ? <span class="trunc" dir="auto">{chat.title}</span> : undefined}
+      sub={desk && chat?.title ? <span class="trunc" dir="auto">{chat.title}</span> : undefined}
       actions={
         <>
           {pin && <span class="chat-pinned">📌 {t("chat.pinned")}</span>}
-          <button type="button" class={`head-btn chat-list-btn${list ? " is-on" : ""}`} aria-pressed={list ? "true" : "false"} title={desk ? t("chat.list") : undefined} onClick={() => setList(!list)}>
-            {face(desk, "history", t("chat.list"))}
+          {/* A phone's header is one row: the chat's name is the button
+              that opens the Chats list (the tab bar says Chat). */}
+          <button type="button" class={`head-btn chat-list-btn${list ? " is-on" : ""}${desk ? "" : " chat-name"}`} aria-pressed={list ? "true" : "false"} title={t("chat.list")} onClick={() => setList(!list)}>
+            {desk ? face(desk, "history", t("chat.list")) : (
+              <>
+                <span class="trunc" dir="auto">{chat?.title || t("chat.list")}</span>
+                <IconChevronDown />
+              </>
+            )}
           </button>
           {!pin && link.meta.value?.role === "controller" && (
             <button
@@ -341,7 +348,7 @@ export function ChatView() {
               title={t("scm.more_actions")}
               onClick={(e) => openMore({ id: laptop?.id ?? "", title: laptop?.title ?? "", msgs: laptop?.messages ?? [] }, (e.currentTarget as HTMLElement).getBoundingClientRect())}
             >
-              <Cod name="ellipsis" />
+              {desk ? <Cod name="ellipsis" /> : <IconMore />}
             </button>
           )}
           {pin ? (
@@ -349,8 +356,13 @@ export function ChatView() {
               {t("chat.follow")}
             </button>
           ) : (
-            <button type="button" class="head-btn chat-new" title={desk ? t("chat.new") : undefined} onClick={newChat}>
-              {face(desk, "add", t("chat.new"))}
+            <button type="button" class="head-btn chat-new" title={t("chat.new")} onClick={newChat}>
+              {desk ? face(desk, "add", t("chat.new")) : (
+                <>
+                  <IconPlus />
+                  <span class="sr-only">{t("chat.new")}</span>
+                </>
+              )}
             </button>
           )}
         </>

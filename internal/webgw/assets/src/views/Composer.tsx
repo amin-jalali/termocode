@@ -19,7 +19,7 @@ import { OfflineError, ReqError } from "../net/link";
 import { link, live } from "../session";
 import { t, type StringKey } from "../strings";
 import { Button } from "../ui/Button";
-import { Cod } from "../ui/icons";
+import { Cod, IconMic, IconSend, IconStop } from "../ui/icons";
 import { errText } from "../ui/CardSheet";
 import { canDictate, dictateChat, listening, stopDictate, toggleDictate } from "../lib/dictate";
 import { attachArgs, clearRefs } from "../lib/tochat";
@@ -66,7 +66,7 @@ export function Composer({
   const hearing = listening.value === chat;
   const mic = canDictate() && (
     <span class="mic">
-      <Button kind="quiet" icon={<Cod name={hearing ? "mic-filled" : "mic"} />} iconOnly pressed={hearing} title={t(hearing ? "dictate.stop" : "dictate.start")} onClick={toggleDictate}>
+      <Button kind="quiet" icon={desk ? <Cod name={hearing ? "mic-filled" : "mic"} /> : <IconMic />} iconOnly pressed={hearing} title={t(hearing ? "dictate.stop" : "dictate.start")} onClick={toggleDictate}>
         {t(hearing ? "dictate.stop" : "dictate.start")}
       </Button>
     </span>
@@ -122,6 +122,22 @@ export function Composer({
     if (sendKey(e)) e.preventDefault();
   };
 
+  // Send and Stop are icons with their words for a screen reader, on a
+  // phone too: the box gets the row's width.
+  const act = (
+    <span class={busy ? "stop" : "send"}>
+      {busy ? (
+        <Button kind={desk ? "quiet" : "neutral"} needsLink icon={desk ? <Cod name="debug-stop" /> : <IconStop />} iconOnly title={t("stop")} onClick={stop}>
+          {t("stop")}
+        </Button>
+      ) : (
+        <Button kind={desk ? "quiet" : "primary"} needsLink icon={desk ? <Cod name="send" /> : <IconSend />} iconOnly title={desk ? `${t("send")} (Enter)` : t("send")} disabled={sending || !text.trim()} onClick={send}>
+          {t("send")}
+        </Button>
+      )}
+    </span>
+  );
+
   return (
     <div class="composer">
       {note && (
@@ -143,8 +159,8 @@ export function Composer({
           ))}
         </ul>
       )}
-      {!desk && <span class="chat-picks">{look.value?.pick()}</span>}
       <div class="composer-row">
+        {!desk && <span class="chat-picks">{look.value?.pick()}</span>}
         <textarea
           ref={box}
           class="composer-box"
@@ -161,19 +177,7 @@ export function Composer({
           onKeyPress={onKeyPress}
         />
         {!desk && mic}
-        {!desk && (
-          <span class={busy ? "stop" : "send"}>
-            {busy ? (
-              <Button kind="neutral" needsLink onClick={stop}>
-                {t("stop")}
-              </Button>
-            ) : (
-              <Button kind="primary" needsLink disabled={sending || !text.trim()} onClick={send}>
-                {t("send")}
-              </Button>
-            )}
-          </span>
-        )}
+        {!desk && act}
       </div>
       {desk && (
         <div class="composer-tools">
@@ -193,17 +197,7 @@ export function Composer({
             </span>
           )}
           {mic}
-          <span class={busy ? "stop" : "send"}>
-            {busy ? (
-              <Button kind="quiet" needsLink icon={<Cod name="debug-stop" />} iconOnly title={t("stop")} onClick={stop}>
-                {t("stop")}
-              </Button>
-            ) : (
-              <Button kind="quiet" needsLink icon={<Cod name="send" />} iconOnly title={`${t("send")} (Enter)`} disabled={sending || !text.trim()} onClick={send}>
-                {t("send")}
-              </Button>
-            )}
-          </span>
+          {act}
         </div>
       )}
       </div>

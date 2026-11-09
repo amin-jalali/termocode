@@ -73,8 +73,11 @@
   resize: none;
   overflow-y: auto;
 }
+.composer-box::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Empty, dir=auto reads left to right: a Persian page keeps its hint right to left. */
+[dir="rtl"] .composer-box:placeholder-shown { direction: rtl; }
 .composer-box:focus-visible { outline: 2px solid var(--focus); outline-offset: -1px; }
-.composer .send .btn, .composer .stop .btn { min-width: 4.5rem; }
+:is(.layout-phone, .layout-tablet) .composer :is(.send, .stop) .btn { width: var(--tap); padding: 0; }
 .composer-note { margin: 0 0 var(--s2); padding-inline-start: var(--s2); border-inline-start: 2px solid var(--amber); font-size: var(--fs-hint); color: var(--text-2); }
 .composer-hint { margin-top: var(--s1); font-family: var(--font-mono); font-size: var(--fs-hint); color: var(--muted); }
 .layout-phone .composer-hint { display: none; }
@@ -140,9 +143,22 @@
 .ph-runv .step-error { margin: var(--s1) 0 0; color: var(--red); }
 :is(.layout-phone, .layout-tablet) .chat-rules { margin: 0 0 var(--s2); font-family: var(--font-mono); }
 .chat:has(> .chat-rules) .msg-extras .rules, .chat:has(> .chat-rules) .msg-extras:not(:has(> :not(.rules))) { display: none; }
-:is(.layout-phone, .layout-tablet) .chat-picks { display: flex; gap: var(--s1); margin-bottom: var(--s2); }
+/* The phone composer is one row: the picker waits behind ✦ at its
+   start; open, its buttons take a row above the box. */
+:is(.layout-phone, .layout-tablet) .chat-picks { display: contents; }
+.pick-toggle { display: grid; place-items: center; flex: none; width: var(--tap); height: var(--tap); border-radius: var(--r-card); color: var(--ai); font-size: 1.125rem; }
+.pick-toggle[aria-expanded="true"] { background: var(--bg-2); }
+.pick-list { display: none; }
+.pick-list.is-open { display: flex; order: -1; flex-basis: 100%; gap: var(--s2); }
+.composer-row:has(.is-open) { flex-wrap: wrap; }
+/* The phone's header is one row: no big heading (the tab bar says
+   Chat), the chat's name opens the Chats list, icons at the end. */
+.layout-phone [data-view="chat"] .view-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.layout-phone [data-view="chat"] .view-actions { flex: 1; min-width: 0; margin: 0; }
+.layout-phone .view-head .head-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--s1); min-width: var(--tap); }
+.head-btn.chat-name { flex: 1; min-width: 0; justify-content: flex-start; padding: 0; color: var(--text); font-size: var(--fs-body); font-weight: 600; }
 .chat-picks:empty { display: none; }
-:is(.layout-phone, .layout-tablet) .ai-pick { max-width: 50%; overflow: hidden; font-size: var(--fs-hint); text-overflow: ellipsis; white-space: nowrap; }
+:is(.layout-phone, .layout-tablet) .ai-pick { min-height: var(--tap); max-width: 50%; overflow: hidden; font-size: var(--fs-hint); text-overflow: ellipsis; white-space: nowrap; }
 :is(.layout-phone, .layout-tablet) .ai-pick::after { content: " ▾"; }
 .ai-menu .ai-menu-label { flex: 1; overflow-wrap: anywhere; }
 .ai-menu-keys { color: var(--muted); }

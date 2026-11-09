@@ -95,6 +95,33 @@ export const IconChevronDown = () => (
   </Icon>
 );
 
+// The phone's composer and chat header (the codicon font is the
+// desktop's only).
+export const IconSend = () => (
+  <Icon>
+    <path d="M12 19V5M6 11l6-6 6 6" />
+  </Icon>
+);
+
+export const IconStop = () => (
+  <Icon>
+    <rect x="7" y="7" width="10" height="10" rx="1.5" />
+  </Icon>
+);
+
+export const IconPlus = () => (
+  <Icon>
+    <path d="M12 5v14M5 12h14" />
+  </Icon>
+);
+
+export const IconMic = () => (
+  <Icon>
+    <rect x="9" y="3" width="6" height="11" rx="3" />
+    <path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21" />
+  </Icon>
+);
+
 export const IconFileSmall = () => (
   <Icon size={14}>
     <path d="M6 3.5h8l4 4v13H6z M14 3.5v4h4" />

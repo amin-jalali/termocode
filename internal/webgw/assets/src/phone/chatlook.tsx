@@ -64,12 +64,22 @@ function MenuSheet() {
 }
 
 /** Pick is the composer's profile and model picker on a phone: it reads
- * the same ai topic as the desktop's. */
+ * the same ai topic as the desktop's. It waits behind a ✦ button at the
+ * start of the composer's row, so the box gets the row; a tap opens the
+ * profile and model buttons in a row above the box (closed, they stay
+ * mounted: a pick's ask to the laptop lives in them). */
 function Pick() {
   useEffect(() => link.subscribe("ai"), []);
+  const [open, setOpen] = useState(false);
+  const s = aiSnap();
+  if (!s?.configured) return null;
+  const what = `${t("ai.profile")}: ${[s.profile, s.model].filter(Boolean).join(" · ")}`;
   return (
     <>
-      {deskLook.pick()}
+      <button type="button" class="pick-toggle" aria-expanded={open} aria-label={what} title={what} onClick={() => setOpen(!open)}>
+        <span aria-hidden="true">✦</span>
+      </button>
+      <span class={`pick-list${open ? " is-open" : ""}`}>{deskLook.pick()}</span>
       <MenuSheet />
     </>
   );
