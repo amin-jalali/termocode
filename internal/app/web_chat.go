@@ -10,6 +10,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
@@ -226,11 +227,14 @@ func webChatKey(sm *ai.StoredMessage) string {
 		fmt.Fprintf(&b, "\x00block %s %s %s %d %d %d", bl.ID, bl.Kind, bl.Title, len(bl.Items), len(bl.Rows), len(bl.Fields))
 	}
 	if r := sm.Run; r != nil {
-		fmt.Fprintf(&b, "\x00%s %s %s %d %g %v", r.ID, r.Profile, r.State, r.ElapsedMs, r.Spent, r.PlanWait)
+		fmt.Fprintf(&b, "\x00%s %s %s %d %g %v %d", r.ID, r.Profile, r.State, r.ElapsedMs, r.Spent, r.PlanWait, r.StartedAtMs)
 	}
 	for i := range sm.Steps {
 		st := &sm.Steps[i]
-		fmt.Fprintf(&b, "\x00%s %s %s %s %d %d %s", st.ID, st.Title, st.State, st.Model, len(st.Text), len(st.Tools), st.Error)
+		fmt.Fprintf(&b, "\x00%s %s %s %s %d %d %s %d %d", st.ID, st.Title, st.State, st.Model, len(st.Text), len(st.Tools), st.Error, st.ElapsedMs, st.StartedAtMs)
+		if u := st.Usage; u != nil {
+			fmt.Fprintf(&b, " %d %d %d %d", u.Input, u.CacheRead, u.CacheWrite, u.Output)
+		}
 	}
 	return b.String()
 }
@@ -310,6 +314,7 @@ func webChatMsgOf(i int, sm *ai.StoredMessage, streaming bool, max int) (webprot
 	if webChatReply(sm) { // a one-step profile answers like a plain chat
 		st := &sm.Steps[0]
 		cm.Model = webStepModel(st)
+		cm.Meta = webChatMeta(st)
 		if sm.Run.State == ai.RunStateRunning || sm.Run.State == ai.RunStatePaused {
 			end, trunc := webChatVisible(st.Text)
 			cm.Text, cm.Streaming, cm.Truncated = webChatRedact(st.Text[:end]), true, trunc
@@ -321,7 +326,7 @@ func webChatMsgOf(i int, sm *ai.StoredMessage, streaming bool, max int) (webprot
 		}
 	} else {
 		if r := sm.Run; r != nil {
-			cm.Run = &webproto.ChatRun{ID: r.ID, Profile: r.Profile, State: webRunState(r.State), ElapsedMs: r.ElapsedMs, CostUSD: r.Spent, PlanWait: r.PlanWait}
+			cm.Run = &webproto.ChatRun{ID: r.ID, Profile: r.Profile, State: webRunState(r.State), ElapsedMs: r.ElapsedMs, CostUSD: r.Spent, PlanWait: r.PlanWait, StartedMs: r.StartedAtMs}
 		}
 		for j := range sm.Steps {
 			out := webChatStep(&sm.Steps[j])
@@ -356,6 +361,21 @@ func webChatReply(sm *ai.StoredMessage) bool {
 		return strings.TrimSpace(sm.Text) != ""
 	}
 	return false
+}
+
+// webChatMeta is the line under a one-step reply: its time (its start
+// while it runs), tokens, step and CLI.
+func webChatMeta(st *ai.StoredStep) *webproto.ChatMeta {
+	out := &webproto.ChatMeta{StartedMs: st.StartedAtMs, Step: webName(st.Title), CLI: ai.CLITitle(st.CLI)}
+	switch agentdag.State(st.State) {
+	case "", agentdag.StatePending, agentdag.StateBlocked, agentdag.StateScheduled, agentdag.StateRunning:
+	default:
+		out.ElapsedMs = st.ElapsedMs
+	}
+	if u := st.Usage; u != nil {
+		out.In, out.Out = u.Input+u.CacheRead+u.CacheWrite, u.Output
+	}
+	return out
 }
 
 // webStepModel is a step's model for the chip: a CLI step's own model
@@ -406,7 +426,7 @@ func webRunState(s string) string {
 // webChatStep trims a run step: plain text while it runs, an AST once it
 // ended.
 func webChatStep(st *ai.StoredStep) webproto.ChatStep {
-	out := webproto.ChatStep{ID: st.ID, Title: st.Title, State: st.State, Model: st.Model, Error: webChatRedact(st.Error)}
+	out := webproto.ChatStep{ID: st.ID, Title: st.Title, State: st.State, Model: st.Model, Error: webChatRedact(st.Error), ElapsedMs: st.ElapsedMs}
 	for _, t := range st.Tools {
 		out.Tools = append(out.Tools, webChatRedact(t))
 	}
