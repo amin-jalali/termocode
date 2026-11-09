@@ -200,7 +200,7 @@ export interface ChatSendArgs {
 }
 
 export interface Attach {
-  kind: "task" | "ptask" | "issue" | "pr" | "file" | "lines" | "diff" | "worktree" | "run" | "race" | "workflow" | "card" | "resource" | "block" | "project" | "view";
+  kind: "task" | "ptask" | "issue" | "pr" | "file" | "lines" | "diff" | "worktree" | "run" | "race" | "workflow" | "card" | "resource" | "block" | "project" | "view" | "item";
   id?: string;
   path?: string;
   from?: number;

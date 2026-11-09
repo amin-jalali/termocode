@@ -6057,7 +6057,8 @@
             "resource",
             "block",
             "project",
-            "view"
+            "view",
+            "item"
           ]
         },
         "label": {

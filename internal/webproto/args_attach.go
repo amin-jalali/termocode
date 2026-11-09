@@ -27,10 +27,11 @@ import (
 //	project          ID
 //	resource         ID: the MCP resource URI
 //	view             Spec: the view spec as JSON (ID: the view id)
+//	item             Spec: an item of the page as JSON (ItemSpec, Add to AI Chat)
 //
 // Label is the chip's text the page showed; the laptop may shorten it.
 type Attach struct {
-	Kind  string `json:"kind" enum:"task|ptask|issue|pr|file|lines|diff|worktree|run|race|workflow|card|resource|block|project|view"`
+	Kind  string `json:"kind" enum:"task|ptask|issue|pr|file|lines|diff|worktree|run|race|workflow|card|resource|block|project|view|item"`
 	ID    string `json:"id,omitempty"`
 	Path  string `json:"path,omitempty"`
 	From  int    `json:"from,omitempty"`
@@ -58,12 +59,13 @@ const (
 	AttachBlock    = "block"
 	AttachProject  = "project"
 	AttachView     = "view"
+	AttachItem     = "item"
 )
 
 // AttachKinds lists the kinds in the order of the enum.
 func AttachKinds() []string {
 	return []string{AttachTask, AttachPTask, AttachIssue, AttachPR, AttachFile, AttachLines, AttachDiff, AttachWorktree,
-		AttachRun, AttachRace, AttachWorkflow, AttachCard, AttachResource, AttachBlock, AttachProject, AttachView}
+		AttachRun, AttachRace, AttachWorkflow, AttachCard, AttachResource, AttachBlock, AttachProject, AttachView, AttachItem}
 }
 
 // Limits of attaches (plan §3.3). The byte caps are for what the laptop
@@ -135,6 +137,13 @@ func (a *Attach) check() error {
 	case AttachView:
 		if (a.ID != "" && !validName(a.ID, MaxID)) || !noPath || !noLines || !validAttachSpec(a.Spec) {
 			return invalid("bad view attach")
+		}
+	case AttachItem:
+		if a.ID != "" || !noPath || !noLines {
+			return invalid("bad item attach")
+		}
+		if _, err := ParseItemSpec(a.Spec); err != nil {
+			return err
 		}
 	case AttachTask:
 		if !validName(a.ID, MaxLabel) || !noPath || !noLines || a.Spec != "" {
