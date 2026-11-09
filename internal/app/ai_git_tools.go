@@ -180,7 +180,7 @@ func aiGitTools(root string, call aiIDECaller) []ai.Tool {
 	}
 	sync := func(ctx context.Context, lvl aiSyncLevel) string { return aiSyncAfter(ctx, call, "", lvl) }
 
-	return []ai.Tool{
+	return append([]ai.Tool{
 		{
 			Name:        "git_log",
 			Description: fmt.Sprintf("Recent commits, newest first: sha, age, author, subject, refs. Optional path limits it to that file's history; n (default %d, max %d).", aiGitLogDefault, aiGitLogMax),
@@ -444,5 +444,15 @@ func aiGitTools(root string, call aiIDECaller) []ai.Tool {
 				return out + note, nil
 			},
 		},
+	}, aiGitMoreTools(root, call)...)
+}
+
+// aiGitMoreTools are the git parity tools (one per area, with ops). The
+// chat's git_branch here replaces the list-only one of ai.WorkspaceTools.
+func aiGitMoreTools(root string, call aiIDECaller) []ai.Tool {
+	return []ai.Tool{
+		aiGitBranchTool(root, call),
+		aiGitTagTool(root, call),
+		aiGitRemoteTool(root, call),
 	}
 }

@@ -25,7 +25,6 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`glob`](#glob) | auto | yes | Find files by name pattern ("**/*_test.go", "src/*.ts"; comma-separated, a leading ! drops files). |
 | [`git_status`](#git_status) | auto | yes | Show the working-tree status (changed / staged files). |
 | [`git_diff`](#git_diff) | auto | yes | Show the diff of one file vs HEAD, or of all changes when path is empty. |
-| [`git_branch`](#git_branch) | auto | yes | List git branches (current marked with *). |
 | [`write_file`](#write_file) | confirm (review) | no | Write a file with new content (creates it if missing). |
 | [`edit_file`](#edit_file) | confirm (review) | no | Change part of a file: replace old_text (copied exactly from the file, unique in it) with new_text. |
 | [`create_file`](#create_file) | confirm (review) | no | Create a new file, optionally with content. |
@@ -66,6 +65,9 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`git_fetch`](#git_fetch) | confirm (git) | no | Fetch from the remotes (updates remote branches; the working tree is not touched). |
 | [`git_hunk`](#git_hunk) | stage: confirm (git)<br>unstage: confirm (git)<br>discard: confirm (always asks) | no | Stage, unstage or discard the one diff hunk that contains line (1-based; for unstage, the line in the staged version). |
 | [`git_stash`](#git_stash) | list: auto<br>save: confirm (git)<br>apply: confirm (git)<br>pop: confirm (always asks)<br>drop: confirm (always asks) | some ask | Stash: list; save (tracked changes, optional message, untracked=true adds new files; cleans the working tree); apply / pop / drop the entry at index (default 0). |
+| [`git_branch`](#git_branch) | compare: auto<br>create: confirm (git)<br>delete: confirm (always asks)<br>delete_remote: auto<br>list: auto<br>merge: confirm (always asks)<br>rename: confirm (git)<br>set_upstream: confirm (git)<br>unset_upstream: confirm (git) | some ask | Branches: list (default; remote=true adds remote branches), compare (base, head: the commits and files head has that base lacks), create (name, from: a branch, tag or commit; it switches to the new branch), rename (name, default the current one; new_name), set_upstream (upstream like origin/main; branch default current) and unset_upstream ask with Always allow git; delete (name; force=true for a branch with commits of its own, they are lost) and merge (name into the current branch; no_ff) ask every time; delete_remote (name like origin/x) opens the user's card, where they type the branch name. |
+| [`git_tag`](#git_tag) | checkout: confirm (always asks)<br>create: confirm (git)<br>delete: confirm (always asks)<br>delete_remote: auto<br>list: auto<br>push: confirm (always asks)<br>show: auto | no | Tags: list (default) and show (name: its commit, tagger, message) run at once; create (name, rev default HEAD, message: annotated, empty: lightweight) asks with Always allow git; delete (local only), push (name, or all=true; to the branch's remote or remote) and checkout (name: a detached HEAD) ask every time; delete_remote (name) opens the user's card, where they type the tag name. |
+| [`git_remote`](#git_remote) | add: confirm (git)<br>fetch_all: confirm (git)<br>force_push: auto<br>incoming: auto<br>list: auto<br>outgoing: auto<br>pull_from: confirm (git)<br>push_to: confirm (always asks)<br>remove: confirm (always asks)<br>rename: confirm (git)<br>set_url: confirm (git) | no | Remotes: list (default), incoming (the upstream's commits HEAD lacks, as of the last fetch) and outgoing (what a push sends) run at once; add (name, url), rename (name, new_name), set_url (name, url), fetch_all (every remote, prune) and pull_from (remote, branch; rebase=true) ask with Always allow git; remove (name) and push_to (remote, branch: HEAD to that branch) ask every time; force_push opens the user's Force Push card for the current branch (with lease), where they type the branch name. |
 | [`tasks_list`](#tasks_list) | auto | yes | List the workspace tasks (.termocode/tasks.json, user commands, auto-detected build/test tasks): label, group (build/test, default), command and the state of the last run. |
 | [`tasks_run`](#tasks_run) | confirm (run) | asks | Run a task in its own VISIBLE terminal tab (like Tasks: Run Task). |
 | [`tasks_status`](#tasks_status) | auto | yes | State of a task run: running or the exit code, and the last output lines. |
@@ -258,16 +260,6 @@ Show the diff of one file vs HEAD, or of all changes when path is empty.
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `path` | string |   | file path (optional) |
-
-### git_branch
-
-List git branches (current marked with *).
-
-**Gate:** auto
-
-**MCP server:** yes
-
-No arguments.
 
 ### write_file
 
@@ -785,6 +777,63 @@ Stash: list; save (tracked changes, optional message, untracked=true adds new fi
 | `index` | integer |   | apply/pop/drop: stash index (stash@{index}) |
 | `message` | string |   | save: stash message |
 | `untracked` | boolean |   | save: stash new (untracked) files too |
+
+### git_branch
+
+Branches: list (default; remote=true adds remote branches), compare (base, head: the commits and files head has that base lacks), create (name, from: a branch, tag or commit; it switches to the new branch), rename (name, default the current one; new_name), set_upstream (upstream like origin/main; branch default current) and unset_upstream ask with Always allow git; delete (name; force=true for a branch with commits of its own, they are lost) and merge (name into the current branch; no_ff) ask every time; delete_remote (name like origin/x) opens the user's card, where they type the branch name.
+
+**Gate:** compare: auto · create: confirm (git) · delete: confirm (always asks) · delete_remote: auto · list: auto · merge: confirm (always asks) · rename: confirm (git) · set_upstream: confirm (git) · unset_upstream: confirm (git)
+
+**MCP server:** some ask
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | string |   | compare: the base (default the repository's main branch) |
+| `branch` | string |   | set_upstream / unset_upstream: the branch (default the current one) |
+| `force` | boolean |   | delete: also a branch with commits no other branch has |
+| `from` | string |   | create: where it starts (default HEAD) |
+| `head` | string |   | compare: the other side (default HEAD) |
+| `name` | string |   | the branch (create, rename, delete, merge, delete_remote) |
+| `new_name` | string |   | rename: the new name |
+| `no_ff` | boolean |   | merge: always make a merge commit |
+| `op` | string |   | what to do. One of: `compare`, `create`, `delete`, `delete_remote`, `list`, `merge`, `rename`, `set_upstream`, `unset_upstream` |
+| `remote` | boolean |   | list: remote branches too |
+| `upstream` | string |   | set_upstream: like origin/main |
+
+### git_tag
+
+Tags: list (default) and show (name: its commit, tagger, message) run at once; create (name, rev default HEAD, message: annotated, empty: lightweight) asks with Always allow git; delete (local only), push (name, or all=true; to the branch's remote or remote) and checkout (name: a detached HEAD) ask every time; delete_remote (name) opens the user's card, where they type the tag name.
+
+**Gate:** checkout: confirm (always asks) · create: confirm (git) · delete: confirm (always asks) · delete_remote: auto · list: auto · push: confirm (always asks) · show: auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `all` | boolean |   | push: every tag |
+| `message` | string |   | create: a message makes an annotated tag |
+| `name` | string |   | the tag |
+| `op` | string |   | what to do. One of: `checkout`, `create`, `delete`, `delete_remote`, `list`, `push`, `show` |
+| `remote` | string |   | push: the remote (default the current branch's remote) |
+| `rev` | string |   | create: the commit (default HEAD) |
+
+### git_remote
+
+Remotes: list (default), incoming (the upstream's commits HEAD lacks, as of the last fetch) and outgoing (what a push sends) run at once; add (name, url), rename (name, new_name), set_url (name, url), fetch_all (every remote, prune) and pull_from (remote, branch; rebase=true) ask with Always allow git; remove (name) and push_to (remote, branch: HEAD to that branch) ask every time; force_push opens the user's Force Push card for the current branch (with lease), where they type the branch name.
+
+**Gate:** add: confirm (git) · fetch_all: confirm (git) · force_push: auto · incoming: auto · list: auto · outgoing: auto · pull_from: confirm (git) · push_to: confirm (always asks) · remove: confirm (always asks) · rename: confirm (git) · set_url: confirm (git)
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `branch` | string |   | push_to / pull_from: the branch on the remote |
+| `name` | string |   | the remote (add, rename, set_url, remove) |
+| `new_name` | string |   | rename: the new name |
+| `op` | string |   | what to do. One of: `add`, `fetch_all`, `force_push`, `incoming`, `list`, `outgoing`, `pull_from`, `push_to`, `remove`, `rename`, `set_url` |
+| `rebase` | boolean |   | pull_from: rebase instead of a merge |
+| `remote` | string |   | push_to / pull_from: the remote |
+| `url` | string |   | add / set_url: the URL |
 
 ### tasks_list
 
