@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/amin-jalali/termocode/internal/ai"
@@ -112,6 +113,41 @@ var mcpServeGateCases = []mcpServeGateCase{
 	{"redis_keys", map[string]any{"conn": "cache", "pattern": "session:*"}, false},
 	{"redis_get", map[string]any{"conn": "cache", "key": "session:ab12"}, true},
 	{"redis_command", map[string]any{"conn": "cache", "command": "HGET session:ab12 plan"}, true},
+	// Containers, servers and Kubernetes: the chat's gates (the GUI's
+	// cards ask every time; reads, shells and port-forwards run at once).
+	{"containers_list", map[string]any{"context": "prod"}, false},
+	{"containers_inspect", map[string]any{"target": "termocode-api-1"}, false},
+	{"containers_logs", map[string]any{"target": "termocode-api-1"}, false},
+	{"containers_stats", nil, false},
+	{"images_list", nil, false},
+	{"volumes_list", nil, false},
+	{"networks_list", nil, false},
+	{"contexts_list", nil, false},
+	{"registries_list", nil, false},
+	{"contexts_manage", map[string]any{"op": "inspect", "name": "prod"}, false},
+	{"contexts_manage", map[string]any{"op": "remove", "name": "prod"}, true},
+	{"contexts_manage", map[string]any{"op": "add", "name": "baaytona", "host": "ssh://deploy@65.109.212.14"}, true},
+	{"containers_control", map[string]any{"action": "stop", "target": "termocode-api-1"}, true},
+	{"containers_control", map[string]any{"action": "remove", "target": "nginx"}, true},
+	{"containers_exec", map[string]any{"op": "files", "target": "termocode-api-1"}, false},
+	{"containers_exec", map[string]any{"op": "exec", "target": "termocode-api-1", "command": []any{"ls"}}, true},
+	{"images_pull", map[string]any{"ref": "nginx:1.27"}, false},
+	{"images_manage", map[string]any{"op": "history", "ref": "postgres:16"}, false},
+	{"images_manage", map[string]any{"op": "remove", "ref": "postgres:16"}, true},
+	{"containers_storage", map[string]any{"op": "disk_usage"}, false},
+	{"containers_storage", map[string]any{"op": "network_remove", "name": "termocode_default"}, true},
+	{"containers_prune", map[string]any{"kind": "system"}, true},
+	{"compose_up", map[string]any{"project": "shop"}, true},
+	{"compose_project", map[string]any{"op": "logs", "project": "shop"}, false},
+	{"compose_project", map[string]any{"op": "down", "project": "shop"}, true},
+	{"registry_manage", map[string]any{"op": "catalog", "host": "ghcr.io"}, false},
+	{"registry_manage", map[string]any{"op": "delete_tag", "ref": "ghcr.io/acme/api:1.4"}, true},
+	{"kube_list", nil, false},
+	{"kube_describe", map[string]any{"kind": "pod", "name": "api-7d9f8c6b5-x2x4q"}, false},
+	{"kube_logs", map[string]any{"pod": "api-7d9f8c6b5-x2x4q"}, false},
+	{"kube_manage", map[string]any{"op": "namespaces"}, false},
+	{"kube_manage", map[string]any{"op": "restart", "name": "api"}, true},
+	{"kube_manage", map[string]any{"op": "delete", "kind": "pod", "name": "api-7d9f8c6b5-x2x4q"}, true},
 }
 
 // mcpServeGateDBs are the connections of mcpServeGateWorkspace: a local
@@ -192,7 +228,9 @@ func TestMCPServeEveryToolGate(t *testing.T) {
 // tool lookup and a Validate precheck).
 func TestMCPServeEveryAskingToolDenied(t *testing.T) {
 	m := aiTestModel(t)
+	docker, kubectl, shop := mcpServeHostFakes(t, &m) // before the workspace: the fixtures are relative
 	root := mcpServeGateWorkspace(t)
+	shop(root)
 	var asked []string
 	src, hub, _ := mcpServeTestSource(root, func(_ context.Context, _ string, tool ai.Tool, _ string) error {
 		asked = append(asked, tool.Name)
@@ -216,12 +254,61 @@ func TestMCPServeEveryAskingToolDenied(t *testing.T) {
 			return src.Call(mcpServeCtx("agent"), tc.tool, tc.args)
 		})
 		var ce *mcp.CallError
-		if len(asked) != 1 || !errors.As(err, &ce) || ce.Code != mcp.CodeDeclined || ui != wantUI {
+		// A host tool (containers, servers, Kubernetes) reads its host in
+		// Validate and in the card text: more UI steps, each a read; that
+		// nothing ran is checked on the fake engines below instead.
+		uiOK := ui == wantUI || (mcpServeHostTools[tc.tool] && ui >= wantUI)
+		if len(asked) != 1 || !errors.As(err, &ce) || ce.Code != mcp.CodeDeclined || !uiOK {
 			t.Errorf("%s %v: asked=%v err=%v ui=%d", tc.tool, tc.args, asked, err, ui)
 		}
 	}
 	if _, err := os.Stat(filepath.Join(root, "ran.txt")); err == nil {
 		t.Fatal("a declined task ran")
+	}
+	mcpServeOnlyReads(t, "docker", docker(), "ps ", "version", "context ls", "context inspect", "images ", "network ls", "volume ls", "inspect ")
+	mcpServeOnlyReads(t, "kubectl", kubectl(), "config ", "get ", "diff ", "api-resources")
+}
+
+// mcpServeHostTools are the exposed tools that read a container engine
+// or kubectl before their card.
+var mcpServeHostTools = map[string]bool{
+	"contexts_manage": true, "containers_control": true, "containers_exec": true, "images_manage": true,
+	"containers_storage": true, "containers_prune": true, "compose_up": true, "compose_project": true,
+	"registry_manage": true, "kube_manage": true,
+}
+
+// mcpServeHostFakes gives m a fake docker and kubectl and returns their
+// call logs; shop(root) puts a compose project shop in the workspace.
+func mcpServeHostFakes(t *testing.T, m *Model) (docker, kubectl func() []string, shop func(root string)) {
+	t.Helper()
+	t.Setenv("DOCKER_CONTEXT", "")
+	t.Setenv("DOCKER_CONFIG", t.TempDir())
+	f := hostFake(t)
+	k := kubeFake(t)
+	k.Set(t, "contexts.txt", "dev\n")
+	k.Set(t, "current-context.txt", "dev\n")
+	m.services = newServicesState()
+	m.kube = newKubeState()
+	t.Cleanup(m.kube.shutdown)
+	m.kube.binary, m.kube.context, m.kube.namespace = k.Kubectl(), "dev", "shop"
+	return f.Calls, k.Calls, func(root string) {
+		m.services.root = root
+		f.Set(t, "ps.json", `{"ID":"9f3c2e1a1234","Names":"termocode-api-1","Image":"ghcr.io/acme/api:1.4","State":"running","Labels":"com.docker.compose.project=shop,com.docker.compose.project.working_dir=`+root+`"}`+"\n"+
+			`{"ID":"aabbccdd","Names":"nginx","Image":"nginx:1.27","State":"exited","Labels":{}}`+"\n")
+	}
+}
+
+// mcpServeOnlyReads fails on any logged call that is not a read.
+func mcpServeOnlyReads(t *testing.T, what string, calls []string, reads ...string) {
+	t.Helper()
+	for _, c := range calls {
+		ok := false
+		for _, r := range reads {
+			ok = ok || strings.HasPrefix(c, r)
+		}
+		if !ok {
+			t.Errorf("%s ran %q for a declined call", what, c)
+		}
 	}
 }
 
