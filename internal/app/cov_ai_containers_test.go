@@ -181,7 +181,7 @@ func TestCovAIContainersHostLists(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	covAIMustContain(t, "contexts", out, "Contexts: 2", "* default (engine default)", "ssh://deploy@prod.example", "only the user switches")
+	covAIMustContain(t, "contexts", out, "Contexts: 2", "- default · this machine · local · engine default · tools use it", "prod · deploy@prod.example · ssh")
 
 	var imgs, vols, nets strings.Builder
 	for i := 0; i < aiContainersListLimit+3; i++ {
@@ -210,7 +210,7 @@ func TestCovAIContainersHostLists(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	covAIMustContain(t, "session contexts", out, "  default (engine default)", "* prod (this session)", "error: cannot reach the host")
+	covAIMustContain(t, "session contexts", out, "- default · this machine · local · engine default · reachable", "- prod · no endpoint · unknown · this session · tools use it", "error: cannot reach the host")
 }
 
 // Registries: hosts and users only, never a secret; an unreadable login

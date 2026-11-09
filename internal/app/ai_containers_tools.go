@@ -46,7 +46,8 @@ import (
 
 // aiContainersPrompt is the system prompt line when an engine exists.
 const aiContainersPrompt = "Containers tools (containers_*, images_*, volumes_list, networks_list, contexts_list, registries_list, compose_up) " +
-	"show every container, image, volume and network on this host; use them before suggesting `docker` commands; " +
+	"show every container, image, volume and network on this host or on any server: contexts_list lists the hosts (user@host, reachable) " +
+	"and the context argument reads or acts on one; never ssh to a server yourself; use them before suggesting `docker` commands; " +
 	"you cannot remove or prune anything."
 
 const (
@@ -98,6 +99,8 @@ type aiContainersHost struct {
 	project string // this workspace's compose project
 	busy    map[string]bool
 	users   map[string]string // registry host → user signed in this run
+	picked  string            // the context argument named another host ("" = the session's)
+	where   string            // where picked points (user@host, this machine)
 }
 
 func aiContainersGetHost(ctx context.Context, call aiIDECaller) (aiContainersHost, error) {
@@ -147,6 +150,16 @@ func aiContainersGetHost(ctx context.Context, call aiIDECaller) (aiContainersHos
 
 // contextLabel names the context the calls use.
 func (h aiContainersHost) contextLabel(ctx context.Context) string {
+	if h.picked != "" {
+		word := "context "
+		if h.e.Kind == "podman" {
+			word = "connection "
+		}
+		if h.where != "" {
+			return word + h.picked + " (" + h.where + ")"
+		}
+		return word + h.picked
+	}
 	if h.e.Kind == "podman" {
 		switch {
 		case h.session != "":
@@ -272,12 +285,13 @@ func aiFindContainer(list []containers.Container, target string) (containers.Con
 	return containers.Container{}, fmt.Errorf("no container %q on this host; containers: %s (see containers_list)", target, strings.Join(names, ", "))
 }
 
-// aiResolveContainer lists the host fresh and finds target.
-func aiResolveContainer(ctx context.Context, call aiIDECaller, target string) (aiContainersHost, containers.Container, error) {
+// aiResolveContainer lists the host of a (its context argument) fresh
+// and finds target.
+func aiResolveContainer(ctx context.Context, call aiIDECaller, a map[string]any, target string) (aiContainersHost, containers.Container, error) {
 	if err := containers.ValidName(target); err != nil {
 		return aiContainersHost{}, containers.Container{}, err
 	}
-	h, err := aiContainersGetHost(ctx, call)
+	h, err := aiContainersHostAt(ctx, call, a)
 	if err != nil {
 		return h, containers.Container{}, err
 	}
@@ -338,7 +352,7 @@ func aiControlValidate(ctx context.Context, call aiIDECaller, a map[string]any) 
 	if !aiValidAction(action) {
 		return aiContainersHost{}, containers.Container{}, fmt.Errorf("action must be one of %s (remove and prune are the user's)", strings.Join(aiContainersActions, ", "))
 	}
-	h, c, err := aiResolveContainer(ctx, call, strings.TrimSpace(ai.ArgString(a, "target")))
+	h, c, err := aiResolveContainer(ctx, call, a, strings.TrimSpace(ai.ArgString(a, "target")))
 	if err != nil {
 		return h, c, err
 	}
@@ -511,12 +525,12 @@ func aiContainersInspect(ctx context.Context, call aiIDECaller, a map[string]any
 	id, label := target, target
 	if kind == "" || kind == "container" {
 		var c containers.Container
-		h, c, err = aiResolveContainer(ctx, call, target)
+		h, c, err = aiResolveContainer(ctx, call, a, target)
 		if err != nil {
 			return "", err
 		}
 		kind, id, label = "container", c.ID, aiContainerName(c)
-	} else if h, err = aiContainersGetHost(ctx, call); err != nil {
+	} else if h, err = aiContainersHostAt(ctx, call, a); err != nil {
 		return "", err
 	}
 	v, err := h.e.InspectType(ctx, kind, id)
@@ -534,7 +548,7 @@ func aiContainersInspect(ctx context.Context, call aiIDECaller, a map[string]any
 }
 
 func aiContainersLogs(ctx context.Context, call aiIDECaller, a map[string]any) (string, error) {
-	h, c, err := aiResolveContainer(ctx, call, strings.TrimSpace(ai.ArgString(a, "target")))
+	h, c, err := aiResolveContainer(ctx, call, a, strings.TrimSpace(ai.ArgString(a, "target")))
 	if err != nil {
 		return "", err
 	}
@@ -568,12 +582,12 @@ func aiContainersStats(ctx context.Context, call aiIDECaller, a map[string]any) 
 	var ids []string
 	if target != "" {
 		var c containers.Container
-		h, c, err = aiResolveContainer(ctx, call, target)
+		h, c, err = aiResolveContainer(ctx, call, a, target)
 		if err != nil {
 			return "", err
 		}
 		ids = []string{c.ID}
-	} else if h, err = aiContainersGetHost(ctx, call); err != nil {
+	} else if h, err = aiContainersHostAt(ctx, call, a); err != nil {
 		return "", err
 	}
 	stats, err := h.e.Stats(ctx, ids...)
@@ -592,8 +606,8 @@ func aiContainersStats(ctx context.Context, call aiIDECaller, a map[string]any) 
 	return aiContainersRedact(strings.TrimRight(b.String(), "\n")), nil
 }
 
-func aiImagesList(ctx context.Context, call aiIDECaller) (string, error) {
-	h, err := aiContainersGetHost(ctx, call)
+func aiImagesList(ctx context.Context, call aiIDECaller, a map[string]any) (string, error) {
+	h, err := aiContainersHostAt(ctx, call, a)
 	if err != nil {
 		return "", err
 	}
@@ -621,8 +635,8 @@ func aiImagesList(ctx context.Context, call aiIDECaller) (string, error) {
 	return aiContainersRedact(strings.TrimRight(b.String(), "\n")), nil
 }
 
-func aiVolumesList(ctx context.Context, call aiIDECaller) (string, error) {
-	h, err := aiContainersGetHost(ctx, call)
+func aiVolumesList(ctx context.Context, call aiIDECaller, a map[string]any) (string, error) {
+	h, err := aiContainersHostAt(ctx, call, a)
 	if err != nil {
 		return "", err
 	}
@@ -649,8 +663,8 @@ func aiVolumesList(ctx context.Context, call aiIDECaller) (string, error) {
 	return aiContainersRedact(strings.TrimRight(b.String(), "\n")), nil
 }
 
-func aiNetworksList(ctx context.Context, call aiIDECaller) (string, error) {
-	h, err := aiContainersGetHost(ctx, call)
+func aiNetworksList(ctx context.Context, call aiIDECaller, a map[string]any) (string, error) {
+	h, err := aiContainersHostAt(ctx, call, a)
 	if err != nil {
 		return "", err
 	}
@@ -674,47 +688,7 @@ func aiNetworksList(ctx context.Context, call aiIDECaller) (string, error) {
 	return aiContainersRedact(strings.TrimRight(b.String(), "\n")), nil
 }
 
-func aiContextsList(ctx context.Context, call aiIDECaller) (string, error) {
-	h, err := aiContainersGetHost(ctx, call)
-	if err != nil {
-		return "", err
-	}
-	list, err := h.e.ListContexts(ctx)
-	if err != nil {
-		return "", errors.New(aiContainersRedact(err.Error()))
-	}
-	var b strings.Builder
-	if h.e.Kind == "podman" {
-		fmt.Fprintf(&b, "%s\nPodman connections: %d (only the user switches; the tools follow the session's connection)\n", h.header(ctx), len(list))
-	} else {
-		fmt.Fprintf(&b, "%s\nContexts: %d (only the user switches; the tools follow the session's context)\n", h.header(ctx), len(list))
-	}
-	for _, c := range list {
-		mark := " "
-		if (h.session == "" && c.Current) || h.session == c.Name {
-			mark = "*"
-		}
-		fmt.Fprintf(&b, "%s %s", mark, c.Name)
-		if c.Current {
-			b.WriteString(" (engine default)")
-		}
-		if h.session == c.Name {
-			b.WriteString(" (this session)")
-		}
-		if ep := c.DockerEndpoint; ep != "" {
-			fmt.Fprintf(&b, " · %s", ep)
-		} else if c.Host != "" {
-			fmt.Fprintf(&b, " · %s", c.Host)
-		}
-		if c.Error != "" {
-			fmt.Fprintf(&b, " · error: %s", aiOneLineClip(c.Error, 120))
-		}
-		b.WriteString("\n")
-	}
-	return aiContainersRedact(strings.TrimRight(b.String(), "\n")), nil
-}
-
-func aiRegistriesList(ctx context.Context, call aiIDECaller) (string, error) {
+func aiRegistriesList(ctx context.Context, call aiIDECaller, _ map[string]any) (string, error) {
 	h, err := aiContainersGetHost(ctx, call)
 	if err != nil {
 		return "", err
@@ -831,7 +805,7 @@ func aiPullDescribe(call aiIDECaller, a map[string]any) string {
 	}
 	ctx, cancel := aiContainersDescribeCtx()
 	defer cancel()
-	h, err := aiContainersGetHost(ctx, call)
+	h, err := aiContainersHostAt(ctx, call, a)
 	if err != nil {
 		return "Pull image " + ref + " (refused: " + aiOneLineClip(err.Error(), 120) + ")"
 	}
@@ -843,17 +817,17 @@ func aiPullRun(ctx context.Context, call aiIDECaller, a map[string]any) (string,
 	if err := containers.ValidImageRef(ref); err != nil {
 		return "", err
 	}
-	h, err := aiContainersGetHost(ctx, call)
+	h, err := aiContainersHostAt(ctx, call, a)
 	if err != nil {
 		return "", err
 	}
-	key := containerTabPrefix + "pull:" + ref
+	key := containerTabPrefix + "pull:" + h.tabKey(ref)
 	out, err := call(ctx, func(m *Model) (string, tea.Cmd, error) {
 		if _, running := m.svcTabRunning(key); running {
 			m.servicesFocusTab(key)
 			return "already pulling " + ref + " in its tab (no change)", nil, nil
 		}
-		cmd := h.e.PullCommand(ref)
+		cmd := h.termCommand(h.e.PullCommand(ref))
 		if err := m.servicesRunCommand(cmd, key); err != nil {
 			return "", nil, fmt.Errorf("cannot open the pull tab: %v", err)
 		}
@@ -920,7 +894,7 @@ func aiComposeResolve(ctx context.Context, call aiIDECaller, a map[string]any) (
 	default:
 		return t, errors.New("services must be a list of service names")
 	}
-	h, err := aiContainersGetHost(ctx, call)
+	h, err := aiContainersHostAt(ctx, call, a)
 	if err != nil {
 		return t, err
 	}
@@ -991,9 +965,9 @@ func aiComposeRun(ctx context.Context, call aiIDECaller, a map[string]any) (stri
 	if err != nil {
 		return "", err
 	}
-	cmd := t.h.e.ComposeWithFiles(t.project, t.dir, t.files, append([]string{"up", "-d"}, t.services...)...)
+	cmd := t.h.termCommand(t.h.e.ComposeWithFiles(t.project, t.dir, t.files, append([]string{"up", "-d"}, t.services...)...))
 	cmd.Label = "compose: " + t.project + " up"
-	key := containerTabPrefix + "compose:" + t.project
+	key := containerTabPrefix + "compose:" + t.h.tabKey(t.project)
 	if _, err := call(ctx, func(m *Model) (string, tea.Cmd, error) {
 		if err := m.servicesRunCommand(cmd, key); err != nil {
 			return "", nil, fmt.Errorf("cannot open the compose tab: %v", err)
@@ -1013,28 +987,34 @@ func (m *Model) aiContainersTools(call aiIDECaller) []ai.Tool {
 	str := func(d string) map[string]any { return map[string]any{"type": "string", "description": d} }
 	num := func(d string) map[string]any { return map[string]any{"type": "integer", "description": d} }
 	target := str("container name or id (see containers_list)")
+	host := aiContextParam()
 	validTarget := func(a map[string]any) error {
+		if err := aiValidContextArg(a); err != nil {
+			return err
+		}
 		return containers.ValidName(strings.TrimSpace(ai.ArgString(a, "target")))
 	}
-	read := func(f func(context.Context, aiIDECaller) (string, error)) func(context.Context, map[string]any) (string, error) {
-		return func(ctx context.Context, _ map[string]any) (string, error) { return f(ctx, call) }
+	read := func(f func(context.Context, aiIDECaller, map[string]any) (string, error)) func(context.Context, map[string]any) (string, error) {
+		return func(ctx context.Context, a map[string]any) (string, error) { return f(ctx, call, a) }
 	}
-	return []ai.Tool{
+	tools := []ai.Tool{
 		{
 			Name: "containers_list",
-			Description: "Every container on this host (all projects, running and stopped), grouped by compose project: " +
+			Description: "Every container on a host (all projects, running and stopped), grouped by compose project: " +
 				"id, name, image, state, status, published ports, compose service, command; plus which host port each container " +
-				"publishes. Names the engine and the context. Use it for \"why is port N busy?\" before suggesting docker commands.",
-			Params:   map[string]any{},
-			Describe: func(map[string]any) string { return "List host containers" },
-			Run: func(ctx context.Context, _ map[string]any) (string, error) {
-				h, err := aiContainersGetHost(ctx, call)
+				"publishes. Names the engine and the context. context reads another host (contexts_list). " +
+				"Use it for \"why is port N busy?\" or \"what runs on server X?\" before suggesting docker or ssh commands.",
+			Params:   map[string]any{"context": host},
+			Validate: aiValidContextArg,
+			Describe: func(a map[string]any) string { return aiOnHost("List host containers", a) },
+			Run: func(ctx context.Context, a map[string]any) (string, error) {
+				h, err := aiContainersHostAt(ctx, call, a)
 				if err != nil {
 					return "", err
 				}
 				list, err := h.e.ListContainers(ctx)
 				if err != nil {
-					return "", errors.New(aiContainersRedact(err.Error()))
+					return "", errors.New(h.bin() + " on " + h.contextLabel(ctx) + ": " + shortRemoteError(aiContainersRedact(err.Error())))
 				}
 				return aiContainersListReport(h.header(ctx), h.project, list), nil
 			},
@@ -1044,14 +1024,18 @@ func (m *Model) aiContainersTools(call aiIDECaller) []ai.Tool {
 			Description: "The engine's inspect JSON of one container (default), image, volume or network, with every env value, " +
 				"auth field and secret-looking label masked (env names stay). Capped at containers_max_inspect_kb.",
 			Params: map[string]any{
-				"target": str("container name or id; or an image reference, volume or network name with kind"),
-				"kind":   map[string]any{"type": "string", "enum": aiInspectKinds(), "description": "what target is (default container)"},
+				"target":  str("container name or id; or an image reference, volume or network name with kind"),
+				"kind":    map[string]any{"type": "string", "enum": aiInspectKinds(), "description": "what target is (default container)"},
+				"context": host,
 			},
 			Required: []string{"target"},
 			Validate: func(a map[string]any) error {
+				if err := aiValidContextArg(a); err != nil {
+					return err
+				}
 				return aiValidInspectTarget(strings.TrimSpace(ai.ArgString(a, "kind")), strings.TrimSpace(ai.ArgString(a, "target")))
 			},
-			Describe: func(a map[string]any) string { return "Inspect " + ai.ArgString(a, "target") },
+			Describe: func(a map[string]any) string { return aiOnHost("Inspect "+ai.ArgString(a, "target"), a) },
 			Run: func(ctx context.Context, a map[string]any) (string, error) {
 				return aiContainersInspect(ctx, call, a)
 			},
@@ -1061,9 +1045,10 @@ func (m *Model) aiContainersTools(call aiIDECaller) []ai.Tool {
 			Description: "The last log lines of one host container (stdout and stderr, with timestamps), secrets redacted. " +
 				"lines default 100, max 1000; since like \"10m\". Capped at services_max_log_kb (newest lines kept).",
 			Params: map[string]any{
-				"target": target,
-				"lines":  num("how many last lines (default 100, max 1000)"),
-				"since":  str("only newer than this, e.g. 10m or 1h"),
+				"target":  target,
+				"lines":   num("how many last lines (default 100, max 1000)"),
+				"since":   str("only newer than this, e.g. 10m or 1h"),
+				"context": host,
 			},
 			Required: []string{"target"},
 			Validate: func(a map[string]any) error {
@@ -1074,7 +1059,7 @@ func (m *Model) aiContainersTools(call aiIDECaller) []ai.Tool {
 				}
 				return validTarget(a)
 			},
-			Describe: func(a map[string]any) string { return "Container logs " + ai.ArgString(a, "target") },
+			Describe: func(a map[string]any) string { return aiOnHost("Container logs "+ai.ArgString(a, "target"), a) },
 			Run: func(ctx context.Context, a map[string]any) (string, error) {
 				return aiContainersLogs(ctx, call, a)
 			},
@@ -1082,49 +1067,54 @@ func (m *Model) aiContainersTools(call aiIDECaller) []ai.Tool {
 		{
 			Name:        "containers_stats",
 			Description: "One sample of CPU, memory, network and block I/O for one container (target) or every running one.",
-			Params:      map[string]any{"target": str("container name or id; default every running container")},
+			Params:      map[string]any{"target": str("container name or id; default every running container"), "context": host},
 			Validate: func(a map[string]any) error {
 				if strings.TrimSpace(ai.ArgString(a, "target")) == "" {
-					return nil
+					return aiValidContextArg(a)
 				}
 				return validTarget(a)
 			},
-			Describe: func(a map[string]any) string { return "Container stats " + ai.ArgString(a, "target") },
+			Describe: func(a map[string]any) string { return aiOnHost("Container stats "+ai.ArgString(a, "target"), a) },
 			Run: func(ctx context.Context, a map[string]any) (string, error) {
 				return aiContainersStats(ctx, call, a)
 			},
 		},
 		{
 			Name:        "images_list",
-			Description: "Every image on this host: repository:tag, id, size, created; dangling images are marked.",
-			Params:      map[string]any{},
-			Describe:    func(map[string]any) string { return "List images" },
+			Description: "Every image on a host: repository:tag, id, size, created; dangling images are marked.",
+			Params:      map[string]any{"context": host},
+			Validate:    aiValidContextArg,
+			Describe:    func(a map[string]any) string { return aiOnHost("List images", a) },
 			Run:         read(aiImagesList),
 		},
 		{
 			Name:        "volumes_list",
-			Description: "Every volume on this host: name, driver, scope, compose project.",
-			Params:      map[string]any{},
-			Describe:    func(map[string]any) string { return "List volumes" },
+			Description: "Every volume on a host: name, driver, scope, compose project.",
+			Params:      map[string]any{"context": host},
+			Validate:    aiValidContextArg,
+			Describe:    func(a map[string]any) string { return aiOnHost("List volumes", a) },
 			Run:         read(aiVolumesList),
 		},
 		{
 			Name:        "networks_list",
-			Description: "Every network on this host: name, id, driver, scope, compose project.",
-			Params:      map[string]any{},
-			Describe:    func(map[string]any) string { return "List networks" },
+			Description: "Every network on a host: name, id, driver, scope, compose project.",
+			Params:      map[string]any{"context": host},
+			Validate:    aiValidContextArg,
+			Describe:    func(a map[string]any) string { return aiOnHost("List networks", a) },
 			Run:         read(aiNetworksList),
 		},
 		{
-			Name:        "contexts_list",
-			Description: "The engine's contexts (docker) or connections (podman): which one is the default and which one this session uses. Only the user switches them.",
-			Params:      map[string]any{},
-			Describe:    func(map[string]any) string { return "List contexts" },
-			Run:         read(aiContextsList),
+			Name: "contexts_list",
+			Description: "Every host (servers): the engine's contexts (docker) or connections (podman), each with where it points " +
+				"(user@host or this machine), ssh / tcp / local, which is the engine default, which one the tools use by default, " +
+				"and whether it answers now. Pass a name as context to the other container tools to work on that host.",
+			Params:   map[string]any{},
+			Describe: func(map[string]any) string { return "List hosts (contexts)" },
+			Run:      read(aiContextsList),
 		},
 		{
 			Name:        "registries_list",
-			Description: "Registry hosts from the engine's login file: signed in or not, the user (when known) and the credential helper. Never a password or token.",
+			Description: "Registry hosts from this machine's login file: signed in or not, the user (when known) and the credential helper. Never a password or token.",
 			Params:      map[string]any{},
 			Describe:    func(map[string]any) string { return "List registries" },
 			Run:         read(aiRegistriesList),
@@ -1134,8 +1124,9 @@ func (m *Model) aiContainersTools(call aiIDECaller) []ai.Tool {
 			Description: "Start, stop, restart, pause or unpause one host container (any project). Asks the user first. " +
 				"Refused when the container is busy or already in that state. Removing and pruning are the user's.",
 			Params: map[string]any{
-				"action": map[string]any{"type": "string", "enum": aiContainersActions, "description": "what to do"},
-				"target": target,
+				"action":  map[string]any{"type": "string", "enum": aiContainersActions, "description": "what to do"},
+				"target":  target,
+				"context": host,
 			},
 			Required: []string{"action", "target"},
 			Mutating: true, Class: ai.ClassContainers, Gate: gate,
@@ -1157,6 +1148,7 @@ func (m *Model) aiContainersTools(call aiIDECaller) []ai.Tool {
 			Params: map[string]any{
 				"ref":     str("image reference: repo[:tag][@sha256:digest]"),
 				"wait_ms": num("wait up to this long (ms, max 120000) for the pull to finish"),
+				"context": host,
 			},
 			Required: []string{"ref"},
 			Mutating: true, Class: ai.ClassContainers, Gate: gate,
@@ -1166,7 +1158,7 @@ func (m *Model) aiContainersTools(call aiIDECaller) []ai.Tool {
 				}
 				ctx, cancel := context.WithTimeout(context.Background(), aiContainersCallWait)
 				defer cancel()
-				_, err := aiContainersGetHost(ctx, call)
+				_, err := aiContainersHostAt(ctx, call, a)
 				return err
 			},
 			Describe: func(a map[string]any) string { return aiPullDescribe(call, a) },
@@ -1176,12 +1168,13 @@ func (m *Model) aiContainersTools(call aiIDECaller) []ai.Tool {
 		},
 		{
 			Name: "compose_up",
-			Description: "Run `docker compose up -d` for a compose project that has containers on this host (see containers_list), " +
+			Description: "Run `docker compose up -d` for a compose project that has containers on a host (see containers_list), " +
 				"in its own folder, in a visible terminal tab. services limits it to some services. Asks the user first. " +
 				"For this workspace's services prefer services_start.",
 			Params: map[string]any{
 				"project":  str("compose project name from containers_list"),
 				"services": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "only these services (default all)"},
+				"context":  host,
 			},
 			Required: []string{"project"},
 			Mutating: true, Class: ai.ClassContainers, Gate: gate,
@@ -1197,6 +1190,7 @@ func (m *Model) aiContainersTools(call aiIDECaller) []ai.Tool {
 			},
 		},
 	}
+	return tools
 }
 
 // aiContainersPromptLine is the system prompt line, only when a container

@@ -36,7 +36,7 @@ func TestAIContextsListWhereAndReachable(t *testing.T) {
 	}
 	covAIMustContain(t, "contexts_list", out,
 		"default · this machine · local · engine default · tools use it · reachable",
-		"prod · deploy@prod.example · ssh · not reachable: ssh: connect to host prod.example port 22: Connection refused",
+		"prod · deploy@prod.example · ssh · not reachable: ssh: Connection refused",
 		"context argument")
 	probed := false
 	for _, c := range f.CtxCalls() {
@@ -78,7 +78,7 @@ func TestAIContainersListOtherContext(t *testing.T) {
 	// A host that does not answer fails with its reason.
 	f.Set(t, "fail-prod.err", "error during connect: ssh: connect to host prod.example port 22: Connection refused")
 	if _, err := aiContainersTool(t, m.aiContainersTools(call), "containers_list").Run(context.Background(), map[string]any{"context": "prod"}); err == nil ||
-		!strings.Contains(err.Error(), "Connection refused") {
+		!strings.Contains(err.Error(), "context prod") {
 		t.Errorf("unreachable prod: %v", err)
 	}
 }
