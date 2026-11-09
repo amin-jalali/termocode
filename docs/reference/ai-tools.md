@@ -191,6 +191,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`tracker_pins`](#tracker_pins) | list: auto<br>run: auto<br>unpin: confirm (always asks) | no | The blocks pinned to the phone's Home (tracker_pin pins one). |
 | [`tracker_tasks`](#tracker_tasks) | auto | no | The shared task list of this repository (Tracker: Show Tasks…; Markdown files in .termocode/tasks that agents and people edit). |
 | [`chat_manage`](#chat_manage) | delete: confirm (always asks)<br>rename: auto | no | Rename a saved AI chat (at once) or delete one (asks the user every time). |
+| [`ide_op`](#ide_op) | bookmarks.clear: auto<br>bookmarks.list: auto<br>bookmarks.toggle: auto<br>buf.close: auto<br>buf.head: auto<br>buf.markdown: auto<br>buf.reload: auto<br>buf.undo: auto<br>debug.expand: auto<br>debug.frame: auto<br>debug.run: auto<br>debug.select: auto<br>debug.sources: auto<br>debug.watch: auto<br>editor.vim_buf_maps: auto<br>editor.vim_maps: auto<br>ext.panel: auto<br>ext.select: auto<br>files.recent: auto<br>http.cancel: auto<br>http.curl: auto<br>http.env_file: auto<br>http.import_curl: auto<br>http.save_body: auto<br>http.saved: auto<br>keys.bind: auto<br>keys.list: auto<br>layout.delete: confirm (always asks)<br>layout.list: auto<br>layout.open: auto<br>layout.reset: auto<br>layout.save: auto<br>lsp.inlay_hints: auto<br>search.replace: confirm (always asks)<br>services.configure: auto<br>services.refresh: auto<br>snippets.delete: auto<br>snippets.list: auto<br>snippets.save: auto<br>snippets.user: auto<br>tasks.terminate: auto<br>term.colors: auto<br>tests.debug: auto<br>tests.refresh: auto<br>tests.stop: auto<br>theme.color_set: auto<br>theme.colors: auto<br>theme.list: auto<br>usercmds.list: auto<br>usercmds.save: auto<br>web.devices: auto | no | Run one of termocode's own IDE operations, exactly as its web page runs it (the result is JSON). |
 | [`view_catalog`](#view_catalog) | auto | no | List the views termocode can show the user (on the phone and in the chat): id, params, typed fields (which can be sorted or filtered) and layouts. |
 | [`view_save`](#view_save) | auto | no | Save a view spec on this laptop under a name, for every paired phone (and pin it to the phones' Home when pin is true). |
 | [`view_manage`](#view_manage) | delete: confirm (always asks)<br>list: auto<br>pin: auto<br>rename: auto<br>unpin: auto | no | The views saved for the phones (view_save saves one). |
@@ -2634,6 +2635,70 @@ Rename a saved AI chat (at once) or delete one (asks the user every time). chats
 | `id` | string | yes | the chat id |
 | `op` | string | yes | what to do. One of: `delete`, `rename` |
 | `title` | string |   | rename: the new title |
+
+### ide_op
+
+Run one of termocode's own IDE operations, exactly as its web page runs it (the result is JSON). An op marked (asks) asks the user every time; the others run at once. A tab is named by its buffer (get_editor_state or open_file gives it). Ops:
+bookmarks.clear — clear every bookmark
+bookmarks.list — the bookmarks
+bookmarks.toggle — set or clear a bookmark on a line (args buf:number, line:number)
+buf.close — close an open tab (args buf:number)
+buf.head — a file as it is at git HEAD (args path:string)
+buf.markdown — the Markdown preview of a tab, as HTML (args buf:number)
+buf.reload — reload an open tab from disk (args buf:number)
+buf.undo — undo the last change in an open tab (args buf:number)
+debug.expand — the children of a variable (args key:string, open:bool)
+debug.frame — show a stack frame (args id:number)
+debug.run — run a configuration without the debugger (args config:string)
+debug.select — pick the debug configuration (args config:string)
+debug.sources — the loaded sources
+debug.watch — add or remove a watch expression (args op:string, expr:string)
+editor.vim_buf_maps — a tab's own key maps (args buf:number)
+editor.vim_maps — the editor's key maps
+ext.panel — an extension's panel (args id:string)
+ext.select — pick a row of an extension's panel (args id:string, row:number)
+files.recent — the recent files
+http.cancel — stop the request that runs
+http.curl — a request as a curl command (args run:number, path:string, index:number)
+http.env_file — create http-client.env.json with a template
+http.import_curl — a curl command as a request in a .http file (args curl:string, path:string)
+http.save_body — save the last response body to a file (args run:number, path:string)
+http.saved — the saved requests
+keys.bind — bind a key (args action:string, key:string, replace:bool)
+keys.list — the key bindings
+layout.delete — delete a saved layout (asks) (args name:string)
+layout.list — the saved layouts
+layout.open — open a saved layout (args name:string)
+layout.reset — reset the layout
+layout.save — save the layout (args name:string, scope:string, replace:bool)
+lsp.inlay_hints — the inlay hints of a range (args buf:number, tick:number, first:number, last:number)
+search.replace — replace text in the workspace (asks) (args find:string, replace:string)
+services.configure — create .termocode/services.json with a template
+services.refresh — read the services again
+snippets.delete — delete a user snippet (args scope:string, trigger:string)
+snippets.list — the snippets for a tab's language (args buf:number)
+snippets.save — save a user snippet (args scope:string, trigger:string, body:string)
+snippets.user — the user's own snippets
+tasks.terminate — stop a running task (by its label) (args label:string)
+term.colors — a terminal tab's colors (args buf:number)
+tests.debug — debug one test (args id:string)
+tests.refresh — find the tests again
+tests.stop — stop the running tests
+theme.color_set — set one theme color (args key:string, color:string)
+theme.colors — the theme's colors
+theme.list — the themes
+usercmds.list — the user's own commands
+usercmds.save — save a user command (args items:list)
+web.devices — the paired devices
+
+**Gate:** bookmarks.clear: auto · bookmarks.list: auto · bookmarks.toggle: auto · buf.close: auto · buf.head: auto · buf.markdown: auto · buf.reload: auto · buf.undo: auto · debug.expand: auto · debug.frame: auto · debug.run: auto · debug.select: auto · debug.sources: auto · debug.watch: auto · editor.vim_buf_maps: auto · editor.vim_maps: auto · ext.panel: auto · ext.select: auto · files.recent: auto · http.cancel: auto · http.curl: auto · http.env_file: auto · http.import_curl: auto · http.save_body: auto · http.saved: auto · keys.bind: auto · keys.list: auto · layout.delete: confirm (always asks) · layout.list: auto · layout.open: auto · layout.reset: auto · layout.save: auto · lsp.inlay_hints: auto · search.replace: confirm (always asks) · services.configure: auto · services.refresh: auto · snippets.delete: auto · snippets.list: auto · snippets.save: auto · snippets.user: auto · tasks.terminate: auto · term.colors: auto · tests.debug: auto · tests.refresh: auto · tests.stop: auto · theme.color_set: auto · theme.colors: auto · theme.list: auto · usercmds.list: auto · usercmds.save: auto · web.devices: auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `op` | string | yes | the operation. One of: `bookmarks.clear`, `bookmarks.list`, `bookmarks.toggle`, `buf.close`, `buf.head`, `buf.markdown`, `buf.reload`, `buf.undo`, `debug.expand`, `debug.frame`, `debug.run`, `debug.select`, `debug.sources`, `debug.watch`, `editor.vim_buf_maps`, `editor.vim_maps`, `ext.panel`, `ext.select`, `files.recent`, `http.cancel`, `http.curl`, `http.env_file`, `http.import_curl`, `http.save_body`, `http.saved`, `keys.bind`, `keys.list`, `layout.delete`, `layout.list`, `layout.open`, `layout.reset`, `layout.save`, `lsp.inlay_hints`, `search.replace`, `services.configure`, `services.refresh`, `snippets.delete`, `snippets.list`, `snippets.save`, `snippets.user`, `tasks.terminate`, `term.colors`, `tests.debug`, `tests.refresh`, `tests.stop`, `theme.color_set`, `theme.colors`, `theme.list`, `usercmds.list`, `usercmds.save`, `web.devices` |
+| `args` | object |   | the operation's args (see the list) |
 
 ### view_catalog
 

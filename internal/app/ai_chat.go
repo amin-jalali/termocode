@@ -181,6 +181,7 @@ func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	tools = append(tools, aiTrackerTools(m.aiS().mcpProfile)...) // MOB-13: pin a read-only MCP call to the phone's Home
 	tools = append(tools, aiTrackerTasksTool(root))              // AI parity: the shared task list (ai_tracker_manage_tools.go)
 	tools = append(tools, aiChatManageTool(call))                // AI parity: rename and delete a saved chat (ai_chat_manage_tool.go)
+	tools = append(tools, aiIDEOpTool(call))                     // AI parity: the IDE ops no typed tool does (ai_ide_op_tool.go)
 	tools = append(tools, aiViewShowTools(m.viewRun)...)         // MOBUX-17: views built from a chat command (ai_view_show_tool.go)
 	tools = append(tools, aiViewTools(call)...)                  // MOB-70: view_catalog and view_save (ai_view_tools.go); view_show is MOBUX-17's
 	tools = append(tools, aiLibrarianTools()...)                 // CMP-91: outside repositories, read only
