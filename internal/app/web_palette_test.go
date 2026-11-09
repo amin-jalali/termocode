@@ -36,6 +36,9 @@ func TestWebPaletteListIsTheSafeAllowList(t *testing.T) {
 	byID := map[string]webproto.PaletteItem{}
 	for _, it := range res.Items {
 		byID[it.ID] = it
+		if it.ID == "web-pair" || it.ID == "web-devices" {
+			continue // the page opens them itself, never palette.run (TestWebPairViewerGetsErrors)
+		}
 		p, ok := aiActionPolicyFor(it.ID)
 		_, form := webPaletteLaptopForms[it.ID]
 		_, user := webPaletteUserOnly[it.ID]

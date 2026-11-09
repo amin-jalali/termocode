@@ -160,7 +160,8 @@ func TestLaptopCardOps(t *testing.T) {
 		OpChatDelete: true, OpChatClear: true, OpAIUseMCPProfile: true, OpAISetAutoApprove: true,
 		OpWorkspaceAddFolder: true, OpWorkspaceRemoveFolder: true, OpWorkspaceOpen: true, OpSearchReplace: true,
 		OpLSPServerAsk: true, OpLayoutDelete: true, OpWorkflowsRun: true, OpWorkflowsSave: true,
-		OpAIRunStart: true, OpAIRaceModels: true, OpAILaneStart: true, OpAIRaceStart: true, OpProjectOpen: true}
+		OpAIRunStart: true, OpAIRaceModels: true, OpAILaneStart: true, OpAIRaceStart: true, OpProjectOpen: true,
+		"web.device_remove": true}
 	for _, p := range Ops() {
 		if p.LaptopCard != want[p.Op] {
 			t.Errorf("%s: laptop card = %v", p.Op, p.LaptopCard)
