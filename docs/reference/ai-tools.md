@@ -2539,7 +2539,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-network-disconnect` | Containers: Disconnect Selected from Network… | never | network changes are the user's; it asks on a card |
 | `containers-network-prune` | Containers: Prune Networks… | never | pruning networks is the user's; nothing is offered to the model |
 | `containers-network-remove` | Containers: Remove Selected Network… | never | removing is the user's; nothing is offered to the model |
-| `containers-open-databases` | Containers: Open in Databases | never | opens a picker or prompt that only the user can answer; use a typed tool (db_connections) |
+| `containers-open-databases` | Containers: Open in Databases | never | use db_connection op open_container |
 | `containers-open-port` | Containers: Open Published Port | auto |   |
 | `containers-pair-sync` | Containers: Pair Sync with Workspace… | never | copies and deletes files between the user's container and workspace; the user reads the card |
 | `containers-pause` | Containers: Pause or Unpause Selected | confirm (always asks) |   |
@@ -2577,8 +2577,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `copy-file-ref` | Copy: File:Line Reference | confirm (ide) |   |
 | `customize-keybindings` | Preferences: Customize Keybindings | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `dap-install` | DAP: Install Adapter... | never | opens a picker or prompt that only the user can answer; use a typed tool (dap_adapters) |
-| `db-add` | Databases: Add Connection… | never | AI provider, credentials and approvals stay with the user |
-| `db-add-tunnel` | Databases: Add SSH Tunnel… | never | AI provider, credentials and approvals stay with the user |
+| `db-add` | Databases: Add Connection… | never | use db_connection op add (it asks) |
+| `db-add-tunnel` | Databases: Add SSH Tunnel… | never | use db_connection op ssh (it asks) |
 | `db-ai-explain-query` | Databases: AI Explain Query | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `db-ai-fix-error` | Databases: AI Fix Query Error | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `db-ai-generate-sql` | Databases: AI Generate SQL from Schema… | never | starts or changes an AI chat or edit; answer in this chat instead |
@@ -2588,10 +2588,10 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-cancel-session` | Databases: Cancel Session Query… | never | stops another session's work; only the user can choose it |
 | `db-chart` | Databases: Chart Result… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-cloud-discover` | Databases: Discover Cloud Databases… | never | runs the user's cloud CLI with their account; only the user starts it |
-| `db-commit` | Databases: Commit | never | the user's transaction |
+| `db-commit` | Databases: Commit | never | use db_session op commit (it asks) |
 | `db-compare-schemas` | Databases: Compare Schemas… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-configure` | Databases: Configure | confirm (always asks) |   |
-| `db-connect` | Databases: Connect Selected | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `db-connect` | Databases: Connect Selected | never | use db_connection op connect |
 | `db-console-history` | Databases: Show Console Version History | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-console-session` | Databases: Console Session… | never | the user's sessions and transactions |
 | `db-copy-as` | Databases: Copy Result As… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -2603,7 +2603,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-dependencies` | Databases: Show Dependencies | auto |   |
 | `db-describe` | Databases: Describe Table | auto |   |
 | `db-disconnect` | Databases: Disconnect Selected… | confirm (always asks) |   |
-| `db-dump` | Databases: Dump Database… | never | runs the server's dump tool with the user's password; only the user can choose it |
+| `db-dump` | Databases: Dump Database… | never | use db_data op dump (it asks) |
 | `db-edit-source` | Databases: Edit Object Source | auto |   |
 | `db-embedded-sql` | Databases: Go to SQL in Strings… | never | moves the user's cursor; the AI reads files with its own tools |
 | `db-end-session` | Databases: End Session… | never | ends another session and rolls back its transaction; only the user can choose it |
@@ -2612,8 +2612,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-er-text` | Databases: Show ER Diagram (Text) | auto |   |
 | `db-exec-mode` | Databases: Choose Execution Mode… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-explain` | Databases: Explain Statement | never | opens a picker or prompt that only the user can answer; use a typed tool (db_explain) |
-| `db-explain-analyze` | Databases: Explain Analyze Statement… | never | executes the statement; use db_explain |
-| `db-export` | Databases: Export Result… | never | opens a picker or prompt that only the user can answer; use a typed tool (db_query + write_file) |
+| `db-explain-analyze` | Databases: Explain Analyze Statement… | never | use db_explain with analyze (reads only) |
+| `db-export` | Databases: Export Result… | never | use db_data op export |
 | `db-export-tables` | Databases: Export Tables to Folder… | never | opens a picker or prompt that only the user can answer; use a typed tool (db_query + write_file) |
 | `db-filter` | Databases: Filter… | never | the filter is typed by the user; the AI uses db_schema |
 | `db-find-object` | Databases: Find Object… | never | opens a picker or prompt that only the user can answer; use a typed tool (db_schema) |
@@ -2631,14 +2631,14 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-history-connection` | Databases: History of This Connection… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-iam-auth` | Databases: Use Cloud IAM Token Login… | never | makes a connection run a command at each connect; only the user chooses it |
 | `db-import-connections` | Databases: Import Connections… | never | reads the user's password files and writes their connections; only the user can choose it |
-| `db-import-csv` | Databases: Import CSV into Table… | never | importing rows is a write the user confirms (db_query) |
+| `db-import-csv` | Databases: Import CSV into Table… | never | use db_data op import_csv (it asks) |
 | `db-import-new-table` | Databases: Import CSV as New Table… | never | creating a table and importing rows is a write the user confirms (db_query) |
 | `db-inline-clear` | Databases: Clear Inline Results | auto |   |
 | `db-insert-hints` | Databases: Show INSERT Column Hints | auto |   |
 | `db-join-hints` | Databases: Show JOIN Cardinality Hints | auto |   |
-| `db-manage-connection` | Databases: Manage Connection… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `db-manage-connection` | Databases: Manage Connection… | never | use db_connection op edit or delete (they ask) |
 | `db-new-console` | Databases: New Console | never | opens a picker or prompt that only the user can answer; use a typed tool |
-| `db-new-from-template` | Databases: New Connection from Template… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `db-new-from-template` | Databases: New Connection from Template… | never | use db_connection op add (it asks) |
 | `db-object-actions` | Databases: Object Actions… | never | drops, empties or creates database objects; only the user can confirm the card |
 | `db-open-csv` | Databases: Open CSV/TSV as Table… | never | the user picks the file; the AI reads files with its own tools |
 | `db-open-sessions` | Databases: Sessions… | never | the user's sessions and transactions |
@@ -2652,7 +2652,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-refresh` | Databases: Refresh | auto |   |
 | `db-refresh-object` | Databases: Refresh Selected Object | auto |   |
 | `db-rename` | Databases: Rename in SQL… | never | opens a picker or prompt that only the user can answer; use a typed tool |
-| `db-restore` | Databases: Restore Database… | never | replaces tables and rows on the server; only the user can choose it |
+| `db-restore` | Databases: Restore Database… | never | use db_data op restore (it asks) |
 | `db-result-cell-menu` | Databases: Result Cell Menu… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-result-column-types` | Databases: Toggle Result Column Types | auto |   |
 | `db-result-create-table` | Databases: Copy Result Columns as CREATE TABLE | never | writes the user's clipboard |
@@ -2667,8 +2667,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-role-create` | Databases: Create Role… | never | changes who can log in; only the user can choose it |
 | `db-role-grants` | Databases: Show Grants of a Role… | never | SQL runs require the database query tool and its guard |
 | `db-roles` | Databases: Show Users and Roles | never | SQL runs require the database query tool and its guard |
-| `db-rollback` | Databases: Roll Back | never | the user's transaction |
-| `db-rollback-savepoint` | Databases: Roll Back to Savepoint… | never | the user's sessions and transactions |
+| `db-rollback` | Databases: Roll Back | never | use db_session op rollback (it asks) |
+| `db-rollback-savepoint` | Databases: Roll Back to Savepoint… | never | use db_session op rollback_savepoint (it asks) |
 | `db-run` | Databases: Run Statement or Selection | never | SQL runs require the database query tool and its guard |
 | `db-run-ask` | Databases: Run… (Choose Statement or Subquery) | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-run-container` | Databases: Run New Database Container… | never | starts a container after a card only the user answers |
@@ -2680,7 +2680,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-save-query` | Databases: Save Query… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-saved-queries` | Databases: Saved Queries… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-saved-runs` | Databases: Saved SQL Runs… | never | a saved run plays SQL and shell steps from a project file; only the user starts it |
-| `db-savepoint` | Databases: Set Savepoint… | never | the user's sessions and transactions |
+| `db-savepoint` | Databases: Set Savepoint… | never | use db_session op savepoint |
 | `db-schema-cache-info` | Databases: Show Schema Cache Info | auto |   |
 | `db-search-data` | Databases: Search Data in Schema… | never | opens a picker or prompt that only the user can answer; use a typed tool (db_search_data) |
 | `db-select` | Databases: Select 100 Rows in Console | never | SQL runs require the database query tool and its guard |
@@ -2689,12 +2689,12 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-sql-folder-dialect` | Databases: Set Folder SQL Dialect… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-sql-intentions` | Databases: SQL Intentions… | never | opens a picker or prompt that only the user can answer; use a typed tool (read_file + write_file) |
 | `db-sql-outline` | Databases: Go to Statement… | never | moves the user's cursor; the AI reads files with its own tools |
-| `db-ssl` | Databases: SSL Settings… | never | AI provider, credentials and approvals stay with the user |
+| `db-ssl` | Databases: SSL Settings… | never | use db_connection op ssl (it asks) |
 | `db-submit-changes` | Databases: Submit Pending Changes… | never | the user's pending edits; use the database query tool |
 | `db-submit-source` | Databases: Submit Object Source… | never | changes a database object; only the user can confirm the card |
 | `db-switch-connection` | Databases: Switch File Connection… | never | AI provider, credentials and approvals stay with the user |
 | `db-test-connection` | Databases: Test Connection | auto |   |
-| `db-transaction-mode` | Databases: Transaction Mode… | never | AI provider, credentials and approvals stay with the user |
+| `db-transaction-mode` | Databases: Transaction Mode… | never | use db_session op tx_mode (it asks) |
 | `db-virtual-objects` | Databases: Edit Virtual Objects… | never | opens the user's virtual objects file for the user to edit |
 | `debug-add-watch` | Debug: Add Watch Expression... | never | opens a picker or prompt that only the user can answer; use a typed tool (debug_evaluate; debug_state shows the watches) |
 | `debug-clear-bps` | Debug: Remove All Breakpoints | confirm (ide) |   |
