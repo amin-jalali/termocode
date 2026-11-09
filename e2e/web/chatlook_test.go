@@ -8,6 +8,10 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/chromedp/chromedp/kb"
+
+	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
 // The desktop chat reads as a chat (owner, 2026-11-09): an answer of a
@@ -143,5 +147,45 @@ func TestDeskChatRulesOnceAtTop(t *testing.T) {
 	}
 	if n := Eval[int](p, deskChat+`.querySelectorAll(".chat-rules").length`); n != 1 {
 		t.Errorf("%d rules lines, want 1", n)
+	}
+}
+
+// The model picker lists the active profile's provider's models (the
+// owner's GPT profile: Codex's), with a check on the one in use; a
+// profile of several steps shows its steps and their models instead.
+func TestDeskAIPickerListsTheProfilesModels(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	c.Send(t, Snap("chat", 1, chatWith(false, userMsg(0, "hi"))))
+	snap := aiFixture(true, true)
+	snap.Profile, snap.Provider, snap.Model = "review", "Codex", "gpt-6-sol"
+	snap.Models = []string{"gpt-6.1-sol", "gpt-6-astra", "gpt-6-sol"}
+	c.Send(t, Snap("ai", 1, snap))
+	const model = `document.querySelector('.ai-pick[data-pick="model"]')`
+	p.WaitJS(model + `?.textContent.includes("gpt-6-sol")`)
+	p.TapJS(model)
+	p.WaitJS(`document.querySelector(".ctx-menu .ctx-item")`)
+	if got := menuLabels(p); got != "gpt-6.1-sol|gpt-6-astra|gpt-6-sol" {
+		t.Errorf("models %q", got)
+	}
+	if got := Eval[string](p, `document.querySelector(".ctx-menu").getAttribute("aria-label")`); got != "Codex" {
+		t.Errorf("the list is named %q, want its provider Codex", got)
+	}
+	if got := Eval[string](p, `[...document.querySelectorAll(".ctx-menu .ctx-item")].filter((b) => b.querySelector(".ctx-keys")?.textContent === "✓").map((b) => b.querySelector(".ctx-label").textContent).join("|")`); got != "gpt-6-sol" {
+		t.Errorf("checked %q, want gpt-6-sol", got)
+	}
+	p.Key(kb.Escape)
+	p.WaitJS(`!document.querySelector(".ctx-menu")`)
+
+	snap.Model, snap.Provider, snap.Models = "", "", []string{}
+	snap.Steps = []webproto.AIStep{{Title: "Reviewer", Model: "claude-opus-5-5"}, {Title: "Fixer", Model: "claude-haiku-4-5"}}
+	c.Send(t, Snap("ai", 2, snap))
+	p.WaitJS(model + `?.textContent.includes("2 steps")`)
+	p.TapJS(model)
+	p.WaitJS(`document.querySelector(".ctx-menu .ctx-item")`)
+	if got := menuLabels(p); got != "Reviewer · claude-opus-5-5|Fixer · claude-haiku-4-5" {
+		t.Errorf("steps %q", got)
+	}
+	if got := Eval[string](p, `document.querySelector(".ctx-menu").getAttribute("aria-label")`); got != "review" {
+		t.Errorf("the steps list is named %q, want the profile review", got)
 	}
 }
