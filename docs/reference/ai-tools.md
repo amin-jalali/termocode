@@ -145,7 +145,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`http_set_environment`](#http_set_environment) | confirm (ide) | no | Select the HTTP environment (from http_environments) for the user's .http files; "none" clears it. |
 | [`http_websocket`](#http_websocket) | no messages to localhost: auto<br>no messages elsewhere: confirm (http:<host[:port]>)<br>with messages: confirm (http:<host[:port]>/write)<br>private, link-local or metadata hosts: confirm (always asks) | no | Open a WebSocket (ws:// or wss://), send messages, collect the answers for wait_ms (default 2000, max 10000), then close. |
 | [`http_save_request`](#http_save_request) | confirm (review) | no | Add a request to a .http file, or with replace=true change the request with that name. |
-| [`db_connections`](#db_connections) | auto | yes | List the database connections of the Databases view (id, type, target, environment, read-only, state) and the suggested ones that are not added yet. |
+| [`db_connections`](#db_connections) | auto | yes | List the database connections of the Databases view, from the project file and the owner's own file (containers on a remote docker context too): id, type, target, environment, read-only, state, where each one really points (an SSH tunnel's server, a container on an ssh:// context, a host, local), remote yes/no, and the suggested ones that are not added yet. |
 | [`db_schema`](#db_schema) | auto | yes | Read a database schema. |
 | [`db_query`](#db_query) | a read (SELECT, SHOW, EXPLAIN without ANALYZE …): auto, in a read-only session<br>any other statement: confirm (db:<conn>/write) with the SQL shown<br>production connections: confirm (always asks)<br>read-only connections: writes refused | asks | Run ONE SQL statement on a connection. |
 | [`db_explain`](#db_explain) | auto | no | Show the query plan of ONE SQL statement in a read-only session (EXPLAIN: the statement does not run). |
@@ -1800,7 +1800,7 @@ Add a request to a .http file, or with replace=true change the request with that
 
 ### db_connections
 
-List the database connections of the Databases view (id, type, target, environment, read-only, state) and the suggested ones that are not added yet.
+List the database connections of the Databases view, from the project file and the owner's own file (containers on a remote docker context too): id, type, target, environment, read-only, state, where each one really points (an SSH tunnel's server, a container on an ssh:// context, a host, local), remote yes/no, and the suggested ones that are not added yet. Call it first for any question about a database or a remote one.
 
 **Gate:** auto
 

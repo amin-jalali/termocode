@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -148,6 +149,72 @@ func dbAIGate(c dbclient.Conn, kind dbclient.Kind) (bool, string) {
 		return true, ""
 	}
 	return true, "db:" + c.ID + "/write"
+}
+
+// dbAIWhere says where a connection really points, past the host it
+// names, and whether that is another machine (remote): an SSH tunnel's
+// server, a container on an ssh:// docker context, a Kubernetes pod, a
+// host that is not this computer. Never a password.
+func dbAIWhere(c dbclient.Conn) (string, bool) {
+	switch {
+	case c.Container != nil && c.SSH != nil:
+		return "container " + sanitizeDBText(c.Container.Name) + " on context " + sanitizeDBText(c.Container.Context) +
+			" (ssh://" + dbSSHLabel(*c.SSH) + ")", true
+	case c.Container != nil:
+		return "container " + sanitizeDBText(c.Container.Name) + " on this computer", false
+	case c.SSH != nil:
+		w := "via ssh " + dbSSHLabel(*c.SSH)
+		if len(c.SSH.Jump) > 0 {
+			w += " (jump " + sanitizeDBText(strings.Join(c.SSH.Jump, ", ")) + ")"
+		}
+		return w, true
+	case c.Kube != nil:
+		w := "kubectl port-forward to pod " + sanitizeDBText(c.Kube.Pod)
+		if c.Kube.Context != "" {
+			w += " on context " + sanitizeDBText(c.Kube.Context)
+		}
+		return w, true
+	case c.Driver == "sqlite" || c.Driver == "duckdb":
+		return "local", false
+	}
+	host := c.Host
+	if c.URL != "" {
+		if p, err := dbclient.ParseURL(c.URL); err == nil {
+			host = p.Host
+		}
+	}
+	if dbAILocalHost(host) {
+		return "local", false
+	}
+	return "host " + sanitizeDBText(host), true
+}
+
+// dbAILocalHost: the host is this computer ("" is the driver's default,
+// localhost; a path is a Unix socket).
+func dbAILocalHost(host string) bool {
+	h := strings.ToLower(strings.Trim(strings.TrimSpace(host), "[]"))
+	return h == "" || h == "localhost" || h == "::1" || h == "0.0.0.0" || strings.HasPrefix(h, "/") ||
+		strings.HasPrefix(h, "127.") || strings.HasSuffix(h, ".localhost")
+}
+
+// dbAIFileProblems names a connection file that is there but does not
+// parse: its connections are missing from the list (never its text).
+func dbAIFileProblems(root string) []string {
+	var out []string
+	check := func(label, path string) {
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return
+		}
+		if _, err := dbclient.ParseConfig(b, dbclient.SourceUser, path, root); err != nil {
+			out = append(out, "the "+label+" could not be read ("+sanitizeDBText(err.Error())+"): its connections are missing here; the owner fixes the file")
+		}
+	}
+	if dir, err := configDir(); err == nil {
+		check("user connection file", filepath.Join(dir, "db", "connections.json"))
+	}
+	check("project file .termocode/databases.json", filepath.Join(root, ".termocode", "databases.json"))
+	return out
 }
 
 // dbAITarget names where a connection points (never a password).
@@ -372,16 +439,21 @@ func dbAIOpenAs(ctx context.Context, root string, c dbclient.Conn, snap *dbAISna
 	return ro, nil
 }
 
+// dbAITunnelClosed is what the model does about a closed SSH tunnel: the
+// AI rides the view's tunnel and never opens one itself.
+const dbAITunnelClosed = "open the tunnel with db_connection (op connect, conn <id>), then call the db_* tool again; " +
+	"without db_connection, ask the owner to connect it in the Databases view (one key there), then try again"
+
 // dbAIRoute resolves c's file paths and sends it through the user's open
-// SSH tunnel; with a tunnel configured but not open the AI is told to
-// ask the user to connect.
+// SSH tunnel; with a tunnel configured but not open the AI is told how
+// to open it (dbAITunnelClosed).
 func dbAIRoute(root string, c dbclient.Conn, snap *dbAISnapshot) (dbclient.Conn, error) {
 	c = dbResolveConnPaths(c, root, dbSSHHome())
 	if c.SSH == nil {
 		return c, nil
 	}
 	if snap.dial == nil {
-		return c, errors.New("connection " + c.ID + " goes through an SSH tunnel that is not open; ask the user to connect it in the Databases view")
+		return c, errors.New("connection " + c.ID + " goes through an SSH tunnel that is not open: " + strings.ReplaceAll(dbAITunnelClosed, "<id>", c.ID))
 	}
 	c.Dial = snap.dial
 	return c, nil
@@ -548,9 +620,10 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 	}
 
 	conns := ai.Tool{
-		Name:        "db_connections",
-		Description: "List the database connections of the Databases view (id, type, target, environment, read-only, state) and the suggested ones that are not added yet.",
-		Describe:    func(map[string]any) string { return "List database connections" },
+		Name: "db_connections",
+		Description: "List the database connections of the Databases view, from the project file and the owner's own file (containers on a remote docker context too): id, type, target, environment, read-only, state, " +
+			"where each one really points (an SSH tunnel's server, a container on an ssh:// context, a host, local), remote yes/no, and the suggested ones that are not added yet. Call it first for any question about a database or a remote one.",
+		Describe: func(map[string]any) string { return "List database connections" },
 		Run: func(ctx context.Context, _ map[string]any) (string, error) {
 			_, _, list := dbLoadConfigs(root)
 			state := map[string]string{}
@@ -568,6 +641,10 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 							state[c.ID] = "connecting"
 						case n.problem != "":
 							state[c.ID] = "error: " + n.problem
+						case c.SSH != nil:
+							if _, err := s.dbDialFor(c); err != nil {
+								state[c.ID] = "not connected (SSH tunnel closed)"
+							}
 						}
 					}
 					for _, row := range s.rows() {
@@ -579,8 +656,14 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 				})
 			}
 			var b strings.Builder
+			for _, p := range dbAIFileProblems(root) {
+				b.WriteString(p + "\n")
+			}
 			if len(list) == 0 {
 				b.WriteString("no database connections; the user adds one in the Databases view (a in the view, or .termocode/databases.json)\n")
+			} else {
+				b.WriteString("id · target · environment · state · where: what it really reaches · remote · file (project: .termocode/databases.json, user: the owner's own file). " +
+					"remote: yes = not on this computer (a server); 127.0.0.1 through an SSH tunnel is the server's own. The db_* tools reach every one of them\n")
 			}
 			for _, c := range list {
 				parts := []string{c.ID}
@@ -602,7 +685,22 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 					st = "not connected (db_* tools connect as needed)"
 				}
 				parts = append(parts, st)
+				where, remote := dbAIWhere(c)
+				yes := "no"
+				if remote {
+					yes = "yes"
+				}
+				parts = append(parts, "where: "+where, "remote: "+yes)
+				if c.Source != "" {
+					parts = append(parts, "file: "+c.Source)
+				}
 				b.WriteString(strings.Join(parts, " · ") + "\n")
+			}
+			for _, st := range state {
+				if st == "not connected (SSH tunnel closed)" {
+					b.WriteString("SSH tunnel closed: " + dbAITunnelClosed + "\n")
+					break
+				}
 			}
 			if len(suggestions) > 0 {
 				b.WriteString("suggested (not added; the user adds them in the Databases view):\n")

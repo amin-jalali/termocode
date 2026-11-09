@@ -22,7 +22,7 @@ import (
 // connection through an SSH tunnel, one local, one SQLite file (the
 // project file holds no password: termocode refuses one there).
 const remoteProjectConns = `{"connections":[` +
-	`{"id":"BaaytonaDB","driver":"postgres","host":"127.0.0.1","port":5432,"user":"baaytona","database":"baaytona",` +
+	`{"id":"baaytonadb","name":"BaaytonaDB","driver":"postgres","host":"127.0.0.1","port":5432,"user":"baaytona","database":"baaytona",` +
 	`"ssh":{"host":"65.109.212.14","user":"deploy","auth":"agent"}},` +
 	`{"id":"appdb","driver":"postgres","host":"localhost","port":5432,"database":"app"},` +
 	`{"id":"notes","driver":"sqlite","path":"data/notes.db"}]}`
@@ -89,7 +89,7 @@ func TestAIDBConnectionsSayWhereAndRemote(t *testing.T) {
 		t.Fatal(err)
 	}
 	for id, wants := range map[string][]string{
-		"BaaytonaDB":    {"postgres 127.0.0.1:5432/baaytona", "where: via ssh deploy@65.109.212.14", "remote: yes", "file: project"},
+		"baaytonadb":    {"name BaaytonaDB", "postgres 127.0.0.1:5432/baaytona", "where: via ssh deploy@65.109.212.14", "remote: yes", "file: project"},
 		"baaytona-db-1": {"where: container baaytona-db-1 on context Baaytona (ssh://deploy@65.109.212.14)", "remote: yes", "file: user"},
 		"rentcar-db-1":  {"where: container rentcar-db-1 on context Baaytona (ssh://deploy@65.109.212.14:2222)", "remote: yes", "file: user"},
 		"shop":          {"mysql db.example.com:3306/shop", "where: host db.example.com", "remote: yes", "file: user"},
@@ -123,7 +123,7 @@ func TestAIDBConnectionsNameABrokenFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out, "the user connection file could not be read") || !strings.Contains(out, "BaaytonaDB · ") {
+	if !strings.Contains(out, "the user connection file could not be read") || !strings.Contains(out, "baaytonadb · ") {
 		t.Errorf("broken user file:\n%s", out)
 	}
 }
@@ -167,7 +167,7 @@ func TestAIIdentityActsNotAsks(t *testing.T) {
 func TestAIRemoteTablesScripted(t *testing.T) {
 	p := &scriptedAIProvider{replies: []ai.Chunk{
 		toolCall("db_connections", nil),
-		toolCall("db_schema", map[string]any{"conn": "BaaytonaDB"}),
+		toolCall("db_schema", map[string]any{"conn": "baaytonadb"}),
 		{Delta: "BaaytonaDB is on the server."},
 	}}
 	m, dir := aiIDETestModel(t, p)
@@ -191,12 +191,18 @@ func TestAIRemoteTablesScripted(t *testing.T) {
 			t.Errorf("system prompt misses %q", w)
 		}
 	}
-	res := strings.Join(p.toolResults(), "\n---\n")
+	results := p.toolResults()
+	if len(results) != 2 {
+		t.Fatalf("%d tool results, want 2: %q", len(results), results)
+	}
+	if !strings.Contains(results[1], "SSH tunnel") || !strings.Contains(results[1], "db_connection (op connect") {
+		t.Errorf("db_schema on a closed tunnel: %s", results[1])
+	}
+	res := strings.Join(results, "\n---\n")
 	for _, w := range []string{
-		"where: via ssh deploy@65.109.212.14 · remote: yes",
+		"baaytonadb · name BaaytonaDB · ", "SSH tunnel closed", "where: via ssh deploy@65.109.212.14 · remote: yes",
 		"baaytona-db-1 · ", "container baaytona-db-1 on context Baaytona",
 		"rentcar-db-1 · ",
-		"db_connection", "op connect",
 	} {
 		if !strings.Contains(res, w) {
 			t.Errorf("tool results lack %q:\n%s", w, res)
