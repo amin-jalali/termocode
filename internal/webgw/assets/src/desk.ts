@@ -9,4 +9,5 @@ import "./styles/panes.css";
 import "./styles/run.css";
 import "./styles/gitviews.css";
 import "./styles/ai.css";
+import "./styles/chatlook.css";
 import "./styles/device.css";

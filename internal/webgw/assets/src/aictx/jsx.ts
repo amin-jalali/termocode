@@ -1,7 +1,7 @@
 // aictx.js's view of the page's Preact (api.ts): JSX here compiles to
 // h(…), which calls the page's own, so these elements are the page's. H
 // is the host; init sets it before anything runs.
-import type { JSX as PJSX } from "preact";
+import type { ComponentChildren, JSX as PJSX } from "preact";
 import type { AIHost } from "./api";
 
 export let H!: AIHost;
@@ -14,6 +14,12 @@ export function setHost(host: AIHost): void {
 /** h is the page's createElement. */
 export function h(type: unknown, props: unknown, ...children: unknown[]): PJSX.Element {
   return (H.h as unknown as (t: unknown, p: unknown, ...c: unknown[]) => PJSX.Element)(type, props, ...children);
+}
+
+/** Fragment is <>…</>: its children as they are (Preact's own does the
+ * same). */
+export function Fragment(p: { children?: ComponentChildren }): PJSX.Element {
+  return p.children as PJSX.Element;
 }
 
 // The JSX types of h: Preact's own (tsconfig.json: jsxFactory h).

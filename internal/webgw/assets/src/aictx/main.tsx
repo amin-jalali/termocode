@@ -16,6 +16,8 @@ import { askSide } from "./side";
 import { AS } from "./strings";
 
 export { exportText } from "./export";
+/** look is the desktop chat's look (look.tsx, lib/toolblocks.ts). */
+export { look } from "./look";
 export { pickMCP } from "./mcp";
 /** side is AI: Side Question… (side.tsx). */
 export { askSide as side };

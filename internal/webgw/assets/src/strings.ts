@@ -842,9 +842,7 @@ export const S = {
   "ai.current": "in use",
   "ai.trust_laptop": "trust it on the laptop",
   "ai.profile": "AI profile",
-  "ai.model": "AI model",
   "ai.use_profile": "Use profile {name} for the next chat messages?",
-  "ai.use_model": "Use model {name} for the AI chat?",
   // Itermoc: the laptop's AI setup (WEBP-ITERMOC)
   "im.title": "Itermoc",
   "im.loading": "Reading the AI setup…",

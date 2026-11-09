@@ -1,0 +1,131 @@
+// The desktop chat's look (owner, 2026-11-09): an AI answer reads as a
+// chat answer. A one-step profile's reply has no run or step card: under
+// it one small muted line with its model and time ("gpt-6-sol · 54s"),
+// the tokens, step and CLI in its tooltip. Each tool call is one short
+// line ("✓ db_schema baaytona-db-1", ✗ when it failed) that opens on a
+// click to show the call and its result. While the answer is written it
+// says Thinking… with its time and a Stop. The page's Chat.tsx asks here
+// through lib/toolblocks.ts look; the phone never loads this.
+import type { ChatMsg } from "../../../../webproto/proto";
+import type { ChatLook } from "../lib/toolblocks";
+import type { VNode } from "preact";
+import { Fragment, H, h } from "./jsx";
+import { Picker } from "./picker";
+
+/** dur writes a time like the chat's run line: "12s", "2m 05s", "1h 03m". */
+export function dur(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ${String(s % 60).padStart(2, "0")}s`;
+  return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`;
+}
+
+/** FAILED: a tool result that says the call failed. */
+const FAILED = /^(error|failed|denied|refused|blocked)\b|exit (status |code )?[1-9]/i;
+
+/** Tool is one tool call as a short line: its mark (✓, ✗, … while it
+ * runs), the call, and on a click the whole call and its result. A line
+ * that is no call (a note, a chip) shows as it is. */
+export function Tool({ line, done }: { line: string; done: boolean }) {
+  const [open, setOpen] = H.useState(false);
+  const call = line.startsWith("⚙") ? line.slice(1).trim() : "";
+  if (!call) return <div class="tool-row tool-note" dir="auto">{line}</div>;
+  const at = call.indexOf(" → ");
+  const what = at < 0 ? call : call.slice(0, at);
+  const res = at < 0 ? "" : call.slice(at + 3);
+  const bad = FAILED.test(res);
+  const mark = res ? (bad ? "✗" : "✓") : done ? "•" : "…";
+  return (
+    <div class={`tool-row${open ? " is-open" : ""}${bad ? " is-bad" : ""}`} dir="ltr">
+      <button type="button" class="tool-sum" aria-expanded={open ? "true" : "false"} title={what} onClick={() => setOpen(!open)}>
+        {mark} {what}
+      </button>
+      {open && (
+        <div class="tool-more">
+          <div class="tool-call">{what}</div>
+          {res && <div class="tool-res">{res}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Clock counts from a start (Unix ms) every second. */
+export function Clock({ from }: { from: number }) {
+  const [now, setNow] = H.useState(Date.now());
+  H.useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return <span class="clock">{dur(now - from)}</span>;
+}
+
+const stop = () => void H.link.request("chat.stop").catch(() => undefined); // stopping is answered ok
+
+/** Thinking is the answer being written: its time and a Stop. */
+function Thinking({ from }: { from?: number }) {
+  const [start] = H.useState(() => from || Date.now());
+  return (
+    <div class="msg-think" dir="ltr">
+      <span class="think-dot" aria-hidden="true" />
+      {H.t("look.thinking")} <Clock from={start} />
+      <button type="button" class="think-stop" onClick={stop}>
+        {H.t("stop")}
+      </button>
+    </div>
+  );
+}
+
+const num = (n = 0) => n.toLocaleString("en-US");
+
+/** Meta is the line under an answer: model and time, the rest in its
+ * tooltip. */
+function Meta({ m }: { m: ChatMsg }) {
+  const x = m.meta;
+  const line = [m.model, x?.elapsed_ms ? dur(x.elapsed_ms) : ""].filter(Boolean).join(" · ");
+  if (!line) return null;
+  const tip = [x?.in || x?.out ? H.t("look.tokens", { in: num(x.in), out: num(x.out) }) : "", x?.step, x?.cli].filter(Boolean).join(" · ");
+  return (
+    <div class="msg-meta" dir="ltr" title={tip || undefined}>
+      {line}
+    </div>
+  );
+}
+
+/** answer draws an AI answer (a run of several steps is the page's). */
+function answer(m: ChatMsg, body: VNode): VNode | null {
+  if (m.run) return null;
+  const tools = m.steps?.length === 1 ? m.steps[0].tools ?? [] : [];
+  return (
+    <>
+      <div class="msg-label">
+        <span class="star" aria-hidden="true">
+          ✦
+        </span>
+        <span>{H.t("chat.ai")}</span>
+      </div>
+      {tools.length > 0 && (
+        <div class="tool-rows">
+          {tools.map((l, i) => (
+            <Tool key={i} line={l} done={!m.streaming} />
+          ))}
+        </div>
+      )}
+      {body}
+      {m.streaming ? <Thinking from={m.meta?.started_ms} /> : <Meta m={m} />}
+    </>
+  );
+}
+
+export const look: ChatLook = {
+  m: (m, body) =>
+    body ? (
+      answer(m, body)
+    ) : (
+      <div class="msg msg-tool" data-i={m.i}>
+        <Tool line={m.text ?? ""} done />
+      </div>
+    ),
+  pick: () => <Picker />,
+};

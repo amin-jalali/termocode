@@ -14,4 +14,8 @@ export const AS = {
   "ai.k_host": "host",
   "ai.k_project": "compose project",
   "ai.k_container": "container",
+  "ai.model": "AI model",
+  "ai.use_model": "Use model {name} for the AI chat?",
+  "look.thinking": "Thinking…",
+  "look.tokens": "{in} in · {out} out",
 } as const;

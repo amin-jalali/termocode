@@ -1541,6 +1541,8 @@ export const FA: Record<TranslatedKey, string> = {
   "ai.k_host": "میزبان",
   "ai.k_project": "پروژه‌ی compose",
   "ai.k_container": "کانتینر",
+  "look.thinking": "در حال فکر…",
+  "look.tokens": "{in} ورودی · {out} خروجی",
   "ai.attach_list": "با پیام فرستاده می‌شود",
   "dictate.start": "به‌جای نوشتن، بگویید",
   "dictate.stop": "توقف شنیدن",

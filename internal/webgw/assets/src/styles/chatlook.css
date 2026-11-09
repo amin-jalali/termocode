@@ -1,0 +1,19 @@
+/* The desktop chat's look (aictx/look.tsx): an answer reads as a chat
+   answer. The line under it, its tool calls as short lines, Thinking…
+   while it writes. */
+.chatcol .msg-meta { margin-top: 4px; color: var(--wb-desc); font-size: 11px; font-variant-numeric: tabular-nums; cursor: default; width: fit-content; }
+.chatcol .tool-rows { display: flex; flex-direction: column; gap: 1px; margin: 2px 0 6px; }
+.chatcol .tool-row { min-width: 0; font-family: var(--font-mono); font-size: 12px; line-height: 18px; color: var(--wb-desc); }
+.chatcol .tool-sum { display: block; max-width: 100%; overflow: hidden; padding: 0 4px; border: 0; border-radius: 3px; background: none; color: inherit; font: inherit; text-align: start; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.chatcol .tool-sum:hover { background: var(--wb-toolbar-hover); color: var(--wb-side-fg); }
+.chatcol .tool-row.is-bad .tool-sum { color: var(--wb-err); }
+.chatcol .tool-more { margin: 2px 0 4px 16px; padding: 4px 8px; border-inline-start: 2px solid var(--wb-panel-border); white-space: pre-wrap; overflow-wrap: anywhere; }
+.chatcol .tool-res { margin-top: 2px; color: var(--wb-side-fg); }
+.chatcol .tool-note { padding: 0 4px; font-family: var(--font-sans); }
+.chatcol .msg-tool { display: block; }
+.chatcol .msg-think { display: flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--wb-desc); font-size: 12px; font-variant-numeric: tabular-nums; }
+.chatcol .think-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--wb-focus, currentColor); animation: think-pulse 1.2s ease-in-out infinite; }
+.chatcol .think-stop { height: 20px; padding: 0 8px; border: 1px solid var(--wb-panel-border); border-radius: 4px; background: none; color: var(--wb-side-fg); font: inherit; cursor: pointer; }
+.chatcol .think-stop:hover { background: var(--wb-toolbar-hover); }
+@keyframes think-pulse { 50% { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) { .chatcol .think-dot { animation: none; } }

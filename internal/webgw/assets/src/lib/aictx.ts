@@ -5,7 +5,8 @@
 // loads when the user asks, starts a drag, or once the chat input takes
 // the focus (there it watches for @ and for a send).
 import { h, render } from "preact";
-import { effect } from "@preact/signals";
+import { effect, signal } from "@preact/signals";
+import { useEffect, useState } from "preact/hooks";
 import type { AIHost, AIItem, GridAt } from "../aictx/api";
 import type * as AICtx from "../aictx/main";
 import { link, store } from "../session";
@@ -13,6 +14,11 @@ import { hostCtrs, hosts, loadHosts } from "../state/hosts";
 import { addStrings, t } from "../strings";
 import { menu, openMenu } from "../ui/ContextMenu";
 import { Sheet } from "../ui/Sheet";
+import { AskLaptop } from "../ui/AskLaptop";
+import { Cod } from "../ui/icons";
+import { Md } from "../ui/Markdown";
+import { aiSnap } from "./ai";
+import { look } from "./toolblocks";
 import { pinned } from "../views/Chat";
 import { ctrList } from "../views/desk/DeskContainers";
 import { conns, loadConns, tables } from "../views/desk/dbstate";
@@ -48,6 +54,13 @@ const host = (): AIHost => ({
   ctrs: ctrList,
   hosts,
   hostCtrs,
+  useState,
+  useEffect,
+  signal,
+  Md,
+  Cod,
+  AskLaptop,
+  aiSnap,
 });
 
 let loading: Promise<Mod> | null = null;
@@ -99,4 +112,7 @@ export function aiGrid(at: Omit<GridAt, "el" | "x" | "y">): (e: MouseEvent) => v
 
 // The chat input's @ and its sends are watched by aictx.js: it loads once
 // the input takes the focus.
+// The chat's look is in aictx.js too: it loads with the workbench.
+withAI((m) => (look.value = m.look));
+
 addEventListener("focusin", (e) => (e.target as Element).matches?.(".composer-box") && withAI(() => 0));

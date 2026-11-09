@@ -13,7 +13,12 @@ import type { Attach, ChatSnap } from "../../../../webproto/proto";
 import type { Link } from "../net/link";
 import type { DBRowsView } from "../state/more";
 import type { Store } from "../state/store";
-import type { effect as PEffect } from "@preact/signals";
+import type { effect as PEffect, signal as PSignal } from "@preact/signals";
+import type { useEffect as PUseEffect, useState as PUseState } from "preact/hooks";
+import type { aiSnap as AISnapOf } from "../lib/ai";
+import type { AskLaptop as PAskLaptop } from "../ui/AskLaptop";
+import type { Cod as PCod } from "../ui/icons";
+import type { Md as PMd } from "../ui/Markdown";
 import type { quick as Quick } from "../lib/workbench";
 import type { loadHosts as LoadHosts } from "../state/hosts";
 import type { ctrList as CtrList } from "../views/desk/DeskContainers";
@@ -94,4 +99,13 @@ export interface AIHost {
   tables: typeof Tables;
   hosts: ReadonlySignal<HostLoad<HostView[]> | null>;
   hostCtrs: ReadonlySignal<ReadonlyMap<string, HostLoad<HostCtr[]>>>;
+  // The chat's look (look.tsx) and its picker (picker.tsx) draw with
+  // the page's hooks, signals and parts.
+  useState: typeof PUseState;
+  useEffect: typeof PUseEffect;
+  signal: typeof PSignal;
+  Md: typeof PMd;
+  Cod: typeof PCod;
+  AskLaptop: typeof PAskLaptop;
+  aiSnap: typeof AISnapOf;
 }

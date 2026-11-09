@@ -8,7 +8,7 @@
 // input, a microphone button dictates into the draft (CMP-48, dictate.ts);
 // nothing is sent until Send.
 import { aiSnap } from "../lib/ai";
-import { AIPicker } from "./AIPicker";
+import { look } from "../lib/toolblocks";
 import { h } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { getDraft, pendingDraft, setDraft, takePending } from "../lib/drafts";
@@ -177,9 +177,7 @@ export function Composer({
       {desk && (
         <div class="composer-tools">
           {aiSnap()?.configured ? (
-            <span class="chat-picks">
-              <AIPicker />
-            </span>
+            <span class="chat-picks">{look.value?.pick()}</span>
           ) : (
             <span class="chat-chip" title={t("chat.agent")}>
               <Cod name="sparkle" /> {[profile || t("chat.default_profile"), model].filter(Boolean).join(" · ")}

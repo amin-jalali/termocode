@@ -17,7 +17,7 @@ import { BlobImg } from "../ui/BlobImg";
 import { Md } from "../ui/Markdown";
 import { Cod, face } from "../ui/icons";
 import { layout } from "../lib/layout";
-import { hasBlocks, toolBlocks } from "../lib/toolblocks";
+import { hasBlocks, look, toolBlocks } from "../lib/toolblocks";
 import { Progress, SkeletonBubbles } from "../ui/Skeleton";
 import { errText } from "../ui/CardSheet";
 import { ChatList } from "./ChatList";
@@ -147,7 +147,7 @@ export function Message({ m: raw, chat = "", canFetch = false }: { m: ChatMsg; c
         </div>
       );
     case "tool":
-      return (
+      return look.value?.m(m, null) ?? (
         <div class="msg msg-tool" data-i={m.i} dir="ltr">
           <span class="tool-mark" aria-hidden="true">⚙</span>
           <span class="tool-text">{m.text ?? ""}</span>
@@ -160,22 +160,30 @@ export function Message({ m: raw, chat = "", canFetch = false }: { m: ChatMsg; c
           {t("chat.error", { text: m.text ?? "" })}
         </div>
       );
-    default:
+    default: {
+      const body = (
+        <div class="msg-body">
+          {m.md && !m.streaming ? <Md doc={m.md} /> : <MsgText text={m.text} streaming={m.streaming} />}
+          {rest}
+        </div>
+      );
       return (
         <div class="msg msg-ai" data-i={m.i}>
-          <div class="msg-label">
-            <span class="star" aria-hidden="true">✦</span>
-            <span>{t("chat.ai")}</span>
-            {m.model && <span class="msg-model">{m.model}</span>}
-          </div>
-          <div class="msg-body">
-            {m.md && !m.streaming ? <Md doc={m.md} /> : <MsgText text={m.text} streaming={m.streaming} />}
-            {rest}
-          </div>
-          <Run m={m} />
+          {look.value?.m(m, body) ?? (
+            <>
+              <div class="msg-label">
+                <span class="star" aria-hidden="true">✦</span>
+                <span>{t("chat.ai")}</span>
+                {m.model && <span class="msg-model">{m.model}</span>}
+              </div>
+              {body}
+              <Run m={m} />
+            </>
+          )}
           <Extras m={m} canFetch={canFetch} />
         </div>
       );
+    }
   }
 }
 
