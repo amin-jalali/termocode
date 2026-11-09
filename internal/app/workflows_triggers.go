@@ -516,6 +516,19 @@ func (m *Model) wfxTrigStart(ev trigger.Event, byHand bool) tea.Cmd {
 // wfxTrigList is the palette's list of recent trigger events: a card
 // with the waiting ones first.
 func (m *Model) wfxTrigList() tea.Cmd {
+	buttons := []confirm.Button{{ID: "close", Title: "Close"}}
+	if n := len(m.wfxS().trigQueue); n > 0 {
+		buttons = append(buttons, confirm.Button{ID: "next", Title: fmt.Sprintf("Answer %d waiting", n)})
+	}
+	m.confirm = confirm.New("Workflow triggers", m.wfxTrigText(), buttons)
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen, m.confirmKind = true, confirmKindWorkflowTriggerList
+	return nil
+}
+
+// wfxTrigText is the text of the trigger list (its card's and the AI's
+// workflow_control op triggers).
+func (m *Model) wfxTrigText() string {
 	st := m.wfxS()
 	var b strings.Builder
 	jobs, hooks := m.wfxTrigWanted()
@@ -538,14 +551,7 @@ func (m *Model) wfxTrigList() tea.Cmd {
 		r := st.trigRecent[i]
 		fmt.Fprintf(&b, "\n%s  %s · %s · %s", r.at.Format("15:04"), r.ev.Workflow, trigger.Clean(r.ev.Summary()), r.outcome)
 	}
-	buttons := []confirm.Button{{ID: "close", Title: "Close"}}
-	if len(st.trigQueue) > 0 {
-		buttons = append(buttons, confirm.Button{ID: "next", Title: fmt.Sprintf("Answer %d waiting", len(st.trigQueue))})
-	}
-	m.confirm = confirm.New("Workflow triggers", b.String(), buttons)
-	m.confirm.SetSize(m.w, m.h)
-	m.confirmOpen, m.confirmKind = true, confirmKindWorkflowTriggerList
-	return nil
+	return b.String()
 }
 
 // wfxTrigWords is the TRIGGERS rows of a workflow page.

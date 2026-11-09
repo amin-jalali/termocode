@@ -155,6 +155,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`workflow_draft`](#workflow_draft) | confirm (always asks): Cancel (first) · Create (writes the file atomically and trusts that version) | no | Save a workflow file .termocode/workflows/<name>.jsonc (new, or a change of one: send the whole file). |
 | [`workflow_dry_run`](#workflow_dry_run) | confirm (always asks): Deny (first) · Dry run (reads sources, runs plan steps, never writes)<br>a file the user has not trusted is refused | no | Dry run a workflow: its sources are read for real (read-only) and its plan steps run (they cost AI money), run steps are only shown and writes are listed with their full text, never sent. |
 | [`workflow_run`](#workflow_run) | confirm (always asks): Deny (first) · Run<br>then every write asks again on its own gate card (Deny first) unless allowed for this file version | no | Run a workflow now, for real. |
+| [`workflow_control`](#workflow_control) | continue: auto<br>off: confirm (always asks)<br>on: confirm (always asks)<br>pause: auto<br>retry: confirm (always asks)<br>stop: confirm (always asks)<br>triggers: auto<br>undo_write: confirm (always asks) | no | Control workflows as the Workflows view does. |
 | [`http_list_requests`](#http_list_requests) | auto | yes | List the HTTP requests in the user's .http / .rest files (request templates with {{variables}}, not resolved), the file variable names and the selected environment. |
 | [`http_environments`](#http_environments) | auto | yes | Show the HTTP environments (http-client.env.json and the private file), the selected one and their variable names. |
 | [`http_send`](#http_send) | GET / HEAD / OPTIONS to localhost: auto<br>other safe methods: confirm (http:<host[:port]>)<br>other methods: confirm (http:<host[:port]>/write)<br>private, link-local or metadata hosts, *.internal, *.local and dot-less names: confirm (always asks) | some ask | Send an HTTP request and read the answer (status, headers, body). |
@@ -2105,6 +2106,22 @@ Run a workflow now, for real. The user confirms on a card first; then every writ
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `name` | string | yes | workflow name from workflow_list |
+
+### workflow_control
+
+Control workflows as the Workflows view does. op pause (before its next step), continue and triggers (recent trigger events) run at once; stop (a live run), on / off (its schedule), retry (an ended run from its failed part; every new write still asks on its own card) and undo_write (a write of an ended run) ask the user every time. Give name for stop, pause, continue, on, off; run (an id from workflow_runs) for retry and undo_write.
+
+**Gate:** continue: auto · off: confirm (always asks) · on: confirm (always asks) · pause: auto · retry: confirm (always asks) · stop: confirm (always asks) · triggers: auto · undo_write: confirm (always asks)
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `op` | string | yes | what to do. One of: `continue`, `off`, `on`, `pause`, `retry`, `stop`, `triggers`, `undo_write` |
+| `item` | string |   | undo_write: the item of the write, with step |
+| `name` | string |   | workflow name from workflow_list (stop, pause, continue, on, off) |
+| `run` | string |   | run id from workflow_runs (retry, undo_write) |
+| `step` | string |   | undo_write: the step id of the write (default: the first write not undone) |
 
 ### http_list_requests
 

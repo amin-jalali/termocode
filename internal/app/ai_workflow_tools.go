@@ -29,7 +29,7 @@ import (
 
 // aiWorkflowToolNames are the tools of the workflow files, in list order.
 var aiWorkflowToolNames = []string{"workflow_list", "workflow_read", "workflow_runs", "workflow_validate",
-	"workflow_draft", "workflow_dry_run", "workflow_run"}
+	"workflow_draft", "workflow_dry_run", "workflow_run", "workflow_control"}
 
 // aiWorkflowReadMax caps the file text workflow_read gives the model.
 const aiWorkflowReadMax = 64 << 10
@@ -249,7 +249,8 @@ func aiWfxValidate(name string, data []byte) string {
 
 // aiWorkflowTools are the workflow tools of workspace ws.
 func (m *Model) aiWorkflowTools(ws string, call aiIDECaller) []ai.Tool {
-	return append(append(aiWorkflowReadTools(ws), m.aiWorkflowDraftTool(ws, call)), m.aiWorkflowRunTools(ws, call)...)
+	tools := append(append(aiWorkflowReadTools(ws), m.aiWorkflowDraftTool(ws, call)), m.aiWorkflowRunTools(ws, call)...)
+	return append(tools, aiWorkflowControlTool(ws, call)) // AI parity: stop, pause, on / off, retry, undo a write, triggers
 }
 
 // aiWorkflowReadTools are the read-only workflow tools of workspace ws.
