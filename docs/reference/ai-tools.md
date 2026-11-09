@@ -191,7 +191,8 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`tracker_pins`](#tracker_pins) | list: auto<br>run: auto<br>unpin: confirm (always asks) | no | The blocks pinned to the phone's Home (tracker_pin pins one). |
 | [`tracker_tasks`](#tracker_tasks) | auto | no | The shared task list of this repository (Tracker: Show Tasks…; Markdown files in .termocode/tasks that agents and people edit). |
 | [`view_catalog`](#view_catalog) | auto | no | List the views termocode can show the user (on the phone and in the chat): id, params, typed fields (which can be sorted or filtered) and layouts. |
-| [`view_save`](#view_save) | confirm (always asks) | no | Save a view spec on this laptop under a name, for every paired phone (and pin it to the phones' Home when pin is true). |
+| [`view_save`](#view_save) | auto | no | Save a view spec on this laptop under a name, for every paired phone (and pin it to the phones' Home when pin is true). |
+| [`view_manage`](#view_manage) | delete: confirm (always asks)<br>list: auto<br>pin: auto<br>rename: auto<br>unpin: auto | no | The views saved for the phones (view_save saves one). |
 | [`repo_fetch`](#repo_fetch) | confirm (always asks) before the first clone of a repository and ref: Deny (first) · Allow<br>a copy fetched before (kept a day): auto | no | Fetch an outside public git repository (not the workspace) to read it: a shallow clone into a temp folder, read only. |
 | [`repo_list`](#repo_list) | auto | no | List a folder of an outside repository fetched with repo_fetch. |
 | [`repo_read`](#repo_read) | auto | no | Read a file of an outside repository fetched with repo_fetch. |
@@ -2634,9 +2635,9 @@ List the views termocode can show the user (on the phone and in the chat): id, p
 
 ### view_save
 
-Save a view spec on this laptop under a name, for every paired phone (and pin it to the phones' Home when pin is true). The user is always asked first. Saves the spec only, never data.
+Save a view spec on this laptop under a name, for every paired phone (and pin it to the phones' Home when pin is true). Saves the spec only, never data. Like the phone's Save as view, it does not ask; view_manage renames, pins or deletes one.
 
-**Gate:** confirm (always asks)
+**Gate:** auto
 
 **MCP server:** no
 
@@ -2645,6 +2646,20 @@ Save a view spec on this laptop under a name, for every paired phone (and pin it
 | `name` | string | yes | a short name, up to 60 characters |
 | `spec` | object | yes | a view spec: {view, args, fields, filter: [{field, op, value}], sort: [{field, desc}], group, limit, layout, density, title}; ids come from view_catalog |
 | `pin` | boolean |   | also pin it to the Home of the paired phones |
+
+### view_manage
+
+The views saved for the phones (view_save saves one). op list, rename (id, name), pin (id: to the phones' Home) and unpin (id) run at once; delete (id) asks the user every time.
+
+**Gate:** delete: confirm (always asks) · list: auto · pin: auto · rename: auto · unpin: auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `op` | string | yes | what to do. One of: `delete`, `list`, `pin`, `rename`, `unpin` |
+| `id` | string |   | the view id from op list |
+| `name` | string |   | rename: the new name |
 
 ### repo_fetch
 

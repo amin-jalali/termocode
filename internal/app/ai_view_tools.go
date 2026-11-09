@@ -55,12 +55,12 @@ func aiViewTools(call aiIDECaller) []ai.Tool {
 		{
 			Name: "view_save",
 			Description: "Save a view spec on this laptop under a name, for every paired phone (and pin it to the phones' Home " +
-				"when pin is true). The user is always asked first. Saves the spec only, never data.",
+				"when pin is true). Saves the spec only, never data. Like the phone's Save as view, it does not ask; view_manage renames, pins or deletes one.",
 			Params: map[string]any{"spec": spec, "name": str("a short name, up to 60 characters"),
 				"pin": map[string]any{"type": "boolean", "description": "also pin it to the Home of the paired phones"}},
 			Required: []string{"spec", "name"},
-			Mutating: true,
-			Class:    "", // always asks, with no "Always allow"
+			// AI parity: the phone's Save as view has no card (a name form),
+			// so this runs at once too.
 			Validate: func(a map[string]any) error { _, _, _, err := aiViewSaveArgs(a); return err },
 			Describe: func(a map[string]any) string {
 				name := strings.TrimSpace(ai.ArgString(a, "name"))
@@ -83,6 +83,7 @@ func aiViewTools(call aiIDECaller) []ai.Tool {
 				})
 			},
 		},
+		aiViewManageTool(call), // AI parity: list, rename, pin, unpin, delete (ai_view_manage_tool.go)
 	}
 }
 
