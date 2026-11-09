@@ -83,6 +83,18 @@ type ChatMsg struct {
 	Steps     []ChatStep   `json:"steps,omitempty"`
 	Blocks    []Block      `json:"blocks,omitempty"` // typed visual blocks after the text, ≤ MaxMsgBlocks
 	Meta      *ChatMeta    `json:"meta,omitempty"`   // a one-step profile's reply: the line under it
+	Wait      *ChatWait    `json:"wait,omitempty"`   // the newest message of a running turn: what its tool waits for
+}
+
+// ChatWait is what a tool of the running turn waits for from the user
+// (an AI db_* tool's question: the trust of an SSH host, an SSH password
+// or key passphrase, the database's password). The page shows "Waiting
+// for you: <Text>" on the message's tool line, with a button that opens
+// the question (the ask ev with the same Conn and Need).
+type ChatWait struct {
+	Text string `json:"text"`           // "Database password for BaaytonaDB"
+	Conn string `json:"conn,omitempty"` // the connection the question is for
+	Need string `json:"need,omitempty"` // its DBNeed.Need
 }
 
 // ChatMeta is what a one-step profile's reply took: the line under the

@@ -7971,6 +7971,9 @@
         },
         "truncated": {
           "type": "boolean"
+        },
+        "wait": {
+          "$ref": "#/defs/ChatWait"
         }
       },
       "required": [
@@ -8186,6 +8189,24 @@
       },
       "required": [
         "id"
+      ],
+      "additionalProperties": true
+    },
+    "ChatWait": {
+      "type": "object",
+      "properties": {
+        "conn": {
+          "type": "string"
+        },
+        "need": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
       ],
       "additionalProperties": true
     },

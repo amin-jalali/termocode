@@ -1274,6 +1274,7 @@ export interface ChatMsg {
   steps?: ChatStep[];
   blocks?: Block[];
   meta?: ChatMeta;
+  wait?: ChatWait;
 }
 
 export interface MdNode {
@@ -1447,6 +1448,12 @@ export interface ChatMeta {
   out?: number;
   step?: string;
   cli?: string;
+}
+
+export interface ChatWait {
+  text: string;
+  conn?: string;
+  need?: string;
 }
 
 export interface ChatDelta {
