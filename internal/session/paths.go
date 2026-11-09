@@ -102,6 +102,9 @@ type Paths struct {
 	WebStatus string
 	// WebLock is held by the running web gateway (one per workspace).
 	WebLock string
+	// WebResume is what a gateway hands the next one across a reload
+	// into a new build (0600: its port and token digests, no secret).
+	WebResume string
 	// WebOpen is the short-lived 0600 page that sends the browser to the
 	// one-time link, so the link is never in a program's argv.
 	WebOpen string
@@ -134,6 +137,7 @@ func PathsFor(workspace string) (Paths, error) {
 		WebHTTPSocket: base + ".webhttp.sock",
 		WebStatus:     base + ".web.json",
 		WebLock:       base + ".web.lock",
+		WebResume:     base + ".web-resume.json",
 		WebOpen:       base + ".web-open.html",
 	}, nil
 }

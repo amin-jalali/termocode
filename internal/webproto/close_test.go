@@ -4,7 +4,7 @@ import "testing"
 
 func TestCloseCodesKnownAndShort(t *testing.T) {
 	want := map[CloseCode]bool{
-		CloseNormal: true, CloseUnsupportedData: true, ClosePolicy: true, CloseTooBig: true,
+		CloseNormal: true, CloseUnsupportedData: true, ClosePolicy: true, CloseTooBig: true, CloseRestarting: true,
 		CloseAuthFailed: true, CloseTokenExpired: true, CloseDeviceRevoked: true,
 		CloseTakenOver: true, CloseTooManyViewers: true, CloseIdle: true, CloseMaxLifetime: true,
 		CloseSlowClient: true, CloseStopped: true, CloseSessionEnded: true,

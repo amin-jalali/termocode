@@ -29,6 +29,10 @@
       "reason": "message too big"
     },
     {
+      "code": 1012,
+      "reason": "restarting"
+    },
+    {
       "code": 4001,
       "reason": "auth failed"
     },
@@ -16169,6 +16173,7 @@
             1003,
             1008,
             1009,
+            1012,
             4001,
             4002,
             4003,

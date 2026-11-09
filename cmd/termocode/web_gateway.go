@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -70,6 +71,7 @@ func webGatewayConfig(args []string, errw io.Writer) (webgw.RunConfig, bool) {
 	totp := fs.Bool("totp", false, "a paired device also needs a one-time code")
 	appKey := fs.Bool("app-key", false, "the Android app may sign in with its keystore key")
 	phone := fs.Bool("phone-watch", false, "a paired phone that watches keeps the gateway up (web_phone)")
+	resume := fs.Bool("resume", false, "take over the browser sessions the last gateway handed over (a reload into a new build)")
 	if err := fs.Parse(args); err != nil || *dir == "" || *audit == "" || fs.NArg() != 0 ||
 		(*sshPort != 0 && (*port != 0 || *sshPort < 1024 || *sshPort > 65535 || *tailnet)) ||
 		(*lan && (*devices == "" || *tailnet || *sshPort != 0)) {
@@ -110,5 +112,15 @@ func webGatewayConfig(args []string, errw io.Writer) (webgw.RunConfig, bool) {
 	cfg.RequireTOTP = *totp
 	cfg.AppKeyLogin = *appKey
 	cfg.PhoneWatch = *phone
+	// A reload into a new build: the folder's own hand-over file, never a
+	// path from argv. Written on a restart bye, read (and removed) once.
+	cfg.ResumePath = paths.WebResume
+	if *resume {
+		if r, err := webgw.ReadResume(paths.WebResume, time.Now()); err == nil {
+			cfg.Resume = &r
+		} else if !errors.Is(err, os.ErrNotExist) {
+			fmt.Fprintf(errw, "termocode web gateway: %v; the browsers need a new link\n", err)
+		}
+	}
 	return cfg, true
 }

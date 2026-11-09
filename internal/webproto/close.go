@@ -10,6 +10,7 @@ const (
 	CloseUnsupportedData    CloseCode = 1003 // a binary frame where text was expected
 	ClosePolicy             CloseCode = 1008 // a bad message or a message out of order
 	CloseTooBig             CloseCode = 1009 // a frame over the read limit
+	CloseRestarting         CloseCode = 1012 // termocode reloads into a new build: reconnect, the session is kept
 	CloseAuthFailed         CloseCode = 4001 // missing or wrong token
 	CloseTokenExpired       CloseCode = 4002 // the token is too old
 	CloseDeviceRevoked      CloseCode = 4003 // the device was removed (v2)
@@ -30,6 +31,7 @@ var closeReasons = map[CloseCode]string{
 	CloseUnsupportedData:    "text frames only",
 	ClosePolicy:             "protocol error",
 	CloseTooBig:             "message too big",
+	CloseRestarting:         "restarting",
 	CloseAuthFailed:         "auth failed",
 	CloseTokenExpired:       "token expired",
 	CloseDeviceRevoked:      "device removed",
@@ -48,7 +50,7 @@ var closeReasons = map[CloseCode]string{
 // CloseCodes lists every close code, in numeric order.
 func CloseCodes() []CloseCode {
 	return []CloseCode{
-		CloseNormal, CloseUnsupportedData, ClosePolicy, CloseTooBig,
+		CloseNormal, CloseUnsupportedData, ClosePolicy, CloseTooBig, CloseRestarting,
 		CloseAuthFailed, CloseTokenExpired, CloseDeviceRevoked, CloseTakenOver,
 		CloseTooManyViewers, CloseIdle, CloseMaxLifetime, CloseSlowClient,
 		CloseStopped, CloseSessionEnded, CloseUnsupportedVersion, CloseHubGone, CloseRoleChanged,

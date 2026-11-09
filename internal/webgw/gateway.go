@@ -90,6 +90,12 @@ type RunConfig struct {
 	// stored self-signed certificate; the pairing link pins its
 	// fingerprint. No passkeys (an IP address has no name for them).
 	LAN *LANConfig
+	// ResumePath gets the hand-over file when the hub's bye is 1012
+	// (termocode reloads into a new build: resume.go); "" writes none.
+	ResumePath string
+	// Resume, when set, is the last gateway's hand-over: its browser
+	// sessions go on here, and Max counts from its start.
+	Resume *Resume
 }
 
 // Status is what the gateway writes to its status file. It holds no
@@ -181,6 +187,9 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	}
 
 	tokens := NewTokens(cfg.Idle, cfg.Max)
+	if cfg.Resume != nil {
+		tokens.Import(cfg.Resume.Tokens, now())
+	}
 	auth := NewAuth(tokens, now, audit)
 	linked := make(chan struct{}, 1)
 	var ctlRef atomic.Pointer[Ctl] // set once the control connection is up
@@ -327,6 +336,10 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 		return 0, ctx.Err()
 	}
 	started := time.Now()
+	if cfg.Resume != nil && !cfg.Resume.Started.IsZero() && cfg.Resume.Started.Before(started) {
+		started = cfg.Resume.Started // a reload does not make the panel's Max longer
+		where += ", after a reload"
+	}
 	st := Status{PID: os.Getpid(), Port: port, URL: url, Sock: cfg.UnixPath, Started: started,
 		IdleS: int(cfg.Idle / time.Second), MaxS: int(cfg.Max / time.Second), PhoneWatch: cfg.PhoneWatch}
 	if err := writeStatus(cfg.StatusPath, st); err != nil {
@@ -352,6 +365,15 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	code, kind, why := waitStop(ctx, ctl, &last, cfg.Idle, started.Add(cfg.Max), tailCh)
 	if code == webproto.CloseStopped {
 		tokens.RevokeAll()
+	}
+	if code == webproto.CloseRestarting && cfg.ResumePath != "" {
+		res := Resume{At: now(), Port: port, Started: started, Tokens: tokens.Export(now())}
+		if cfg.UnixPath != "" {
+			res.SSHPort = cfg.PortHint
+		}
+		if err := WriteResume(cfg.ResumePath, res); err != nil {
+			why = "restart: " + err.Error() // the pages need a new link then
+		}
 	}
 	_ = audit.Log(Event{Kind: kind, Code: int(code)})
 	ws.CloseAll(code, time.Second)
@@ -511,8 +533,11 @@ func waitStop(ctx context.Context, ctl *Ctl, last *atomic.Int64, idle time.Durat
 	for {
 		select {
 		case <-ctl.Done():
-			if ctl.Code() == webproto.CloseStopped {
+			switch ctl.Code() {
+			case webproto.CloseStopped:
 				return webproto.CloseStopped, EvKillSwitch, "kill_switch"
+			case webproto.CloseRestarting: // a reload into a new build (resume.go)
+				return webproto.CloseRestarting, EvStop, "restart"
 			}
 			return webproto.CloseHubGone, EvStop, "hub_gone"
 		case <-ctx.Done():

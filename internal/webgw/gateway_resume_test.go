@@ -3,7 +3,6 @@
 package webgw
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -41,28 +40,6 @@ func (r *gwRig) authToken() string {
 	return got.Token
 }
 
-// dialWS opens the WebSocket with tok and says hello; the hub peer is
-// returned once the open line and the hello reached it.
-func (r *gwRig) dialWS(tok string) (*websocket.Conn, *hubPeer) {
-	r.t.Helper()
-	origin := "http://127.0.0.1:" + strconv.Itoa(r.port)
-	h := http.Header{}
-	h.Set("Origin", origin)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	c, _, err := websocket.Dial(ctx, "ws://127.0.0.1:"+strconv.Itoa(r.port)+"/ws",
-		&websocket.DialOptions{HTTPHeader: h, Subprotocols: []string{Subprotocol}})
-	if err != nil {
-		r.t.Fatal(err)
-	}
-	r.t.Cleanup(func() { _ = c.CloseNow() })
-	writeText(r.t, c, helloMsg(tok))
-	p := r.hub.next()
-	p.line(r.t) // open
-	p.line(r.t) // hello
-	return c, p
-}
-
 // Spec (reload on a new build): the hub's bye 1012 is a restart, not the
 // kill switch: the gateway writes its browser sessions (token digests,
 // never a token) and its port to the 0600 resume file, closes every
@@ -73,7 +50,7 @@ func TestGatewayRestartHandsOverTheSessions(t *testing.T) {
 	resume := filepath.Join(t.TempDir(), "web-resume.json")
 	r := startedGateway(t, func(c *RunConfig) { c.ResumePath = resume })
 	tok := r.authToken()
-	c, _ := r.dialWS(tok)
+	c, _, _ := r.connectToken(tok)
 	r.ctl.send(t, `{"t":"bye","code":1012}`)
 	if got := closeCode(t, c); got != websocket.StatusCode(webproto.CloseRestarting) {
 		t.Fatalf("browser closed with %d, want 1012", got)
@@ -104,9 +81,7 @@ func TestGatewayRestartHandsOverTheSessions(t *testing.T) {
 	if r2.port != r.port {
 		t.Fatalf("the next gateway serves on %d, want the same port %d", r2.port, r.port)
 	}
-	c2, p2 := r2.dialWS(tok) // the old token: the page's reconnect
-	_ = p2
-	_ = c2
+	r2.connectToken(tok) // the old token: the page's reconnect
 	st, err := ReadStatus(r2.cfg.StatusPath)
 	if err != nil || !st.Started.Equal(res.Started) {
 		t.Errorf("the next gateway's start %v, want the first one's %v (Max counts on): %v", st.Started, res.Started, err)
