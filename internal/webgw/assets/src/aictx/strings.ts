@@ -18,6 +18,7 @@ export const AS = {
   "ai.use_model": "Use model {name} for the AI chat?",
   "look.thinking": "Thinking…",
   "look.tokens": "{in} in · {out} out",
+  "look.rules": "Rules: {name}",
   "look.step_of": "step {n} of {of}",
   "look.steps": "{n} steps",
   "look.run_view": "Run view",

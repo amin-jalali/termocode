@@ -90,7 +90,7 @@ function Extras({ m, canFetch }: { m: ChatMsg; canFetch: boolean }) {
           ↩ {a.label}
         </span>
       ))}
-      {m.rules && <span class="chip">{t("chat.rules", { name: m.rules })}</span>}
+      {m.rules && <span class="chip rules">{t("chat.rules", { name: m.rules })}</span>}
       {open !== null && imgs[open] !== undefined && (
         <div class="msg-img">
           <BlobImg op="chat.image" args={{ i: m.i, n: open }} alt={t("img.alt", { name: imgs[open] })} />
@@ -277,6 +277,7 @@ export function ChatView() {
   } else {
     content = (
       <div class={`topic chat${st?.stale && !pin ? " is-stale" : ""}`}>
+        {look.value?.top(msgs)}
         {msgs.length === 0 ? (
           <div class="empty">
             <div class="empty-state">

@@ -1543,6 +1543,7 @@ export const FA: Record<TranslatedKey, string> = {
   "ai.k_container": "کانتینر",
   "look.thinking": "در حال فکر…",
   "look.tokens": "{in} ورودی · {out} خروجی",
+  "look.rules": "قواعد: {name}",
   "look.step_of": "گام {n} از {of}",
   "look.steps": "{n} گام",
   "look.run_view": "نمای اجرا",

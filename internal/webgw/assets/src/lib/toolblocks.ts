@@ -16,12 +16,15 @@ export const toolBlocks = signal<ToolBlocksRenderer | null>(null);
 /** ChatLook is the desktop's chat look (aictx.js, aictx/look.tsx): the
  * workbench puts it here once aictx.js loaded. An AI answer without a
  * run card (a line with its model and time, its tool calls as short
- * lines), a tool line, and the composer's profile and model picker.
+ * lines, a strip for a run of several steps), a tool line, the rules
+ * file once at the top, and the composer's profile and model picker.
  * The phone never fills it and keeps its own look. */
 export interface ChatLook {
   /** m draws an AI answer around body (its text), or a tool line (body
    * null); null leaves it to the page. */
   m(m: ChatMsg, body: VNode | null): VNode | null;
+  /** top is the line over the messages: the rules file the turns used. */
+  top(msgs: readonly ChatMsg[]): VNode | null;
   pick(): VNode;
 }
 

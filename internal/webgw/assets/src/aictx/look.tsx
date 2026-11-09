@@ -6,7 +6,8 @@
 // click to show the call and its result. While the answer is written it
 // says Thinking… with its time and a Stop. A run of several steps shows
 // a strip of its steps above the answer, and its Run view on Show
-// (runview.tsx). The page's Chat.tsx asks here
+// (runview.tsx). The rules file the turns used shows once, at the top
+// of the chat (desk CSS hides its chip on each message). The page's Chat.tsx asks here
 // through lib/toolblocks.ts look; the phone never loads this.
 import type { ChatMsg } from "../../../../webproto/proto";
 import type { ChatLook } from "../lib/toolblocks";
@@ -138,5 +139,14 @@ export const look: ChatLook = {
         <Tool line={m.text ?? ""} done />
       </div>
     ),
+  top: (msgs) => {
+    let rules = "";
+    for (const m of msgs) rules = m.rules || rules; // the newest
+    return rules ? (
+      <div class="chat-rules" dir="ltr">
+        {H.t("look.rules", { name: rules })}
+      </div>
+    ) : null;
+  },
   pick: () => <Picker />,
 };

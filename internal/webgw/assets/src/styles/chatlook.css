@@ -11,6 +11,10 @@
 .tool-res { margin-top: 2px; color: var(--wb-side-fg); }
 .tool-note { padding: 0 4px; font-family: var(--font-sans); }
 .chatcol .msg-tool { display: block; }
+/* The rules file shows once, at the top (look.tsx top), not per message. */
+.chatcol .msg-extras .rules { display: none; }
+.chatcol .msg-extras:not(:has(> :not(.rules))) { display: none; }
+.chatcol .chat-rules { margin: 0 0 8px; color: var(--wb-desc); font-size: 11px; }
 .chatcol .msg-think { display: flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--wb-desc); font-size: 12px; font-variant-numeric: tabular-nums; }
 .chatcol .think-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--wb-focus, currentColor); animation: think-pulse 1.2s ease-in-out infinite; }
 .chatcol .think-stop { height: 20px; padding: 0 8px; border: 1px solid var(--wb-panel-border); border-radius: 4px; background: none; color: var(--wb-side-fg); font: inherit; cursor: pointer; }
