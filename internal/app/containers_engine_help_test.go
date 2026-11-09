@@ -56,8 +56,16 @@ func TestEngineDownRowsShowTheStartCommand(t *testing.T) {
 	st.containerEngine.Reachable = false
 	st.containerEngine.Kind = "docker"
 	st.containerEngine.Problem = services.Problem{Kind: services.ProblemDaemonDown}
+	// The hosts tree: the problem rows sit under the host in use (depth 1).
 	body := st.hostSectionBody("containers")
-	if len(body) != 3 || body[1].kind != svcRowHint || body[1].text != "Open Docker Desktop" || body[2].kind != svcRowRetry {
+	var under []svcRow
+	for _, r := range body {
+		if r.depth == 1 {
+			under = append(under, r)
+		}
+	}
+	if len(body) == 0 || !body[0].current || len(under) != 3 || under[0].text != "Docker is not running" ||
+		under[1].kind != svcRowHint || under[1].text != "Open Docker Desktop" || under[2].kind != svcRowRetry {
 		t.Fatalf("containers rows %+v", body)
 	}
 }

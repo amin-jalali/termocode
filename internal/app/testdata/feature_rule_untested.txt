@@ -160,8 +160,6 @@ palette/transfer-reveal
 palette/transfer-upload
 palette/trim-blanks
 palette/trim-whitespace
-palette/web-devices
-palette/web-pair
 palette/web-totp
 palette/workflow-dry-run
 palette/workflow-edit-file
