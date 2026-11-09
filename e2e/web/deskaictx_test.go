@@ -5,6 +5,7 @@ package web
 import (
 	"encoding/json"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -59,7 +60,7 @@ func aiSend(t *testing.T, p *Page, c *HubConn, text string) map[string]webproto.
 	p.Key(kb.Enter)
 	r := expectReq(t, c, "chat.send")
 	var a webproto.ChatSendArgs
-	if err := json.Unmarshal(r.Args, &a); err != nil || a.Text != text {
+	if err := json.Unmarshal(r.Args, &a); err != nil || !strings.HasSuffix(a.Text, text) {
 		t.Fatalf("chat.send args %s", r.Args)
 	}
 	out := map[string]webproto.ItemSpec{}
@@ -294,4 +295,72 @@ func aiItemOf(t *testing.T, r *webproto.Req, label string) webproto.ItemSpec {
 	}
 	t.Fatalf("no item %q in %s", label, r.Args)
 	return webproto.ItemSpec{}
+}
+
+// aiPickRows are the rows of the open @ picker.
+const aiPickRows = `[...document.querySelectorAll(".quick .quick-row")].map((r) => r.querySelector(".quick-label").textContent + " · " + (r.querySelector(".quick-detail")?.textContent ?? ""))`
+
+// Typing @ in the chat input opens a searchable picker of the items
+// (database connections and their read tables, hosts, compose projects,
+// containers); it reads the lists it does not have yet. Picking one adds
+// its chip and takes the @ out of the draft; the text typed stays.
+func TestDeskAddToAIChatAtPicker(t *testing.T) {
+	p, c := aiOpenChat(t)
+	// The Databases tree read local's tables already.
+	Eval[bool](p, `(location.hash = "#/more/db", true)`)
+	reply(t, c, expectOp(t, c, webproto.OpDBConns, `{}`), dbConns())
+	replyLocalHosts(t, c)
+	p.WaitJS(dbxSide + `?.querySelectorAll(".tr[data-conn]").length === 3`)
+	p.TapJS(dbxSide + `.querySelector('.tr[data-conn="local"]')`)
+	reply(t, c, expectOp(t, c, webproto.OpDBTables, `{"conn":"local"}`), webproto.DBTables{Conn: "local", Schema: "public", Tables: []webproto.DBTable{{Name: "users"}, {Name: "orders"}}})
+	p.WaitJS(dbxSide + `.querySelector('.tr[data-table="orders"]')`)
+
+	p.TapJS(composer + `.querySelector("textarea")`)
+	p.Key("why @")
+	p.WaitJS(`document.querySelector(".quick .quick-box") === document.activeElement && document.querySelectorAll(".quick .quick-row").length > 0`)
+	if got := Eval[string](p, `document.querySelector(".quick .quick-box").placeholder`); got != "Search items to add to the AI chat" {
+		t.Errorf("picker placeholder %q", got)
+	}
+	got := Eval[[]string](p, aiPickRows)
+	for _, want := range []string{"local · database", "prod · database", "cache · database", "local › users · table", "local › orders · table", "default · host"} {
+		if !slices.Contains(got, want) {
+			t.Errorf("picker rows %q: no %q", got, want)
+		}
+	}
+	p.Key("orders")
+	p.WaitJS(`document.querySelector(".quick .quick-row .quick-label")?.textContent === "local › orders"`)
+	p.Key(kb.Enter)
+	reply(t, c, expectOp(t, c, webproto.OpDBDDL, `{"conn":"local","table":"orders"}`), webproto.DBText{Text: "CREATE TABLE orders (id int);"})
+	aiWaitChips(t, p, "local › orders")
+	p.WaitJS(composer + `.querySelector("textarea").value === "why " && document.activeElement === ` + composer + `.querySelector("textarea")`)
+
+	// An @ inside a word (an email) opens nothing.
+	p.Key("ada@x")
+	c.Quiet(t, 300*time.Millisecond)
+	if Eval[bool](p, `!!document.querySelector(".quick")`) {
+		t.Error("an @ inside a word opened the picker")
+	}
+	sent := aiSend(t, p, c, " is slow?")
+	if s, ok := sent["local › orders"]; !ok || s.DDL != "CREATE TABLE orders (id int);" {
+		t.Fatalf("sent %+v", sent)
+	}
+}
+
+// The picker reads what it does not have: with no Databases or
+// Containers opened yet, it asks for the connections and the hosts.
+func TestDeskAddToAIChatAtPickerLoads(t *testing.T) {
+	p, c := aiOpenChat(t)
+	p.TapJS(composer + `.querySelector("textarea")`)
+	p.Key("@")
+	reply(t, c, expectOp(t, c, webproto.OpDBConns, `{}`), dbConns())
+	reply(t, c, expectOp(t, c, webproto.OpContainersServers, `{}`), hostsList())
+	p.WaitJS(`[...document.querySelectorAll(".quick .quick-row .quick-label")].map((e) => e.textContent).join("|") .includes("baaytona")`)
+	p.Key("prod")
+	p.WaitJS(`document.querySelector(".quick .quick-row .quick-label")?.textContent === "prod"`)
+	p.Key(kb.Enter)
+	aiWaitChips(t, p, "prod")
+	sent := aiSend(t, p, c, "is prod up?")
+	if sent["prod"].Item != "db_conn" || sent["prod"].Conn != "prod" {
+		t.Fatalf("sent %+v", sent)
+	}
 }
