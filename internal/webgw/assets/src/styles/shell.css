@@ -17,7 +17,14 @@
 /* A focus near the edge never scrolls the desktop sideways (hidden still
    lets the browser scroll it, which slid the activity bar out of view). */
 .shell.layout-desktop { overflow: clip; }
-html[data-kb="up"] .shell { transform: translateY(var(--vvtop, 0px)); }
+/* A phone's shell is fixed to the visible part of the page: iOS scrolls
+   the page itself under an open keyboard (and lets a finger scroll it),
+   which carried the strip and the header away and left the composer at
+   the top over a blank. */
+.shell:not(.layout-desktop) { position: fixed; top: 0; left: 0; right: 0; transform: translateY(var(--vvtop, 0px)); }
+/* iOS zooms the page into a box whose text is under 16 px, and the page
+   stays wider than the screen. */
+:is(.layout-phone, .layout-tablet) :is(input, textarea, select) { font-size: max(1rem, 16px) !important; }
 html[data-kb="up"] .layout-phone .tabbar,
 html[data-kb="up"] .layout-phone .pill-wrap { display: none; }
 

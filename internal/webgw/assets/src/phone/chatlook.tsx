@@ -16,12 +16,13 @@ import { look as deskLook } from "../aictx/look";
 import { AS } from "../aictx/strings";
 import { aiSnap } from "../lib/ai";
 import { layout } from "../lib/layout";
+import { goTab } from "../lib/router";
 import { look } from "../lib/toolblocks";
 import { link, store } from "../session";
 import { addStrings, t } from "../strings";
 import { AskLaptop } from "../ui/AskLaptop";
 import type { MenuItems } from "../ui/ContextMenu";
-import { Cod } from "../ui/icons";
+import { Cod, IconPlus } from "../ui/icons";
 import { Md } from "../ui/Markdown";
 import { Sheet } from "../ui/Sheet";
 import { pinned } from "../views/Chat";
@@ -63,23 +64,52 @@ function MenuSheet() {
   );
 }
 
-/** Pick is the composer's profile and model picker on a phone: it reads
- * the same ai topic as the desktop's. It waits behind a ✦ button at the
- * start of the composer's row, so the box gets the row; a tap opens the
- * profile and model buttons in a row above the box (closed, they stay
- * mounted: a pick's ask to the laptop lives in them). */
+/** Pick is the phone composer's + (the common chat composer's): a round
+ * button at the start of the pill that opens a sheet to add a file and
+ * to choose the AI profile and model (the same ai topic as the
+ * desktop's), the one in use named once, muted, in its header. The sheet
+ * stays open under a picker's list: a pick's ask to the laptop lives in
+ * its buttons. */
 function Pick() {
   useEffect(() => link.subscribe("ai"), []);
   const [open, setOpen] = useState(false);
   const s = aiSnap();
-  if (!s?.configured) return null;
-  const what = `${t("ai.profile")}: ${[s.profile, s.model].filter(Boolean).join(" · ")}`;
+  const close = () => setOpen(false);
   return (
     <>
-      <button type="button" class="pick-toggle" aria-expanded={open} aria-label={what} title={what} onClick={() => setOpen(!open)}>
-        <span aria-hidden="true">✦</span>
+      <button type="button" class="composer-plus" aria-haspopup="dialog" aria-expanded={open} aria-label={t("plus.label")} title={t("plus.label")} onClick={() => setOpen(true)}>
+        <IconPlus />
       </button>
-      <span class={`pick-list${open ? " is-open" : ""}`}>{deskLook.pick()}</span>
+      {open && (
+        <Sheet onLater={close} label={t("plus.title")}>
+          <div class="actsheet plus-sheet">
+            <h2 class="actsheet-title">{t("plus.title")}</h2>
+            {s?.configured && (
+              <p class="actsheet-hint plus-now" dir="auto">
+                {[s.profile, s.model].filter(Boolean).join(" · ")}
+              </p>
+            )}
+            <div class="actsheet-list">
+              <button
+                type="button"
+                class="actsheet-row plus-file"
+                onClick={() => {
+                  close();
+                  goTab("files");
+                }}
+              >
+                {t("plus.file")}
+              </button>
+              {s?.configured && (
+                <>
+                  <p class="actsheet-hint plus-label">{t("ai.model")}</p>
+                  <span class="plus-picks">{deskLook.pick()}</span>
+                </>
+              )}
+            </div>
+          </div>
+        </Sheet>
+      )}
       <MenuSheet />
     </>
   );
