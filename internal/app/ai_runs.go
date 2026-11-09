@@ -434,6 +434,9 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 					spec.MCP, served = srv.spec, ts
 				}
 			}
+			// who it is above the prompt (a developer / system message),
+			// where the CLI's own skills and sandbox text cannot win
+			spec.Instructions = aiCLIInstructions(root, served, spec.Write)
 			// termocode's context first, then the step (CS-1 got only the step)
 			prompt := aiCLIPrompt(ctx, dir, aiWithToolGuide(nodeBase, served, true)+sys, input+wts.othersNote(n.ID), handoff)
 			res, err := aiCLIRun(ctx, spec, prompt, emit)

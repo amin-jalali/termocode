@@ -103,14 +103,14 @@ func TestAIIdentityCodexStepInstructions(t *testing.T) {
 		not    []string
 	}{
 		{agentdag.PresetAll, []string{"write_file", "can change files in the project folder"}, []string{"read-only"}},
-		{agentdag.PresetReadOnly, []string{"read-only", "db_query"}, []string{"write_file"}},
+		{agentdag.PresetReadOnly, []string{"read-only", "db_schema"}, []string{"write_file"}},
 	} {
 		_, dir, spec := stepMCPRun(t, c.preset, nil, nil)
 		text := spec.Instructions
 		for _, want := range append([]string{
 			"You are the AI inside termocode", "project " + filepath.Base(dir),
 			"Do not read your own docs, skills or config",
-			`MCP server "termocode"`, "mcp__termocode__", "db_query",
+			`MCP server "termocode"`, "mcp__termocode__", "db_schema",
 			"never give the owner a command to run",
 		}, c.want...) {
 			if !strings.Contains(text, want) {

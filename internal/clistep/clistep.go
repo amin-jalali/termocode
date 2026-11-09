@@ -134,9 +134,14 @@ func mcpArgs(s Spec) []string {
 	}
 	switch s.CLI {
 	case ai.CLICodex:
+		// default_tools_approval_mode approve: Codex runs every call of
+		// the server without its own approval (exec has no one to ask,
+		// so it would fail each call that is not a read); termocode's
+		// gate behind the socket asks the owner.
 		k := "mcp_servers." + name
 		return []string{"-c", k + ".command=" + jsonText(s.MCP.Command), "-c", k + ".args=" + jsonText(args),
-			"-c", k + ".tool_timeout_sec=" + strconv.Itoa(MCPToolTimeout)}
+			"-c", k + ".tool_timeout_sec=" + strconv.Itoa(MCPToolTimeout),
+			"-c", k + ".default_tools_approval_mode=" + jsonText("approve")}
 	case ai.CLIClaude:
 		type server struct {
 			Command string   `json:"command"`
@@ -173,6 +178,9 @@ func Args(s Spec) []string {
 		} else {
 			out = append(out, "--tools", "Read,Grep,Glob")
 		}
+		if t := strings.TrimSpace(s.Instructions); t != "" {
+			out = append(out, "--append-system-prompt="+t) // one arg: a text that starts with "-" stays the value
+		}
 		return append(out, mcpArgs(s)...)
 	case ai.CLICodex:
 		sandbox := "read-only"
@@ -183,9 +191,18 @@ func Args(s Spec) []string {
 		if model {
 			out = append(out, "-m", s.Model)
 		}
-		out = append(out, "--sandbox", sandbox)
+		// The sandbox is the CLI's own shell and file edits (the step's
+		// Tools setting); approval never: exec has no one to ask, so a
+		// command outside the sandbox fails at once and never waits.
+		out = append(out, "--sandbox", sandbox, "-c", "approval_policy="+jsonText("never"))
 		if e := codexEffort(s.Reasoning); e != "" {
 			out = append(out, "-c", "model_reasoning_effort="+jsonText(e))
+		}
+		if t := strings.TrimSpace(s.Instructions); t != "" {
+			// a developer message above the prompt; Codex's own skills
+			// list goes (its openai-docs skill claims every question
+			// about "you": the step would answer as Codex)
+			out = append(out, "-c", "developer_instructions="+jsonText(t), "-c", "skills.include_instructions=false")
 		}
 		out = append(out, mcpArgs(s)...)
 		return append(out, "-C", s.Dir, "-")

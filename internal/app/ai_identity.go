@@ -93,6 +93,31 @@ func aiToolGuide(tools []ai.Tool, viaMCP bool) string {
 	return head + b.String() + "Reads run at once. Every change asks the owner on a card first; when a card is declined, do not retry it. Secrets show as [REDACTED].\n"
 }
 
+// aiCLIInstructions is what a CLI step (Codex, Claude Code) gets above
+// the prompt (clistep.Spec.Instructions): who it is, termocode's tools
+// it has from the step's MCP server (served; none: no server) and what
+// its own tools may do (write: the step's Tools setting lets them change
+// the project folder). Its own docs and skills never answer who it is,
+// and its read-only shell never hides termocode's tools.
+func aiCLIInstructions(root string, served []ai.Tool, write bool) string {
+	var b strings.Builder
+	b.WriteString(aiIdentityPrompt(root))
+	b.WriteString(aiToolGuide(served, true))
+	if len(served) > 0 {
+		b.WriteString("Call them as tools (mcp__" + aiStepMCPName + "__<name>); never give the owner a command to run in place of one of them.\n")
+	}
+	switch {
+	case write:
+		b.WriteString("Your own tools can change files in the project folder; for databases, containers and servers use termocode's tools.\n")
+	case len(served) > 0:
+		b.WriteString("Your own shell and file tools are read-only (this step's Tools setting). That is not a limit of termocode's tools: " +
+			"do every change they offer through them (each one asks the owner on a card), and never say you cannot when one of them can.\n")
+	default:
+		b.WriteString("This step only reads (its Tools setting): your own tools are read-only.\n")
+	}
+	return b.String()
+}
+
 // aiWithToolGuide puts the tool guide of tools right after the identity
 // paragraph of base (at the end when base has none).
 func aiWithToolGuide(base string, tools []ai.Tool, viaMCP bool) string {
