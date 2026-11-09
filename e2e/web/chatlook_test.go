@@ -108,7 +108,7 @@ func TestDeskChatRunStripAndRunView(t *testing.T) {
 	if got := Eval[string](p, ai+`.querySelector(".run-strip .strip-where").textContent`); !strings.HasPrefix(got, "step 2 of 3 · 4") {
 		t.Errorf("strip says %q, want step 2 of 3 · 40s", got)
 	}
-	if Eval[bool](p, ai+`.querySelector(".run-strip").compareDocumentPosition(`+ai+`.querySelector(".msg-body")) & Node.DOCUMENT_POSITION_PRECEDING`) {
+	if !Eval[bool](p, `!!(`+ai+`.querySelector(".run-strip").compareDocumentPosition(`+ai+`.querySelector(".msg-body")) & Node.DOCUMENT_POSITION_FOLLOWING)`) {
 		t.Error("the strip is not above the answer")
 	}
 	if Eval[bool](p, `document.querySelector(".run-view") !== null`) {
@@ -116,14 +116,14 @@ func TestDeskChatRunStripAndRunView(t *testing.T) {
 	}
 	p.TapJS(ai + `.querySelector(".run-strip .strip-show")`)
 	const rv = `document.querySelector(".run-view")`
-	p.WaitJS(rv + `?.querySelectorAll(".rv-step").length === 3`)
-	text := Eval[string](p, rv+`.innerText`)
+	p.WaitJS(rv + `?.querySelectorAll(".runv-step").length === 3`)
+	text := Eval[string](p, rv+`.textContent`)
 	for _, want := range []string{"Run view", "plan-code-review", "Plan", "claude-opus-5-5", "12s", "1. Add the column.", "Code", "gpt-6-sol", "Edit db.go", "Adding the column", "Review", "HTTP 400: no credit"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("the Run view has no %q:\n%s", want, text)
 		}
 	}
 	chatShot(t, p, "run", rv)
-	p.TapJS(rv + `.querySelector(".rv-close")`)
+	p.TapJS(rv + `.querySelector(".runv-close")`)
 	p.WaitJS(`!document.querySelector(".run-view")`)
 }

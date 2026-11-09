@@ -4,13 +4,17 @@
 // the tokens, step and CLI in its tooltip. Each tool call is one short
 // line ("✓ db_schema baaytona-db-1", ✗ when it failed) that opens on a
 // click to show the call and its result. While the answer is written it
-// says Thinking… with its time and a Stop. The page's Chat.tsx asks here
+// says Thinking… with its time and a Stop. A run of several steps shows
+// a strip of its steps above the answer, and its Run view on Show
+// (runview.tsx). The page's Chat.tsx asks here
 // through lib/toolblocks.ts look; the phone never loads this.
 import type { ChatMsg } from "../../../../webproto/proto";
 import type { ChatLook } from "../lib/toolblocks";
 import type { VNode } from "preact";
+import { readChat } from "../state/chat";
 import { Fragment, H, h } from "./jsx";
 import { Picker } from "./picker";
+import { Strip } from "./runview";
 
 /** dur writes a time like the chat's run line: "12s", "2m 05s", "1h 03m". */
 export function dur(ms: number): string {
@@ -43,7 +47,7 @@ export function Tool({ line, done }: { line: string; done: boolean }) {
       </button>
       {open && (
         <div class="tool-more">
-          <div class="tool-call">{what}</div>
+          {what.length > 48 && <div class="tool-call">{what}</div>}
           {res && <div class="tool-res">{res}</div>}
         </div>
       )}
@@ -93,10 +97,16 @@ function Meta({ m }: { m: ChatMsg }) {
   );
 }
 
-/** answer draws an AI answer (a run of several steps is the page's). */
-function answer(m: ChatMsg, body: VNode): VNode | null {
-  if (m.run) return null;
-  const tools = m.steps?.length === 1 ? m.steps[0].tools ?? [] : [];
+/** chatOf is the id of the chat on show: the old one the page reads,
+ * else the laptop's. */
+const chatOf = (): string => H.pinned.peek()?.id ?? readChat(H.store.topic("chat").peek()?.data)?.id ?? "";
+
+/** answer draws an AI answer: a run of several steps as a strip of its
+ * steps above it, a one-step reply with its tool lines and the line
+ * under it. */
+function answer(m: ChatMsg, body: VNode): VNode {
+  const run = m.run;
+  const tools = !run && m.steps?.length === 1 ? m.steps[0].tools ?? [] : [];
   return (
     <>
       <div class="msg-label">
@@ -105,6 +115,7 @@ function answer(m: ChatMsg, body: VNode): VNode | null {
         </span>
         <span>{H.t("chat.ai")}</span>
       </div>
+      {run && <Strip m={m} chat={chatOf()} />}
       {tools.length > 0 && (
         <div class="tool-rows">
           {tools.map((l, i) => (
@@ -113,7 +124,7 @@ function answer(m: ChatMsg, body: VNode): VNode | null {
         </div>
       )}
       {body}
-      {m.streaming ? <Thinking from={m.meta?.started_ms} /> : <Meta m={m} />}
+      {run ? null : m.streaming ? <Thinking from={m.meta?.started_ms} /> : <Meta m={m} />}
     </>
   );
 }

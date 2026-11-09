@@ -2,18 +2,51 @@
    answer. The line under it, its tool calls as short lines, Thinking…
    while it writes. */
 .chatcol .msg-meta { margin-top: 4px; color: var(--wb-desc); font-size: 11px; font-variant-numeric: tabular-nums; cursor: default; width: fit-content; }
-.chatcol .tool-rows { display: flex; flex-direction: column; gap: 1px; margin: 2px 0 6px; }
-.chatcol .tool-row { min-width: 0; font-family: var(--font-mono); font-size: 12px; line-height: 18px; color: var(--wb-desc); }
-.chatcol .tool-sum { display: block; max-width: 100%; overflow: hidden; padding: 0 4px; border: 0; border-radius: 3px; background: none; color: inherit; font: inherit; text-align: start; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
-.chatcol .tool-sum:hover { background: var(--wb-toolbar-hover); color: var(--wb-side-fg); }
-.chatcol .tool-row.is-bad .tool-sum { color: var(--wb-err); }
-.chatcol .tool-more { margin: 2px 0 4px 16px; padding: 4px 8px; border-inline-start: 2px solid var(--wb-panel-border); white-space: pre-wrap; overflow-wrap: anywhere; }
-.chatcol .tool-res { margin-top: 2px; color: var(--wb-side-fg); }
-.chatcol .tool-note { padding: 0 4px; font-family: var(--font-sans); }
+.tool-rows { display: flex; flex-direction: column; gap: 1px; margin: 2px 0 6px; }
+.tool-row { min-width: 0; font-family: var(--font-mono); font-size: 12px; line-height: 18px; color: var(--wb-desc); }
+.tool-sum { display: block; max-width: 100%; overflow: hidden; padding: 0 4px; border: 0; border-radius: 3px; background: none; color: inherit; font: inherit; text-align: start; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.tool-sum:hover { background: var(--wb-toolbar-hover); color: var(--wb-side-fg); }
+.tool-row.is-bad .tool-sum { color: var(--wb-err); }
+.tool-more { margin: 2px 0 4px 16px; padding: 4px 8px; border-inline-start: 2px solid var(--wb-panel-border); white-space: pre-wrap; overflow-wrap: anywhere; }
+.tool-res { margin-top: 2px; color: var(--wb-side-fg); }
+.tool-note { padding: 0 4px; font-family: var(--font-sans); }
 .chatcol .msg-tool { display: block; }
 .chatcol .msg-think { display: flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--wb-desc); font-size: 12px; font-variant-numeric: tabular-nums; }
 .chatcol .think-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--wb-focus, currentColor); animation: think-pulse 1.2s ease-in-out infinite; }
 .chatcol .think-stop { height: 20px; padding: 0 8px; border: 1px solid var(--wb-panel-border); border-radius: 4px; background: none; color: var(--wb-side-fg); font: inherit; cursor: pointer; }
 .chatcol .think-stop:hover { background: var(--wb-toolbar-hover); }
 @keyframes think-pulse { 50% { opacity: 0.3; } }
-@media (prefers-reduced-motion: reduce) { .chatcol .think-dot { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .chatcol .think-dot, .strip-step.is-now::before { animation: none; } }
+
+/* A run of several steps (aictx/runview.tsx): the strip above the
+   answer and the Run view beside the chat. */
+.chatcol .run-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 2px 0 6px; color: var(--wb-desc); font-size: 12px; font-variant-numeric: tabular-nums; }
+.chatcol .strip-steps { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.strip-step { display: inline-flex; align-items: center; gap: 4px; color: var(--wb-side-fg); }
+.strip-step::before { content: "○"; color: var(--wb-desc); }
+.strip-step.is-done::before { content: "◉"; color: var(--wb-ok); }
+.strip-step.is-now::before { content: "◉"; color: var(--wb-focus); animation: think-pulse 1.2s ease-in-out infinite; }
+.strip-step.is-bad::before { content: "✗"; color: var(--wb-err); }
+.strip-sep { width: 12px; height: 1px; background: var(--wb-panel-border); }
+.chatcol .strip-wait { color: var(--wb-warn); }
+.chatcol .strip-show { height: 20px; padding: 0 8px; border: 1px solid var(--wb-panel-border); border-radius: 4px; background: none; color: var(--wb-side-fg); font: inherit; cursor: pointer; }
+.chatcol .strip-show:hover { background: var(--wb-toolbar-hover); }
+.run-view { position: fixed; top: 35px; bottom: 22px; z-index: 30; display: flex; flex-direction: column; width: min(420px, 40vw); border-inline: 1px solid var(--wb-panel-border); background: var(--wb-side-bg); color: var(--wb-side-fg); font-size: var(--fs-ui, 13px); box-shadow: -4px 0 12px rgb(0 0 0 / 0.18); }
+.run-view:not([style]) { right: 0; }
+.runv-head { display: flex; align-items: center; gap: 8px; min-height: 35px; padding: 0 6px 0 12px; border-bottom: 1px solid var(--wb-panel-border); }
+.runv-title { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+.runv-sub { flex: 1 1 auto; min-width: 0; overflow: hidden; color: var(--wb-desc); text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.runv-close { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 5px; background: none; color: inherit; cursor: pointer; }
+.runv-close:hover { background: var(--wb-toolbar-hover); }
+.runv-steps { flex: 1 1 auto; min-height: 0; margin: 0; padding: 8px 12px; overflow: auto; list-style: none; }
+.runv-step { padding: 8px 0; border-bottom: 1px solid var(--wb-panel-border); }
+.runv-step:last-child { border-bottom: 0; }
+.runv-step-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin-bottom: 4px; }
+.runv-name { font-weight: 600; }
+.runv-name::before { content: "○ "; color: var(--wb-desc); }
+.runv-step.is-done .runv-name::before { content: "◉ "; color: var(--wb-ok); }
+.runv-step.is-now .runv-name::before { content: "◉ "; color: var(--wb-focus); }
+.runv-step.is-bad .runv-name::before { content: "✗ "; color: var(--wb-err); }
+.runv-facts { color: var(--wb-desc); font-size: 12px; font-variant-numeric: tabular-nums; }
+.runv-out { margin: 4px 0 0; overflow-wrap: anywhere; }
+.run-view .step-error { margin: 4px 0 0; color: var(--wb-err); }
