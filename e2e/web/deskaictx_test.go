@@ -176,3 +176,122 @@ func menuLabelsAfter(p *Page, el string) string {
 	p.WaitJS(`!document.querySelector(".ctx-menu")`)
 	return s
 }
+
+// aiOpenUsers opens the users table of local in a grid (its rows: id,
+// email, password_hash, api_key).
+func aiOpenUsers(t *testing.T, p *Page, c *HubConn) string {
+	t.Helper()
+	Eval[bool](p, `(location.hash = "#/more/db", true)`)
+	reply(t, c, expectOp(t, c, webproto.OpDBConns, `{}`), dbConns())
+	replyLocalHosts(t, c)
+	p.WaitJS(dbxSide + `?.querySelectorAll(".tr[data-conn]").length === 3`)
+	p.TapJS(dbxSide + `.querySelector('.tr[data-conn="local"]')`)
+	reply(t, c, expectOp(t, c, webproto.OpDBTables, `{"conn":"local"}`), webproto.DBTables{Conn: "local", Tables: []webproto.DBTable{{Name: "users"}}})
+	p.TapJS(dbxSide + `.querySelector('.tr[data-table="users"]')`)
+	rows := webproto.DBRows{Columns: []string{"id", "email", "Password_Hash", "api_key"}, Rows: [][]webproto.DBCell{
+		{{V: "1"}, {V: "ada@x"}, {V: "$2b$10$abc"}, {V: "k-123"}},
+		{{V: "2"}, {V: "bob@x"}, {V: "$2b$10$def"}, {N: true}},
+	}, Key: []string{"id"}}
+	reply(t, c, expectOp(t, c, webproto.OpDBRows, `{"conn":"local","table":"users","from":0}`), rows)
+	const grid = `document.querySelector('[data-view="db-table"] .dbg-table')`
+	p.WaitJS(grid + `?.querySelectorAll("tbody tr").length === 2`)
+	return grid
+}
+
+const aiSecret = `document.querySelector(".ai-secret")`
+
+// aiSecretAsk sends text and waits for the warning card: it names the
+// secret-looking columns, its buttons are Cancel (focused), Mask and
+// send, Send all, and nothing is sent yet.
+func aiSecretAsk(t *testing.T, p *Page, c *HubConn, text, cols string) {
+	t.Helper()
+	p.TapJS(composer + `.querySelector("textarea")`)
+	p.Key(text)
+	p.Key(kb.Enter)
+	p.WaitJS(aiSecret + ` && document.activeElement?.textContent === "Cancel"`)
+	if got := Eval[string](p, aiSecret+`.querySelector(".ai-secret-cols").textContent`); got != cols {
+		t.Errorf("the card names %q, want %q", got, cols)
+	}
+	if got := Eval[string](p, `[...`+aiSecret+`.querySelectorAll("button")].map((b) => b.textContent).join("|")`); got != "Cancel|Mask and send|Send all" {
+		t.Errorf("the card's buttons %q", got)
+	}
+	c.Quiet(t, 200*time.Millisecond)
+}
+
+// Rows with columns that look secret (password, hash, token, api key, …
+// by name, any case) never go to the AI unasked: before the send, a card
+// in the page names those columns. Cancel (first, focused) sends
+// nothing; Mask and send puts ••• in their place; Send all sends them.
+// No laptop step. A cell of such a row asks too; rows without one never
+// ask.
+func TestDeskAddToAIChatSecretColumns(t *testing.T) {
+	p, c := aiOpenChat(t)
+	grid := aiOpenUsers(t, p, c)
+	aiAdd(p, grid+`.querySelector("thead th.dbg-n")`)
+	aiWaitChips(t, p, "local › users › 2 rows")
+
+	// Cancel: nothing is sent, the draft and the chip stay.
+	aiSecretAsk(t, p, c, "who signed up?", "Password_Hash, api_key")
+	p.TapJS(`[...` + aiSecret + `.querySelectorAll("button")].find((b) => b.textContent === "Cancel")`)
+	p.WaitJS(`!` + aiSecret)
+	c.Quiet(t, 200*time.Millisecond)
+	aiWaitChips(t, p, "local › users › 2 rows")
+	if got := Eval[string](p, composer+`.querySelector("textarea").value`); got != "who signed up?" {
+		t.Fatalf("after Cancel the draft is %q", got)
+	}
+
+	// Mask and send: those values are •••, the rest goes as it is.
+	Eval[bool](p, `(`+composer+`.querySelector("textarea").value = "", `+composer+`.querySelector("textarea").dispatchEvent(new Event("input", {bubbles: true})), true)`)
+	aiSecretAsk(t, p, c, "who signed up?", "Password_Hash, api_key")
+	p.TapJS(`[...` + aiSecret + `.querySelectorAll("button")].find((b) => b.textContent === "Mask and send")`)
+	r := expectReq(t, c, "chat.send")
+	if strings.Contains(string(r.Args), "$2b$10$abc") || strings.Contains(string(r.Args), "k-123") {
+		t.Fatalf("a masked value was sent: %s", r.Args)
+	}
+	s := aiItemOf(t, r, "local › users › 2 rows")
+	if want := [][]*string{{aiStr("1"), aiStr("ada@x"), aiStr("•••"), aiStr("•••")}, {aiStr("2"), aiStr("bob@x"), aiStr("•••"), nil}}; !reflect.DeepEqual(s.Rows, want) || strings.Join(s.Masked, ",") != "Password_Hash,api_key" {
+		t.Fatalf("masked rows %+v masked %v", s.Rows, s.Masked)
+	}
+	reply(t, c, r, map[string]any{"id": "c-1"})
+	p.WaitJS(`!` + aiSecret + ` && !document.querySelector('[data-view="chat"] .composer-attach')`)
+
+	// Send all: the values go as they are.
+	aiAdd(p, grid+`.querySelector('tbody tr[data-row="0"] td:nth-child(3)')`)
+	aiWaitChips(t, p, "local › users › row 1 › email")
+	aiSecretAsk(t, p, c, "is this one real?", "Password_Hash, api_key")
+	p.TapJS(`[...` + aiSecret + `.querySelectorAll("button")].find((b) => b.textContent === "Send all")`)
+	r = expectReq(t, c, "chat.send")
+	s = aiItemOf(t, r, "local › users › row 1 › email")
+	if want := [][]*string{{aiStr("1"), aiStr("ada@x"), aiStr("$2b$10$abc"), aiStr("k-123")}}; !reflect.DeepEqual(s.Rows, want) || len(s.Masked) != 0 {
+		t.Fatalf("rows sent %+v masked %v", s.Rows, s.Masked)
+	}
+	reply(t, c, r, map[string]any{"id": "c-1"})
+	p.WaitJS(`!document.querySelector('[data-view="chat"] .composer-attach')`)
+
+	// A column item carries no values: it never asks.
+	aiAdd(p, grid+`.querySelector("thead th:nth-child(4)")`)
+	got := aiSend(t, p, c, "what is this column?")
+	if got["local › users › Password_Hash"].Column != "Password_Hash" {
+		t.Fatalf("sent %+v", got)
+	}
+}
+
+// aiItemOf is the spec of r's item attach labelled label.
+func aiItemOf(t *testing.T, r *webproto.Req, label string) webproto.ItemSpec {
+	t.Helper()
+	var a webproto.ChatSendArgs
+	if err := json.Unmarshal(r.Args, &a); err != nil {
+		t.Fatal(err)
+	}
+	for _, at := range a.Attach {
+		if at.Label == label {
+			s, err := webproto.ParseItemSpec(at.Spec)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return s
+		}
+	}
+	t.Fatalf("no item %q in %s", label, r.Args)
+	return webproto.ItemSpec{}
+}
