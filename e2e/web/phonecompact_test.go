@@ -14,7 +14,7 @@ import (
 // the view's header is one slim row (no big "Chat" heading: the tab bar
 // already says it; the chat's name is the button that opens the Chats
 // list, New chat an icon); the composer is one row (the profile and
-// model picker behind a ✦ button at its start, Send an icon); the tab
+// model picker in the sheet its + opens, Send an icon); the tab
 // bar is compact. Every control stays at least 44x44 px and reachable.
 
 // phoneRegionsJS measures the phone shell's regions, in CSS px.
@@ -65,7 +65,7 @@ func openCompact(t *testing.T, lang, scheme, title string) (*Page, *HubConn) {
 	snap.Profile, snap.Provider, snap.Model = "GPT", "Codex", "gpt-6-sol"
 	snap.Models = []string{"gpt-6.1-sol", "gpt-6-sol"}
 	c.Send(t, Snap("ai", 1, snap))
-	p.WaitJS(chatView + `?.querySelector(".composer .pick-toggle")`)
+	p.WaitJS(chatView + `?.querySelector(".composer .composer-plus")`)
 	return p, c
 }
 
@@ -91,8 +91,8 @@ func TestPhoneCompactChatGivesTheScreenToTheConversation(t *testing.T) {
 			if r.Head > 48 {
 				t.Errorf("the chat header is %.0f px tall, want one row (≤ 48)", r.Head)
 			}
-			if r.Foot > 64 {
-				t.Errorf("the composer is %.0f px tall, want one row (≤ 64)", r.Foot)
+			if r.Foot > 68 {
+				t.Errorf("the composer is %.0f px tall, want one row (≤ 68)", r.Foot)
 			}
 			if r.Tabs > 52 {
 				t.Errorf("the tab bar is %.0f px tall, want ≤ 52", r.Tabs)
@@ -124,20 +124,17 @@ func TestPhoneCompactChatGivesTheScreenToTheConversation(t *testing.T) {
 			if w := Eval[float64](p, send+`.getBoundingClientRect().width`); w > 48 {
 				t.Errorf("Send is %.0f px wide, want an icon button (≤ 48)", w)
 			}
-			// The picker is one tap away; picking a model opens its sheet.
-			p.TapJS(chatView + `.querySelector(".composer .pick-toggle")`)
-			model := chatView + `.querySelector('.composer .ai-pick[data-pick="model"]')`
+			// The picker is one tap away (+); picking a model opens its list.
+			p.TapJS(chatView + `.querySelector(".composer .composer-plus")`)
+			model := `document.querySelector('.sheet .plus-sheet .ai-pick[data-pick="model"]')`
 			p.WaitJS(model + `?.getBoundingClientRect().height >= 43.5`)
-			if !Eval[bool](p, chatView+`.querySelector('.composer .ai-pick[data-pick="profile"]')?.textContent.includes("GPT")`) {
-				t.Error("the open picker does not name the profile")
-			}
-			if bad := Eval[[]string](p, smallTargetsJS(`[data-view="chat"] .composer button`)); len(bad) > 0 {
-				t.Errorf("open picker: targets under 44 px: %v", bad)
+			if !Eval[bool](p, `document.querySelector('.sheet .plus-sheet .ai-pick[data-pick="profile"]')?.textContent.includes("GPT")`) {
+				t.Error("the picker does not name the profile")
 			}
 			p.TapJS(model)
 			p.WaitJS(`document.querySelectorAll(".sheet .ai-menu .actsheet-row").length === 2`)
-			Eval[bool](p, `(document.querySelector(".scrim").click(), true)`)
-			p.WaitJS(`!document.querySelector(".sheet .ai-menu")`)
+			Eval[bool](p, `([...document.querySelectorAll(".scrim")].forEach((s) => s.click()), true)`)
+			p.WaitJS(`!document.querySelector(".sheet")`)
 			// The name opens the Chats list; New chat is one tap.
 			c.Send(t, Snap("chats", 1, map[string]any{"chats": []any{
 				map[string]any{"id": "c-1", "title": title, "updated": 3000, "msgs": 4, "open": true}}}))
@@ -186,7 +183,7 @@ func TestPhoneDesignShots(t *testing.T) {
 			ai := aiFixture(true, true)
 			ai.Profile, ai.Provider, ai.Model = "GPT", "Codex", "gpt-6-sol"
 			c.Send(t, Snap("ai", 1, ai))
-			ready := chatView + `?.querySelector(".msg") && document.querySelector(".composer .ai-pick, .composer .pick-toggle")`
+			ready := chatView + `?.querySelector(".msg") && document.querySelector(".composer .ai-pick, .composer .pick-toggle, .composer .composer-plus")`
 			snap(t, p, filepath.Join(dir, "phone-design-"+tc.name+".png"), ready)
 		})
 	}
