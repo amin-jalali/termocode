@@ -148,6 +148,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`agent_run_stop`](#agent_run_stop) | confirm (always asks): Deny (first) · Stop run | no | Stop an agent run of this chat: one that waits to start is dropped, a running one stops its steps. |
 | [`agent_run_wait`](#agent_run_wait) | auto | no | Wait until a background agent run of this chat ends (or timeout_s passes), then return its status and, when it ended, its result. |
 | [`agent_run_send`](#agent_run_send) | auto | no | Send a message to a running step of an agent run of this chat (to steer it: a hint, a narrower task, a question to answer in its result). |
+| [`agent_runs`](#agent_runs) | discard: confirm (always asks)<br>list: auto<br>merge: confirm (always asks)<br>output: auto<br>pause: auto<br>resume: auto | no | The agent runs of every chat (the Runs view) and the agent worktrees. |
 | [`workflow_list`](#workflow_list) | auto | no | List the workflows of this workspace (.termocode/workflows/*.jsonc) and of the user's own folder: name, title, state (file error, not trusted, on, off, runs by hand), steps, writes and the last run. |
 | [`workflow_read`](#workflow_read) | auto | no | Read one workflow file: where it is, whether it is trusted, its problems and warnings, its write steps (and whether each asks), and the file text. |
 | [`workflow_runs`](#workflow_runs) | auto | no | The recent runs of the workflows (or of one), newest first: id, dry run or run, state, writes. |
@@ -2020,6 +2021,20 @@ Send a message to a running step of an agent run of this chat (to steer it: a hi
 | `message` | string | yes | what to tell the step, short and concrete |
 | `run_id` | string | yes | the run id |
 | `step` | string |   | the step id or title (optional when only one step runs) |
+
+### agent_runs
+
+The agent runs of every chat (the Runs view) and the agent worktrees. op list (runs of the last week with their key and state), output (key: each step's answer), pause (key: before its next step) and resume (key: a paused run of this chat) run at once; merge (worktree: write an agent step's work into the user's files) and discard (worktree: remove it and its branch) ask the user every time. agent_run_stop stops a run.
+
+**Gate:** discard: confirm (always asks) · list: auto · merge: confirm (always asks) · output: auto · pause: auto · resume: auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `op` | string | yes | what to do. One of: `discard`, `list`, `merge`, `output`, `pause`, `resume` |
+| `key` | string |   | output, pause, resume: the run's key from op list |
+| `worktree` | string |   | merge, discard: the agent worktree id (worktrees_list) |
 
 ### workflow_list
 
