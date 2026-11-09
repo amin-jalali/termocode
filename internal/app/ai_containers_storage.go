@@ -82,7 +82,7 @@ func aiStorageParse(ctx context.Context, call aiIDECaller, a map[string]any) (ai
 		return r, err
 	}
 	labels := func() (map[string]string, error) {
-		list, err := aiArgList(a, "labels")
+		list, err := aiContainersArgList(a, "labels")
 		if err != nil || len(list) == 0 {
 			return nil, err
 		}

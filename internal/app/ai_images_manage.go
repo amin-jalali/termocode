@@ -152,16 +152,16 @@ func aiImageParse(ctx context.Context, call aiIDECaller, a map[string]any) (aiIm
 	case "run":
 		o := containers.RunOptions{Image: r.ref, Name: strings.TrimSpace(ai.ArgString(a, "name")), Remove: !ai.ArgBool(a, "keep"),
 			Detach: ai.ArgBool(a, "detach"), Network: strings.TrimSpace(ai.ArgString(a, "network")), Restart: strings.TrimSpace(ai.ArgString(a, "restart"))}
-		if o.Ports, err = aiArgList(a, "ports"); err != nil {
+		if o.Ports, err = aiContainersArgList(a, "ports"); err != nil {
 			return r, err
 		}
-		if o.Volumes, err = aiArgList(a, "volumes"); err != nil {
+		if o.Volumes, err = aiContainersArgList(a, "volumes"); err != nil {
 			return r, err
 		}
-		if o.Command, err = aiArgList(a, "command"); err != nil {
+		if o.Command, err = aiContainersArgList(a, "command"); err != nil {
 			return r, err
 		}
-		env, err := aiArgList(a, "env")
+		env, err := aiContainersArgList(a, "env")
 		if err != nil {
 			return r, err
 		}
@@ -210,7 +210,7 @@ func aiImageParse(ctx context.Context, call aiIDECaller, a map[string]any) (aiIm
 				return r, fmt.Errorf("tag: %v", err)
 			}
 		}
-		if o.Args, err = aiArgList(a, "build_args"); err != nil {
+		if o.Args, err = aiContainersArgList(a, "build_args"); err != nil {
 			return r, err
 		}
 		for _, v := range append([]string{o.Target}, o.Args...) {

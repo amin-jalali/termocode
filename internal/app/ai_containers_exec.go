@@ -48,8 +48,8 @@ var aiCtrFiles = func(ctx context.Context, h aiContainersHost, id string) (works
 	return host.FS(), nil
 }
 
-// aiArgList is a list argument: a JSON array, or one string split at spaces.
-func aiArgList(a map[string]any, key string) ([]string, error) {
+// aiContainersArgList is a list argument: a JSON array, or one string split at spaces.
+func aiContainersArgList(a map[string]any, key string) ([]string, error) {
 	switch v := a[key].(type) {
 	case nil:
 		return nil, nil
@@ -109,7 +109,7 @@ func aiExecParse(ctx context.Context, call aiIDECaller, a map[string]any) (aiExe
 		case "attach":
 			r.cmd = h.e.Attach(c.ID)
 		case "exec":
-			if o.Command, err = aiArgList(a, "command"); err != nil {
+			if o.Command, err = aiContainersArgList(a, "command"); err != nil {
 				return r, err
 			}
 			if len(o.Command) == 0 {
