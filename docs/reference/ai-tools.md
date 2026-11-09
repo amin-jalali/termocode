@@ -34,8 +34,8 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`rename`](#rename) | confirm (fileWrite) | no | Rename or move a file / directory. |
 | [`git_stage`](#git_stage) | confirm (git) | no | Stage a file for the next commit. |
 | [`git_commit`](#git_commit) | confirm (git) | no | Commit the staged changes with a message. |
-| [`git_checkout`](#git_checkout) | confirm (git) | no | Switch to a branch, optionally creating it. |
-| [`git_push`](#git_push) | confirm (git) | no | Push the current branch to its remote. |
+| [`git_checkout`](#git_checkout) | confirm (always asks) | no | Switch to a branch, optionally creating it (it asks every time). |
+| [`git_push`](#git_push) | confirm (always asks) | no | Push the current branch to its remote (it asks every time). |
 | [`git_pull`](#git_pull) | confirm (git) | no | Pull the current branch from its remote. |
 | [`run_command`](#run_command) | confirm (run) | no | Run a shell command HIDDEN in the workspace root and return its captured output (one-shot: build, test, grep, …; 2 min limit). |
 | [`lsp_nav`](#lsp_nav) | auto | yes | Go to definition, type definition, implementations or references of the symbol at a file position, via the language server. |
@@ -361,7 +361,7 @@ Stage a file for the next commit.
 
 ### git_commit
 
-Commit the staged changes with a message.
+Commit the staged changes with a message. amend=true replaces the last commit (the staged changes go in; an empty message keeps its message; it asks every time); signoff adds a Signed-off-by trailer.
 
 **Gate:** confirm (git)
 
@@ -369,13 +369,15 @@ Commit the staged changes with a message.
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `message` | string | yes | commit message |
+| `amend` | boolean |   | replace the last commit |
+| `message` | string |   | commit message (amend: empty keeps the old one) |
+| `signoff` | boolean |   | add a Signed-off-by trailer |
 
 ### git_checkout
 
-Switch to a branch, optionally creating it.
+Switch to a branch, optionally creating it (it asks every time).
 
-**Gate:** confirm (git)
+**Gate:** confirm (always asks)
 
 **MCP server:** no
 
@@ -386,9 +388,9 @@ Switch to a branch, optionally creating it.
 
 ### git_push
 
-Push the current branch to its remote.
+Push the current branch to its remote (it asks every time).
 
-**Gate:** confirm (git)
+**Gate:** confirm (always asks)
 
 **MCP server:** no
 

@@ -692,18 +692,49 @@ func localWorkspaceTools(w Workspace) []Tool {
 			},
 		},
 		{
-			Name: "git_commit", Description: "Commit the staged changes with a message.",
-			Params: map[string]any{"message": strParam("commit message")}, Required: []string{"message"},
+			Name: "git_commit", Description: "Commit the staged changes with a message. amend=true replaces the last commit " +
+				"(the staged changes go in; an empty message keeps its message; it asks every time); signoff adds a Signed-off-by trailer.",
+			Params: map[string]any{"message": strParam("commit message (amend: empty keeps the old one)"),
+				"amend":   map[string]any{"type": "boolean", "description": "replace the last commit"},
+				"signoff": map[string]any{"type": "boolean", "description": "add a Signed-off-by trailer"}},
 			Mutating: true, Class: ClassGit,
-			Describe: func(a map[string]any) string { return fmt.Sprintf("Commit: %q", firstLine(ArgString(a, "message"))) },
+			Gate: func(a map[string]any) (bool, string) {
+				if ArgBool(a, "amend") {
+					return true, "" // the GUI asks every time: no "Always allow"
+				}
+				return true, ClassGit
+			},
+			Validate: func(a map[string]any) error {
+				if !ArgBool(a, "amend") && strings.TrimSpace(ArgString(a, "message")) == "" {
+					return errors.New("message is empty")
+				}
+				return nil
+			},
+			Describe: func(a map[string]any) string {
+				if !ArgBool(a, "amend") {
+					return fmt.Sprintf("Commit: %q", firstLine(ArgString(a, "message")))
+				}
+				if msg := ArgString(a, "message"); strings.TrimSpace(msg) != "" {
+					return fmt.Sprintf("Amend the last commit: %q", firstLine(msg))
+				}
+				return "Amend the last commit (its message kept)"
+			},
 			Run: func(_ context.Context, a map[string]any) (string, error) {
-				return "committed", git.Commit(w.Root, ArgString(a, "message"))
+				amend := ArgBool(a, "amend")
+				out := "committed"
+				if amend {
+					out = "amended the last commit"
+				}
+				return out, git.CommitWith(w.Root, ArgString(a, "message"), amend, ArgBool(a, "signoff"))
 			},
 		},
 		{
-			Name: "git_checkout", Description: "Switch to a branch, optionally creating it.",
+			Name: "git_checkout", Description: "Switch to a branch, optionally creating it (it asks every time).",
 			Params:   map[string]any{"branch": strParam("branch name"), "create": map[string]any{"type": "boolean", "description": "create the branch first"}},
 			Required: []string{"branch"}, Mutating: true, Class: ClassGit,
+			// The GUI asks every time before a checkout (files change): no
+			// "Always allow".
+			Gate: func(map[string]any) (bool, string) { return true, "" },
 			Describe: func(a map[string]any) string {
 				if ArgBool(a, "create") {
 					return "Create branch " + ArgString(a, "branch")
@@ -719,8 +750,10 @@ func localWorkspaceTools(w Workspace) []Tool {
 			},
 		},
 		{
-			Name: "git_push", Description: "Push the current branch to its remote.",
+			Name: "git_push", Description: "Push the current branch to its remote (it asks every time).",
 			Mutating: true, Class: ClassGit,
+			// The GUI asks every time before a push: no "Always allow".
+			Gate:     func(map[string]any) (bool, string) { return true, "" },
 			Describe: func(map[string]any) string { return "Git push" },
 			Run:      func(context.Context, map[string]any) (string, error) { return "pushed", git.Push(w.Root) },
 		},

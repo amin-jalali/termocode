@@ -316,7 +316,18 @@ func hostRuns(w Workspace) map[string]func(context.Context, map[string]any) (str
 			return w.hostGitOK(ctx, "staged "+p(a), "add", "--", p(a))
 		},
 		"git_commit": func(ctx context.Context, a map[string]any) (string, error) {
-			return w.hostGitOK(ctx, "committed", "commit", "-m", ArgString(a, "message"))
+			args := []string{"commit"}
+			if ArgBool(a, "signoff") {
+				args = append(args, "--signoff")
+			}
+			if !ArgBool(a, "amend") {
+				return w.hostGitOK(ctx, "committed", append(args, "-m", ArgString(a, "message"))...)
+			}
+			args = append(args, "--amend")
+			if strings.TrimSpace(ArgString(a, "message")) == "" {
+				return w.hostGitOK(ctx, "amended the last commit", append(args, "--no-edit")...)
+			}
+			return w.hostGitOK(ctx, "amended the last commit", append(args, "-m", ArgString(a, "message"))...)
 		},
 		"git_checkout": func(ctx context.Context, a map[string]any) (string, error) {
 			br := ArgString(a, "branch")

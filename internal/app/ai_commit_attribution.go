@@ -95,11 +95,16 @@ func aiAttributionTools(tools []ai.Tool, root string) []ai.Tool {
 			return h + aiAttributionNote()
 		}
 		tools[i].Run = func(_ context.Context, a map[string]any) (string, error) {
-			msg, author := aiCommitAttributed(ai.ArgString(a, "message"))
-			if err := git.CommitOpts(root, msg, git.CommitOptions{Author: author}); err != nil {
+			amend, msg, author := ai.ArgBool(a, "amend"), ai.ArgString(a, "message"), ""
+			if !amend || strings.TrimSpace(msg) != "" { // an amend with no message keeps the old one as it is
+				msg, author = aiCommitAttributed(msg)
+			}
+			if err := git.CommitOpts(root, msg, git.CommitOptions{Author: author, Amend: amend, Signoff: ai.ArgBool(a, "signoff")}); err != nil {
 				return "", err
 			}
 			switch {
+			case amend:
+				return "amended the last commit", nil
 			case author != "":
 				return "committed (author: termocode AI, committer: the user)", nil
 			case msg != ai.ArgString(a, "message"):

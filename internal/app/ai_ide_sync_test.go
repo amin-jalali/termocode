@@ -377,7 +377,8 @@ func TestAIGitCheckoutReloadsOpenBuffers(t *testing.T) {
 	a := filepath.Join(dir, "a.txt")
 	m.openFileAtLine(a, 1)
 	m.openFileAtLine(filepath.Join(dir, "c.txt"), 1) // a.txt is now a tab in the background
-	driveAIChat(t, m, m.sendAIChat("switch"), nil)
+	// A checkout asks every time (no Always allow): the user says yes.
+	driveAIChat(t, m, m.sendAIChat("switch"), func(aiChatConfirmMsg) string { return "allow" })
 	if got := bufText(t, c, a); got != "other" {
 		t.Errorf("buffer %q after checkout, want the other branch's text (result %q)", got, oneResult(t, p))
 	}

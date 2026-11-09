@@ -678,6 +678,9 @@ func aiToolCardButtons(t ai.Tool) []confirm.Button {
 	if aiWorkflowCancelFirst[t.Name] || aiStashLosesData(t) {
 		deny.Title = "Cancel"
 	}
+	if aiGitAsksEveryTime(t) { // the GUI asks every time (ai_git_cards.go)
+		deny.Title, allow.Style = "Cancel", confirm.StyleDestructive
+	}
 	var more []confirm.Button
 	if t.Class != "" {
 		more = append(more, confirm.Button{ID: "always", Title: "Always allow " + t.Class})
