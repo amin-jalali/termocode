@@ -1190,6 +1190,7 @@ func (m *Model) aiContainersTools(call aiIDECaller) []ai.Tool {
 			},
 		},
 	}
+	tools = append(tools, m.aiContextsManageTool(call)) // servers: ai_contexts_manage.go
 	return tools
 }
 

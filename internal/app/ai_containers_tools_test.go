@@ -20,6 +20,9 @@ var aiContainersReadNames = []string{"containers_list", "containers_inspect", "c
 	"images_list", "volumes_list", "networks_list", "contexts_list", "registries_list"}
 var aiContainersWriteNames = []string{"containers_control", "images_pull", "compose_up"}
 
+// aiContainersManageNames ask per op (their own tests pin each gate).
+var aiContainersManageNames = []string{"contexts_manage"}
+
 // aiContainersTestModel is a model on the fake docker (docker27 fixtures)
 // with a synchronous IDE caller.
 func aiContainersTestModel(t *testing.T) (*Model, *servicestest.Fake, aiIDECaller) {
@@ -70,7 +73,7 @@ func TestAIContainersToolsSchema(t *testing.T) {
 			t.Errorf("%s: no description / Describe", tl.Name)
 		}
 	}
-	want := append(append([]string(nil), aiContainersReadNames...), aiContainersWriteNames...)
+	want := append(append(append([]string(nil), aiContainersReadNames...), aiContainersWriteNames...), aiContainersManageNames...)
 	sort.Strings(names)
 	sort.Strings(want)
 	if strings.Join(names, ",") != strings.Join(want, ",") {
@@ -121,8 +124,8 @@ func TestAIContainersNeverOfferedTools(t *testing.T) {
 			t.Errorf("tool %s must not be offered to the model", tl.Name)
 		}
 	}
-	if found != len(aiContainersReadNames)+len(aiContainersWriteNames) {
-		t.Errorf("%d container tools in the chat list, want %d", found, len(aiContainersReadNames)+len(aiContainersWriteNames))
+	if n := len(aiContainersReadNames) + len(aiContainersWriteNames) + len(aiContainersManageNames); found != n {
+		t.Errorf("%d container tools in the chat list, want %d", found, n)
 	}
 	for _, id := range []string{"containers-image-push", "containers-image-tag", "containers-image-run", "containers-image-remove",
 		"containers-network-remove", "containers-volume-remove", "containers-volume-disk-usage", "containers-remove",
