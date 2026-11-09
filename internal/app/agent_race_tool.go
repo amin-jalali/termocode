@@ -149,7 +149,7 @@ func (m *Model) aiRaceTools(call aiIDECaller) []ai.Tool {
 					m.startRace(task, verify, ids), nil
 			})
 		},
-	}}
+	}, aiAgentRacesTool(call)} // AI parity: list, summary, verify, stop (ai_agent_races_tool.go)
 }
 
 func init() {
