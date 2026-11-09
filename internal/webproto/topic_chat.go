@@ -82,6 +82,18 @@ type ChatMsg struct {
 	Run       *ChatRun     `json:"run,omitempty"`
 	Steps     []ChatStep   `json:"steps,omitempty"`
 	Blocks    []Block      `json:"blocks,omitempty"` // typed visual blocks after the text, ≤ MaxMsgBlocks
+	Meta      *ChatMeta    `json:"meta,omitempty"`   // a one-step profile's reply: the line under it
+}
+
+// ChatMeta is what a one-step profile's reply took: the line under the
+// answer ("gpt-6-sol · 54s") and its tooltip (tokens, step, CLI).
+type ChatMeta struct {
+	ElapsedMs int64  `json:"elapsed_ms,omitempty"` // once it ended
+	StartedMs int64  `json:"started_ms,omitempty"` // Unix ms; the page counts from it while it runs
+	In        int    `json:"in,omitempty"`         // prompt tokens (cache included)
+	Out       int    `json:"out,omitempty"`        // generated tokens
+	Step      string `json:"step,omitempty"`       // the step's title
+	CLI       string `json:"cli,omitempty"`        // the CLI that ran it ("Codex"), "" for an API model
 }
 
 // ChatRun is the pipeline run a message shows.
@@ -91,7 +103,8 @@ type ChatRun struct {
 	State     string  `json:"state" enum:"running|done|failed|cancelled|interrupted|paused"`
 	ElapsedMs int64   `json:"elapsed_ms,omitempty"`
 	CostUSD   float64 `json:"cost_usd,omitempty"`
-	PlanWait  bool    `json:"plan_wait,omitempty"` // waits for a plan approval (a card)
+	PlanWait  bool    `json:"plan_wait,omitempty"`  // waits for a plan approval (a card)
+	StartedMs int64   `json:"started_ms,omitempty"` // Unix ms; the page counts from it while it runs
 }
 
 // ChatStep is one step of a run.
@@ -105,6 +118,8 @@ type ChatStep struct {
 	MD     *MdNode  `json:"md,omitempty"`    // the answer as an AST once the step ended
 	Error  string   `json:"error,omitempty"`
 	Blocks []Block  `json:"blocks,omitempty"` // typed visual blocks of the step, ≤ MaxMsgBlocks
+	// ElapsedMs is how long the step took (once it ended).
+	ElapsedMs int64 `json:"elapsed_ms,omitempty"`
 }
 
 // Chat delta ops.

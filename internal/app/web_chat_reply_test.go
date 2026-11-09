@@ -88,3 +88,36 @@ func TestAttentionNotForOneStepReply(t *testing.T) {
 		t.Fatalf("failed reply: %v", ev)
 	}
 }
+
+// A one-step reply carries what the line under the answer shows and its
+// tooltip: the time it took (or when it started, while it runs), its
+// tokens, its step and its CLI. A longer run's steps carry their time,
+// and the run when it started (the page counts while it runs).
+func TestChatReplyCarriesItsMeta(t *testing.T) {
+	sm := gptReplyMsg(ai.RunStateDone, "12 tables.", "12 tables.")
+	sm.Steps[0].ElapsedMs, sm.Steps[0].StartedAtMs = 54104, 1794175279370
+	sm.Steps[0].Usage = &ai.Usage{Input: 3001, CacheRead: 11776, Output: 32}
+	cm, _ := webChatMsg(1, &sm, false)
+	want := webproto.ChatMeta{ElapsedMs: 54104, StartedMs: 1794175279370, In: 14777, Out: 32, Step: "GPT", CLI: "Codex"}
+	if cm.Meta == nil || *cm.Meta != want {
+		t.Errorf("done reply meta %+v, want %+v", cm.Meta, want)
+	}
+	run := gptReplyMsg(ai.RunStateRunning, "", "I am ")
+	run.Steps[0].StartedAtMs = 1794175279370
+	if cm, _ = webChatMsg(1, &run, false); cm.Meta == nil || cm.Meta.StartedMs != 1794175279370 || cm.Meta.ElapsedMs != 0 {
+		t.Errorf("running reply meta %+v", cm.Meta)
+	}
+	two := gptReplyMsg(ai.RunStateDone, "final", "final")
+	two.Run.StartedAtMs = 1794175279359
+	two.Steps = append([]ai.StoredStep{{ID: "s0", Title: "Plan", State: "completed", Text: "a plan", ElapsedMs: 4000}}, two.Steps...)
+	cm, _ = webChatMsg(1, &two, false)
+	if cm.Meta != nil || cm.Run == nil || cm.Run.StartedMs != 1794175279359 || cm.Steps[0].ElapsedMs != 4000 {
+		t.Errorf("two steps: meta %+v run %+v steps %+v", cm.Meta, cm.Run, cm.Steps)
+	}
+	// A change of the time or the tokens sends the message again.
+	a := webChatKey(&sm)
+	sm.Steps[0].Usage.Output = 40
+	if webChatKey(&sm) == a {
+		t.Error("the key does not change with the tokens")
+	}
+}

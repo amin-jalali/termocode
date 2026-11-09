@@ -7858,6 +7858,31 @@
       ],
       "additionalProperties": true
     },
+    "ChatMeta": {
+      "type": "object",
+      "properties": {
+        "cli": {
+          "type": "string"
+        },
+        "elapsed_ms": {
+          "type": "integer"
+        },
+        "in": {
+          "type": "integer"
+        },
+        "out": {
+          "type": "integer"
+        },
+        "started_ms": {
+          "type": "integer"
+        },
+        "step": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
     "ChatMsg": {
       "type": "object",
       "properties": {
@@ -7884,6 +7909,9 @@
         },
         "md": {
           "$ref": "#/defs/MdNode"
+        },
+        "meta": {
+          "$ref": "#/defs/ChatMeta"
         },
         "model": {
           "type": "string"
@@ -7994,6 +8022,9 @@
         "profile": {
           "type": "string"
         },
+        "started_ms": {
+          "type": "integer"
+        },
         "state": {
           "enum": [
             "running",
@@ -8094,6 +8125,9 @@
             "$ref": "#/defs/Block"
           },
           "type": "array"
+        },
+        "elapsed_ms": {
+          "type": "integer"
         },
         "error": {
           "type": "string"

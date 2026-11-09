@@ -1273,6 +1273,7 @@ export interface ChatMsg {
   run?: ChatRun;
   steps?: ChatStep[];
   blocks?: Block[];
+  meta?: ChatMeta;
 }
 
 export interface MdNode {
@@ -1299,6 +1300,7 @@ export interface ChatRun {
   elapsed_ms?: number;
   cost_usd?: number;
   plan_wait?: boolean;
+  started_ms?: number;
 }
 
 export interface ChatStep {
@@ -1311,6 +1313,7 @@ export interface ChatStep {
   md?: MdNode;
   error?: string;
   blocks?: Block[];
+  elapsed_ms?: number;
 }
 
 export interface Block {
@@ -1435,6 +1438,15 @@ export interface BlockBoardColumn {
   label: string;
   tone?: "ok" | "warn" | "bad" | "busy" | "idle" | "info";
   items?: BlockItem[];
+}
+
+export interface ChatMeta {
+  elapsed_ms?: number;
+  started_ms?: number;
+  in?: number;
+  out?: number;
+  step?: string;
+  cli?: string;
 }
 
 export interface ChatDelta {
