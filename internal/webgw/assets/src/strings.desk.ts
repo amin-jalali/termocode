@@ -232,6 +232,9 @@ export const SD = {
   "dev.viewers": "Browsers open now",
   "dev.viewer": "Read only",
   "dev.controller": "Read and change",
+  "dev.devices": "Paired devices",
+  "dev.pair": "Pair a Device…",
+  "dev.list": "Devices…",
   // Run, Test and Debug (WEBP-4)
   "test.output_of": "Output of {name}",
   "test.all_output": "Show all output",

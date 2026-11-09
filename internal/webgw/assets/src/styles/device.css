@@ -1,0 +1,17 @@
+/* Pair a Device… and Devices… of the desktop page (pair.js). The QR code
+   keeps its white quiet zone in every theme: a phone's camera needs dark
+   on light. */
+.set-pair { display: flex; gap: var(--s2); }
+.pair-link, .pair-ask, .pair-devices { min-width: min(420px, 90vw); }
+.pair-qr { display: block; width: 232px; height: 232px; margin: var(--s2) auto; border-radius: 4px; }
+.pair-addr { text-align: center; font-family: var(--font-mono); color: var(--muted); unicode-bidi: isolate; direction: ltr; }
+.pair-row { display: flex; gap: var(--s2); align-items: center; }
+.pair-url { flex: 1; width: auto; font-family: var(--font-mono); direction: ltr; }
+.pair-left { font-variant-numeric: tabular-nums; }
+.pair-code-label { color: var(--muted); font-size: 0.875rem; }
+.pair-error { color: var(--red); }
+.pair-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; max-height: 50vh; overflow: auto; }
+.pair-dev { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "name act" "facts act"; align-items: center; column-gap: var(--s3); padding: var(--s2) 0; border-bottom: 1px solid var(--border); }
+.pair-dev-name { grid-area: name; font-weight: 600; overflow-wrap: anywhere; }
+.pair-dev-facts { grid-area: facts; color: var(--muted); font-size: 0.875rem; }
+.pair-dev .btn { grid-area: act; }

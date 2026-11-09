@@ -65,7 +65,8 @@ import type { StringKey } from "../strings";
 import { DeskSearch } from "../views/desk/DeskSearch";
 import { DeskWorktrees } from "../views/desk/DeskWorktrees";
 import { DeskDB } from "../views/desk/DeskDB";
-import { DeskDevice, DeskSettings } from "../views/desk/DeskSettings";
+import { DeskSettings } from "../views/desk/DeskSettings";
+import { DeviceView } from "../lib/device";
 import { ThemeTab, UserCmdsTab } from "../views/desk/ConfigTabs";
 import { DeskContainers, OutputView } from "../views/desk/DeskContainers";
 import { CtrTab } from "../views/desk/CtrTab";
@@ -340,7 +341,7 @@ function EditorBody({ more, file, slot }: { more: boolean; file: string | null; 
   if (more) {
     const sub = route.value.tab === "more" ? route.value.rest : "";
     if (sub === "settings") return <DeskSettings />;
-    if (sub === "") return <DeskDevice />;
+    if (sub === "") return <DeviceView />;
     return <MoreView />;
   }
   if (file && diffOf(file)) return <DiffView key={file} tab={file} slot={slot} />;

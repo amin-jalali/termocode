@@ -43,6 +43,7 @@ import { askHere, askLaptop } from "../ui/AskHere";
 import { gitFailed } from "../views/git/errors";
 import { mdBufs } from "../views/MDPreview";
 import { cmpTab, mdTab } from "./vtabs";
+import { openPair } from "./device";
 
 export interface Command {
   id: string;
@@ -694,8 +695,10 @@ function laptopCommand(it: PaletteItem): Command {
     id: "laptop:" + it.id,
     text: it.title,
     keys: it.keys,
-    laptop: { ask: it.ask === true },
+    // page: the page opens it itself (Pair a Device…, Devices…).
+    laptop: it.page ? undefined : { ask: it.ask === true },
     run: () => {
+      if (it.page) return openPair(it.id);
       if (it.ask) {
         asking.value = it;
         return;

@@ -6,7 +6,8 @@ app-chunk-3.js sha384-Ll5hWoEDyEUQ5fd76oRHPbg9YRMxcBD9fmz8co5QbpblfM65+Md4xnD5/T
 app-chunk.js sha384-Aq3VXd9mnCHg6De9Y9CgsndinVqwHb69BE6XRTGiMUNjvfqBLdQcMSAb0mXwodVk 178773
 app.css sha384-iYPlyhk6g9eXJee4oiFXtEkutKayIEi51kirJLn3KBegIsB9tC9ZfGTr1P/FxJ2v 103371
 app.js sha384-sFA31wmA8VeASWL+C6YrXoOREhrQeCKrKZiz+JzNwV+K9ZGM0FWiWyQCk1Eq2a8T 28353
-desk.css sha384-modGC2ws/buQjK+P+0QQZPwZ4LQvXNzf5tSyW0ddeDHAdgyiuTfcYpcZ/NWft/qK 105038
+desk.css sha384-6hEy3B+FAwEWl8sWVklFmSRJIXCdKs67Q7uUfcRQCLWEThBrQ/5ejcqt7Ndyxkz8 106064
+device.js sha384-Z6tYAI6HxpJXRPN0O0pA/fyd2sYq8+PoKyRth2+ZzMaGl5wqqzaY/oVL07jZR8w/ 11003
 editor.js sha384-y2LrycVeXa+jyDjFfB9mM8o1Z9ecf6SRIFg5ZA889DHvz50ly111hLiCI0mjCvcc 219692
 fonts/nf-devicons.woff2 sha384-wUH+v6WoaVUttsmf/h5v4dkRuoqahceAkv1xrpwZtXkl+OmHeVQ8Na1lkb47vg+C 183656
 fonts/nf-fa-extension.woff2 sha384-6BEtIZZkxrg7PvLXCc1ixQVY7+TPzyhXLbdjhd7alitXS26M37KznH4dEnv4+g3k 35536
@@ -19,7 +20,7 @@ home.js sha384-nTiO1mxVqPJpo/DN603D3FUmlEHYWeEWq0MmdFxx3maS5/24Epuq2S9KtQtOOehf 
 icon-maskable.svg sha384-jsUQFC456bVobLxEI3ZKbp9mW6SjO1Joa3U86iXD66qm+YF+smRbvNGYVLvYMqOf 201
 icon.svg sha384-1i6/INXc16ryIXQB25IUE2qoPWGgij99HXLf1+5KcACYRgURj9eQzm/tcozbgZjh 210
 icons/codicon.ttf sha384-ydwWqX1+Wu2d6/YNWz288+ntV4SOp+lwtNI+XWqY3797m8eIMAmbNR5P9SCqdB5N 125828
-index.html sha384-OTmy85Mtqxrv7a2NsjNNlYvDsTTTKOJLOvLvTED9esj+WoeImix2XkwiM7AuGbYx 1274
+index.html sha384-7nc6fnNTsEG3xRKocTiLVpjsaXGgkP4dvNKwa01DNTU/FDyomEN6+dya5gdhzb1y 1274
 kit.css sha384-P8qmDyG8siZiLU0QdtTGodQg6BmhXlsrjnZgCc8H1xZhq6/UdXcrDClKlDEA+fxq 97538
 kit.html sha384-2r5bR6jUEk51+ZxmHTSwwszj972o1axWkE4PQSo4DzKmynyqQG3/k0iohh6A8HFy 719
 kit.js sha384-9nDWW/RJ2xajE2ZVdyKJU2I0A6sVie6MwOxnhKC0R1Bar5zF8xuGWbMSlCVp/skQ 219021
@@ -34,5 +35,5 @@ monaco/editor-contrib.js sha384-zovZc9/8c8IF6IlccJXAp+iG87TnOpWjJGqruAwc0mBMA0kL
 monaco/editor-host.js sha384-rIPG+WRVloxnbIjzdw7y2Okz9CDO0u8Vi8Gp09YBtnrkMwRn5dEhgAkE5greTXHf 361750
 monaco/editor.css sha384-h3Pml8012xDelgjWIfvjv8T/9ptDUnH1yJrSjj78OtB8P1yT/3pmrp6Y7S2cNUV4 390829
 monaco/editor.js sha384-n5VxbIFjdhl1sERXQHN52h87EGviSdsndgKg9eRxZVuVsFtoxtLJDuY2UxnnGx/r 2472349
-strings-fa.js sha384-7uvXWIzruJeeg1gKiNS3m48bOAy3d5VXprjcMnoLuiriAAbw0yrFzb7orpGk80f4 103616
-workbench.js sha384-FlUgiL10LP1cEx87HRCqn4C4jGMW0UpouX+wXVgGo5blBw2KSalrqMUsgS27pUKv 270312
+strings-fa.js sha384-zcQwTTWntDB0eC+PplE+jHQrNVHklBNdIk4EOcHTSbFiBl7kkDw5P7eEeQCEnwir 103756
+workbench.js sha384-hfhngp3wHilSS6JDic9E+MT429P0pGrTaU4m+mIVJBtuHzWRBGXmHri6ZEx3yCvo 268436

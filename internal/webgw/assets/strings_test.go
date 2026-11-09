@@ -226,7 +226,7 @@ func TestEveryUsedStringKeyExists(t *testing.T) {
 	// The feature-local English tables (the Home MOB-4, saved views
 	// MOB-71, MCP views, races) hold keys of their own; a literal may name
 	// one of them. Their keys do not open a namespace of the page's.
-	for _, l := range []struct{ file, name string }{{"src/home/strings.ts", "HS"}, {"src/home/savedstrings.ts", "SV"}, {"src/phone/mcp/strings.ts", "MS"}, {"src/phone/races/strings.ts", "RS"}} {
+	for _, l := range []struct{ file, name string }{{"src/home/strings.ts", "HS"}, {"src/home/savedstrings.ts", "SV"}, {"src/phone/mcp/strings.ts", "MS"}, {"src/phone/races/strings.ts", "RS"}, {"src/device/strings.ts", "PS"}} {
 		for _, e := range parseStrings(t, l.file, l.name) {
 			keys[e.key] = true
 		}

@@ -1,21 +1,17 @@
-// The desktop's Settings and This device pages, in the editor area like
-// the laptop editor's settings editor: a search box, the groups on the
-// left (a table of contents with counts), and each setting as its
-// category and title in bold, its description, and its value in the
-// control its type has. The laptop's settings are read only here (each
-// shows a lock; a changed one has the blue bar and says its default).
-// This device's settings change this browser only (theme, language,
-// text direction, notifications).
+// The desktop's Settings page, in the editor area like the laptop
+// editor's settings editor: a search box, the groups on the left (a
+// table of contents with counts), and each setting as its category and
+// title in bold, its description, and its value in the control its type
+// has. The laptop's settings are read only here (each shows a lock; a
+// changed one has the blue bar and says its default). This device's page
+// shares its frame (SetPage) and lives in device.js (src/device.tsx).
 import { Fragment, h, type ComponentChildren } from "preact";
 import { signal } from "@preact/signals";
 import { useEffect, useRef } from "preact/hooks";
-import { prefs, setPref, type Direction, type Language, type Theme } from "../../lib/prefs";
 import { link, store } from "../../session";
 import { readSettings, type SettingView } from "../../state/more";
 import { t } from "../../strings";
 import { Cod } from "../../ui/icons";
-import { NotifyField } from "../../ui/NotifyField";
-import { BookmarkField } from "../../ui/BookmarkField";
 
 const query = signal("");
 
@@ -167,96 +163,3 @@ export function DeskSettings() {
     </SetPage>
   );
 }
-
-function Choice<T extends string>({ name, title, desc, value, choices, set }: { name: string; title: string; desc: string; value: T; choices: readonly { value: T; label: string }[]; set: (v: T) => void }) {
-  return (
-    <div class="set-item" data-key={name}>
-      <div class="set-title">
-        <span class="set-name">{title}</span>
-      </div>
-      <p class="set-desc">{desc}</p>
-      <div class="set-value">
-        <select class="set-input set-select" aria-label={title} value={value} onChange={(e) => set((e.currentTarget as HTMLSelectElement).value as T)}>
-          {choices.map((c) => (
-            <option key={c.value} value={c.value}>
-              {c.label}
-            </option>
-          ))}
-        </select>
-      </div>
-    </div>
-  );
-}
-
-/** DeskDevice is this browser's own settings and the link's facts. */
-export function DeskDevice() {
-  const p = prefs.value;
-  const m = link.meta.value;
-  const themes = [
-    { value: "system", label: t("more.theme.system") },
-    { value: "dark", label: t("more.theme.dark") },
-    { value: "light", label: t("more.theme.light") },
-  ] as const;
-  const langs = [
-    { value: "auto", label: t("more.dir.auto") },
-    { value: "en", label: t("more.lang.en") },
-    { value: "fa", label: t("more.lang.fa") },
-  ] as const;
-  const dirs = [
-    { value: "auto", label: t("more.dir.auto") },
-    { value: "ltr", label: t("more.dir.ltr") },
-    { value: "rtl", label: t("more.dir.rtl") },
-  ] as const;
-  const groups = [
-    { id: "look", label: t("dev.look"), n: 3 },
-    { id: "notify", label: t("notify.title"), n: 1 },
-    { id: "link", label: t("dev.link"), n: 4 },
-    { id: "about", label: t("more.about"), n: 1 },
-  ];
-  return (
-    <SetPage id="more" title={t("act.device")} groups={groups}>
-      <section class="set-group" data-group="look" aria-label={t("dev.look")}>
-        <h2 class="set-group-h">{t("dev.look")}</h2>
-        <Choice<Theme> name="theme" title={t("theme")} desc={t("dev.theme_desc")} value={p.theme} choices={themes} set={(v) => setPref("theme", v)} />
-        <Choice<Language> name="lang" title={t("more.lang")} desc={t("dev.lang_desc")} value={p.lang} choices={langs} set={(v) => setPref("lang", v)} />
-        <Choice<Direction> name="dir" title={t("more.dir")} desc={t("dev.dir_desc")} value={p.dir} choices={dirs} set={(v) => setPref("dir", v)} />
-      </section>
-      <section class="set-group" data-group="notify" aria-label={t("notify.title")}>
-        <h2 class="set-group-h">{t("notify.title")}</h2>
-        <div class="set-item set-notify">
-          <NotifyField />
-        </div>
-      </section>
-      <section class="set-group" data-group="link" aria-label={t("dev.link")}>
-        <h2 class="set-group-h">{t("dev.link")}</h2>
-        <Fact title={t("dev.name")} value={m?.device || "—"} />
-        <Fact title={t("dev.role")} value={m ? t(m.role === "viewer" ? "dev.viewer" : "dev.controller") : "—"} />
-        <Fact title={t("dev.viewers")} value={m ? String(m.viewers) : "—"} />
-        <BookmarkField desk />
-      </section>
-      <section class="set-group" data-group="about" aria-label={t("more.about")}>
-        <h2 class="set-group-h">{t("more.about")}</h2>
-        <div class="set-item">
-          <p class="set-desc">{t("more.about.body")}</p>
-          <a class="set-link" href="/assets/licenses.txt">
-            {t("more.licenses")}
-          </a>
-        </div>
-      </section>
-    </SetPage>
-  );
-}
-
-function Fact({ title, value }: { title: string; value: string }) {
-  return (
-    <div class="set-item">
-      <div class="set-title">
-        <span class="set-name">{title}</span>
-      </div>
-      <div class="set-value">
-        <input class="set-input" value={value} disabled aria-label={title} />
-      </div>
-    </div>
-  );
-}
-

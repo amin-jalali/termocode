@@ -33,10 +33,11 @@ var sourceRules = []rule{
 	// The page's dynamic imports (lib/lazy.ts) load the editor file
 	// (WEB-39), the desktop workbench, the Persian strings and the phone's
 	// Home (MOB-4); the desktop
-	// editor's frame loads its Vim mode (monaco-vim.js, WEBP-1); the
-	// workbench loads Add to AI Chat (aictx.js, lib/aictx.ts). Each is a
+	// editor's frame loads its Vim mode (monaco-vim.js, WEBP-1); the workbench
+	// loads Add to AI Chat (aictx.js, lib/aictx.ts) and This device, Pair
+	// a Device… and Devices… (device.js, lib/device.tsx). Each is a
 	// fixed path.
-	{name: "dynamic import", re: regexp.MustCompile(`\bimport\s*\(`), allow: map[string]bool{"lib/lazy.ts": true, "monaco/frame.ts": true, "lib/aictx.ts": true}},
+	{name: "dynamic import", re: regexp.MustCompile(`\bimport\s*\(`), allow: map[string]bool{"lib/lazy.ts": true, "monaco/frame.ts": true, "lib/device.tsx": true, "lib/aictx.ts": true}},
 	{name: "remote script/style", re: regexp.MustCompile(`(?i)@import|url\(\s*["']?(https?:)?//`)},
 	// Only the prefs module touches localStorage, and it never holds a
 	// secret; and the bookmark key of a remembered browser (WEBP-12), the
@@ -203,8 +204,9 @@ func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
 		if pageFile(e.Path) { // lib/push.ts: the push-only worker (MOB-30)
 			text = strings.ReplaceAll(text, "navigator.serviceWorker", "")
 		}
-		if e.Path == "workbench.js" { // Add to AI Chat (lib/aictx.ts), a fixed path
-			text = strings.Replace(text, `import("/assets/aictx.js")`, "", 1)
+		if e.Path == "workbench.js" { // the workbench's one dynamic import: This device, Pair a Device… and Devices… (lib/device.tsx), a fixed path
+			text = strings.Replace(text, `import("/assets/device.js")`, "", 1)
+			text = strings.Replace(text, `import("/assets/aictx.js")`, "", 1) // Add to AI Chat (lib/aictx.ts), a fixed path
 		}
 		if e.Path == "monaco-frame.js" { // the frame's one dynamic import: Vim mode (WEBP-1), a fixed path
 			text = strings.Replace(text, `import("/assets/monaco-vim.js")`, "", 1)
