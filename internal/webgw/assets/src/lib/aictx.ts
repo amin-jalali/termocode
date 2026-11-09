@@ -16,6 +16,7 @@ import { pinned } from "../views/Chat";
 import { ctrList } from "../views/desk/DeskContainers";
 import { conns, loadConns, tables } from "../views/desk/dbstate";
 import { addAttach, attaches } from "./attach";
+import { getDraft, setDraft } from "./drafts";
 import { toast } from "./toasts";
 import { quick, setPanes } from "./workbench";
 
@@ -36,6 +37,8 @@ const host = (): AIHost => ({
   pinned,
   attaches,
   addAttach,
+  getDraft,
+  setDraft,
   showChat: () => setPanes({ chat: true }),
   conns,
   tables,

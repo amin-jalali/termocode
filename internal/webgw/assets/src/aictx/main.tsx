@@ -15,6 +15,7 @@ import { askSide } from "./side";
 import { AS } from "./strings";
 
 export { exportText } from "./export";
+export { pickMCP } from "./mcp";
 /** side is AI: Side Question… (side.tsx). */
 export { askSide as side };
 

@@ -8,8 +8,8 @@ import (
 	"testing"
 )
 
-// The AI chat's extras (aictx.js: Add to AI Chat, AI: Side Question…, a
-// grid's Export Result…) are their own file, loaded by the workbench on
+// The AI chat's extras (aictx.js: Add to AI Chat, AI: Side Question…,
+// AI: Insert MCP Prompt or Resource…, a grid's Export Result…) are their own file, loaded by the workbench on
 // first use: the phone's files never name it, and it holds no second
 // Preact or session (its sources import types and pure helpers only,
 // and get the rest from the workbench's host).

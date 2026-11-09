@@ -1,6 +1,7 @@
 // The contract between the desktop workbench and the AI chat's extras
 // (aictx.js): Add to AI Chat (a right click's item, an @ in the chat
-// input, an item dropped on the chat), AI: Side Question… and, beside
+// input, an item dropped on the chat), AI: Side Question…, AI: Insert MCP
+// Prompt or Resource… and, beside
 // them, a grid's Export Result…. aictx.js is built alone (cmd/webbuild
 // aictxChunk) and the workbench loads it on first use (lib/aictx.ts
 // withAI). It imports types and pure helpers only and gets everything
@@ -80,6 +81,8 @@ export interface AIHost {
   pinned: ReadonlySignal<ChatSnap | null>;
   attaches: Signal<Readonly<Record<string, readonly Attach[]>>>;
   addAttach(chat: string, a: Attach): boolean;
+  getDraft(chat: string): string;
+  setDraft(chat: string, text: string): void;
   /** showChat opens the chat pane. */
   showChat(): void;
   loadConns: typeof LoadConns;
