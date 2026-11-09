@@ -152,6 +152,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`db_history`](#db_history) | auto | no | List recent SQL runs (the user's and yours), newest first. |
 | [`db_ddl`](#db_ddl) | auto | yes | Show the DDL (CREATE statement) of a table, with its indexes and foreign keys. |
 | [`db_search_data`](#db_search_data) | auto | no | Find a value in every column of every table of a schema (MySQL: a database), in a read-only session. |
+| [`db_connection`](#db_connection) | add: confirm (always asks)<br>connect: auto<br>delete: confirm (always asks)<br>disconnect: confirm (always asks)<br>edit: confirm (always asks)<br>open_container: auto<br>ssh: confirm (always asks)<br>ssl: confirm (always asks)<br>test: auto | no | Manage a connection of the Databases view, in the file that holds it (.termocode/databases.json or your connections file). |
 | [`ast_grep`](#ast_grep) | search: auto<br>with rewrite: confirm (review), or confirm (fileWrite) when AI file changes are not reviewed | no | Structural code search with ast-grep: pattern is code with $VAR wildcards ("fmt.Println($A)"). |
 | [`codebase_search`](#codebase_search) | auto | no | Find code by meaning: describe what it does in plain words ("where the password is checked") and get the best matching places as file:line with a score, best first. |
 | [`look_at`](#look_at) | auto<br>an image is sent to the main model in one extra request (a PDF is read locally) | no | Look at an image file (png, jpg, gif, webp) and answer a question about it, or read the text of a PDF file. |
@@ -1888,6 +1889,43 @@ Find a value in every column of every table of a schema (MySQL: a database), in 
 | `value` | string | yes | the text to find (contains, any case) |
 | `exact` | boolean |   | the whole cell equals value |
 | `schema` | string |   | schema (PostgreSQL, default public) or database (MySQL, default the connection's) |
+
+### db_connection
+
+Manage a connection of the Databases view, in the file that holds it (.termocode/databases.json or your connections file). op add (id, driver, host, port, user, database, path for sqlite, db for redis, environment, read_only, file project|user), edit (conn + the fields to change), delete, ssh (ssh_host, ssh_port, ssh_user, ssh_auth, ssh_key_file, ssh_jump; or remove: true), ssl (ssl_mode, ssl_ca, ssl_cert, ssl_key) and disconnect ask the user every time. test (a fresh login and a ping), connect (the view connects; it asks the user for a missing password) and open_container (Open in Databases of a database container) run at once. Never pass a password or a URL: the user types passwords in the Databases view.
+
+**Gate:** add: confirm (always asks) · connect: auto · delete: confirm (always asks) · disconnect: confirm (always asks) · edit: confirm (always asks) · open_container: auto · ssh: confirm (always asks) · ssl: confirm (always asks) · test: auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `op` | string | yes | what to do. One of: `add`, `connect`, `delete`, `disconnect`, `edit`, `open_container`, `ssh`, `ssl`, `test` |
+| `conn` | string |   | connection id (db_connections); not for add or open_container |
+| `container` | string |   | open_container: the container's name (containers_list) |
+| `database` | string |   | add / edit: the database (cassandra: keyspace) |
+| `db` | integer |   | add (redis): the database number |
+| `driver` | string |   | add: the database type. One of: `postgres`, `mysql`, `sqlite`, `redis`, `cassandra` |
+| `environment` | string |   | add / edit: dev, staging, production … |
+| `file` | string |   | add: project (.termocode/databases.json, default) or user (your connections file). One of: `project`, `user` |
+| `host` | string |   | add / edit: the server |
+| `id` | string |   | add: the new connection's id (a-z 0-9 _ -) |
+| `name` | string |   | add / edit: the display name |
+| `path` | string |   | add / edit (sqlite): a file inside the workspace |
+| `port` | integer |   | add / edit: the port (default: the driver's) |
+| `read_only` | boolean |   | add / edit: refuse writes |
+| `remove` | boolean |   | ssh: remove the tunnel |
+| `ssh_auth` | string |   | ssh: how to sign in. One of: `agent`, `key`, `password` |
+| `ssh_host` | string |   | ssh: the SSH server or ~/.ssh/config alias |
+| `ssh_jump` | string |   | ssh: jump hosts, comma separated |
+| `ssh_key_file` | string |   | ssh: the key file |
+| `ssh_port` | integer |   | ssh: its port |
+| `ssh_user` | string |   | ssh: the SSH login |
+| `ssl_ca` | string |   | ssl: CA file |
+| `ssl_cert` | string |   | ssl: client certificate file |
+| `ssl_key` | string |   | ssl: client key file |
+| `ssl_mode` | string |   | ssl: the mode. One of: `disable`, `require`, `verify-ca`, `verify-full` |
+| `user` | string |   | add / edit: the login name |
 
 ### ast_grep
 

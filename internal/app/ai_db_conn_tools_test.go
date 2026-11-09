@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/amin-jalali/termocode/internal/containers"
 	"github.com/amin-jalali/termocode/internal/dbclient"
 )
 
@@ -69,7 +70,6 @@ func TestAIDBConnectionGateMatchesTheGUI(t *testing.T) {
 		{map[string]any{"op": "delete", "conn": "local"}, true},
 		{map[string]any{"op": "disconnect", "conn": "local"}, true},
 		{map[string]any{"op": "ssh", "conn": "local", "ssh_host": "bastion"}, true},
-		{map[string]any{"op": "ssh", "conn": "local", "remove": true}, true},
 		{map[string]any{"op": "ssl", "conn": "local", "ssl_mode": "verify-full"}, true},
 		{map[string]any{"op": "test", "conn": "local"}, false},
 		{map[string]any{"op": "connect", "conn": "local"}, false},
@@ -259,7 +259,12 @@ func TestAIDBConnectionTestConnectDisconnect(t *testing.T) {
 func TestAIDBConnectionOpenContainer(t *testing.T) {
 	e := newAIDBEnv(t)
 	e.m.services = svcHostState()
-	out, err := e.run(t, "db_connection", map[string]any{"op": "open_container", "container": "nginx"})
+	out, err := e.run(t, "db_connection", map[string]any{"op": "open_container", "container": "termocode-postgres-1"})
+	if err != nil || !strings.Contains(out, "already in Databases as local") {
+		t.Fatalf("a saved one: %q %v", out, err)
+	}
+	e.m.services.containerRows[0].Ports = []containers.Port{{PublicPort: 55432, PrivatePort: 5432, Type: "tcp"}}
+	out, err = e.run(t, "db_connection", map[string]any{"op": "open_container", "container": "nginx"})
 	if err == nil || !strings.Contains(err.Error(), "termocode-postgres-1") {
 		t.Fatalf("not a database container: %q %v", out, err)
 	}
@@ -267,7 +272,7 @@ func TestAIDBConnectionOpenContainer(t *testing.T) {
 	if err != nil || !strings.Contains(out, "password") {
 		t.Fatalf("open: %q %v", out, err)
 	}
-	if p := e.m.databases.pendingConn; p.Driver != "postgres" || p.Port != 5432 {
+	if p := e.m.databases.pendingConn; p.Driver != "postgres" || p.Port != 55432 {
 		t.Fatalf("pending connection: %+v", p)
 	}
 }

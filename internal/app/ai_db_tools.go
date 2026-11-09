@@ -1028,7 +1028,7 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 		},
 	}
 
-	tools := []ai.Tool{conns, schema, query, explain, hist, ddl, search}
+	tools := []ai.Tool{conns, schema, query, explain, hist, ddl, search, aiDBConnectionTool(root, call)}
 	if dbHasRedis(root) { // the redis_* tools only where a Redis connection exists
 		tools = append(tools, aiRedisTools(root, call)...)
 	}
