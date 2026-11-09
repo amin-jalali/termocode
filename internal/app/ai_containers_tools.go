@@ -1116,6 +1116,7 @@ func (m *Model) aiContainersTools(call aiIDECaller) []ai.Tool {
 		},
 	}
 	tools = append(tools, m.aiContextsManageTool(call)) // servers: ai_contexts_manage.go
+	tools = append(tools, m.aiContainersExecTool(call)) // inside a container: ai_containers_exec.go
 	return tools
 }
 
