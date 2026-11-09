@@ -2,11 +2,11 @@
 // kind becomes a Preact element and each string a text node, so nothing
 // in a message can become markup. Links go through safeHref and a confirm
 // sheet; code blocks stay left to right and isolated with a copy button.
-import { Fragment, h, type ComponentChildren } from "preact";
+import { h, type ComponentChildren } from "preact";
 import { useState } from "preact/hooks";
 import { activeDesk } from "../lib/deskeditor";
 import { layout } from "../lib/layout";
-import { Cod } from "./icons";
+import { face } from "./icons";
 import type { MdNode } from "../../../../webproto/proto";
 import { askLink } from "../lib/links";
 import { toast } from "../lib/toasts";
@@ -59,31 +59,16 @@ export function CodeBlock({ text, lang, diagram }: { text: string; lang?: string
             title={desk ? t(source ? "chat.show_diagram" : "chat.show_source") : undefined}
             onClick={() => setSource(!source)}
           >
-            {desk ? (
-              <>
-                <Cod name={source ? "type-hierarchy" : "code"} />
-                <span class="sr-only">{t(source ? "chat.show_diagram" : "chat.show_source")}</span>
-              </>
-            ) : (
-              t(source ? "chat.show_diagram" : "chat.show_source")
-            )}
+            {face(desk, source ? "type-hierarchy" : "code", t(source ? "chat.show_diagram" : "chat.show_source"))}
           </button>
         )}
         {desk && (
           <button type="button" class="cb-insert" aria-label={t("chat.insert")} title={t("chat.insert")} disabled={!ed} onClick={() => ed?.insert(text.replace(/\n$/, ""))}>
-            <Cod name="insert" />
-            <span class="sr-only">{t("chat.insert")}</span>
+            {face(true, "insert", t("chat.insert"))}
           </button>
         )}
         <button type="button" class="cb-copy" aria-label={desk ? t("copy") : undefined} title={desk ? t("copy") : undefined} onClick={copy}>
-          {desk ? (
-            <>
-              <Cod name="copy" />
-              <span class="sr-only">{t("copy")}</span>
-            </>
-          ) : (
-            t("copy")
-          )}
+          {face(desk, "copy", t("copy"))}
         </button>
       </div>
       <pre class={drawn ? "cb-pre cb-diagram" : "cb-pre"}>
@@ -99,67 +84,52 @@ export function CodeBlock({ text, lang, diagram }: { text: string; lang?: string
 }
 
 function kids(n: MdNode, d: number): ComponentChildren[] {
-  return (n.c ?? []).map((c, i) => node(c, d + 1, i));
+  return (n.c ?? []).map((c) => node(c, d + 1));
 }
 
-function node(n: MdNode, d: number, key: number): ComponentChildren {
+function node(n: MdNode, d: number): ComponentChildren {
   if (!n || typeof n !== "object") return null;
   if (d > MAX_DEPTH) return textOf(n);
   switch (n.k) {
     case "doc":
-      return <Fragment key={key}>{kids(n, d)}</Fragment>;
+      return kids(n, d);
     case "p":
-      return (
-        <p key={key} dir="auto">
-          {kids(n, d)}
-        </p>
-      );
+    case "li":
+    case "blockquote":
+    case "th":
+    case "td":
+      return h(n.k, { dir: "auto" }, kids(n, d));
     case "h": {
       const lv = Math.min(6, Math.max(1, Math.floor(n.level ?? 1)));
       return (
-        <div key={key} class={`md-h md-h${lv}`} role="heading" aria-level={Math.min(6, lv + 2)} dir="auto">
+        <div class={`md-h md-h${lv}`} role="heading" aria-level={Math.min(6, lv + 2)} dir="auto">
           {kids(n, d)}
         </div>
       );
     }
     case "em":
-      return <em key={key}>{kids(n, d)}</em>;
     case "strong":
-      return <strong key={key}>{kids(n, d)}</strong>;
+    case "ul":
+      return h(n.k, null, kids(n, d));
     case "code":
       return (
-        <code key={key} class="md-code" dir="ltr">
+        <code class="md-code" dir="ltr">
           {n.text ?? ""}
         </code>
       );
     case "codeblock":
-      return <CodeBlock key={key} text={n.text ?? ""} lang={n.lang} diagram={n.diagram} />;
-    case "ul":
-      return <ul key={key}>{kids(n, d)}</ul>;
+      return <CodeBlock text={n.text ?? ""} lang={n.lang} diagram={n.diagram} />;
     case "ol":
       return (
-        <ol key={key} start={n.start && n.start !== 1 ? n.start : undefined}>
+        <ol start={n.start && n.start !== 1 ? n.start : undefined}>
           {kids(n, d)}
         </ol>
       );
-    case "li":
-      return (
-        <li key={key} dir="auto">
-          {kids(n, d)}
-        </li>
-      );
-    case "blockquote":
-      return (
-        <blockquote key={key} dir="auto">
-          {kids(n, d)}
-        </blockquote>
-      );
     case "link": {
       const href = safeHref(n.href);
-      if (!href) return <Fragment key={key}>{kids(n, d)}</Fragment>;
+      if (!href) return kids(n, d);
       return (
         <a
-          key={key}
           class="md-link"
           href={href}
           target="_blank"
@@ -174,32 +144,20 @@ function node(n: MdNode, d: number, key: number): ComponentChildren {
       );
     }
     case "hr":
-      return <hr key={key} />;
+      return <hr />;
     case "br":
-      return <br key={key} />;
+      return <br />;
     case "table":
       return (
-        <div key={key} class="md-table">
+        <div class="md-table">
           <table>
             <tbody>
-              {(n.rows ?? []).map((row, ri) => (
-                <tr key={ri}>{(Array.isArray(row) ? row : []).map((cell, ci) => node(cell, d + 1, ci))}</tr>
+              {(n.rows ?? []).map((row) => (
+                <tr>{(Array.isArray(row) ? row : []).map((cell) => node(cell, d + 1))}</tr>
               ))}
             </tbody>
           </table>
         </div>
-      );
-    case "th":
-      return (
-        <th key={key} dir="auto">
-          {kids(n, d)}
-        </th>
-      );
-    case "td":
-      return (
-        <td key={key} dir="auto">
-          {kids(n, d)}
-        </td>
       );
     case "text":
       return n.text ?? "";
@@ -210,5 +168,5 @@ function node(n: MdNode, d: number, key: number): ComponentChildren {
 
 /** Md draws one markdown AST. */
 export function Md({ doc }: { doc: MdNode }) {
-  return <div class="md">{node(doc, 0, 0)}</div>;
+  return <div class="md">{node(doc, 0)}</div>;
 }

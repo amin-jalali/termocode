@@ -15,7 +15,7 @@ import { isStub, readChat } from "../state/chat";
 import { t } from "../strings";
 import { BlobImg } from "../ui/BlobImg";
 import { Md } from "../ui/Markdown";
-import { Cod } from "../ui/icons";
+import { Cod, face } from "../ui/icons";
 import { layout } from "../lib/layout";
 import { hasBlocks, toolBlocks } from "../lib/toolblocks";
 import { Progress, SkeletonBubbles } from "../ui/Skeleton";
@@ -39,17 +39,28 @@ const NEAR_BOTTOM_PX = 80;
 /** PAGE is how many messages draw at first and per Load older. */
 const PAGE = 60;
 
-function MsgText({ text, streaming }: { text?: string; streaming?: boolean }) {
+/** CHUNK: a plain text draws in blocks of about this many characters,
+ * each cut after a line end, so a streamed token lays out the last block
+ * only (one 48 KB text node took 5.5 ms of layout a token; at 4x CPU
+ * the page drew a token seconds late). The text only grows, so the cuts
+ * stay where they were. */
+const CHUNK = 1024;
+
+function MsgText({ text = "", streaming }: { text?: string; streaming?: boolean }) {
+  const parts = [];
+  let i = 0;
+  for (let j; (j = text.indexOf("\n", i + CHUNK)) >= 0; i = j + 1) parts.push(<div>{text.slice(i, j + 1)}</div>);
   return (
-    <p class="msg-text" dir="auto">
-      {text ?? ""}
+    <div class="msg-text" dir="auto">
+      {parts}
+      {text.slice(i)}
       {streaming && (
         <span class={`cursor${live.value ? "" : " is-paused"}`} aria-hidden="true">
           ▍
         </span>
       )}
       {streaming && !live.value && <span class="msg-paused">{t("chat.paused")}</span>}
-    </p>
+    </div>
   );
 }
 
@@ -307,14 +318,7 @@ export function ChatView() {
         <>
           {pin && <span class="chat-pinned">📌 {t("chat.pinned")}</span>}
           <button type="button" class={`head-btn chat-list-btn${list ? " is-on" : ""}`} aria-pressed={list ? "true" : "false"} title={desk ? t("chat.list") : undefined} onClick={() => setList(!list)}>
-            {desk ? (
-              <>
-                <Cod name="history" />
-                <span class="sr-only">{t("chat.list")}</span>
-              </>
-            ) : (
-              t("chat.list")
-            )}
+            {face(desk, "history", t("chat.list"))}
           </button>
           {!pin && link.meta.value?.role === "controller" && (
             <button
@@ -333,14 +337,7 @@ export function ChatView() {
             </button>
           ) : (
             <button type="button" class="head-btn chat-new" title={desk ? t("chat.new") : undefined} onClick={newChat}>
-              {desk ? (
-                <>
-                  <Cod name="add" />
-                  <span class="sr-only">{t("chat.new")}</span>
-                </>
-              ) : (
-                t("chat.new")
-              )}
+              {face(desk, "add", t("chat.new"))}
             </button>
           )}
         </>

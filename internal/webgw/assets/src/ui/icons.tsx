@@ -1,6 +1,6 @@
 // Line icons for the tab bar and the strip, drawn as SVG elements (no
 // icon font, no markup strings). 24-unit grid, 1.75 stroke, currentColor.
-import { h, type ComponentChildren } from "preact";
+import { Fragment, h, type ComponentChildren } from "preact";
 import { fileIcon } from "../lib/fileicon";
 
 function Icon({ children, size = 22 }: { children: ComponentChildren; size?: number }) {
@@ -170,6 +170,18 @@ export const IconRows = () => (
 export function Cod({ name, big }: { name: string; big?: boolean }) {
   return <span class={`cod cod-${name}${big ? " cod-24" : ""}`} aria-hidden="true" />;
 }
+
+/** face is a button's face: on the desktop its icon (with its words
+ * for a screen reader), on a phone its words. */
+export const face = (desk: boolean, name: string, text: string) =>
+  desk ? (
+    <>
+      <Cod name={name} />
+      <span class="sr-only">{text}</span>
+    </>
+  ) : (
+    text
+  );
 
 /** FileIcon is a file's or folder's icon in the workbench (the TUI's). */
 export function FileIcon({ path, dir, open }: { path: string; dir?: boolean; open?: boolean }) {
