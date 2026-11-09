@@ -404,7 +404,8 @@ func TestDBConsolePostgresConnectReason(t *testing.T) {
 	d.Key("f1")
 	d.Type("Databases: Focus")
 	d.Key("enter", "enter")
-	if !d.WaitForText(`database "app" does not exist`, time.Second) {
+	// The connection sets no database: the name the server got, said once.
+	if !d.WaitForText(`localhost:5432 answers, but database app does not exist there.`, time.Second) {
 		t.Fatalf("reason missing: %s", ansi.Strip(d.Frame()))
 	}
 }

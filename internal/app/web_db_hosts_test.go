@@ -94,7 +94,7 @@ func TestWebDBTunnelNothingListensSaysWhatToCheck(t *testing.T) {
 		SSH: &dbclient.SSHConfig{Host: "65.109.212.14", User: "deploy", Auth: "password"}})
 	dbStoreSet(t, "db.baaytona.ssh", "tunnel-pw-51")
 	f := webCallWithin(t, m, c, webproto.OpDBTables, `{"conn":"baaytona"}`, 5*time.Second)
-	want := "Nothing answers at 127.0.0.1:5432 on 65.109.212.14 (through SSH). Is the container's port published?"
+	want := "SSH to deploy@65.109.212.14 works, but nothing answers at 127.0.0.1:5432 on that server (connection refused)."
 	if webTestErr(f) != "conflict" || f["msg"] != want {
 		t.Fatalf("got %v\nwant msg %q", f, want)
 	}

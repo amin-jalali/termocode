@@ -94,7 +94,7 @@ func TestTunnelTargetUnreachable(t *testing.T) {
 	defer srv.Close()
 	tun := dialThrough(t, srv)
 	_, err := tun.DialContext(context.Background(), "tcp", "db.internal:5432")
-	if err == nil || !strings.Contains(err.Error(), "Nothing answers at db.internal:5432 on bastion (through SSH)") {
+	if err == nil || !strings.Contains(err.Error(), "SSH to u@bastion works, but nothing answers at db.internal:5432 on that server (connection refused).") {
 		t.Fatalf("err = %v", err)
 	}
 	if _, err := tun.DialContext(context.Background(), "udp", "db.internal:53"); err == nil || !strings.Contains(err.Error(), "TCP only") {

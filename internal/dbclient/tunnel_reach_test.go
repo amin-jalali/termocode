@@ -19,21 +19,88 @@ import (
 
 // The owner's case: Postgres runs in a container on the server and its
 // port is not published, so nothing listens on the server's
-// 127.0.0.1:5432. The reason is one plain line that names the address,
-// the SSH server and what to check.
+// 127.0.0.1:5432. The reason is one plain sentence: the SSH login that
+// worked (user@host), the address on that server and how it failed.
 func TestTunnelNothingListensSaysWhatToCheck(t *testing.T) {
 	srv := dbtest.NewSSHServer() // Forward nil: the server refuses every target
 	defer srv.Close()
 	tun := dialThrough(t, srv)
 	_, err := tun.DialContext(context.Background(), "tcp", "127.0.0.1:5432")
-	want := "Nothing answers at 127.0.0.1:5432 on bastion (through SSH). Is the container's port published?"
+	want := "SSH to u@bastion works, but nothing answers at 127.0.0.1:5432 on that server (connection refused)."
 	if err == nil || err.Error() != want {
 		t.Fatalf("err = %v\nwant  %s", err, want)
 	}
 	_, err = tun.DialContext(context.Background(), "tcp", "db.internal:5432")
-	want = "Nothing answers at db.internal:5432 on bastion (through SSH). Is the database running there?"
+	want = "SSH to u@bastion works, but nothing answers at db.internal:5432 on that server (connection refused)."
 	if err == nil || err.Error() != want {
 		t.Fatalf("err = %v\nwant  %s", err, want)
+	}
+}
+
+// The SSH server takes the tunnel channel but its dial to the target
+// never ends (a firewall that drops packets): at the deadline the reason
+// says the target on that server timed out, and it is still a deadline.
+func TestTunnelTargetTimeoutSaysTimedOut(t *testing.T) {
+	srv := dbtest.NewSSHServer()
+	defer srv.Close()
+	block := make(chan struct{})
+	defer close(block) // runs before srv.Close
+	srv.Forward = func(context.Context, string) (net.Conn, error) {
+		<-block
+		return nil, errors.New("stopped")
+	}
+	tun := dialThrough(t, srv)
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	_, err := tun.DialContext(ctx, "tcp", "127.0.0.1:5432")
+	want := "SSH to u@bastion works, but 127.0.0.1:5432 on that server did not answer in time (timed out)."
+	if err == nil || err.Error() != want {
+		t.Fatalf("err = %v\nwant  %s", err, want)
+	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("err %v is not a deadline", err)
+	}
+	if ReachText(fmtWrap(err)) != want {
+		t.Fatalf("ReachText of a wrapped error = %q", ReachText(fmtWrap(err)))
+	}
+}
+
+// fmtWrap flattens err the way a driver does (only its text is kept).
+func fmtWrap(err error) error {
+	return errors.New("failed to connect to `user=app database=app`: 127.0.0.1:5432 (127.0.0.1): dial error: " + err.Error())
+}
+
+// A cancel (not a deadline) stays a plain cancel.
+func TestTunnelTargetCancelStaysCancel(t *testing.T) {
+	srv := dbtest.NewSSHServer()
+	defer srv.Close()
+	block := make(chan struct{})
+	defer close(block) // runs before srv.Close
+	srv.Forward = func(context.Context, string) (net.Conn, error) {
+		<-block
+		return nil, errors.New("stopped")
+	}
+	tun := dialThrough(t, srv)
+	ctx, cancel := context.WithCancel(context.Background())
+	time.AfterFunc(100*time.Millisecond, cancel)
+	_, err := tun.DialContext(ctx, "tcp", "127.0.0.1:5432")
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v, want context.Canceled", err)
+	}
+}
+
+// The other reasons name the same SSH login.
+func TestReachErrorTexts(t *testing.T) {
+	for _, tc := range []struct {
+		e    ReachError
+		want string
+	}{
+		{ReachError{Addr: "127.0.0.1:5432", Via: "deploy@65.109.212.14", Prohibited: true}, "SSH to deploy@65.109.212.14 works, but that server does not allow tunnels (AllowTcpForwarding is off there)."},
+		{ReachError{Addr: "127.0.0.1:5432", Via: "deploy@65.109.212.14", Reason: "no route to host"}, "SSH to deploy@65.109.212.14 works, but 127.0.0.1:5432 on that server could not be reached (no route to host)."},
+	} {
+		if got := tc.e.Error(); got != tc.want {
+			t.Errorf("got  %q\nwant %q", got, tc.want)
+		}
 	}
 }
 

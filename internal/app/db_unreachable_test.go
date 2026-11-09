@@ -81,7 +81,7 @@ func TestDBTunnelNothingListensEndsWithPlainReason(t *testing.T) {
 	m := unreachableModel(t, &dbclient.SSHConfig{Host: "65.109.212.14", User: "deploy", Auth: "password"})
 	dbStoreSet(t, "db.baaytona.ssh", "tunnel-pw-31")
 	n := connectEnds(t, m, "baaytona", 5*time.Second)
-	want := "Nothing answers at 127.0.0.1:5432 on 65.109.212.14 (through SSH). Is the container's port published?"
+	want := "SSH to deploy@65.109.212.14 works, but nothing answers at 127.0.0.1:5432 on that server (connection refused)."
 	if n.problem != want {
 		t.Fatalf("problem = %q\nwant      %q", n.problem, want)
 	}
@@ -112,7 +112,7 @@ func TestDBTunnelSilentTargetEndsAtTheDeadline(t *testing.T) {
 	m := unreachableModel(t, &dbclient.SSHConfig{Host: "65.109.212.14", User: "deploy", Auth: "password"})
 	dbStoreSet(t, "db.baaytona.ssh", "tunnel-pw-32")
 	n := connectEnds(t, m, "baaytona", 5*time.Second)
-	want := "No answer from 127.0.0.1:5432 on 65.109.212.14 (through SSH) in time."
+	want := "SSH to deploy@65.109.212.14 works, but 127.0.0.1:5432 on that server did not answer in time (timed out)."
 	if n.problem != want {
 		t.Fatalf("problem = %q\nwant      %q", n.problem, want)
 	}
