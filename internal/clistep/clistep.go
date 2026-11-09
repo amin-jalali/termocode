@@ -194,7 +194,14 @@ func Args(s Spec) []string {
 		// The sandbox is the CLI's own shell and file edits (the step's
 		// Tools setting); approval never: exec has no one to ask, so a
 		// command outside the sandbox fails at once and never waits.
-		out = append(out, "--sandbox", sandbox, "-c", "approval_policy="+jsonText("never"))
+		// No network for its own shell (read-only has none): servers,
+		// containers and databases are reached only through termocode's
+		// tools.
+		out = append(out, "--sandbox", sandbox)
+		if s.Write {
+			out = append(out, "-c", "sandbox_workspace_write.network_access=false")
+		}
+		out = append(out, "-c", "approval_policy="+jsonText("never"))
 		if e := codexEffort(s.Reasoning); e != "" {
 			out = append(out, "-c", "model_reasoning_effort="+jsonText(e))
 		}

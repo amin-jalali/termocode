@@ -2298,7 +2298,7 @@ Read a database schema. No database / schema / table: the databases (and the sch
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `conn` | string | yes | connection id (db_connections) |
+| `conn` | string |   | connection id (db_connections); default: the project's own connection |
 | `database` | string |   | database name (optional) |
 | `schema` | string |   | schema name (optional; PostgreSQL) |
 | `table` | string |   | table or view name (optional) |
@@ -2313,8 +2313,8 @@ Run ONE SQL statement on a connection. A read (SELECT, SHOW, EXPLAIN without ANA
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `conn` | string | yes | connection id (db_connections) |
 | `sql` | string | yes | one SQL statement |
+| `conn` | string |   | connection id (db_connections); default: the project's own connection |
 | `max_rows` | integer |   | rows to read (default 100, max 1000) |
 
 ### db_explain

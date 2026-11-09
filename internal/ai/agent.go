@@ -472,6 +472,12 @@ func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (r
 	case t.Validate != nil:
 		invalid = t.Validate(args)
 	}
+	shellGuard := func() {
+		if k, ok := shellGuardArg[t.Name]; ok && invalid == nil {
+			invalid = ShellOwnTool(a.Tools, ArgString(args, k))
+		}
+	}
+	shellGuard()
 	var verdict PreToolVerdict
 	if invalid == nil && a.PreTool != nil {
 		verdict = a.PreTool(ctx, t, args)
@@ -480,6 +486,7 @@ func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (r
 			if t.Validate != nil {
 				invalid = t.Validate(args)
 			}
+			shellGuard()
 		}
 	}
 	human := t.Human(args)

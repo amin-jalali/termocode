@@ -37,10 +37,24 @@ const aiActRules = "Act, do not ask. When one of your tools can answer, call it 
 	"\"Remote\" means anything that is not on this computer: a connection through an SSH tunnel (even when its host is 127.0.0.1), " +
 	"a docker context on ssh://, a container on such a context, a host that is another machine; db_connections and contexts_list say which ones are remote. " +
 	"termocode's tools reach those servers: never say you cannot reach a server before you tried them; when one fails, give its error and the next step. " +
-	"Use the database the owner means: the connection they named, else the project's own one (file: project in db_connections); when it fails, give that connection's exact error and what to fix, and stop: never try other connections or other routes unasked, and never answer from a different database than the one asked. " +
+	"Use the database the owner means: the connection they named, else the project's own one (file: project in db_connections); when it fails, give that connection's exact error and what to fix: never try other connections or other routes unasked, and never answer from a different database than the one asked. " +
+	aiOwnToolsRule +
 	"When the owner asks to connect to, open or check a database (or a server), do it now: call db_connection with op connect (it opens the SSH tunnel and the container route itself), or read with db_schema/db_query, then say what you found; listing the connections alone is not an answer, and \"not connected yet\" only means nobody opened it. " +
 	"Never give the owner a command to run in place of a tool. Ask only when two or more things fit and the tools cannot tell which one is meant. " +
 	"Answer in the same language as the owner. "
+
+// aiOwnToolsRule (owner, 2026-11-09): "We built the tools. termocode
+// knows the containers, knows how to connect, knows the databases", and
+// "or if it doesn't exist, help the user build it". A Codex step ran psql
+// itself and answered from a connection the owner never set up.
+// run_command and terminal_send refuse such commands too (ai.ShellOwnTool).
+const aiOwnToolsRule = "The owner's databases, containers, servers, kubernetes and git go through termocode's tools; " +
+	"never run psql, docker, ssh, kubectl or git yourself (not with run_command, terminal_send or your own shell); " +
+	"never explore other connections or routes: call the tool for what was asked, and if it fails, report its error. " +
+	"When the thing asked for does not exist yet (no database connection, server or container route) or its setup is wrong, help the owner build it: " +
+	"say the fix in one line and make it with termocode's tools (db_connection op add or edit, contexts_manage add for a missing server), " +
+	"prefilled only from what termocode's tools showed (contexts_list, containers_list: the container's POSTGRES_USER / POSTGRES_DB, its published port; never a secret); " +
+	"each change asks the owner on a card; never edit config files by hand and never invent a value no tool gave you. "
 
 // aiToolGroup is one kind of tool in the guide: its names (a name ending
 // in "_" is a prefix) and when to use them.
@@ -103,7 +117,7 @@ func aiToolGuide(tools []ai.Tool, viaMCP bool) string {
 	head := "termocode's tools you have (use them before you guess):\n"
 	if viaMCP {
 		head = "termocode's tools you have come from its MCP server \"termocode\" (use them before you guess; " +
-			"prefer them to your own shell for databases, containers and servers):\n"
+			"never your own shell for databases, containers, servers, kubernetes and git):\n"
 	}
 	return head + b.String() + "Reads run at once. Every change asks the owner on a card first; when a card is declined, do not retry it. Secrets show as [REDACTED].\n"
 }
@@ -130,6 +144,7 @@ func aiCLIInstructions(root string, served []ai.Tool, write bool) string {
 	default:
 		b.WriteString("This step only reads (its Tools setting): your own tools are read-only.\n")
 	}
+	b.WriteString("Your own shell has no network: the only way to servers, containers and databases is termocode's tools.\n")
 	return b.String()
 }
 

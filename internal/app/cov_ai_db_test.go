@@ -122,7 +122,7 @@ func (e *covDBEnv) run(t *testing.T, name string, a map[string]any) (string, err
 // targets, read-only and states.
 func TestCovAIDBConnections(t *testing.T) {
 	e := covDBSetup(t)
-	for id, want := range map[string]string{"bad": "has a problem", "cache": "is Redis: use redis_keys", "nope": `no connection "nope"`, "": "give conn (one of: "} {
+	for id, want := range map[string]string{"bad": "has a problem", "cache": "is Redis: use redis_keys", "nope": `no connection "nope"`, "": "which one? pass conn"} {
 		if _, err := dbAIConn(e.root, id); err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("%q: %v", id, err)
 		}
