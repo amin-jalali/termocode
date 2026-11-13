@@ -855,3 +855,11 @@ change things never run from this list: use `/tool server.tool …` (it asks fir
 An extension can carry its own `mcp.json` (see Extensions). Those servers show in the MCP
 list with source `project` and wait for your trust like any server from a repo. Your own
 `mcp.json` and the project's files win when a name is the same.
+
+## Channels: a server pushes a message
+
+Some servers send a message by themselves (a build failed, a chat reply arrived). By default
+termocode ignores these. Add the server's name to `mcp_channels` in `config.json`
+(`"mcp_channels": ["ci"]`) and its messages show in the chat as a note and a toast. They are for
+you to read: they are never sent to the AI on their own, so a server cannot steer the AI through
+a channel. Keys and tokens in a message are hidden.

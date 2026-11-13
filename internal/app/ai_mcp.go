@@ -106,7 +106,9 @@ func (m *Model) aiMCP() *mcp.Manager {
 			}
 			return mcp.Expander{Env: os.LookupEnv, SecretLookup: storeSecretLookup, Workspace: root, Home: home}
 		},
-		Roots: func() []string { return []string{root} },
+		Roots:          func() []string { return []string{root} },
+		Channel:        mcpChannelPush, // PR-37 (ai_mcp_channel.go)
+		ChannelAllowed: mcpChannelAllowed,
 		Log: func(server, line string) {
 			out.Append(mcpLogChannel, clock.Now().Format("15:04:05")+"  "+server+": "+ai.Redact(aiCleanText(line)))
 		},

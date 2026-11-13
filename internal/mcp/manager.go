@@ -85,6 +85,12 @@ type ManagerOptions struct {
 	TrustedTools     func(name string) string
 	SaveTrustedTools func(name, hash string)
 
+	// Channel gets a message a server pushed (notifications/claude/channel)
+	// when ChannelAllowed says the server may (mcp_channels). Called from
+	// the connection's goroutine; must not block. Both nil: dropped.
+	Channel        func(server, content string, meta map[string]string)
+	ChannelAllowed func(server string) bool
+
 	// Tokens keeps OAuth sign-ins (CredStore in production); nil: remote
 	// servers can only use static headers.
 	Tokens TokenStore
@@ -424,6 +430,11 @@ func (m *Manager) ensure(ctx context.Context, st *serverState, ask AskTrust) (*P
 		StartTimeout: time.Duration(cfg.StartTimeout) * time.Second,
 		Roots:        m.opts.Roots,
 		Log:          func(line string) { m.log(name, "%s", line) },
+		Channel: func(content string, meta map[string]string) {
+			if m.opts.Channel != nil && m.opts.ChannelAllowed != nil && m.opts.ChannelAllowed(name) {
+				m.opts.Channel(name, content, meta)
+			}
+		},
 		ToolsChanged: func() {
 			m.mu.Lock()
 			st.haveTools = false // listed again on the next turn

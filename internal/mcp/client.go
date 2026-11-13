@@ -28,6 +28,10 @@ type Options struct {
 	// ResourcesChanged is called on notifications/resources/list_changed
 	// (uri "") and notifications/resources/updated (the resource's uri).
 	ResourcesChanged func(uri string)
+	// Channel is called on notifications/claude/channel (PR-37): a message
+	// the server pushes by itself. meta values are text. The manager lets
+	// it through only for the servers of mcp_channels.
+	Channel func(content string, meta map[string]string)
 	// Shared is called when the share broker says how many sessions use
 	// a shared server, and its pid (share.go).
 	Shared func(sessions, pid int)
@@ -37,6 +41,9 @@ type Options struct {
 	// only the old handshake (the manager remembers it).
 	SkipDiscover bool
 }
+
+// channelNotify is the notification a channel server pushes (PR-37).
+const channelNotify = "notifications/claude/channel"
 
 // startTimeout is how long a start may take.
 func (o Options) startTimeout() time.Duration {
@@ -397,6 +404,19 @@ func (c *Client) handle(m extproc.Message, reply replyFunc) {
 		if c.opts.ResourcesChanged != nil {
 			c.opts.ResourcesChanged(p.URI)
 		}
+	case channelNotify:
+		var p struct {
+			Content string         `json:"content"`
+			Meta    map[string]any `json:"meta"`
+		}
+		if json.Unmarshal(m.Params, &p) != nil || p.Content == "" || c.opts.Channel == nil {
+			return
+		}
+		meta := make(map[string]string, len(p.Meta))
+		for k, v := range p.Meta {
+			meta[k] = fmt.Sprint(v)
+		}
+		c.opts.Channel(p.Content, meta)
 	case "notifications/subscriptions/acknowledged":
 		c.opts.log("listening for changes")
 	case "notifications/progress":
