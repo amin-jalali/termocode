@@ -757,8 +757,8 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, m.servicesNoteCmd(note, cmd)
 		}
 	case "x":
-		if name, ok := m.selectedContext(); ok {
-			return m, m.askContextRemove(name)
+		if _, ok := m.selectedContext(); ok {
+			return m, nil // KB-1: x is stop; D removes a context
 		}
 		if _, _, ok := m.selectedProjectGroup(); ok {
 			return m, m.projectGroupAction("stop")
@@ -936,7 +936,7 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		}
 	case "D":
 		if name, ok := m.selectedContext(); ok {
-			return m, m.askContextDefault(name)
+			return m, m.askContextRemove(name)
 		}
 		if im, ref, ok := m.selectedImage(); ok {
 			return m, m.askImageRemoveRef(im, ref)
@@ -952,6 +952,9 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, m.askProjectDown()
 		}
 	case "u":
+		if name, ok := m.selectedContext(); ok { // KB-1: D is remove; u makes it the default
+			return m, m.askContextDefault(name)
+		}
 		if _, ref, ok := m.selectedImage(); ok {
 			m.askImagePull(ref)
 			return m, nil
@@ -1104,11 +1107,11 @@ func hostKeysHelp(r svcRow) (string, []confirm.KeyRow) {
 			[]string{"Space", "open: its projects and containers"},
 			[]string{"r", "read its containers again"},
 			[]string{"t", "open a terminal: ssh to it, or a shell here"},
-			[]string{"D", "make it the default"},
+			[]string{"u", "make it the default (asks first)"},
 			[]string{"y", "copy the endpoint"},
 			[]string{"i", "inspect"},
 			[]string{"n", "create a new one (asks first)"},
-			[]string{"x", "remove (asks first)"})
+			[]string{"D", "remove (asks first)"})
 	case r.kind == svcRowHostItem && r.host == hostServerContainer:
 		return with("Keys of a container on another host",
 			[]string{"Enter", "open a database container in Databases"},

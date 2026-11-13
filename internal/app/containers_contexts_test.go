@@ -313,7 +313,7 @@ func TestContextMakeDefaultNeedsTheCardAndRunsExactCommand(t *testing.T) {
 	m, f := ctxSession(t)
 	st := m.services
 	selectContext(t, st, "prod")
-	if cmd := press(m, "D"); cmd != nil {
+	if cmd := press(m, "u"); cmd != nil {
 		t.Fatal("D ran something before the card")
 	}
 	if !m.confirmOpen {
@@ -332,7 +332,7 @@ func TestContextMakeDefaultNeedsTheCardAndRunsExactCommand(t *testing.T) {
 	}
 	// Confirm runs exactly `context use prod`, once, without the session override.
 	selectContext(t, st, "prod")
-	press(m, "D")
+	press(m, "u")
 	cmd = m.handleConfirmSelect("use")
 	before := len(f.CtxCalls())
 	pumpHost(t, m, cmd)

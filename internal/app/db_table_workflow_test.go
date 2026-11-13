@@ -352,7 +352,7 @@ func TestDBTableDescribe(t *testing.T) {
 
 func TestDBTableDDLIsAReadOnlySQLBuffer(t *testing.T) {
 	d, _ := tableDriver(t, 80, 24)
-	d.Key("D")
+	d.Key("v")
 	if !d.WaitFor(func() bool { return strings.HasSuffix(dbBufName(t, d), "SQL DDL: app.users") }, 2*time.Second) {
 		t.Fatalf("DDL buffer missing: %s\n%s", dbBufName(t, d), ansi.Strip(d.Frame()))
 	}
