@@ -375,6 +375,9 @@ func (st *servicesState) shutdown() {
 	if st != nil {
 		st.stopWatch()
 		st.stopHostWatch()
+		if st.files.host != nil {
+			_ = st.files.host.Close() // the file browser's shellmux (RC-9)
+		}
 	}
 }
 

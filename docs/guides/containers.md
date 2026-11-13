@@ -205,6 +205,8 @@ Downloads folder and never replaces a file there (`name (1)`, `name (2)`…).
 **Upload a file here…** asks for a local path, then a card with **Cancel**
 first; a file that is already in the container is replaced only after a
 second **Replace** card. Nothing is written in the container without a card.
+On a host over `ssh://` or `tcp://` the listings share one long shell in
+the container, so each folder opens without a new SSH round trip.
 
 ### Pair sync with the workspace
 

@@ -83,6 +83,10 @@ func containerUploadLocalPath(s, home string) (string, error) {
 	return filepath.Clean(s), nil
 }
 
+// containerFilesPipe starts the file browser's shellmux (nil = the real
+// one; tests swap it).
+var containerFilesPipe containerhost.Piper
+
 // openContainerFiles connects to a running container and lists "/".
 func (m *Model) openContainerFiles(c containers.Container) tea.Cmd {
 	if !strings.EqualFold(c.State, "running") {
@@ -90,14 +94,20 @@ func (m *Model) openContainerFiles(c containers.Container) tea.Cmd {
 	}
 	e := m.services.containerEngine
 	name := containerShownName(c)
-	cfg := containerhost.Config{Binary: e.Binary, Kind: e.Kind, Context: e.Context, Container: c.ID, Root: "/", X: e.X}
+	cfg := containerhost.Config{Binary: e.Binary, Kind: e.Kind, Context: e.Context, Container: c.ID, Root: "/", X: e.X, Pipe: containerFilesPipe}
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
+		// RC-9: over ssh:// or tcp:// every engine call is slow, so the
+		// listings share one long `exec -i sh` (the shellmux).
+		cfg.Mux = containerhost.RemoteEndpoint(containerhost.Endpoint(ctx, cfg.X, cfg.Binary, cfg.Context))
 		h, err := containerhost.New(ctx, cfg)
 		return containerUIDoneMsg{apply: func(m *Model) tea.Cmd {
 			if err != nil {
 				return m.servicesToast(toast.Errr, "Cannot open the files of "+name, errLine(err.Error()))
+			}
+			if old := m.services.files.host; old != nil && old != h {
+				_ = old.Close() // its shellmux, if any
 			}
 			m.services.files = containerFilesState{host: h, name: name, dir: "/"}
 			return m.listContainerFiles("/")
