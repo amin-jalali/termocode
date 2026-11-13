@@ -115,6 +115,10 @@ func (m *Model) databaseExplainStart(r *dbRun) tea.Cmd {
 		pl.analyze = false // SQLite has no ANALYZE: the plan is all there is, and it never runs the statement
 		note = m.pushToastDetail(toast.Info, "SQLite has no EXPLAIN ANALYZE", "Showing the query plan; the statement does not run.")
 	}
+	if pl.analyze && c.Driver == "oracle" {
+		pl.analyze = false // EXPLAIN PLAN never runs the statement (DBX-63)
+		note = m.pushToastDetail(toast.Info, "Oracle has no EXPLAIN ANALYZE", "Showing the query plan; the statement does not run.")
+	}
 	if p, ok := c.PGPreset(); ok {
 		pl.preset = p.ID
 		if pl.analyze && p.Quirks.NoExplainAnalyze {

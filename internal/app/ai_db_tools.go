@@ -103,10 +103,11 @@ func dbAIConn(root, id string) (dbclient.Conn, error) {
 
 // dbAISQLDriver reports a driver the AI and MCP db tools read with SQL:
 // PostgreSQL, MySQL, SQLite, SQL Server (DBX-62: read-only through a
-// transaction that is rolled back) and the extra engines (DBX-71).
+// transaction that is rolled back), Oracle (DBX-63) and the extra
+// engines (DBX-71).
 func dbAISQLDriver(driver string) bool {
 	switch driver {
-	case "postgres", "mysql", "sqlite", "sqlserver":
+	case "postgres", "mysql", "sqlite", "sqlserver", "oracle":
 		return true
 	}
 	return dbclient.IsExtraSQL(driver)
@@ -563,6 +564,8 @@ func dbAIDialect(driver string) dbclient.Dialect {
 		return dbclient.SQLiteDialect{}
 	case "sqlserver":
 		return dbclient.SQLServerDialect{}
+	case "oracle":
+		return dbclient.OracleDialect{}
 	}
 	if dbclient.IsExtraSQL(driver) {
 		return dbclient.DialectFor(driver) // DBX-71

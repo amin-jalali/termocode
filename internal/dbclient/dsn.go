@@ -57,6 +57,9 @@ func ParseURL(raw string) (Conn, error) {
 		// SQL Server / Azure SQL (DBX-62): the database is ?database=
 		// (read below); a path is the instance name and stays in the URL.
 		c.Driver = "sqlserver"
+	case "oracle", "ora":
+		// Oracle (DBX-63): the path is the service name.
+		c.Driver = "oracle"
 	case "firebird", "firebirdsql", "vertica", "hdb", "hana", "saphana", "exasol", "exa":
 		// DBX-71: c.Driver is the engine id (normDriver); the database is
 		// the path (Firebird: a server path or alias; Exasol: the schema).
