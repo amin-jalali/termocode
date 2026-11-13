@@ -70,9 +70,9 @@ func TestProgramOptionHelpers(t *testing.T) {
 // runTUI builds the program and runs it; a clean end stops the helpers, an
 // error or a panic keeps the work and exits with 1.
 func TestRunTUIEnds(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	t.Setenv("HOME", scratchDir(t))
 	t.Setenv("XDG_CONFIG_HOME", "")
-	t.Setenv("XDG_STATE_HOME", t.TempDir())
+	t.Setenv("XDG_STATE_HOME", scratchDir(t))
 	t.Setenv("TERMOCODE_ICON_MODE", "ascii")
 	oldRun, oldExit := runProgram, exitProcess
 	t.Cleanup(func() { runProgram, exitProcess = oldRun, oldExit })
@@ -202,4 +202,16 @@ func TestMainRunsAndExits(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit %d", code)
 	}
+}
+
+// scratchDir is a temporary folder whose removal never fails the test: the
+// UI's background work may still write into it for a moment.
+func scratchDir(t *testing.T) string {
+	t.Helper()
+	d, err := os.MkdirTemp("", "termocode-cmd-test-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { time.Sleep(50 * time.Millisecond); _ = os.RemoveAll(d) })
+	return d
 }
