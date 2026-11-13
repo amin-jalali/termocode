@@ -318,12 +318,19 @@ func dbAIAskPassword(ctx context.Context, call aiIDECaller, c dbclient.Conn, nam
 // bounded by that timeout on its own. The web page's opens (no call)
 // are bounded by their caller.
 func dbAILogin(ctx context.Context, c dbclient.Conn, snap *dbAISnapshot, pw string) (dbclient.Session, error) {
+	open := dbSQLSessionFactory
+	if dbAIEngine(c.Driver) {
+		// The engine's own session (DBX-65); paths are already absolute.
+		open = func(ctx context.Context, c dbclient.Conn, pw string) (dbclient.Session, error) {
+			return dbOpenDriverSession(ctx, c, "", pw)
+		}
+	}
 	if snap.call == nil {
-		return dbSQLSessionFactory(ctx, c, pw)
+		return open(ctx, c, pw)
 	}
 	lctx, cancel := context.WithTimeout(ctx, loadDBConsoleSettings().timeout())
 	defer cancel()
-	sess, err := dbSQLSessionFactory(lctx, c, pw)
+	sess, err := open(lctx, c, pw)
 	if err != nil && ctx.Err() == nil && errors.Is(lctx.Err(), context.DeadlineExceeded) && dbclient.ReachText(err) == "" {
 		err = dbNoAnswer(c, c.SSH != nil) // the database said nothing in time
 	}
