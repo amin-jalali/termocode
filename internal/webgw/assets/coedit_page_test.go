@@ -294,3 +294,35 @@ console.log("ok");
 		t.Fatalf("harness: %s", out)
 	}
 }
+
+// Spec (G-COL): the phone's editor draws the laptop's cursor (and the
+// other pages' carets) too: peerRanges turns the carets into document
+// offsets (a caret, its selection) inside the text, and the editor
+// draws them as a named caret and a shaded selection.
+func TestPhoneEditorDrawsCarets(t *testing.T) {
+	out := runJS(t, `
+import { Text } from "@codemirror/state";
+import { peerRanges } from "../editor/peers";
+function eq(a: unknown, b: unknown, what: string) {
+  const x = JSON.stringify(a), y = JSON.stringify(b);
+  if (x !== y) throw new Error(what + ": got " + x + ", want " + y);
+}
+const doc = Text.of(["ab", "cdef"]);
+eq(peerRanges(doc, [{ line: 2, col: 3, name: "Laptop" }]), [{ at: 5, name: "Laptop" }], "caret");
+eq(peerRanges(doc, [{ line: 2, col: 3, sel: { line: 1, col: 2 }, name: "L" }]), [{ at: 5, name: "L", from: 1, to: 5 }], "selection");
+eq(peerRanges(doc, [{ line: 9, col: 9, name: "L" }]), [{ at: 7, name: "L" }], "past the end");
+console.log("ok");
+`, nil)
+	if !strings.Contains(out, "ok") {
+		t.Fatalf("harness: %s", out)
+	}
+	ed := raceSrc(t, "editor/main.ts")
+	for _, want := range []string{"peers(items)", "peerRanges(", "cm-peer"} {
+		if !strings.Contains(ed, want) {
+			t.Errorf("editor/main.ts has no %s", want)
+		}
+	}
+	if live := raceSrc(t, "views/LiveEditor.tsx"); strings.Contains(live, "if (!desk || diff || !ready || !h) return;") {
+		t.Error("LiveEditor draws carets on the desktop only")
+	}
+}
