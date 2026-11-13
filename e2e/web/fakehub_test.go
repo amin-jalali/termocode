@@ -215,6 +215,23 @@ func (c *HubConn) Quiet(t *testing.T, d time.Duration) {
 	}
 }
 
+// NoSubOf checks that the page sends nothing for d but subs that do not
+// name topic (a view that opens may ask for its own topics meanwhile).
+func (c *HubConn) NoSubOf(t *testing.T, topic string, d time.Duration) {
+	t.Helper()
+	end := time.After(d)
+	for {
+		select {
+		case m := <-c.in:
+			if sub, ok := m.(*webproto.Sub); !ok || slices.Contains(sub.Topics, topic) {
+				t.Fatalf("page sent %s; want no sub of %s", show(m), topic)
+			}
+		case <-end:
+			return
+		}
+	}
+}
+
 // Expect returns the next message, which must be a T.
 func Expect[T webproto.Msg](t *testing.T, c *HubConn) T {
 	t.Helper()

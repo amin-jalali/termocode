@@ -26,6 +26,11 @@ func gptProfile() ai.Profile {
 
 func gptRunModel(t *testing.T) (*Model, string) {
 	t.Helper()
+	// the tests fake the Codex run itself: Codex need not be installed
+	// (CI has none; without it the run stops with a "not found" toast)
+	oldLook := agentLookPath
+	t.Cleanup(func() { agentLookPath = oldLook })
+	agentLookPath = func(bin string) (string, error) { return "/fake/" + bin, nil }
 	m, dir := cliRunModel(t)
 	m.ai.profFake = []ai.Profile{gptProfile()}
 	m.ai.reloadProfiles()

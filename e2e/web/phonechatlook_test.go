@@ -71,15 +71,14 @@ func TestPhoneChatOneStepReplyIsAChatAnswer(t *testing.T) {
 }
 
 func TestPhoneChatAnswerBeingWrittenSaysThinking(t *testing.T) {
+	t0 := time.Now()
 	writing := map[string]any{"i": 1, "role": "assistant", "streaming": true, "text": "Let me look", "model": "gpt-6-sol",
-		"meta": map[string]any{"started_ms": time.Now().Add(-12 * time.Second).UnixMilli(), "step": "Step 1", "cli": "Codex"}}
+		"meta": map[string]any{"started_ms": t0.Add(-12 * time.Second).UnixMilli(), "step": "Step 1", "cli": "Codex"}}
 	p, c := openChat(t, Phone, chatWith(true, userMsg(0, "hi"), writing))
 	const ai = phoneChat + `.querySelector('.msg-ai[data-i="1"]')`
 	p.WaitJS(ai + `?.querySelector(".msg-think")`)
 	got := Eval[string](p, ai+`.querySelector(".msg-think").textContent`)
-	if !strings.Contains(got, "Thinking…") || !strings.Contains(got, "12s") && !strings.Contains(got, "13s") {
-		t.Errorf("the answer being written says %q, want Thinking… 12s", got)
-	}
+	checkThinkingSecs(t, got, t0)
 	p.TapJS(ai + `.querySelector(".msg-think button")`)
 	expectReq(t, c, "chat.stop")
 }
