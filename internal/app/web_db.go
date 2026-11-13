@@ -46,6 +46,10 @@ func webDBSQL(driver string) bool {
 	return false
 }
 
+// webDBBrowse reports a driver the page lists and reads: the SQL ones and
+// Cassandra / ScyllaDB (CQL; web_db_cql.go).
+func webDBBrowse(driver string) bool { return webDBSQL(driver) || driver == "cassandra" }
+
 // webDBDatabase is the database name of c, never its host or user.
 func webDBDatabase(c dbclient.Conn) string {
 	if c.Driver == "sqlite" {
@@ -102,12 +106,12 @@ func (m *Model) webDBConns(call *webCall) tea.Cmd {
 			}
 			d := c.Driver
 			switch d {
-			case "postgres", "mysql", "sqlite", "redis":
+			case "postgres", "mysql", "sqlite", "redis", "cassandra":
 			default:
 				d = "other"
 			}
 			it := webproto.DBConn{ID: c.ID, Driver: d, Database: webDBDatabase(c), Env: c.Environment, ReadOnly: c.ReadOnly,
-				SQL: webDBSQL(c.Driver) && c.Problem == ""}
+				SQL: webDBBrowse(c.Driver) && c.Problem == ""}
 			if n := dbConnName(c); n != c.ID {
 				it.Name = n
 			}
@@ -177,7 +181,7 @@ func (m *Model) webDBFind(call *webCall, id string) (webDBConn, bool) {
 // webDBSchema is the schema whose tables the page lists.
 func webDBSchema(c dbclient.Conn) string {
 	switch c.Driver {
-	case "mysql":
+	case "mysql", "cassandra":
 		return webDBDatabase(c)
 	case "sqlite":
 		return "main"
@@ -201,22 +205,31 @@ func (m *Model) webDBTables(call *webCall) tea.Cmd {
 		}
 		defer s.Close()
 		schema := webDBSchema(w.c)
-		res, err := s.Introspect(ctx, dbclient.IntrospectionRequest{Schema: schema, Lean: true})
+		var objs []webDBObject
+		if w.c.Driver == "cassandra" {
+			objs, err = webDBCQLObjects(ctx, s, w.c)
+		} else {
+			var res dbclient.IntrospectionResult
+			res, err = s.Introspect(ctx, dbclient.IntrospectionRequest{Schema: schema, Lean: true})
+			for _, o := range res.Objects {
+				objs = append(objs, webDBObject{name: o.Name, kind: o.Kind})
+			}
+		}
 		if err != nil {
 			w.fail(call, err)
 			return nil
 		}
 		out := webproto.DBTables{Conn: w.c.ID, Schema: schema, Tables: []webproto.DBTable{}}
 		names, views := map[string]bool{}, map[string]bool{}
-		for i, o := range res.Objects {
+		for i, o := range objs {
 			if i == webproto.MaxDBTables {
-				out.More = len(res.Objects) - i
+				out.More = len(objs) - i
 				break
 			}
-			names[o.Name] = true
-			view := strings.Contains(strings.ToLower(o.Kind), "view")
-			views[o.Name] = view
-			out.Tables = append(out.Tables, webproto.DBTable{Name: o.Name, View: view})
+			names[o.name] = true
+			view := strings.Contains(strings.ToLower(o.kind), "view")
+			views[o.name] = view
+			out.Tables = append(out.Tables, webproto.DBTable{Name: o.name, View: view, Group: o.group})
 		}
 		return applyMsg(func(m *Model) tea.Cmd {
 			if m.web != nil {
@@ -245,6 +258,9 @@ func (m *Model) webDBRows(call *webCall) tea.Cmd {
 	if !m.web.more.dbTables[a.Conn][a.Table] {
 		call.fail(webproto.CodeNotFound, "That table is not in the list. Open the list again.")
 		return nil
+	}
+	if w.c.Driver == "cassandra" {
+		return m.webDBCQLRows(call, w, a)
 	}
 	d := dbAIDialect(w.c.Driver)
 	from := d.QuoteIdent(a.Table)
@@ -337,6 +353,16 @@ func (m *Model) webDBQuery(call *webCall) tea.Cmd {
 		}
 		defer s.Close()
 		start := time.Now()
+		if w.c.Driver == "cassandra" {
+			out, err := webDBCQLPage(ctx, s, sql, webproto.MaxDBRows, a.Cursor, w.snap.password)
+			if err != nil {
+				w.fail(call, err)
+				return nil
+			}
+			out.Ms = time.Since(start).Milliseconds()
+			call.reply(out)
+			return nil
+		}
 		r := s.Run(ctx, sql, dbclient.RunOptions{MaxRows: webproto.MaxDBRows})
 		if r.Err != nil {
 			w.fail(call, r.Err)
