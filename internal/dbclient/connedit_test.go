@@ -98,7 +98,7 @@ func TestParseConnJSON(t *testing.T) {
 	if err != nil || c.ID != "dev-copy" || c.Password != "" || c.Driver != "mysql" || c.Port != 3306 {
 		t.Fatalf("got %v %+v", err, c)
 	}
-	if _, err := ParseConnJSON(`{"id":"z","driver":"db2","host":"h"}`, cs); err == nil {
+	if _, err := ParseConnJSON(`{"id":"z","driver":"informix","host":"h"}`, cs); err == nil {
 		t.Fatal("unsupported driver must fail")
 	}
 	if _, err := ParseConnJSON(`not json`, cs); err == nil {
