@@ -441,6 +441,20 @@ input; nothing is sent until you press `Enter`.
   text and timestamped lines both work; timestamps and silence marks
   are removed. It should stop by itself after `{seconds}`, or on an
   interrupt (Ctrl+C), and print what it heard.
+- Fully offline in two steps: leave `"command"` empty and name a
+  recorder in `"record"` (it writes the sound to `{wav}`) and a local
+  speech-to-text program in `"transcribe"` (it reads `{wav}` and prints
+  the words). termocode runs them one after the other and deletes the
+  recording. For example with `arecord` and whisper.cpp:
+
+  ```json
+  {
+    "record": ["arecord", "-q", "-f", "S16_LE", "-r", "16000", "-c", "1", "-d", "{seconds}", "{wav}"],
+    "transcribe": ["whisper-cli", "-nt", "-l", "{lang}", "-m", "/path/to/ggml-base.bin", "-f", "{wav}"]
+  }
+  ```
+
+  **Stop and use** ends the recording; then the words are written out.
 - Each time a card shows the program and asks first: **Cancel** is
   first and `Esc` cancels. **Listen** starts it.
 - While it listens, **Stop and use** asks the program to finish; the
