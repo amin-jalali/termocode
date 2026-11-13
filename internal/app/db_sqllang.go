@@ -82,10 +82,11 @@ func (m *Model) databaseSQLOutline() tea.Cmd {
 // databaseSQLSwitchPicker lists the SQL connections for the .sql buffer.
 func (m *Model) databaseSQLSwitchPicker() tea.Cmd {
 	m.ensureDatabasesLoaded()
-	file, src, cmd, ok := m.databaseSQLBuffer()
-	if !ok {
-		return cmd
+	file, lines, ok := m.httpBufText(0)
+	if !ok || !dbSQLAttachable(file) {
+		return m.pushToastDetail(toast.Info, "Open a .sql or code file", "This sets the connection of a SQL file, or of the SQL in the strings of a Go, Python or JS/TS file.")
 	}
+	src := strings.Join(lines, "\n")
 	cur := m.dbConsole().consoleConn(file, strings.Split(src, "\n"))
 	var items []picker.Item
 	for _, c := range m.databases.conns {
