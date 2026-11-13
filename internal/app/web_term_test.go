@@ -51,9 +51,15 @@ func TestTermLinesFollowOutput(t *testing.T) {
 		t.Fatalf("send: %v", f)
 	}
 	r.pumpUntil("the echo", func() bool { return strings.Contains(webTermText(r, buf), "web-42") })
-	if f := r.call(webproto.OpTermSend, &webproto.TermSendArgs{Buf: buf, Text: "cat\r"}); f["t"] != "res" {
+	// Ctrl+C goes to the foreground job. The job must be on the tty before
+	// the key is sent: a ^C that beats the job to the foreground reaches
+	// only the interactive shell (which ignores it), and the job then
+	// swallows every later line. The job's own output proves it is in the
+	// foreground (the shell hands it the tty before it runs).
+	if f := r.call(webproto.OpTermSend, &webproto.TermSendArgs{Buf: buf, Text: "sh -c 'echo up-$((3+4)); exec cat'\r"}); f["t"] != "res" {
 		t.Fatal(f)
 	}
+	r.pumpUntil("the job in the foreground", func() bool { return strings.Contains(webTermText(r, buf), "up-7") })
 	if f := r.call(webproto.OpTermInterrupt, &webproto.BufArgs{Buf: buf}); f["t"] != "res" {
 		t.Fatal(f)
 	}
