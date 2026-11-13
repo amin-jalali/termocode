@@ -118,6 +118,7 @@ var aiDBParity = map[string]string{
 	"db-guide":               "execute_action",
 	"db-heatmap":             "execute_action",
 	"db-highlight-usages":    "execute_action",
+	"db-embedded-check":      "execute_action",
 	"db-inline-clear":        "execute_action",
 	"db-insert-hints":        "execute_action",
 	"db-join-hints":          "execute_action",

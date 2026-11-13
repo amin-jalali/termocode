@@ -630,6 +630,7 @@ missing	db-switch-connection	Databases|S
 missing	db-sql-folder-dialect	Databases|S
 missing	db-highlight-usages	Databases|S
 missing	db-embedded-sql	Databases|S
+missing	db-embedded-check	Databases|S
 missing	db-sql-intentions	Databases|S
 missing	db-server-info	Databases|S
 missing	db-sessions	Databases|S

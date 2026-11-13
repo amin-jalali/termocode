@@ -3237,6 +3237,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-disconnect` | Databases: Disconnect Selected… | confirm (always asks) |   |
 | `db-dump` | Databases: Dump Database… | never | use db_data op dump (it asks) |
 | `db-edit-source` | Databases: Edit Object Source | auto |   |
+| `db-embedded-check` | Databases: Check SQL in Strings | auto |   |
 | `db-embedded-sql` | Databases: Go to SQL in Strings… | never | moves the user's cursor; the AI reads files with its own tools |
 | `db-end-session` | Databases: End Session… | never | ends another session and rolls back its transaction; only the user can choose it |
 | `db-er-diagram` | Databases: Export ER Diagram… | never | opens a picker or prompt that only the user can answer; use a typed tool |
