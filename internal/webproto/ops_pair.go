@@ -81,7 +81,7 @@ func (a *DeviceArgs) validate(int) error {
 type WebDevice struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
-	Role     string `json:"role" enum:"viewer|control"`
+	Role     string `json:"role" enum:"viewer|control|edit"`
 	Guest    bool   `json:"guest,omitempty"`
 	Bookmark bool   `json:"bookmark,omitempty"`
 	Live     bool   `json:"live,omitempty"`

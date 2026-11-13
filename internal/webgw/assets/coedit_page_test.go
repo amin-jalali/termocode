@@ -255,7 +255,7 @@ try { checkServerMsg(meta("owner")); } catch { bad = true; }
 if (!bad) throw new Error("an unknown role passed");
 if (!mayEdit("editor") || !mayEdit("controller") || mayEdit("viewer") || mayEdit(undefined)) throw new Error("mayEdit");
 console.log("ok");
-`, liveStubs)
+`, map[string]string{"../session": liveStubs["../session"]})
 	if !strings.Contains(out, "ok") {
 		t.Fatalf("harness: %s", out)
 	}

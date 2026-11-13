@@ -557,8 +557,11 @@ func (c *wsConn) openHub(h *webproto.Hello) bool {
 // hubRole is the hub's name for a session role. Anything unknown is a
 // viewer: the hub then refuses every op that changes something.
 func hubRole(r Role) webproto.Role {
-	if r == RoleControl {
+	switch r {
+	case RoleControl:
 		return webproto.RoleController
+	case RoleEdit:
+		return webproto.RoleEditor
 	}
 	return webproto.RoleViewer
 }

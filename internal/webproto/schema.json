@@ -688,7 +688,7 @@
       "op": "buf.set_text",
       "args": "SetTextArgs",
       "result": "EditRes",
-      "role": "controller",
+      "role": "editor",
       "rate": {
         "n": 20,
         "per_ms": 1000
@@ -702,7 +702,7 @@
       "op": "buf.save",
       "args": "BufArgs",
       "result": "EditRes",
-      "role": "controller",
+      "role": "editor",
       "rate": {
         "n": 20,
         "per_ms": 1000
@@ -716,7 +716,7 @@
       "op": "buf.undo",
       "args": "BufArgs",
       "result": "EditRes",
-      "role": "controller",
+      "role": "editor",
       "rate": {
         "n": 20,
         "per_ms": 1000
@@ -729,7 +729,7 @@
     {
       "op": "buf.close",
       "args": "BufArgs",
-      "role": "controller",
+      "role": "editor",
       "rate": {
         "n": 20,
         "per_ms": 1000
@@ -742,7 +742,7 @@
     {
       "op": "buf.cursor",
       "args": "BufCursorArgs",
-      "role": "controller",
+      "role": "editor",
       "rate": {
         "n": 20,
         "per_ms": 1000
@@ -14328,7 +14328,8 @@
         "role": {
           "enum": [
             "viewer",
-            "controller"
+            "controller",
+            "editor"
           ]
         },
         "t": {
@@ -14421,7 +14422,8 @@
         "role": {
           "enum": [
             "viewer",
-            "controller"
+            "controller",
+            "editor"
           ]
         },
         "t": {
@@ -14891,7 +14893,8 @@
         "role": {
           "enum": [
             "viewer",
-            "controller"
+            "controller",
+            "editor"
           ]
         }
       },
@@ -18875,7 +18878,8 @@
         "role": {
           "enum": [
             "viewer",
-            "control"
+            "control",
+            "edit"
           ]
         },
         "self": {

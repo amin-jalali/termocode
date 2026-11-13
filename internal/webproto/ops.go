@@ -143,14 +143,15 @@ var opTable = []Policy{
 	{Op: OpChatNew, New: newOf[EmptyArgs](), Role: RoleController, Rate: Rate{N: 1, Per: 2 * time.Second}, MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV1},
 	{Op: OpCardsAnswer, New: newOf[CardsAnswerArgs](), Role: RoleController, Rate: perSec(5), MaxBytes: 24 * kib, Audit: AuditYes, Phase: PhaseV1},
 
-	// Files.
+	// Files. The edit ops of an opened file are open to an editor too: a
+	// share the owner let edit (G-COL).
 	{Op: OpTreeRevealLaptop, New: newOf[PathArgs](), Role: RoleController, Rate: perSec(2), MaxBytes: 8 * kib, Audit: AuditNo, Phase: PhaseV1},
-	{Op: OpBufSetText, New: newOf[SetTextArgs](), Role: RoleController, Rate: perSec(20), MaxBytes: 1 * mib, Audit: AuditCounted, Phase: PhaseV1},
-	{Op: OpBufSave, New: newOf[BufArgs](), Role: RoleController, Rate: perSec(20), MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV1},
-	{Op: OpBufUndo, New: newOf[BufArgs](), Role: RoleController, Rate: perSec(20), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV1},
-	{Op: OpBufClose, New: newOf[BufArgs](), Role: RoleController, Rate: perSec(20), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV1},
+	{Op: OpBufSetText, New: newOf[SetTextArgs](), Role: RoleEditor, Rate: perSec(20), MaxBytes: 1 * mib, Audit: AuditCounted, Phase: PhaseV1},
+	{Op: OpBufSave, New: newOf[BufArgs](), Role: RoleEditor, Rate: perSec(20), MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV1},
+	{Op: OpBufUndo, New: newOf[BufArgs](), Role: RoleEditor, Rate: perSec(20), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV1},
+	{Op: OpBufClose, New: newOf[BufArgs](), Role: RoleEditor, Rate: perSec(20), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV1},
 	// The page's caret, shown in the laptop's editor (G-COL).
-	{Op: OpBufCursor, New: newOf[BufCursorArgs](), Role: RoleController, Rate: perSec(20), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV2},
+	{Op: OpBufCursor, New: newOf[BufCursorArgs](), Role: RoleEditor, Rate: perSec(20), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV2},
 
 	// Images (v2): bytes for the page to show, never a URL.
 	{Op: OpFileImage, New: newOf[PathArgs](), Role: RoleController, Rate: perSec(4), MaxBytes: 8 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
@@ -238,8 +239,9 @@ func DecodeArgs(op string, raw json.RawMessage) (any, error) {
 }
 
 // Allowed reports whether a connection with role may call op. A
-// controller may do what a viewer may; control ops are for the control
-// connection only.
+// controller may do what a viewer and an editor may; an editor what a
+// viewer may and the file edit ops (G-COL); control ops are for the
+// control connection only.
 func Allowed(role Role, op string) bool {
 	p, ok := Lookup(op)
 	if !ok {
@@ -248,8 +250,10 @@ func Allowed(role Role, op string) bool {
 	switch role {
 	case RoleViewer:
 		return p.Role == RoleViewer
+	case RoleEditor:
+		return p.Role == RoleViewer || p.Role == RoleEditor
 	case RoleController:
-		return p.Role == RoleViewer || p.Role == RoleController
+		return p.Role == RoleViewer || p.Role == RoleEditor || p.Role == RoleController
 	case RoleCtl:
 		return p.Role == RoleCtl
 	}
@@ -259,7 +263,7 @@ func Allowed(role Role, op string) bool {
 // CapsFor lists the browser ops a role may call, in table order; it is
 // what meta.caps carries.
 func CapsFor(role Role) []string {
-	if role != RoleViewer && role != RoleController {
+	if role != RoleViewer && role != RoleController && role != RoleEditor {
 		return nil
 	}
 	var out []string

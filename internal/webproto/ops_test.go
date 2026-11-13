@@ -81,7 +81,7 @@ func TestEveryOpHasPolicyRow(t *testing.T) {
 		if !opNameRE.MatchString(p.Op) || len(p.Op) > MaxOpName {
 			t.Errorf("%s: bad op name", p.Op)
 		}
-		if p.Role != RoleViewer && p.Role != RoleController && p.Role != RoleCtl {
+		if p.Role != RoleViewer && p.Role != RoleController && p.Role != RoleEditor && p.Role != RoleCtl {
 			t.Errorf("%s: role %q", p.Op, p.Role)
 		}
 		if p.Rate.N <= 0 || p.Rate.Per <= 0 {
@@ -125,7 +125,7 @@ func TestRolesAndCaps(t *testing.T) {
 	}
 	for _, p := range Ops() {
 		wantV := p.Role == RoleViewer
-		wantC := p.Role == RoleViewer || p.Role == RoleController
+		wantC := p.Role == RoleViewer || p.Role == RoleController || p.Role == RoleEditor
 		if viewer[p.Op] != wantV || Allowed(RoleViewer, p.Op) != wantV {
 			t.Errorf("%s: viewer allowed = %v, want %v", p.Op, viewer[p.Op], wantV)
 		}

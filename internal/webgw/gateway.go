@@ -481,7 +481,7 @@ func onCtlEvent(kind string, data json.RawMessage, t ctlTargets) {
 			Role   string `json:"role"`
 		}
 		if json.Unmarshal(data, &d) != nil || !strings.HasPrefix(d.Device, "dev-") ||
-			(d.Role != webdevices.RoleViewer && d.Role != webdevices.RoleControl) {
+			(d.Role != webdevices.RoleViewer && d.Role != webdevices.RoleControl && d.Role != webdevices.RoleEdit) {
 			return
 		}
 		t.tokens.SetDeviceRole(d.Device, sessionRole(d.Role))

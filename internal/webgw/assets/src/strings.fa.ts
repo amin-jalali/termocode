@@ -1015,6 +1015,7 @@ export const FA: Record<TranslatedKey, string> = {
   "dev.viewers": "مرورگرهای باز",
   "dev.viewer": "فقط خواندن",
   "dev.controller": "خواندن و تغییر",
+  "dev.editor": "خواندن و ویرایش فایل‌ها",
   "dev.devices": "دستگاه‌های جفت‌شده",
   "dev.pair": "جفت کردن یک دستگاه…",
   "dev.list": "دستگاه‌ها…",

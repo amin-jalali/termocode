@@ -428,9 +428,25 @@ To let someone else watch, run **Web: Share as Viewer…**:
 2. **Copy link** and send it to them. It works **once**, for **10
    minutes**.
 3. They open it and read you the **6-digit code** they see. If it is the
-   same as on your card, pick **Let them watch**.
+   same as on your card, pick **Let them watch**, or **Let them edit
+   files** to write code with you.
 4. They save a passkey and can watch. They can never get control. Remove
    them in **Web: Devices…** when you are done.
+
+**Let them edit files** is only on this laptop card (never in a web
+page). They may then change, save and undo the files they open, and
+nothing more: no terminal, git, chat or answers.
+
+### Edit together
+
+You and a person on the web page can type in the same file at once:
+
+- Your typing and theirs both land when you change different text. Only
+  a change to the same text stops their page and asks them to choose
+  (**Use the laptop's text** or **Send mine**).
+- Their page shows your cursor as a thin amber bar (hover: **Laptop's
+  cursor**). Your editor shows their cursor with their device's name. It
+  goes when they leave.
 
 ### Share one AI chat
 
