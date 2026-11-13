@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/amin-jalali/termocode/internal/relay"
 	"github.com/amin-jalali/termocode/internal/webpush"
 )
 
@@ -28,6 +29,8 @@ type webConfig struct {
 	PushDetail  string // web_push_detail (MOB-30): none, count or title
 	Push        bool   // web_push (CMP-47): "off" sends no push to a phone at all
 	PhoneWatch  bool   // web_phone: "on": a paired phone that watches keeps the panel up (MOB-31)
+	// Relay (web_relay, ADR 0022): the relay's https address; "" is off.
+	Relay string
 	// ApproveOnLaptop (web_approve_on_laptop): a web action that needs a
 	// confirm waits for the laptop's card; off, the page confirms it.
 	ApproveOnLaptop bool
@@ -74,6 +77,13 @@ func webSettings() webConfig {
 		c.PhoneWatch = true
 	default:
 		c.Problems = append(c.Problems, fmt.Sprintf("web_phone %q: use \"on\" or \"off\"", s.WebPhone))
+	}
+	if v := strings.TrimSpace(s.WebRelay); v != "" {
+		if _, err := relay.CheckURL(v); err != nil {
+			c.Problems = append(c.Problems, fmt.Sprintf("web_relay %q: use https://host[:port]", s.WebRelay))
+		} else {
+			c.Relay = strings.TrimSuffix(v, "/")
+		}
 	}
 	intIn := func(key string, v *int, lo, hi int, dst *int) {
 		if v == nil {

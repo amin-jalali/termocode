@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/relay"
 	"github.com/amin-jalali/termocode/internal/session"
 	"github.com/amin-jalali/termocode/internal/webgw"
 )
@@ -70,10 +71,12 @@ func webGatewayConfig(args []string, errw io.Writer) (webgw.RunConfig, bool) {
 	totp := fs.Bool("totp", false, "a paired device also needs a one-time code")
 	appKey := fs.Bool("app-key", false, "the Android app may sign in with its keystore key")
 	phone := fs.Bool("phone-watch", false, "a paired phone that watches keeps the gateway up (web_phone)")
+	relayURL := fs.String("relay", "", "web_relay: also wait for paired phones on this relay (https://host[:port])")
 	resume := fs.Bool("resume", false, "take over the browser sessions the last gateway handed over (a reload into a new build)")
 	if err := fs.Parse(args); err != nil || *dir == "" || *audit == "" || fs.NArg() != 0 ||
 		(*sshPort != 0 && (*port != 0 || *sshPort < 1024 || *sshPort > 65535 || *tailnet)) ||
-		(*lan && (*devices == "" || *tailnet || *sshPort != 0)) {
+		(*lan && (*devices == "" || *tailnet || *sshPort != 0)) ||
+		(*relayURL != "" && *devices == "") {
 		fmt.Fprintln(errw, "termocode: the web gateway is started by termocode itself")
 		return webgw.RunConfig{}, false
 	}
@@ -111,6 +114,13 @@ func webGatewayConfig(args []string, errw io.Writer) (webgw.RunConfig, bool) {
 	cfg.RequireTOTP = *totp
 	cfg.AppKeyLogin = *appKey
 	cfg.PhoneWatch = *phone
+	if *relayURL != "" {
+		if _, err := relay.CheckURL(*relayURL); err != nil {
+			fmt.Fprintf(errw, "termocode web gateway: %v\n", err)
+			return webgw.RunConfig{}, false
+		}
+		cfg.Relay = &webgw.RelayConfig{URL: *relayURL} // its key comes from termocode over the hub socket
+	}
 	// A reload into a new build: the folder's own hand-over file, never a
 	// path from argv. Written on a restart bye, read (and removed) once.
 	cfg.ResumePath = paths.WebResume

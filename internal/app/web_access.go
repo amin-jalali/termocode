@@ -100,7 +100,7 @@ func (m *Model) openWebPair(guest bool) tea.Cmd {
 		return m.webToast(toast.Warn, webOffText)
 	}
 	st := m.webPanel
-	if !guest && !cfg.LAN && !cfg.Tailnet {
+	if !guest && !cfg.LAN && !cfg.Tailnet && cfg.Relay == "" {
 		return m.openWebUseLANCard() // web_pair_lan.go: loopback asks to use this Wi-Fi
 	}
 	if !guest && m.web != nil {
@@ -115,7 +115,7 @@ func (m *Model) openWebPair(guest bool) tea.Cmd {
 	if st == nil || !st.up || m.web == nil {
 		return m.webToast(toast.Warn, "Start the web panel first: Web: Open in Browser.")
 	}
-	if st.url == "" {
+	if st.url == "" && st.relay == nil {
 		return m.webToast(toast.Warn, `Pairing a device needs "web_listen": "lan" (same Wi-Fi) or "tailnet" in config.json. Set it, then start the panel again.`)
 	}
 	if guest && st.fp != "" {
@@ -143,7 +143,7 @@ func (m *Model) openWebPair(guest bool) tea.Cmd {
 	m.confirm = confirm.New(title, body, []confirm.Button{
 		{ID: "close", Title: "Close"},
 		{ID: "copy", Title: "Copy link"},
-	}).WithPicture(webQRLines(acc.link)).WithCaption("", webPairAddr(st.url))
+	}).WithPicture(webQRLines(acc.link)).WithCaption("", webPairCaption(st))
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindWebPairQR
@@ -177,6 +177,9 @@ func (m *Model) webPairNewLink(st *webPanelState, guest bool, by *webConn) (stri
 // webPairLink is the pairing link: <url>#p=<secret>, and in LAN mode
 // &fp=<certificate fingerprint>, which the app pins for that origin.
 func webPairLink(st *webPanelState, plain string) string {
+	if st.relay != nil {
+		return webRelayPairLink(st.relay, plain) // works from any network
+	}
 	link := st.url + "#p=" + plain
 	if st.fp != "" {
 		link += "&fp=" + st.fp
