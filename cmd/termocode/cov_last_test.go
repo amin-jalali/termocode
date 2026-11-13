@@ -4,11 +4,13 @@ package main
 
 import (
 	"bytes"
+	"github.com/amin-jalali/termocode/internal/workflow/score"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/secrets"
 )
@@ -92,4 +94,26 @@ func TestAIExecSetupWithALockedStore(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 	_ = secrets.Store(nil)
+}
+
+func TestSmallHelpers(t *testing.T) {
+	if wfFirstOr("", "d") != "d" || wfFirstOr("x", "d") != "x" {
+		t.Fatal("wfFirstOr")
+	}
+	if got := wfScoreText(score.Result{Score: 0.5, Pass: 0.7, Passed: false}); !strings.Contains(got, "✗") {
+		t.Fatal(got)
+	}
+	if got := wfScoreText(score.Result{Score: 0.9, Pass: 0.7, Passed: true}); !strings.Contains(got, "✓") {
+		t.Fatal(got)
+	}
+	if got := newWebForward("ssh", nil, t.TempDir()).backoff(3); got != 3*time.Second {
+		t.Fatalf("backoff %v", got)
+	}
+	covSessionEnv(t)
+	if agentSocketOfCwd() == "" {
+		t.Fatal("no socket for the current folder")
+	}
+	if _, err := laneSpool(errReader{}); err == nil {
+		t.Fatal("a broken stream spooled")
+	}
 }
