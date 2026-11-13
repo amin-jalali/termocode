@@ -73,3 +73,41 @@ func TestRunClientWithoutSession(t *testing.T) {
 		t.Fatalf("missing folder: exit %d", code)
 	}
 }
+
+func TestCmdSSHRefusals(t *testing.T) {
+	if code := cmdSSH(nil); code != 2 {
+		t.Errorf("no host: %d", code)
+	}
+	if code := cmdSSH([]string{"me@box"}); code != 1 && code != 2 {
+		t.Errorf("without a terminal: %d", code)
+	}
+}
+
+func TestCmdKillAndSessionsWithNothingRunning(t *testing.T) {
+	dir := covSessionEnv(t)
+	if code := cmdKill(dir); code != 1 {
+		t.Errorf("kill: %d", code)
+	}
+	if code := cmdSessions(); code != 0 {
+		t.Errorf("sessions: %d", code)
+	}
+}
+
+func TestTerminalChangeFromEnvironment(t *testing.T) {
+	for _, mode := range []string{"", "kitty"} {
+		c := &session.ClientCaps{Env: map[string]string{"TERM": "xterm-kitty"}, Note: mode}
+		msg := terminalChange(c)
+		if msg.Graphics.Reason == "" {
+			t.Errorf("no reason for %q", mode)
+		}
+	}
+	g := &session.ClientCaps{Graphics: &session.GraphicsCaps{Protocol: "sixel"}}
+	if terminalChange(g).Graphics.Protocol != termimg.Sixel {
+		t.Error("graphics from the client")
+	}
+}
+
+func TestWatchRepaintNeedsASession(t *testing.T) {
+	t.Setenv(session.EnvSession, "")
+	watchRepaint(nil) // returns before touching the program
+}
