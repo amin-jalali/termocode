@@ -304,7 +304,7 @@ func TestDoorSwitchIsAudited(t *testing.T) {
 		t.Fatalf("switch audit lines: %+v", got)
 	}
 	writeText(t, c, `{"t":"sub","topics":["status"],"ws":"`+otherWS+`"}`)
-	if m := readMsg(t, c); m["ev"] != "ws.gone" {
+	if m := readMsg(t, c); m["kind"] != "ws.gone" {
 		t.Fatalf("not running: %v", m)
 	}
 	if n := len(switches()); n != 1 {

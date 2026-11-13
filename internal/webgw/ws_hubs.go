@@ -216,6 +216,9 @@ func (c *wsConn) sideWriter(h *sideHub) {
 	}
 	h.conn = conn
 	h.mu.Unlock()
+	// WEB-55: the switch is on record once the session's hub answered the
+	// dial (the same-uid socket); a session that is not running is not.
+	_ = c.s.cfg.Audit.Log(Event{Kind: EvSwitch, Conn: c.id, Device: c.sess.Device, Summary: h.ws})
 	w := bufio.NewWriterSize(conn, 64<<10)
 	write := func(line []byte) bool {
 		_ = conn.SetWriteDeadline(time.Now().Add(c.s.cfg.HubWait))
