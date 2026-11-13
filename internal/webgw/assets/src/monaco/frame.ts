@@ -10,7 +10,8 @@
 import { ChangeSet, Text } from "@codemirror/state";
 import { dict } from "../state/dict";
 import { History } from "../editor/history";
-import { diff, merge3 } from "../lib/textdiff";
+import { diff } from "../lib/textdiff";
+import { merge3 } from "../coedit/merge";
 import type { AICompletion, AINextEdit, LspCompletion, LspHover, LspLocations } from "../../../../webproto/proto";
 import type { HlRow } from "../editor/api";
 import { esc, md } from "./mdtext";

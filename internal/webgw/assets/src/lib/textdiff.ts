@@ -45,19 +45,6 @@ export function utf8Len(s: string): number {
   return n;
 }
 
-/** colUtf16 turns a byte column of line (nvim) into UTF-16 units (the
- * editor's), at most the line's length. */
-export function colUtf16(line: string, bytes: number): number {
-  let n = 0, i = 0;
-  while (i < line.length && n < bytes) {
-    const c = line.charCodeAt(i);
-    const pair = isHigh(c) && i + 1 < line.length && isLow(line.charCodeAt(i + 1));
-    n += c < 0x80 ? 1 : c < 0x800 ? 2 : pair ? 4 : 3;
-    i += pair ? 2 : 1;
-  }
-  return i;
-}
-
 /** pos is offset at in text as nvim's (row, byte column). */
 export function pos(text: string, at: number): { row: number; col: number } {
   let row = 0, start = 0;
@@ -66,18 +53,4 @@ export function pos(text: string, at: number): { row: number; col: number } {
     start = i + 1;
   }
   return { row, col: utf8Len(text.slice(start, at)) };
-}
-
-/** merge3 joins two changes made on one base: mine (the page's) and
- * theirs (the laptop's). When they do not touch the same text both land,
- * with the hub's edge rules (internal/coedit): two inserts at one point
- * put theirs first. An overlap is a real conflict: null. */
-export function merge3(base: string, mine: string, theirs: string): string | null {
-  const m = diff(base, mine);
-  const t = diff(base, theirs);
-  if (!m) return theirs;
-  if (!t) return mine;
-  if (t.to <= m.from) return base.slice(0, t.from) + t.insert + base.slice(t.to, m.from) + m.insert + base.slice(m.to);
-  if (m.to <= t.from) return base.slice(0, m.from) + m.insert + base.slice(m.to, t.from) + t.insert + base.slice(t.to);
-  return null;
 }

@@ -91,13 +91,19 @@ var deviceChunk = page{Name: "device", Entry: "device.tsx"}
 // holds no second copy of either and workbench.js does not grow.
 var aictxChunk = page{Name: "aictx", Entry: "aictx/main.tsx"}
 
+// coeditChunk is live editing together (coedit.js, G-COL): the editor's
+// sync with the laptop, the merge of both sides' typing and the other
+// people's carets, built alone. The page loads it with the editor
+// (lib/coedit.ts) and gives it its signals and link; it imports nothing.
+var coeditChunk = page{Name: "coedit", Entry: "coedit/main.ts"}
+
 // deskChunk is the desktop workbench's stylesheet (desk.css): index.html
 // links it for wide screens only (media="(min-width: 1200px)"), so a
 // phone neither waits for it nor counts it in its budget.
 var deskChunk = page{Name: "desk", Entry: "desk.ts", CSSOnly: true}
 
 // chunkPaths are the only dynamic imports a page may make.
-var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true, "/assets/" + workbenchChunk.Name + ".js": true, "/assets/" + homeChunk.Name + ".js": true, "/assets/" + persianChunk.Name + ".js": true, "/assets/" + monacoVim.Name + ".js": true, "/assets/" + deviceChunk.Name + ".js": true, "/assets/" + aictxChunk.Name + ".js": true}
+var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true, "/assets/" + workbenchChunk.Name + ".js": true, "/assets/" + homeChunk.Name + ".js": true, "/assets/" + persianChunk.Name + ".js": true, "/assets/" + monacoVim.Name + ".js": true, "/assets/" + deviceChunk.Name + ".js": true, "/assets/" + aictxChunk.Name + ".js": true, "/assets/" + coeditChunk.Name + ".js": true}
 
 // kitPage is the component kit (WEB-UX-1). It is always built, so CI keeps
 // it fresh, but only a webdev build embeds and serves it.
@@ -127,7 +133,7 @@ func Build(dir string) (map[string][]byte, error) {
 	if err := copyServed(vendorDir, pkgs, out); err != nil {
 		return nil, err
 	}
-	for _, p := range []page{deskChunk, appPage, editorChunk, persianChunk, deviceChunk, aictxChunk, monacoAMD, monacoVim, monacoFrame, kitPage} {
+	for _, p := range []page{deskChunk, appPage, editorChunk, persianChunk, deviceChunk, aictxChunk, coeditChunk, monacoAMD, monacoVim, monacoFrame, kitPage} {
 		if p.Name != appPage.Name {
 			if _, err := os.Stat(filepath.Join(abs, "src", p.Entry)); errors.Is(err, os.ErrNotExist) {
 				continue // a folder without the kit or the editor (test fixtures)

@@ -10,14 +10,13 @@
 // overlap stops it: the user's text stays, the editor stops sending and
 // shows the laptop's change until the user chooses (use the laptop's
 // text, or send theirs).
-import { computed, signal, type Signal } from "@preact/signals";
-import type { BufSnap, EditRes } from "../../../../webproto/proto";
-import type { EditorHandle } from "../editor/api";
-import { OfflineError, ReqError } from "../net/link";
-import { link, live } from "../session";
-import { own, save as saveBuf } from "./edit";
-import { diff, merge3, pos } from "./textdiff";
+// The sync itself is in coedit.js (coedit/sync.ts), loaded with the
+// editor (lib/coedit.ts); the page keeps only its state here.
+import { computed, signal } from "@preact/signals";
+import type { LiveSync } from "../coedit/sync";
 import { focusSlot } from "./workbench";
+
+export type { LiveSync };
 
 export type LivePhase = "synced" | "sending" | "waiting" | "conflict" | "error" | "gone";
 
@@ -29,9 +28,6 @@ export interface LiveStatus {
   base?: string;
   laptop?: string;
 }
-
-/** SEND_MS: typing sends once it pauses this long. */
-export const SEND_MS = 150;
 
 /** editing is the path open in the editor (null: the read view). */
 export const editing = signal<string | null>(null);
@@ -49,190 +45,4 @@ export function setSync(slot: string, s: LiveSync | null): void {
   if (s) next.set(slot, s);
   else next.delete(slot);
   syncs.value = next;
-}
-
-export class LiveSync {
-  private known: { text: string; tick: number };
-  private latest: BufSnap;
-  private timer: ReturnType<typeof setTimeout> | undefined;
-  private flying: Promise<void> | null = null;
-  private conflict: { base: string } | null = null;
-  private gone = false;
-  /** behind: the hub moved the last send over the laptop's edits; the
-   * laptop's text at known.tick is not known.text until its copy comes. */
-  private behind = false;
-  /** prior is the laptop's text before the last merge (lost shows it). */
-  private prior: string | null = null;
-  /** status is this editor's state (shown above it and in its header). */
-  readonly status: Signal<LiveStatus> = signal<LiveStatus>(SYNCED);
-
-  constructor(readonly buf: number, private readonly ed: EditorHandle, snap: BufSnap) {
-    this.known = { text: snap.lines.join("\n"), tick: snap.tick };
-    this.latest = snap;
-  }
-
-  /** textNow is the editor's text now. */
-  textNow(): string {
-    return this.ed.text();
-  }
-
-  /** dirty: the editor holds text the laptop does not have yet. */
-  dirty(): boolean {
-    return this.ed.text() !== this.known.text;
-  }
-
-  /** settled is the changedtick the page's text is known at: null while
-   * text is unsent or on its way, in a conflict, or when the buffer is gone. */
-  settled(): number | null {
-    if (this.conflict || this.gone || this.flying || this.behind || this.dirty()) return null;
-    return this.known.tick;
-  }
-
-  /** local: the user changed the text. */
-  local(): void {
-    if (this.conflict || this.gone) return;
-    clearTimeout(this.timer);
-    this.timer = setTimeout(() => void this.flush(), SEND_MS);
-  }
-
-  /** store takes the page's newest copy of the buffer. */
-  store(s: BufSnap, gone: boolean): void {
-    this.latest = s;
-    if (gone && !this.gone) {
-      this.gone = true;
-      clearTimeout(this.timer);
-      this.status.value = { phase: "gone" };
-      return;
-    }
-    this.process();
-  }
-
-  private process(): void {
-    if (this.flying || this.gone) return;
-    const s = this.latest;
-    if (s.tick < this.known.tick) return; // this page's own change is on its way
-    this.behind = false;
-    const text = s.lines.join("\n");
-    if (text === this.known.text) {
-      this.known.tick = s.tick; // a save, or this page's own change
-      return;
-    }
-    if (this.conflict) {
-      this.status.value = { phase: "conflict", base: this.conflict.base, laptop: text };
-      return;
-    }
-    if (!this.dirty()) {
-      this.known = { text, tick: s.tick };
-      this.ed.remote(text);
-      return;
-    }
-    const merged = merge3(this.known.text, this.ed.text(), text);
-    if (merged !== null) {
-      // Both typed, apart: the laptop's change shows, the user's unsent
-      // typing stays where it was and goes out on the laptop's tick.
-      this.prior = this.known.text;
-      this.known = { text, tick: s.tick };
-      this.ed.remote(merged);
-      if (this.dirty()) this.local();
-      return;
-    }
-    this.conflict = { base: this.known.text };
-    clearTimeout(this.timer);
-    this.status.value = { phase: "conflict", base: this.known.text, laptop: text };
-  }
-
-  /** flush sends what is unsent now; it resolves when the hub answered. */
-  flush(): Promise<void> {
-    clearTimeout(this.timer);
-    if (this.flying) return this.flying;
-    if (this.conflict || this.gone) return Promise.resolve();
-    if (this.behind) return Promise.resolve(); // process sends once the laptop's text is here
-    const now = this.ed.text();
-    const d = diff(this.known.text, now);
-    if (!d) {
-      this.status.value = { phase: "synced" };
-      return Promise.resolve();
-    }
-    if (!live.peek()) {
-      this.status.value = { phase: "waiting" };
-      return Promise.resolve();
-    }
-    const base = this.known;
-    const args = { buf: this.buf, tick: base.tick, start: pos(base.text, d.from), end: pos(base.text, d.to), lines: d.insert.split("\n") };
-    this.status.value = { phase: "sending" };
-    this.flying = link.request("buf.set_text", args).then(
-      (res) => {
-        const r = res as EditRes;
-        own.tick = Math.max(own.tick, r.tick);
-        this.known = { text: now, tick: r.tick };
-        this.behind = r.rebased === true;
-        this.flying = null;
-        this.status.value = { phase: "synced" };
-        this.process();
-        if (!this.conflict && this.dirty()) this.local();
-      },
-      (e: unknown) => {
-        this.flying = null;
-        if (e instanceof ReqError && e.code === "conflict") {
-          this.conflict = { base: base.text };
-          this.status.value = { phase: "conflict", base: base.text, laptop: this.latest.lines.join("\n") };
-        } else if (e instanceof OfflineError) {
-          this.status.value = { phase: "waiting" };
-        } else {
-          this.status.value = { phase: "error", note: e instanceof Error ? e.message : "" };
-        }
-        this.process();
-      },
-    );
-    return this.flying;
-  }
-
-  /** lost: the editor could not show the laptop's change over typing it
-   * got meanwhile (the two overlap). Nothing more goes out: sending now
-   * would undo the laptop's change. The user chooses, as in a conflict. */
-  lost(): void {
-    if (this.gone) return;
-    const base = this.prior ?? this.known.text;
-    this.conflict = { base };
-    clearTimeout(this.timer);
-    this.status.value = { phase: "conflict", base, laptop: this.latest.lines.join("\n") };
-  }
-
-  /** takeLaptop shows the laptop's text; the user's text is one undo away. */
-  takeLaptop(): void {
-    const s = this.latest;
-    const text = s.lines.join("\n");
-    this.conflict = null;
-    this.known = { text, tick: s.tick };
-    this.ed.replace(text);
-    this.status.value = { phase: "synced" };
-  }
-
-  /** sendMine sends the user's text over the laptop's newest. */
-  sendMine(): Promise<void> {
-    const s = this.latest;
-    this.conflict = null;
-    this.known = { text: s.lines.join("\n"), tick: s.tick };
-    return this.flush();
-  }
-
-  /** save sends what is unsent, then writes the file through nvim. */
-  async save(): Promise<boolean> {
-    await this.flush();
-    if (this.conflict || this.gone || this.dirty()) return false;
-    return saveBuf(this.buf);
-  }
-
-  /** undoEd and redoEd step the editor's own history (it sends the result). */
-  undoEd(): void {
-    if (!this.ed.undo()) return;
-  }
-
-  redoEd(): void {
-    if (!this.ed.redo()) return;
-  }
-
-  dispose(): void {
-    clearTimeout(this.timer);
-  }
 }

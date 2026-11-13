@@ -36,7 +36,8 @@ func TestPerfGuardEditorBudget(t *testing.T) {
 // lib/lazy.ts; the desktop editor's frame has one, its Vim mode
 // (monaco-vim.js, WEBP-1); the workbench has two, Add to AI Chat
 // (aictx.js, lib/aictx.ts) and This device with Pair a Device… and
-// Devices… (device.js, lib/device.tsx).
+// Devices… (device.js, lib/device.tsx); an editor loads live editing
+// together (coedit.js, lib/coedit.ts).
 func TestTheOnlyDynamicImportsAreTheEditorAndTheWorkbench(t *testing.T) {
 	re := regexp.MustCompile(`\bimport\s*\(([^)]*)\)`)
 	var found []string
@@ -58,8 +59,9 @@ func TestTheOnlyDynamicImportsAreTheEditorAndTheWorkbench(t *testing.T) {
 		t.Fatal(err)
 	}
 	sort.Strings(found)
-	if len(found) != 7 || found[0] != `src/lib/aictx.ts "/assets/aictx.js"` || found[1] != `src/lib/device.tsx "/assets/device.js"` || found[2] != `src/lib/lazy.ts "/assets/editor.js"` || found[3] != `src/lib/lazy.ts "/assets/home.js"` || found[4] != `src/lib/lazy.ts "/assets/strings-fa.js"` || found[5] != `src/lib/lazy.ts "/assets/workbench.js"` || found[6] != `src/monaco/frame.ts "/assets/monaco-vim.js"` {
-		t.Errorf("dynamic imports %q, want only lib/lazy.ts loading /assets/editor.js, /assets/home.js, /assets/strings-fa.js and /assets/workbench.js, lib/aictx.ts loading /assets/aictx.js, lib/device.tsx loading /assets/device.js, and monaco/frame.ts loading /assets/monaco-vim.js", found)
+	want := []string{`src/lib/aictx.ts "/assets/aictx.js"`, `src/lib/coedit.ts "/assets/coedit.js"`, `src/lib/device.tsx "/assets/device.js"`, `src/lib/lazy.ts "/assets/editor.js"`, `src/lib/lazy.ts "/assets/home.js"`, `src/lib/lazy.ts "/assets/strings-fa.js"`, `src/lib/lazy.ts "/assets/workbench.js"`, `src/monaco/frame.ts "/assets/monaco-vim.js"`}
+	if strings.Join(found, "\n") != strings.Join(want, "\n") {
+		t.Errorf("dynamic imports %q, want only lib/lazy.ts loading /assets/editor.js, /assets/home.js, /assets/strings-fa.js and /assets/workbench.js, lib/aictx.ts loading /assets/aictx.js, lib/coedit.ts loading /assets/coedit.js (live editing together, G-COL), lib/device.tsx loading /assets/device.js, and monaco/frame.ts loading /assets/monaco-vim.js", found)
 	}
 }
 
