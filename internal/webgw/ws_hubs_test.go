@@ -277,3 +277,37 @@ func TestWithWS(t *testing.T) {
 		}
 	}
 }
+
+// WEB-55: each switch to another session is a line in the audit log
+// (ev "switch": the device and the project's ws), once per opened hub;
+// a project that cannot be opened (not running) is not a switch.
+func TestDoorSwitchIsAudited(t *testing.T) {
+	d := newDoorRig(t, nil)
+	shop := d.project(shopWS)
+	c, _ := d.connect()
+	switches := func() []Event {
+		var out []Event
+		for _, e := range readAudit(t, d.alog) {
+			if e.Kind == "switch" {
+				out = append(out, e)
+			}
+		}
+		return out
+	}
+	writeText(t, c, `{"t":"sub","topics":["status"],"ws":"`+shopWS+`"}`)
+	sp := openProject(t, shop)
+	_ = sp.line(t)
+	writeText(t, c, `{"t":"sub","topics":["git"],"ws":"`+shopWS+`"}`)
+	_ = sp.line(t)
+	got := switches()
+	if len(got) != 1 || got[0].Summary != shopWS || got[0].Device == "" {
+		t.Fatalf("switch audit lines: %+v", got)
+	}
+	writeText(t, c, `{"t":"sub","topics":["status"],"ws":"`+otherWS+`"}`)
+	if m := readMsg(t, c); m["ev"] != "ws.gone" {
+		t.Fatalf("not running: %v", m)
+	}
+	if n := len(switches()); n != 1 {
+		t.Fatalf("a project that is not running was audited as a switch: %d", n)
+	}
+}
