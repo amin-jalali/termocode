@@ -110,7 +110,7 @@ func run(ctx context.Context, args []string, logw, outw io.Writer) error {
 	}
 	rl := relay.New(o.cfg)
 	srv := &http.Server{
-		Handler:           secure(handler(rl)),
+		Handler:           secure(handler(rl, pageHandler(o.trustProxy))),
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       60 * time.Second,
 		MaxHeaderBytes:    8 << 10,
@@ -143,10 +143,16 @@ func run(ctx context.Context, args []string, logw, outw io.Writer) error {
 	return nil
 }
 
-// handler routes the relay's paths: the WebSockets and a health check.
-func handler(rl *relay.Server) http.Handler {
+// handler routes the relay's paths: the WebSockets, a health check and
+// the page (rl or page may be nil in tests).
+func handler(rl *relay.Server, page http.Handler) http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle(relay.PathPrefix, rl)
+	if rl != nil {
+		mux.Handle(relay.PathPrefix, rl)
+	}
+	if page != nil {
+		mux.Handle("/", page)
+	}
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		_, _ = io.WriteString(w, "ok\n")
