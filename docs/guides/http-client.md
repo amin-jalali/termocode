@@ -259,6 +259,13 @@ The .proto reader covers proto2 and proto3 messages, enums, maps,
 oneofs, `optional` and services; options are skipped, editions and
 groups are not supported.
 
+The AI's `http_send` tool calls a `GRPC` request too (from a .http file
+or with `method: GRPC` and a `grpc://` URL) and reads the same page. A
+gRPC call may change data, so it always asks first (one "Always allow"
+per host and port; a private network address asks each time). It never
+skips the certificate check and a public name may not reach a private
+address.
+
 ## More commands
 
 | Palette | What it does |
