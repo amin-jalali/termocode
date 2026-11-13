@@ -40,6 +40,9 @@ func mcpLoadProfiles() ([]mcp.Profile, []string) {
 // removed from the files).
 func (m *Model) mcpActiveProfile() *mcp.Profile {
 	name := m.aiS().mcpProfile
+	if name == "" { // AI-11: else the agent profile's own
+		name = m.aiS().activeProfile().MCPProfile
+	}
 	if name == "" {
 		return nil
 	}
