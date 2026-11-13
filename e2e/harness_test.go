@@ -229,10 +229,19 @@ func Start(t *testing.T, o StartOpts) *Term {
 		}
 	}()
 	// Emulator replies (DSR, DA, OSC queries) → PTY, like a real terminal.
+	// The emulator is closed by this goroutine itself: Emulator.Close and a
+	// Read in another goroutine race on its closed flag (-race).
+	replyDone := make(chan struct{})
 	go func() {
 		buf := make([]byte, 4096)
 		for {
 			n, err := em.Read(buf)
+			select {
+			case <-replyDone:
+				_ = em.Close()
+				return
+			default:
+			}
 			if n > 0 && !o.Silent {
 				_ = tm.write(buf[:n])
 			}
@@ -267,8 +276,9 @@ func Start(t *testing.T, o StartOpts) *Term {
 		_ = ptmx.Close()
 		tm.toApp.Close()
 		tm.toTerm.Close()
+		close(replyDone)
 		tm.mu.Lock()
-		_ = em.Close()
+		_, _ = em.Write([]byte("\x1b[5n")) // a reply wakes the reader, which closes em
 		tm.mu.Unlock()
 		if left := waitGone(kids, leakWait); len(left) > 0 {
 			t.Logf("killed processes termocode left running %v after it ended: %v", leakWait, left)
