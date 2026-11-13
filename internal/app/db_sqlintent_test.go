@@ -64,3 +64,29 @@ func TestDBSQLIntentItems(t *testing.T) {
 		t.Fatal("db-sql-intentions has no AI policy")
 	}
 }
+
+// The last visual selection counts when the cursor stands at one of its
+// ends: it becomes byte offsets inside the statement's lines.
+func TestDBIntentSelection(t *testing.T) {
+	lines := []string{"SELECT 1;", "SELECT name, price * qty", "FROM items;"}
+	// statement lines [1, 3); selection "price * qty" on line 2 (cols 13..23)
+	s, e, ok := dbIntentSelRange(lines, 1, 3, [2]int{2, 13}, [2]int{2, 23}, false)
+	if !ok || strings.Join(lines[1:3], "\n")[s:e] != "price * qty" {
+		t.Fatalf("selection = %d..%d ok=%v", s, e, ok)
+	}
+	// linewise: whole lines
+	s, e, ok = dbIntentSelRange(lines, 1, 3, [2]int{2, 0}, [2]int{3, 2147483647}, true)
+	if !ok || s != 0 || e != len("SELECT name, price * qty\nFROM items;") {
+		t.Fatalf("linewise = %d..%d ok=%v", s, e, ok)
+	}
+	// a multi-byte last character is taken whole
+	u := []string{"SELECT 'é'"}
+	s, e, ok = dbIntentSelRange(u, 0, 1, [2]int{1, 7}, [2]int{1, 8}, false)
+	if !ok || u[0][s:e] != "'é" {
+		t.Fatalf("utf8 = %q ok=%v", u[0][s:e], ok)
+	}
+	// outside the statement: none
+	if _, _, ok := dbIntentSelRange(lines, 1, 3, [2]int{1, 0}, [2]int{2, 3}, false); ok {
+		t.Fatal("selection outside the statement taken")
+	}
+}
