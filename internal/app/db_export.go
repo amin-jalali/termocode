@@ -217,7 +217,7 @@ func (m *Model) databaseExportStart() tea.Cmd {
 	}
 	s.exp = e
 	var items []picker.Item
-	for _, f := range dbExportFormatList() {
+	for _, f := range dbExportFormatListFor(m.databaseWorkspaceRoot()) {
 		items = append(items, picker.Item{ID: string(f.Format), Title: f.Title, Hint: f.Ext})
 	}
 	m.picker = picker.NewItems("Export rows as…", items)
@@ -256,7 +256,7 @@ func (m *Model) databaseExportFormatPicked(id string) tea.Cmd {
 	if e == nil {
 		return nil
 	}
-	info, ok := dbExportFormatInfo(id)
+	info, _, ok := dbExportFormatFor(m.databaseWorkspaceRoot(), id, dbclient.ExportOptions{})
 	if !ok {
 		s.exp = nil
 		return nil
@@ -267,6 +267,7 @@ func (m *Model) databaseExportFormatPicked(id string) tea.Cmd {
 	} else {
 		e.opts = m.dbExportPrepare(e.opts) // CSV settings, keys, shown columns (DBX-36)
 	}
+	_, e.opts, _ = dbExportFormatFor(m.databaseWorkspaceRoot(), id, e.opts) // a Lua extractor's script
 	if e.format == dbclient.FormatSQLUpdate && len(e.opts.KeyColumns) == 0 {
 		s.exp = nil
 		return m.pushToastDetail(toast.Warn, "Cannot export SQL UPDATEs", errDBUpdateNoKey.Error())

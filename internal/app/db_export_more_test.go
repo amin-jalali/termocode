@@ -99,3 +99,38 @@ func TestDBExportTablesToFolder(t *testing.T) {
 		t.Fatalf("schema.sql: %v", err)
 	}
 }
+
+// DBX-36: a script in .termocode/extractors is one more format in the
+// pickers; picking it hands the script to the writer, and a name cannot
+// point outside the folder.
+func TestDBLuaExtractorsJoinTheFormatList(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, ".termocode", "extractors")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	src := "extension = '.up'\nfunction row(r) return string.upper(r.name) .. '\\n' end"
+	if err := os.WriteFile(filepath.Join(dir, "upper.lua"), []byte(src), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	list := dbExportFormatListFor(root)
+	last := list[len(list)-1]
+	if last.Format != "lua:upper" || last.Ext != ".up" {
+		t.Fatalf("last format: %+v", last)
+	}
+	info, o, ok := dbExportFormatFor(root, "lua:upper", dbclient.ExportOptions{})
+	if !ok || info.Title != "Lua: upper" || o.Lua != src {
+		t.Fatalf("picked: %+v %+v %v", info, o, ok)
+	}
+	if _, _, ok := dbExportFormatFor(root, "lua:../upper", dbclient.ExportOptions{}); ok {
+		t.Fatal("a name outside the folder was accepted")
+	}
+	r := dbclient.Result{Columns: []dbclient.Column{{Name: "name"}}, Rows: [][]dbclient.Cell{{{Text: "ann"}}}}
+	text, err := dbCopyAsText(r, info.Format, o)
+	if err != nil || text != "ANN\n" {
+		t.Fatalf("copy: %q %v", text, err)
+	}
+	if got := dbExportFormatListFor(t.TempDir()); len(got) != len(dbExportFormatList()) {
+		t.Fatalf("no folder, %d formats", len(got))
+	}
+}
