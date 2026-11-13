@@ -266,6 +266,8 @@ per host and port; a private network address asks each time). It never
 skips the certificate check and a public name may not reach a private
 address.
 
+Like every AI send, the call is shown on the HTTP Response page (tagged "by AI"; the call page is the body, `200 OK` when the gRPC status is OK) and is written to the HTTP history. A call that cannot start is in the history too, with its error.
+
 The web page sends a `GRPC` request the same way (pick it from a .http
 file, or choose `GRPC` as the method of a new request). The laptop makes
 the call with the web's host rules and the call page is the answer's

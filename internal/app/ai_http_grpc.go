@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -75,20 +76,21 @@ func httpGRPCGuardDial(addr string) grpc.DialOption {
 }
 
 // httpAIGRPCRun runs the gRPC request of r and returns the call page
-// for the model; a failed call is the answer, not a Go error.
-func httpAIGRPCRun(ctx context.Context, root string, r *httpAIReq, maxBytes int) string {
-	set := loadHTTPSettings()
+// for the model; a failed call is the answer, not a Go error. The call
+// is an AI run on the HTTP page (the call page as the body) and a line
+// in the HTTP history, like any AI send: show opens it on the UI loop.
+func httpAIGRPCRun(ctx context.Context, root string, r *httpAIReq, maxBytes int, show func(*httpRun) error) string {
 	file := r.file
 	if file == "" {
 		file = filepath.Join(root, "ad-hoc.http")
 	}
-	plan, err := httpGRPCPlanFor(r.rr, file, set.timeout())
-	text := ""
-	if err == nil {
-		text, err = httpGRPCCall(ctx, plan, false, httpGRPCGuardDial(plan.target.Addr))
-	}
-	if err != nil {
-		text = "gRPC call failed: " + err.Error()
+	resp := webHTTPGRPCDo(ctx, r.rr, file, false)
+	run := &httpRun{rr: r.rr, resp: resp, file: r.file, line: r.req.Line, label: r.req.Label(), env: r.env, by: "ai", at: time.Now()}
+	httpRecordHistory(run)
+	_ = show(run) // the page is a courtesy; the model has the answer either way
+	text := string(resp.Body)
+	if text == "" {
+		text = "gRPC call failed: " + resp.Err
 	}
 	for _, v := range r.rr.Secrets {
 		if v != "" {
