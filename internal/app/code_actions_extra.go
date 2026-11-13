@@ -310,7 +310,8 @@ func (m *Model) generateDocCommentAt(line int) tea.Cmd {
 		local row = %d
 		local lines = vim.api.nvim_buf_get_lines(0, row-1, row, false)
 		if #lines == 0 then return 'noline' end
-		local name = lines[1]:match('^%%s*func%%s+%%(?[^)]*%%)?%%s*([%%w_]+)%%s*%%(')
+		local name = lines[1]:match('^%%s*func%%s+%%b()%%s*([%%w_]+)%%s*%%(')
+			or lines[1]:match('^%%s*func%%s+([%%w_]+)%%s*%%(')
 		if not name then
 			name = lines[1]:match('^%%s*type%%s+([%%w_]+)%%s')
 		end
