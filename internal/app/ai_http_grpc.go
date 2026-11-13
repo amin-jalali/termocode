@@ -21,9 +21,10 @@ import (
 // HTTP one. Every call asks (a call may change data), private hosts
 // always; the dial refuses a private address for a public name.
 
-// httpAIGRPCValidate checks the URL of a gRPC request: a host and a
+// httpGRPCValidateURL checks the URL of a gRPC request (the AI's and
+// the web's sends): a host and a
 // method.
-func httpAIGRPCValidate(rawURL string) error {
+func httpGRPCValidateURL(rawURL string) error {
 	t, err := grpcreq.ParseTarget(rawURL)
 	if err != nil {
 		return err
@@ -64,6 +65,15 @@ func httpAIGRPCGuard(host string) func(network, address string, _ syscall.RawCon
 	}
 }
 
+// httpGRPCGuardDial dials addr (host:port) with httpAIGRPCGuard.
+func httpGRPCGuardDial(addr string) grpc.DialOption {
+	host, _, _ := net.SplitHostPort(addr)
+	d := &net.Dialer{Control: httpAIGRPCGuard(host)}
+	return grpc.WithContextDialer(func(ctx context.Context, a string) (net.Conn, error) {
+		return d.DialContext(ctx, "tcp", a)
+	})
+}
+
 // httpAIGRPCRun runs the gRPC request of r and returns the call page
 // for the model; a failed call is the answer, not a Go error.
 func httpAIGRPCRun(ctx context.Context, root string, r *httpAIReq, maxBytes int) string {
@@ -75,12 +85,7 @@ func httpAIGRPCRun(ctx context.Context, root string, r *httpAIReq, maxBytes int)
 	plan, err := httpGRPCPlanFor(r.rr, file, set.timeout())
 	text := ""
 	if err == nil {
-		host, _, _ := net.SplitHostPort(plan.target.Addr)
-		d := &net.Dialer{Control: httpAIGRPCGuard(host)}
-		dial := grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
-			return d.DialContext(ctx, "tcp", addr)
-		})
-		text, err = httpGRPCCall(ctx, plan, false, dial)
+		text, err = httpGRPCCall(ctx, plan, false, httpGRPCGuardDial(plan.target.Addr))
 	}
 	if err != nil {
 		text = "gRPC call failed: " + err.Error()

@@ -380,7 +380,7 @@ func (r *httpAIReq) validate() error {
 		return fmt.Errorf("unresolved variables: %s; see http_environments (the user may need to select an environment or add the value to http-client.private.env.json)", strings.Join(names, ", "))
 	}
 	if isGRPCRequest(r.rr.Request) {
-		if err := httpAIGRPCValidate(r.rr.URL); err != nil {
+		if err := httpGRPCValidateURL(r.rr.URL); err != nil {
 			return err
 		}
 	} else if u, err := url.Parse(r.rr.URL); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {

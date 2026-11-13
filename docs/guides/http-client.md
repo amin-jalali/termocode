@@ -266,6 +266,12 @@ per host and port; a private network address asks each time). It never
 skips the certificate check and a public name may not reach a private
 address.
 
+The web page sends a `GRPC` request the same way (pick it from a .http
+file, or choose `GRPC` as the method of a new request). The laptop makes
+the call with the web's host rules and the call page is the answer's
+body: `200 OK` when the status is OK, otherwise the gRPC status is shown
+as the error.
+
 ## More commands
 
 | Palette | What it does |
