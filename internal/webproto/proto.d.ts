@@ -895,6 +895,10 @@ export interface DBSecretArgs {
   value: string;
 }
 
+export interface WebForwardArgs {
+  port: number;
+}
+
 export interface GitLinesArgs {
   path: string;
   from: number;
@@ -2190,6 +2194,12 @@ export interface DBNeed {
 export interface Attention {
   kind: "card" | "run_done" | "run_failed" | "task_done" | "bell";
   id?: string;
+}
+
+export interface FwdReady {
+  port: number;
+  mode: "tailnet" | "local" | "ssh";
+  url?: string;
 }
 
 export interface PairAsk {
@@ -4203,6 +4213,7 @@ export interface OpArgs {
   "db.tx": DBTxArgs;
   "db.trust_host": DBTrustArgs;
   "db.secret": DBSecretArgs;
+  "web.forward": WebForwardArgs;
   "ci.fix_prompt": EmptyArgs;
   "git.stage_lines": GitLinesArgs;
   "git.unstage_lines": GitLinesArgs;
@@ -4335,6 +4346,7 @@ export interface EventData {
   "answered": Answered;
   "ask": AskCard;
   "attention": Attention;
+  "fwd.ready": FwdReady;
   "pair.ask": PairAsk;
   "pair.end": PairEnd;
   "search.batch": SearchBatch;
@@ -4534,6 +4546,7 @@ export interface OpResult {
   "db.tx": AskRef;
   "db.trust_host": DBDone;
   "db.secret": DBDone;
+  "web.forward": AskRef;
   "ci.fix_prompt": CIFixPrompt;
   "git.discard_lines": AskRef;
   "git.discard_hunk": AskRef;
