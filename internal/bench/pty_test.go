@@ -96,3 +96,48 @@ func TestSummarize(t *testing.T) {
 		t.Fatal("empty input must give zero stats")
 	}
 }
+
+// A terminal program redraws only what changed: after a jump the stream holds
+// "line 0000001" and then "50000" at a cursor position. The text the user sees
+// is "line 0050000". Matching must be on the screen, not on the byte stream.
+func TestSessionMatchesTheScreenNotTheStream(t *testing.T) {
+	s, err := Start(Spec{Bin: "sh", Args: []string{"-c", `printf 'line 0000001'; sleep 0.2; printf '\033[1;8H50000'; sleep 5`}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	if _, err := s.WaitForText("line 0050000", 3*time.Second); err != nil {
+		t.Fatalf("the screen shows it, the stream does not: %v", err)
+	}
+}
+
+func TestSessionTimeKeyIgnoresTextAlreadyOnScreen(t *testing.T) {
+	s := startCat(t)
+	if _, err := s.WaitForText("ready", 5*time.Second); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 2; i++ { // the second "q" is already on screen from the first
+		d, _, err := s.TimeKey([]byte("q"), "q", 5*time.Second)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if d <= 0 {
+			t.Fatalf("latency %v", d)
+		}
+	}
+	if n := strings.Count(s.Text(), "q"); n != 2 {
+		t.Fatalf("screen has %d q, want 2", n)
+	}
+}
+
+func TestSessionAnswersTerminalQueries(t *testing.T) {
+	// Programs like termocode ask the terminal who it is (DA1) and wait.
+	s, err := Start(Spec{Bin: "bash", Args: []string{"-c", `printf '\033[c'; IFS= read -r -s -n 3 -t 3 reply; case "$reply" in *'[?'*) printf got-answer;; *) printf no-answer;; esac; sleep 3`}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	if _, err := s.WaitForText("got-answer", 4*time.Second); err != nil {
+		t.Fatalf("no reply to DA1: %v (screen %q)", err, s.Text())
+	}
+}
