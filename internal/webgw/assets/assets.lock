@@ -20,7 +20,7 @@ home.js sha384-obTeQHZ/SYDT6uq4csDDxWYluJs/+ZVt8jXKFw94wQY+IsL2hxt+WgI0UEWSqZjS 
 icon-maskable.svg sha384-jsUQFC456bVobLxEI3ZKbp9mW6SjO1Joa3U86iXD66qm+YF+smRbvNGYVLvYMqOf 201
 icon.svg sha384-1i6/INXc16ryIXQB25IUE2qoPWGgij99HXLf1+5KcACYRgURj9eQzm/tcozbgZjh 210
 icons/codicon.ttf sha384-ydwWqX1+Wu2d6/YNWz288+ntV4SOp+lwtNI+XWqY3797m8eIMAmbNR5P9SCqdB5N 125828
-index.html sha384-ZF3LenYk/WHBODoECBiiyIWkl7fksPjfNjXzHBnnlDZ7aLm4rzwkgqFDDSB+HU8Q 1274
+index.html sha384-xBf3eFFNPKegO1ubbaeFW/Wi4Cref95e7Qp8LLpMpsF932TSboJT5U1ZASEGt8IG 1274
 kit.css sha384-xZW9zoI6r955nkHoPpj30TWnl3mncsHkk1O1aMUJ9O0+mni+elb8BfNamjF2BKsw 102907
 kit.html sha384-of1mwY55JSGV6Skq/lwM5DOCirLdJjlFLIx7Gs3hjaKvMc7N5snc434zF4cOzx0K 719
 kit.js sha384-zX/E16ykQp7WA2dsuT9ZpYmdG1CXAm7jrYFyNrYvQTeuyYaS0PuCjUL/FV2PclVz 218649
@@ -35,5 +35,6 @@ monaco/editor-contrib.js sha384-zovZc9/8c8IF6IlccJXAp+iG87TnOpWjJGqruAwc0mBMA0kL
 monaco/editor-host.js sha384-rIPG+WRVloxnbIjzdw7y2Okz9CDO0u8Vi8Gp09YBtnrkMwRn5dEhgAkE5greTXHf 361750
 monaco/editor.css sha384-h3Pml8012xDelgjWIfvjv8T/9ptDUnH1yJrSjj78OtB8P1yT/3pmrp6Y7S2cNUV4 390829
 monaco/editor.js sha384-n5VxbIFjdhl1sERXQHN52h87EGviSdsndgKg9eRxZVuVsFtoxtLJDuY2UxnnGx/r 2472349
+parquet.js sha384-pV/P0aOmc1JcLh1AJcIyqJjQw2BZVV7l9XbBJL3ddZfiU4LN8ZwrRj4xxRdYo0Pu 605
 strings-fa.js sha384-ZZg0a1PoWMwVFBNESKQAQCvh14lLunFkQeBugcRlNdsLknXSNfseeppylbINMdRX 104237
-workbench.js sha384-l3c4aF0obT64ZUYXzorBIpvKYLIF9JQZvp1s3xpF62UqRMxmKWP8lRR74WDrnr8T 268569
+workbench.js sha384-FYR9xS8JRlKpVXMCwSM1lak9fzlkNLXh1GeVwYUOgvqbf+1826TPUW/rnpzg44q6 268769

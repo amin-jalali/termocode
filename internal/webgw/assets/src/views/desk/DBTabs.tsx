@@ -17,6 +17,7 @@ import { aiGrid, withAI } from "../../lib/aictx";
 import { mountDesk, setDesk, type DeskHandle } from "../../lib/deskeditor";
 import { sqlTab } from "../../lib/vtabs";
 import { modKey } from "../../lib/platform";
+import { saveParquet } from "../../lib/parquet";
 import { saveBlob } from "../../lib/transfer";
 import { showFile, wordWrap } from "../../lib/workbench";
 import { ReqError } from "../../net/link";
@@ -58,6 +59,7 @@ function exportMenu(e: MouseEvent | { x: number; y: number }, r: DBRowsView, nam
     { label: "CSV", run: () => save("csv") },
     { label: "JSON", run: () => save("json") },
     { label: "Markdown", run: () => save("md") },
+    { label: "Parquet", run: () => saveParquet(r, name) },
   ]);
 }
 

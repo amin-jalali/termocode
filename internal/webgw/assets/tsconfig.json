@@ -31,6 +31,7 @@
       "/assets/home.js": ["./src/home.tsx"],
       "/assets/device.js": ["./src/device.tsx"],
       "/assets/aictx.js": ["./src/aictx/main.tsx"],
+      "/assets/parquet.js": ["./src/parquet.ts"],
       "/assets/monaco-vim.js": ["./src/monaco/vim.ts"]
     }
   },
