@@ -610,6 +610,11 @@ More Redis commands in the palette (they work on the selected connection, or on 
 
 `XINFO GROUPS`, `XINFO CONSUMERS`, `XINFO STREAM`, `MODULE LIST`, `MEMORY STATS`, `PUBSUB NUMSUB`, `CLUSTER NODES` and the module `INFO` commands give readable grids in the console too.
 
+### Cloud warehouses
+
+Snowflake, Databricks SQL, BigQuery and Athena are reached over their own REST APIs (HTTPS, no extra driver). The password is the account's token or key and goes to the secret store; the other settings go in `"params"` (in a URL, as its query). They have no transactions and no read-only mode of their own: a read-only connection and the AI's read-only session let only reads through, and other statements are refused before they are sent.
+- **Snowflake** (`"driver": "snowflake"`, `snowflake://user@account.snowflakecomputing.com/DB/SCHEMA?warehouse=WH&role=ROLE`): the SQL API. The password is a programmatic access token (`"tokenType": "OAUTH"` or `"KEYPAIR_JWT"` in params for the others). `database` and the params `schema`, `warehouse` and `role` set the context of every statement. A long statement is polled until it ends; Cancel stops it on the account. Big results are read part by part until the row limit. The tree lists the databases (`SHOW TERSE DATABASES`), their schemas and tables (`INFORMATION_SCHEMA`), and a table's columns and `GET_DDL`.
+
 ## MongoDB
 
 A MongoDB connection (`"driver": "mongodb"`) takes a host and port (27017 by default), an optional user, a database and a password from the secret store. A user signs in against `admin` unless `"params": {"authSource": "…"}` says otherwise. For a replica set, Atlas or other options, paste a `mongodb://` or `mongodb+srv://` URL: it is saved as it is, but the password moves to the secret store. `"tls": true` or `"ssl"` turn on TLS. An SSH tunnel works with one server's host and port (not with `mongodb+srv://`).

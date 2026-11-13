@@ -44,6 +44,8 @@ type HTTPEngine struct {
 	LineBased bool
 	// FixURL adjusts a connection parsed from one of Schemes (nil: none).
 	FixURL func(*Conn)
+	// QueryParams keeps the URL's query as Conn.Params ("?warehouse=WH").
+	QueryParams bool
 }
 
 var httpEngines = map[string]HTTPEngine{}

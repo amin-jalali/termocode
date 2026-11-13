@@ -123,6 +123,13 @@ func ParseURL(raw string) (Conn, error) {
 			if c.Database == "" {
 				c.Database = e.Database
 			}
+			if e.QueryParams {
+				for k, v := range u.Query() {
+					if len(v) > 0 {
+						c.Params[k] = v[0]
+					}
+				}
+			}
 			if e.FixURL != nil {
 				e.FixURL(&c)
 			}
