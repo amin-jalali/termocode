@@ -89,7 +89,7 @@ func dbAIConn(root, id string) (dbclient.Conn, error) {
 				// AI's read-only guarantee would rest on the parser alone.
 				title := dbclient.ExtraSQLEngineTitle(c.Driver)
 				return c, fmt.Errorf("connection %s is %s: AI tools need a read-only transaction, which %s does not have", id, title, title)
-			case !dbAISQLDriver(c.Driver):
+			case !dbAISQLDriver(c.Driver) && c.Driver != "cassandra":
 				return c, fmt.Errorf("connection %s (%s) does not use SQL", id, c.Driver)
 			}
 			return c, nil
@@ -873,6 +873,9 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 			defer cancel()
 			defer sess.Close()
 			req := dbclient.IntrospectionRequest{Schema: schemaName, Object: table}
+			if c.Driver == "cassandra" && schemaName == "" {
+				req.Schema = database // a keyspace (the connection's own when none is given)
+			}
 			if c.Driver == "mysql" {
 				if database == "" && table != "" {
 					database = c.Database

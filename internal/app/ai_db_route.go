@@ -324,6 +324,8 @@ func dbAILogin(ctx context.Context, c dbclient.Conn, snap *dbAISnapshot, pw stri
 		open = func(ctx context.Context, c dbclient.Conn, pw string) (dbclient.Session, error) {
 			return dbOpenDriverSession(ctx, c, "", pw)
 		}
+	} else if c.Driver == "cassandra" {
+		open = dbCassandraSessionFactory // CQL, not the SQL driver (DBX-67)
 	}
 	if snap.call == nil {
 		return open(ctx, c, pw)
