@@ -11,10 +11,11 @@ import { ChangeSet, Text } from "@codemirror/state";
 import { dict } from "../state/dict";
 import { History } from "../editor/history";
 import { diff } from "../lib/textdiff";
+import { merge3 } from "../coedit/merge";
 import type { AICompletion, AINextEdit, LspCompletion, LspHover, LspLocations } from "../../../../webproto/proto";
 import type { HlRow } from "../editor/api";
 import { esc, md } from "./mdtext";
-import type { AiAt, AiKind, CursorOp, EditAct, FrameBlame, FrameGlyph, FrameHint, FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, NavKind, ToFrame } from "./protocol";
+import type { AiAt, AiKind, CursorOp, EditAct, FrameBlame, FrameGlyph, FrameHint, FrameMarker, FrameOpts, FramePeer, FromFrame, LspKind, MenuCan, NavKind, ToFrame } from "./protocol";
 import type { Vim, VimMapDef, VimMode } from "./vim";
 import type * as VimModule from "./vim";
 import "./frame.css";
@@ -75,6 +76,8 @@ interface Decoration {
     linesDecorationsClassName?: string;
     glyphMarginClassName?: string;
     glyphMarginHoverMessage?: { value: string };
+    beforeContentClassName?: string;
+    hoverMessage?: { value: string };
     stickiness?: number;
     after?: { content: string; inlineClassName?: string };
     showIfCollapsed?: boolean;
@@ -248,6 +251,7 @@ let lastHl: readonly HlRow[] = [];
  * the faint breakpoint under the pointer. */
 let glyphDecos: Collection | null = null;
 let hintDecos: Collection | null = null;
+let peerDecos: Collection | null = null;
 let glyphRows = new Set<number>();
 /** glyphMenu: a right click in the glyph margin opens the page's menu
  * for that row instead of the editor's. */
@@ -1016,6 +1020,23 @@ function flash(cs: ChangeSet): void {
   flashTimer = setTimeout(() => flashDecos?.clear(), 1500);
 }
 
+/** peers draws the other people's carets (G-COL): a thin coloured bar
+ * at the caret, its name on hover, and its selection shaded. */
+function peers(items: FramePeer[]): void {
+  if (!peerDecos) return;
+  const out: Decoration[] = [];
+  for (const p of items) {
+    const hover = { value: p.name };
+    out.push({ range: { startLineNumber: p.line, startColumn: p.col, endLineNumber: p.line, endColumn: p.col }, options: { beforeContentClassName: "peer-caret", hoverMessage: hover, stickiness: 1, showIfCollapsed: true } });
+    if (p.sel && (p.sel.line !== p.line || p.sel.col !== p.col)) {
+      const back = p.sel.line < p.line || (p.sel.line === p.line && p.sel.col < p.col);
+      const a = back ? p.sel : p, b = back ? p : p.sel;
+      out.push({ range: { startLineNumber: a.line, startColumn: a.col, endLineNumber: b.line, endColumn: b.col }, options: { className: "peer-sel", hoverMessage: hover } });
+    }
+  }
+  peerDecos.set(out);
+}
+
 function textChange(text: string): ChangeSet | null {
   const d = diff(cur.toString(), text);
   if (!d) return null;
@@ -1223,6 +1244,7 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
   gutterDecos = ed.createDecorationsCollection();
   glyphDecos = ed.createDecorationsCollection();
   hintDecos = ed.createDecorationsCollection();
+  peerDecos = ed.createDecorationsCollection();
   if (!m.diff) {
     watchGlyphs(ed);
     watchGitMarks(ed);
@@ -1362,7 +1384,16 @@ function onMessage(e: MessageEvent): void {
       return;
     case "remote": {
       if (m.seen < v) {
-        sendText(true); // the user typed since: the page sees it first
+        // The user typed since the page computed this text (G-COL): move
+        // the laptop's change over that typing; the page gets the result.
+        const both = merge3(m.mine, cur.toString(), m.text);
+        if (both === null) {
+          post({ t: "text", text: cur.toString(), v, user: true, canUndo: hist.canUndo(), canRedo: hist.canRedo(), lost: true });
+          return;
+        }
+        const cs = textChange(both);
+        if (cs) apply(cs, "remote");
+        sendText(true);
         return;
       }
       const cs = textChange(m.text);
@@ -1463,6 +1494,9 @@ function onMessage(e: MessageEvent): void {
     }
     case "markers":
       markers(m.items);
+      return;
+    case "peers":
+      peers(m.items);
       return;
     case "glyphs":
       setGlyphs(m.items, m.stop);

@@ -19,11 +19,13 @@ package app
 //	termocode_web_reset  buf, seq, tick, lines      (reloaded from disk)
 //	termocode_web_dirty  buf, modified, tick           (a write moves the tick too)
 //	termocode_web_gone   buf                        (unloaded or deleted)
+//	termocode_web_cursor buf, row, col, srow, scol  (the laptop's cursor, G-COL;
+//	                     buf -1: in no followed buffer; srow -1: no selection)
 
 const webLuaPrelude = `
 local W = _G.termocode_web
-if not W or W.v ~= 5 then
-  W = { v = 5, bufs = (W and W.bufs) or {} }
+if not W or W.v ~= 6 then
+  W = { v = 6, bufs = (W and W.bufs) or {} }
   _G.termocode_web = W
   local api = vim.api
   W.LOGMAX = 512
@@ -106,9 +108,61 @@ if not W or W.v ~= 5 then
     i.lines = api.nvim_buf_get_lines(b, i.first, -1, false)
     return i
   end
+  -- Live editing together (G-COL): the pages' carets are marks in
+  -- W.PEER, one per page (key), with the page's name at the end of the
+  -- row; the laptop's cursor goes out when it moves in a followed buffer.
+  W.PEER = api.nvim_create_namespace('termocode_web_peer')
+  api.nvim_set_hl(0, 'TermocodeWebPeer', { default = true, link = 'Search' })
+  api.nvim_set_hl(0, 'TermocodeWebPeerName', { default = true, link = 'Comment' })
+  function W.peer(b, key, name, row, col)
+    local st = W.bufs[b]
+    if not st or not api.nvim_buf_is_valid(b) then return false end
+    st.peers = st.peers or {}
+    local n = api.nvim_buf_line_count(b)
+    if row >= n then row = n - 1 end
+    local line = api.nvim_buf_get_lines(b, row, row + 1, false)[1] or ''
+    if col > #line then col = #line end
+    local o = { id = st.peers[key], virt_text = { { ' ' .. name, 'TermocodeWebPeerName' } }, virt_text_pos = 'eol', priority = 200 }
+    if col < #line then o.end_col, o.hl_group = col + 1, 'TermocodeWebPeer' end
+    st.peers[key] = api.nvim_buf_set_extmark(b, W.PEER, row, col, o)
+    return true
+  end
+  function W.unpeer(keep)
+    for b, st in pairs(W.bufs) do
+      for key, id in pairs(st.peers or {}) do
+        if not keep[key] then
+          st.peers[key] = nil
+          if api.nvim_buf_is_valid(b) then pcall(api.nvim_buf_del_extmark, b, W.PEER, id) end
+        end
+      end
+    end
+  end
+  local last = ''
+  function W.cursor()
+    if next(W.bufs) == nil then return end
+    local b = api.nvim_get_current_buf()
+    local out
+    if W.bufs[b] then
+      local p = api.nvim_win_get_cursor(0)
+      local sr, sc = -1, -1
+      local mode = api.nvim_get_mode().mode
+      if mode == 'v' or mode == 'V' or mode == '\22' then
+        local v = vim.fn.getpos('v')
+        sr, sc = v[2] - 1, v[3] - 1
+      end
+      out = { b, p[1] - 1, p[2], sr, sc }
+    else
+      out = { -1, 0, 0, -1, -1 }
+    end
+    local k = table.concat(out, ',')
+    if k == last then return end
+    last = k
+    notify('termocode_web_cursor', unpack(out))
+  end
   function W.detach(list)
     for _, d in ipairs(list) do
       local b = d[1]
+      if api.nvim_buf_is_valid(b) then api.nvim_buf_clear_namespace(b, W.PEER, 0, -1) end
       W.bufs[b] = nil -- the next callback returns true: nvim detaches
       if d[2] and api.nvim_buf_is_valid(b) and not vim.bo[b].buflisted and not vim.bo[b].modified
         and vim.fn.bufwinid(b) == -1 then
@@ -122,6 +176,8 @@ if not W or W.v ~= 5 then
       notify('termocode_web_dirty', ev.buf, vim.bo[ev.buf].modified, api.nvim_buf_get_changedtick(ev.buf))
     end
   end })
+  api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI', 'ModeChanged', 'BufEnter', 'WinEnter' }, { group = 'TermocodeWeb',
+    callback = function() W.cursor() end })
 end
 `
 

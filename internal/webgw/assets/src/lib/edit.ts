@@ -12,6 +12,12 @@ import { link } from "../session";
 /** CONTEXT rows above and below the selection come into the sheet. */
 export const CONTEXT = 20;
 
+/** mayEdit: a connection with this role may edit the files it opens: a
+ * controller, or a share the owner let edit (editor, G-COL). */
+export function mayEdit(role: string | undefined): boolean {
+  return role === "controller" || role === "editor";
+}
+
 export interface Draft {
   path: string;
   buf: number;

@@ -28,6 +28,14 @@ type webFiles struct {
 	bufsList  *webproto.BufsSnap  // the bufs list as last sent
 	termsList *webproto.TermsSnap // the terms list as last sent
 	typedAt   time.Time           // keys from a browser reached a shell (the status chip's mark)
+
+	laptop webLaptopAt     // the laptop's cursor as last sent (G-COL)
+	peers  map[string]bool // connections whose caret the laptop shows
+	// The pages' carets by buffer and connection id, relayed to the
+	// other pages (G-COL), and each connection's key there.
+	peerAt   map[int]map[string]webproto.Peer
+	peerKeys map[string]string
+	peerSeq  int
 }
 
 // files returns the hub's file state, making it on first use.
@@ -65,5 +73,6 @@ func (m *Model) webTrackFiles() tea.Cmd {
 	m.webTrackBufs(h, f)
 	m.webTrackTerms(h, f)
 	m.webReleaseBufs(h, f)
+	m.webDropPeers(h, f)
 	return cmd
 }

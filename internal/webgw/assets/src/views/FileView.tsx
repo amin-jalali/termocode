@@ -11,7 +11,7 @@ import { layout } from "../lib/layout";
 import { wordWrap } from "../lib/workbench";
 import { modKey } from "../lib/platform";
 import { FileIcon, IconLaptop, IconPencil, IconRedo, IconRows, IconSave, IconUndo, IconWrap } from "../ui/icons";
-import { draft, own, save, saveErr, selection, startEdit, tapRow, undo } from "../lib/edit";
+import { draft, mayEdit, own, save, saveErr, selection, startEdit, tapRow, undo } from "../lib/edit";
 import { closePath, fileOf, holdPath, openPath, type FileState } from "../lib/file";
 import { dropHl, hl, rowSegs, wantHl } from "../lib/hl";
 import { IMAGE_EXT } from "../lib/image";
@@ -260,7 +260,7 @@ export function FileView({ path, slot = "g0" }: { path: string; slot?: string })
   const buf = st.kind === "open" ? readBuf(store.topic("buf:" + st.buf).value?.data) : null;
   const dir = dirName(path);
   const controller = link.meta.value?.role === "controller";
-  const canEdit = controller && !!buf && !buf.readonly && !isGone(store.topic("buf:" + st.buf).value?.data);
+  const canEdit = mayEdit(link.meta.value?.role) && !!buf && !buf.readonly && !isGone(store.topic("buf:" + st.buf).value?.data);
   const editLines = () => {
     if (!buf || !live.peek()) return;
     const s = selection.peek() ?? topRow(body.current);

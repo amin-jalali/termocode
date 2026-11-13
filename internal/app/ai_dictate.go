@@ -94,7 +94,7 @@ func (m *Model) openAIDictate() tea.Cmd {
 			" seconds. The words go into the chat input; nothing is sent until you press Enter. The AI never starts this.",
 		confirm.Button{ID: "cancel", Title: "Cancel"},
 		confirm.Button{ID: "record", Title: "Listen"},
-	).WithCode(strings.Join(set.Argv(), " "), "from "+voice.FileName)
+	).WithCode(set.Show(), "from "+voice.FileName)
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindAIDictate

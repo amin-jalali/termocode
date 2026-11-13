@@ -24,7 +24,7 @@ var (
 )
 
 // browserRoles are the roles a browser can have (RoleCtl is never one).
-var browserRoles = []Role{RoleViewer, RoleController}
+var browserRoles = []Role{RoleViewer, RoleController, RoleEditor}
 
 type genType struct {
 	t      reflect.Type

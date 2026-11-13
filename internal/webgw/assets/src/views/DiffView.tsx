@@ -27,6 +27,7 @@ import { Cod } from "../ui/icons";
 import { Crumbs } from "./FileView";
 import { AIDiff } from "./AIDiff";
 import { LiveEditor } from "./LiveEditor";
+import { mayEdit } from "../lib/edit";
 import { View } from "./View";
 
 /** diffInline and diffCollapse: the diff editors' view, for every tab. */
@@ -122,8 +123,7 @@ function LiveSide({ d, left, slot, onCount }: { d: DiffTab; left: Side; slot: st
   const buf = st?.kind === "open" && st.buf !== undefined ? readBuf(store.topic("buf:" + st.buf).value?.data) : null;
   if (st && st.kind !== "open" && st.kind !== "loading") return <p class="empty refused">{st.kind === "error" ? errText(st.err) : t("file.missing")}</p>;
   if (!buf || st?.buf === undefined) return <div class="editor-host desk-host" />;
-  const controller = link.meta.value?.role === "controller";
-  const canEdit = controller && !buf.readonly && !isGone(store.topic("buf:" + st.buf).value?.data);
+  const canEdit = mayEdit(link.meta.value?.role) && !buf.readonly && !isGone(store.topic("buf:" + st.buf).value?.data);
   return (
     <LiveEditor
       key={buf.buf}

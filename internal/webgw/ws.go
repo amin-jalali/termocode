@@ -108,8 +108,6 @@ const (
 	DefaultHubWait   = 15 * time.Second
 	DefaultPingEvery = 25 * time.Second
 	DefaultPongWait  = 10 * time.Second
-	// DefaultMaxViewers: the owner's limit of browsers at once.
-	DefaultMaxViewers = 4
 )
 
 // closeInternal (1011) is for a fault inside the gateway. It is not in
@@ -557,8 +555,11 @@ func (c *wsConn) openHub(h *webproto.Hello) bool {
 // hubRole is the hub's name for a session role. Anything unknown is a
 // viewer: the hub then refuses every op that changes something.
 func hubRole(r Role) webproto.Role {
-	if r == RoleControl {
+	switch r {
+	case RoleControl:
 		return webproto.RoleController
+	case RoleEdit:
+		return webproto.RoleEditor
 	}
 	return webproto.RoleViewer
 }

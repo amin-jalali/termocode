@@ -1,3 +1,5 @@
+//go:build unix
+
 package app
 
 import (
@@ -39,7 +41,7 @@ func TestSetTextTickConflict(t *testing.T) {
 	f := webSetText(r, r.c, b.Buf, b.Tick, 0, 6, 0, 11, "phone")
 	var res webproto.EditRes
 	webResData(t, f, &res)
-	if webBufLines(r, b.Buf) != "hello phone" || res.Tick <= b.Tick || !res.Dirty {
+	if webBufLines(r, b.Buf) != "hello phone" || res.Tick <= b.Tick || !res.Dirty || res.Rebased {
 		t.Fatalf("edit: %q %+v", webBufLines(r, b.Buf), res)
 	}
 	r.lua(`local b = ... vim.api.nvim_buf_set_lines(b, 0, 1, false, { "laptop typed" })`, nil, b.Buf)
@@ -197,8 +199,8 @@ func TestSetTextRebasesOverADisjointLaptopEdit(t *testing.T) {
 	if got := webBufLines(r, b.Buf); got != "zero|one|TWO|three!" {
 		t.Fatalf("rebased edit: %q", got)
 	}
-	if res.Tick <= b.Tick+1 || !res.Dirty {
-		t.Fatalf("result: %+v", res)
+	if res.Tick <= b.Tick+1 || !res.Dirty || !res.Rebased {
+		t.Fatalf("result: %+v (a moved edit says rebased: the page waits for the laptop's text)", res)
 	}
 }
 

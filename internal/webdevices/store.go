@@ -26,6 +26,9 @@ import (
 const (
 	RoleViewer  = "viewer"  // reads only
 	RoleControl = "control" // may type, edit and answer cards
+	// RoleEdit is a share (Guest) the owner let edit the files it opens
+	// (G-COL); never given to a plain pairing.
+	RoleEdit = "edit"
 )
 
 // MaxDevices caps the list.

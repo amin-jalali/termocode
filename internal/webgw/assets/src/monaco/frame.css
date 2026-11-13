@@ -2,6 +2,9 @@
    page (protocol.ts "colors"), set on the root by frame.ts. */
 html, body { height: 100%; margin: 0; overflow: hidden; background: var(--wb-editor-bg, #1e1e1e); }
 #editor { position: absolute; inset: 0; }
+/* Another person's caret and selection (G-COL: the laptop's). */
+.peer-caret { border-left: 2px solid var(--amber, #cca700); margin-left: -1px; }
+.peer-sel { background: var(--amber, #cca700); opacity: 0.25; }
 /* Rows the laptop just changed light up for a moment. */
 .tc-laptop { background: var(--wb-sel, #264f78); opacity: 0.45; }
 

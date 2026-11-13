@@ -136,7 +136,7 @@ func (m *Model) openWebPair(guest bool) tea.Cmd {
 	if guest {
 		title = "Share as a viewer"
 		body = "Send this link to the person you share with (Copy link). It works once, for 10 minutes.\n" +
-			"They can only watch: no typing, no answers, no changes.\n" +
+			"They can only watch, unless you let them edit files when they open it.\n" +
 			"They need this computer shared to them on Tailscale. When they open the link,\n" +
 			"they read you a 6-digit code; you check it here and let them in."
 	}
@@ -286,8 +286,11 @@ func (m *Model) webPairAsk(call *webCall) tea.Cmd {
 		title = "Let someone watch?"
 		fmt.Fprintf(&body, "%s opened your share link.\n\n", name)
 		fmt.Fprintf(&body, "Code on their screen: %s\nLet them in only if they tell you the same code.\n\n", code)
-		body.WriteString("They will see your files, chats and terminals, but cannot type or change anything.")
-		actions = append(actions, confirm.Button{ID: "viewer", Title: "Let them watch", Style: confirm.StylePrimary})
+		body.WriteString("They will see your files, chats and terminals, but cannot type or change anything.\n")
+		body.WriteString("Let them edit files: they may also change and save the files they open, with you,\n")
+		body.WriteString("live. Still no terminal, git, chat or answers.")
+		actions = append(actions, confirm.Button{ID: "viewer", Title: "Let them watch", Style: confirm.StylePrimary},
+			confirm.Button{ID: "edit", Title: "Let them edit files"})
 	} else {
 		fmt.Fprintf(&body, "%s wants to pair with this termocode.\n\n", name)
 		fmt.Fprintf(&body, "Code on the phone: %s\nPair only if the phone shows the same code.\n\n", code)
@@ -313,6 +316,8 @@ func (m *Model) answerWebPairAsk(id string) tea.Cmd {
 		role = webdevices.RoleViewer
 	case "control":
 		role = webdevices.RoleControl
+	case "edit":
+		role = webdevices.RoleEdit // a share only (webPairDecide)
 	}
 	cmd, _ := m.webPairDecide(role, "laptop")
 	return cmd
@@ -609,8 +614,11 @@ func webConnectText(c *webConn) string {
 			name = d.Name
 		}
 	}
-	if c.role == webproto.RoleViewer {
+	switch c.role {
+	case webproto.RoleViewer:
 		return name + " is watching (view only)."
+	case webproto.RoleEditor:
+		return name + " is here and may edit files."
 	}
 	return name + " connected with control."
 }

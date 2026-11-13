@@ -3,7 +3,7 @@
 
 export type Version = 2;
 export type Subprotocol = "termocode.v2";
-export type Role = "viewer" | "controller";
+export type Role = "viewer" | "controller" | "editor";
 export type ErrCode = "bad_request" | "forbidden" | "limit" | "conflict" | "gone" | "busy" | "not_found" | "internal";
 export type CloseCode = 1000 | 1003 | 1008 | 1009 | 1012 | 4001 | 4002 | 4003 | 4004 | 4005 | 4006 | 4007 | 4008 | 4009 | 4010 | 4011 | 4012 | 4013;
 export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "workflows" | "worktrees" | "inbox" | "projects" | "races";
@@ -227,6 +227,12 @@ export interface SetTextArgs {
 }
 
 export interface Pos {
+  row: number;
+  col: number;
+}
+
+export interface BufCursorArgs {
+  buf: number;
   row: number;
   col: number;
 }
@@ -1609,6 +1615,21 @@ export interface BufSnap {
   et?: boolean;
   enc?: string;
   eol?: string;
+  laptop?: Cursor;
+  peers?: Peer[];
+}
+
+export interface Cursor {
+  row: number;
+  col: number;
+  sel?: Pos;
+}
+
+export interface Peer {
+  key: string;
+  name: string;
+  row: number;
+  col: number;
 }
 
 export interface LinesDelta {
@@ -1638,6 +1659,16 @@ export interface ResetDelta {
 
 export interface GoneDelta {
   kind: "gone";
+}
+
+export interface CursorDelta {
+  kind: "cursor";
+  at?: Cursor;
+}
+
+export interface PeersDelta {
+  kind: "peers";
+  items?: Peer[];
 }
 
 export interface TermsSnap {
@@ -2373,6 +2404,11 @@ export interface ChatRef {
 export interface EditRes {
   tick: number;
   dirty: boolean;
+  rebased?: boolean;
+}
+
+export interface CursorRes {
+  key: string;
 }
 
 export interface ImageRes {
@@ -3700,7 +3736,7 @@ export interface WebDeviceList {
 export interface WebDevice {
   id: string;
   name: string;
-  role: "viewer" | "control";
+  role: "viewer" | "control" | "edit";
   guest?: boolean;
   bookmark?: boolean;
   live?: boolean;
@@ -4026,6 +4062,7 @@ export interface OpArgs {
   "buf.save": BufArgs;
   "buf.undo": BufArgs;
   "buf.close": BufArgs;
+  "buf.cursor": BufCursorArgs;
   "file.image": PathArgs;
   "chat.image": ChatImageArgs;
   "term.send": TermSendArgs;
@@ -4347,7 +4384,7 @@ export interface TopicData {
   "cards": { snap: CardsSnap; delta: CardsDelta };
   "tree": { snap: TreeSnap; delta: TreeDirDelta | TreeRemoveDelta | TreeHiddenDelta | TreeRootsDelta };
   "bufs": { snap: BufsSnap; delta: BufsSnap };
-  "buf": { snap: BufSnap; delta: LinesDelta | TickDelta | DirtyDelta | ResetDelta | GoneDelta };
+  "buf": { snap: BufSnap; delta: LinesDelta | TickDelta | DirtyDelta | ResetDelta | GoneDelta | CursorDelta | PeersDelta };
   "terms": { snap: TermsSnap; delta: TermsSnap };
   "term": { snap: TermSnap; delta: LinesDelta | TickDelta | TermResetDelta | TermModeDelta | GoneDelta };
   "git": { snap: GitSnap; delta: GitSnap };
@@ -4401,6 +4438,7 @@ export interface OpResult {
   "buf.set_text": EditRes;
   "buf.save": EditRes;
   "buf.undo": EditRes;
+  "buf.cursor": CursorRes;
   "file.image": ImageRes;
   "chat.image": ImageRes;
   "term.new": TermNewRes;

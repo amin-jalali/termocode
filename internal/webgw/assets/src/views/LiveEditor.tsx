@@ -11,7 +11,7 @@ import { startEdit } from "../lib/edit";
 import { hl, hlRows, wantHl } from "../lib/hl";
 import { lineComment, mountDesk, setDesk, type DeskHandle } from "../lib/deskeditor";
 import { loadEditor } from "../lib/lazy";
-import { editing, liveStatus, LiveSync, session, setSync, syncs } from "../lib/live";
+import { editing, liveStatus, session, setSync, syncs, type LiveSync } from "../lib/live";
 import { toast } from "../lib/toasts";
 import { link, live, store } from "../session";
 import { gutterMarks } from "../lib/gutter";
@@ -25,6 +25,7 @@ import { t } from "../strings";
 import { Button } from "../ui/Button";
 import { DiffRow } from "../ui/rows";
 import { diffRows } from "./EditSheet";
+import { coedit, loadCoedit } from "../lib/coedit";
 
 function readBuf(data: unknown): BufSnap | null {
   if (typeof data !== "object" || data === null) return null;
@@ -158,11 +159,13 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
               onDiff: (n, a, r) => diffRef.current?.onCount(n, a, r),
               onGlyph: diff ? undefined : (line, menu, x, y) => onGlyph(path, line, menu, x, y),
               onGitMark: diff ? undefined : (line) => peekChange(path, line),
+              // Live editing together (G-COL): the laptop sees this caret.
+              onCaret: diff || d.readOnly ? undefined : (line, col) => coedit.peek()?.caret(buf, line, col, () => ed.current?.text() ?? ""),
             }),
         })
       : loadEditor();
-    load.then(
-      (mod) => {
+    Promise.all([load, loadCoedit()]).then(
+      ([mod, co]) => {
         const first = peek();
         if (dead || !host.current || !first) return;
         let sync: LiveSync | null = null;
@@ -170,6 +173,7 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
           doc: first.lines.join("\n"),
           label: t("file.edit") + " " + path,
           onChange: () => sync?.local(),
+          onRemoteLost: () => sync?.lost(),
           onSave: saveLive,
           onDone: doneLive,
           onViewport: (a, b) => {
@@ -181,7 +185,7 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
             if (s) wantHl(buf, s.tick, a, b, () => peek()?.lines ?? [], () => peek()?.tick ?? -1);
           },
         });
-        sync = new LiveSync(buf, handle, first);
+        sync = new co.LiveSync(buf, handle, first);
         ed.current = handle;
         if (d) setDesk(slot, handle as DeskHandle);
         setSync(slot, sync);
@@ -215,6 +219,14 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
   useEffect(() => {
     if (snap) own?.store(snap, isGone(ts?.data));
   }, [snap, ready, own]);
+  // Live editing together (G-COL): the laptop's cursor (and selection)
+  // and the other pages' carets in this file.
+  const laptopAt = snap?.laptop;
+  useEffect(() => {
+    const h = ed.current;
+    if (diff || !ready || !h) return;
+    h.peers(coedit.peek()?.peersOf(snap, t("live.laptop_caret")) ?? []);
+  }, [ready, laptopAt, snap?.peers]);
   // Git change marks (desktop): the file's unstaged diff on disk, asked
   // again when the laptop saves or git's list changes.
   const gitData = desk ? (store.topic("git").value?.data as GitSnap | undefined) : undefined;

@@ -76,7 +76,7 @@ func (t *Tokens) Import(recs []TokenRecord, now time.Time) int {
 	n := 0
 	for _, r := range recs {
 		b, err := hex.DecodeString(r.Hash)
-		if err != nil || len(b) != sha256.Size || (r.Role != RoleControl && r.Role != RoleViewer) || len(t.byHash) >= MaxSessions {
+		if err != nil || len(b) != sha256.Size || (r.Role != RoleControl && r.Role != RoleViewer && r.Role != RoleEdit) || len(t.byHash) >= MaxSessions {
 			continue
 		}
 		s := &Sess{ID: r.ID, Device: r.Device, Role: r.Role, Created: r.Created, LastSeen: r.LastSeen}
