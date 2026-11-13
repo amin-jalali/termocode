@@ -1,6 +1,6 @@
 module github.com/amin-jalali/termocode/e2e
 
-go 1.26.10
+go 1.26.11
 
 require (
 	github.com/charmbracelet/x/ansi v0.11.7
