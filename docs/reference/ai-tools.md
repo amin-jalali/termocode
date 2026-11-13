@@ -3285,6 +3285,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-refresh-object` | Databases: Refresh Selected Object | auto |   |
 | `db-rename` | Databases: Rename in SQL… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-restore` | Databases: Restore Database… | never | use db_data op restore (it asks) |
+| `db-result-beside` | Databases: Show Result Beside… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-result-cell-menu` | Databases: Result Cell Menu… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-result-column-types` | Databases: Toggle Result Column Types | auto |   |
 | `db-result-create-table` | Databases: Copy Result Columns as CREATE TABLE | never | writes the user's clipboard |

@@ -419,6 +419,10 @@ func (m *Model) databasePage() dbPage {
 			databaseRedisStringView(&p, r.redis)
 			break
 		}
+		if other := s.besideRun(); other != nil && r.result.Err == nil && len(r.result.Columns) > 0 {
+			m.databaseBesideView(&p, s, other, width)
+			break
+		}
 		m.databaseGrid(&p, s)
 	case dbViewJSON:
 		if plan {

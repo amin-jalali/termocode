@@ -417,6 +417,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Show Redis Pub/Sub Channels | `redis-pubsub-channels` |   | `PUBSUB CHANNELS` |
 | Databases: Show Redis Slow Log | `redis-slowlog` |   |   |
 | Databases: Show Redis Stream Groups | `redis-stream-groups` |   | `XINFO GROUPS on the stream` |
+| Databases: Show Result Beside… | `db-result-beside` |   |   |
 | Databases: Show Schema Cache Info | `db-schema-cache-info` |   |   |
 | Databases: Show Server Info | `db-server-info` |   |   |
 | Databases: Show Sessions and Locks | `db-sessions` |   |   |

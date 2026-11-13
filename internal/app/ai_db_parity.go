@@ -190,6 +190,7 @@ var aiDBNotForAI = map[string]string{
 	"db-chart":               "a chart of the user's result page",
 	"db-copy-as":             "writes the user's clipboard",
 	"db-result-create-table": "writes the user's clipboard",
+	"db-result-beside":       "a menu of the user's result page",
 	"db-result-cell-menu":    "a menu of the user's result page",
 	"db-result-goto-row":     "moves the user's cursor on the result page",
 	"db-result-page-size":    "a display setting of the user's result page",
