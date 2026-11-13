@@ -125,29 +125,34 @@ func httpGRPCFiles(ctx context.Context, cc grpc.ClientConnInterface, plan httpGR
 // httpGRPCCall runs plan and returns the page text. err is set when the
 // call could not start; a failed status is on the page.
 func httpGRPCCall(ctx context.Context, plan httpGRPCPlan, insecureTLS bool, opts ...grpc.DialOption) (string, error) {
+	res, err := httpGRPCInvoke(ctx, plan, insecureTLS, opts...)
+	if err != nil {
+		return "", err
+	}
+	return res.Text(plan.target), nil
+}
+
+// httpGRPCInvoke runs plan and returns the finished call.
+func httpGRPCInvoke(ctx context.Context, plan httpGRPCPlan, insecureTLS bool, opts ...grpc.DialOption) (grpcreq.Result, error) {
 	if plan.target.Method == "" {
-		return "", fmt.Errorf("grpc: put the method in the URL (grpc://host:port/package.Service/Method)")
+		return grpcreq.Result{}, fmt.Errorf("grpc: put the method in the URL (grpc://host:port/package.Service/Method)")
 	}
 	ctx, cancel := context.WithTimeout(ctx, plan.timeout)
 	defer cancel()
 	cc, err := grpcreq.Dial(plan.target, insecureTLS, opts...)
 	if err != nil {
-		return "", err
+		return grpcreq.Result{}, err
 	}
 	defer func() { _ = cc.Close() }()
 	files, _, err := httpGRPCFiles(ctx, cc, plan)
 	if err != nil {
-		return "", err
+		return grpcreq.Result{}, err
 	}
 	md, err := grpcreq.FindMethod(files, plan.target.Service, plan.target.Method)
 	if err != nil {
-		return "", err
+		return grpcreq.Result{}, err
 	}
-	res, err := grpcreq.Call(ctx, cc, files, md, plan.messages, plan.meta)
-	if err != nil {
-		return "", err
-	}
-	return res.Text(plan.target), nil
+	return grpcreq.Call(ctx, cc, files, md, plan.messages, plan.meta)
 }
 
 // httpGRPCDescribe lists the services of plan's server (only its
