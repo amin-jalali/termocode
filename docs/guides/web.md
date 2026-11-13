@@ -330,6 +330,24 @@ There are three ways. Pick the one that fits your phone:
   only ciphertext and the time. A push that waits longer than an hour
   for a phone that is off is dropped: by then, the laptop is the better
   place to look.
+  A push says when the AI waits for you (a tool call, a plan, a
+  review) and when an AI run or a task ends or fails. Tap the
+  notification and the panel opens on the cards (or just opens, for an
+  end). It needs a secure page, so it works only where the panel has
+  a real https address:
+
+  | How you reach the panel | Web Push |
+  |---|---|
+  | Tailnet (`web_listen: tailnet`, https) | yes |
+  | Wi-Fi (`web_listen: lan`, pinned certificate) | no: the phone's browser does not trust the certificate for push |
+  | This computer (`127.0.0.1`) or an SSH tunnel | no: the phone is not on that address |
+
+  Where it is not possible, **Notifications** in the page says so and
+  gives the page's own notifications only (while it is open in the
+  background). Set `"web_push": "off"` in `config.json` to send no push
+  at all; the phones keep their subscription for when you turn it on.
+  Remove a phone's subscription with **Stop notifications** on that
+  phone, or remove the device in **Web: Devices…**.
 - **UnifiedPush.** The phone gives the panel the address of its own
   distributor. When a new card waits and the phone is not connected,
   the panel posts `wake` to that address, at most once every 30
@@ -346,7 +364,7 @@ What a Web Push says is set by `web_push_detail` in `config.json`:
 |---|---|
 | `none` | "Something needs you" |
 | `count` (default) | how many things wait, such as "2 things need you" |
-| `title` | the number and the kind of the newest one, such as "A plan needs you" |
+| `title` | the number and the kind of the newest one, such as "A plan needs you", and the name of the folder the panel runs in as the title |
 
 The kind comes from a short fixed list (tool, MCP, plan, review, trust,
 workflow). The phone shows its own fixed text for it. A push never
@@ -649,6 +667,7 @@ issue.
 | `web_max_hours` | `12` | A browser's sign-in ends this many hours after it began (1..24); the panel stays up. |
 | `web_open_browser` | `true` | Open the link in this computer's browser on start. |
 | `web_max_viewers` | `4` | Browsers at once (1..8). |
+| `web_push` | `on` | `off`: send no push to any phone (a phone that turned on Notify me gets pushes while this is `on`). |
 | `web_push_detail` | `count` | What a phone push says: `none`, `count` or `title` (a fixed text per kind). |
 | `web_listen` | `loopback` | `tailnet`: also reach it from your tailnet devices. `lan`: from devices on the same Wi-Fi (https, pinned certificate). |
 | `web_require_totp` | `false` | A paired device also types a code from an authenticator app. |

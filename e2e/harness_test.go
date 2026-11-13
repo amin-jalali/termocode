@@ -117,6 +117,9 @@ type StartOpts struct {
 	// Link puts a slow network (latency, bandwidth) between the terminal
 	// and termocode, both ways, like an SSH connection (Group S2).
 	Link *SlowLink
+	// Bin runs this binary instead of the shared one (the update test
+	// builds its own, with the fake release server hook).
+	Bin string
 }
 
 // Start launches termocode in a fresh PTY with an isolated HOME.
@@ -167,7 +170,11 @@ func Start(t *testing.T, o StartOpts) *Term {
 			t.Fatal(err)
 		}
 	}
-	cmd := exec.Command(binPath, o.Args...)
+	bin := binPath
+	if o.Bin != "" {
+		bin = o.Bin
+	}
+	cmd := exec.Command(bin, o.Args...)
 	cmd.Dir = ws
 	cmd.Env = append(isolatedEnv(home), o.Env...)
 

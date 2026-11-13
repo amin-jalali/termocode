@@ -19,8 +19,9 @@
 import { h } from "preact";
 import { signal } from "@preact/signals";
 import { useEffect, useRef } from "preact/hooks";
-import type { PhoneInfo, PhonePrefsArgs } from "../../../../../webproto/proto";
+import type { PhoneInfo, PhonePrefsArgs, PushItem, PushList } from "../../../../../webproto/proto";
 import { notifyState, perm, turnOff, turnOn } from "../../lib/notify";
+import { canPush } from "../../lib/push";
 import { prefs, setPref } from "../../lib/prefs";
 import { ReqError } from "../../net/link";
 import { forgetToken } from "../../net/auth";
@@ -59,6 +60,26 @@ const forgetFailed = signal(false);
 const DEF_FROM = "22:00";
 const DEF_TO = "07:00";
 
+/** pushItems is the devices that get pushes (push.list, controllers only). */
+const pushItems = signal<PushItem[] | null>(null);
+
+async function readPush(): Promise<void> {
+  try {
+    pushItems.value = ((await link.request("push.list")) as PushList).items;
+  } catch {
+    pushItems.value = null;
+  }
+}
+
+async function removePush(it: PushItem): Promise<void> {
+  try {
+    pushItems.value = ((await link.request("push.remove", { device: it.device })) as PushList).items;
+    if (it.this) turnOff(); // this browser's own alerts stop too
+  } catch {
+    void readPush();
+  }
+}
+
 async function read(): Promise<void> {
   load.value = "loading";
   try {
@@ -68,6 +89,7 @@ async function read(): Promise<void> {
     const p = res.prefs;
     setPref("quiet", p.quiet_from && p.quiet_to ? `${p.quiet_from}-${p.quiet_to}` : "");
     load.value = "ready";
+    if (res.role === "controller" && !res.guest) void readPush();
   } catch (e) {
     load.value = e instanceof ReqError && e.code === "forbidden" ? "unpaired" : "failed";
   }
@@ -246,6 +268,7 @@ function Body({ d }: { d: PhoneInfo }) {
         ) : (
           <div class="field">
             <p class="group-text">{nst === "blocked" ? tp("ph.alerts_blocked") : tp("ph.alerts_body")}</p>
+            {nst !== "blocked" && !canPush() && <p class="group-text">{tp("ph.alerts_nopush")}</p>}
             <Segmented<"off" | "on">
               label={tp("ph.alerts")}
               value={nst === "on" ? "on" : "off"}
@@ -256,6 +279,28 @@ function Body({ d }: { d: PhoneInfo }) {
                 if (!guest) void save({ ...p, alerts: v === "on" });
               }}
             />
+          </div>
+        )}
+        {d.role === "controller" && !guest && (
+          <div class="field">
+            <span class="field-label">{tp("ph.push_title")}</span>
+            {(pushItems.value ?? []).length === 0 ? (
+              <p class="group-text">{tp("ph.push_none")}</p>
+            ) : (
+              <ul class="phone-laptops">
+                {(pushItems.value ?? []).map((it) => (
+                  <li class="phone-laptop" key={it.device}>
+                    <span class="phone-laptop-name">
+                      {it.name} · {tp("ph.push_added")} {when(it.added)}
+                    </span>
+                    {it.this && <span class="phone-live">{tp("ph.laptop_this")}</span>}
+                    <Button kind="quiet" onClick={() => void removePush(it)}>
+                      {tp("ph.push_remove")}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
         <div class="field">

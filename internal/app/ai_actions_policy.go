@@ -1023,6 +1023,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"web_max_viewers":   aiNever(aiNoWeb),
 	"web_push_detail":   aiNever(aiNoWeb),
 	"web_phone":         aiNever(aiNoWeb),
+	"web_push":          aiNever(aiNoWeb),
 	// Who confirms a web action: the AI never moves it to the page or back.
 	"web_approve_on_laptop": aiNever(aiNoWeb),
 	// The door (MOB-56): more open projects = more of the laptop on the phone.
