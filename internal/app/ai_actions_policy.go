@@ -171,6 +171,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"lsp-container-diagnostics": aiConfirm(ai.ClassIDE),
 	"lsp-mirror-refresh":        aiConfirm(ai.ClassIDE), // reads the container's code into the local cache
 	"lsp-mirror-clear":          aiNever("opens a card only the user answers; it deletes the local mirror"),
+	// RC-8: the tools sidecar of a container workspace (container_sidecar.go).
+	"debug-sidecar-start": aiNever("opens a card only the user answers; it starts a container"),
+	"debug-sidecar-stop":  aiDestructive(), // removes the sidecar termocode started
 
 	// ── Git ──
 	"git-stage":              aiConfirm(ai.ClassGit),
@@ -472,6 +475,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"kubernetes-kustomize":              aiNever("use the typed tool kube_manage op kustomize"),
 	"kubernetes-helm-repo-add":          aiNever("use the typed tool kube_manage op helm_repo_add"),
 	"kubernetes-helm-install":           aiNever("use the typed tool kube_manage op helm_install"),
+	"kubernetes-add-cluster":            aiNever("the AI never edits the kubeconfig; only the person does, after a card with the diff"),
 	"kubernetes-report":                 aiAuto(),
 	"kubernetes-rbac":                   aiAuto(),
 	"kubernetes-hpa":                    aiAuto(),

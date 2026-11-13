@@ -448,10 +448,12 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Debug: Show Call Stack | `debug-show-stack` |   |   |
 | Debug: Show Variables | `debug-show-vars` |   |   |
 | Debug: Start / Continue | `debug-start` | `Alt+F5` | `Alt+F5` |
+| Debug: Start Tools Sidecar… | `debug-sidecar-start` |   | `debug a folder opened in a container` |
 | Debug: Step Into | `debug-step-into` | `F11` | `F11` |
 | Debug: Step Out | `debug-step-out` | `Shift+F11` | `Shift+F11` |
 | Debug: Step Over | `debug-step-over` | `F10` | `F10` |
 | Debug: Stop | `debug-stop` | `Shift+Alt+F5` | `Shift+Alt+F5` |
+| Debug: Stop Tools Sidecar | `debug-sidecar-stop` |   |   |
 | Debug: Toggle Breakpoint | `debug-toggle-breakpoint` | `F9` | `F9` |
 
 ## Developer
@@ -789,6 +791,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Kubernetes: Add Cluster to Kubeconfig… | `kubernetes-add-cluster` |   |   |
 | Kubernetes: Add Helm Repo… | `kubernetes-helm-repo-add` |   |   |
 | Kubernetes: Apply Current File… | `kubernetes-apply-file` |   |   |
 | Kubernetes: Autoscalers (HPA) | `kubernetes-hpa` |   |   |

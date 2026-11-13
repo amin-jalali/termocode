@@ -93,6 +93,10 @@ type Options struct {
 	// built-in matcher and never runs rg or reads the local disk (a
 	// container workspace, ADR 0018).
 	FS FS
+	// Remote, with FS, runs rg or grep (whichever RemoteTools lists) in
+	// the container to find the files worth reading (remote.go).
+	Remote      Remote
+	RemoteTools []string
 }
 
 // FS is a file system the built-in search can walk instead of the local
@@ -252,7 +256,7 @@ func search(ctx context.Context, dirs []string, query string, opts Options, abs 
 		var err error
 		switch {
 		case opts.FS != nil:
-			err = runFS(ctx, opts.FS, dir, query, opts, emit)
+			err = runRemote(ctx, dir, query, opts, emit)
 		case useRg:
 			err = runRg(ctx, dir, query, opts, emit)
 		default:

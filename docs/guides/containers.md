@@ -268,7 +268,9 @@ After a discard, a git command or an AI edit in the container, the open
 files read the container's text again; a file with unsaved edits keeps
 them and a warning says the file changed in the container.
 **Replace in Workspace** reads and writes the files through the
-container too.
+container too. **Find in Files** asks `rg` in the container which files
+hold the text, or `grep` when the image has no `rg` (plain text searches;
+a regex search with only `grep` reads every file), and reads only those.
 
 The **Testing** view finds the tests in the container's files and runs
 them there (`go test`, `pytest`, `cargo test`, jest or vitest must be
@@ -296,6 +298,33 @@ from your computer the usual way, then a card with **Cancel** first asks
 before it copies them into the container folder. Nothing in the
 container is replaced: a name that is already there gets ` (1)`. New
 files belong to the user the workspace runs as.
+
+#### Debug in a container
+
+Go code in a container workspace is debugged in a *tools sidecar*: a
+second container that termocode starts next to yours, from your
+container's own image, sharing its files, network and processes. The
+debugger (`dlv`) runs there behind a small bridge; nothing is installed or
+changed in your container.
+
+**Debug: Start Tools Sidecar…** (or F5 when none runs) asks first on a
+card with **Cancel** first. The sidecar gets your container's user and
+environment (passed in a private file, never on a command line) and is
+removed with **Debug: Stop Tools Sidecar** and when termocode quits. It
+works with docker for a folder that is a bind mount or a volume.
+
+The tools come from a volume, `termocode-tools-<cpu>-<libc>`, that you
+build once per engine from termocode's source:
+
+```sh
+scripts/sidecar-tools/build.sh amd64 glibc my-image:dev            # this machine's docker
+scripts/sidecar-tools/build.sh arm64 musl my-image:dev "docker --context prod"
+```
+
+It builds `tc-sleep`, `tc-dap-bridge` and a pinned `dlv` as static Linux
+programs (Go needed, no C compiler) and copies them into the volume. `rg`
+is added only when its pinned sha256 is filled in
+`scripts/sidecar-tools/fetch-rg.sh`; without it the search uses `grep`.
 
 #### Containers on another machine (ssh://)
 

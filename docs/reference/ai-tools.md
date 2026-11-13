@@ -3341,6 +3341,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `debug-select-config` | Debug: Select Configuration... | never | opens a picker or prompt that only the user can answer; use a typed tool (debug_start with config) |
 | `debug-show-stack` | Debug: Show Call Stack | auto |   |
 | `debug-show-vars` | Debug: Show Variables | auto |   |
+| `debug-sidecar-start` | Debug: Start Tools Sidecar… | never | opens a card only the user answers; it starts a container |
+| `debug-sidecar-stop` | Debug: Stop Tools Sidecar | confirm (always asks) |   |
 | `debug-start` | Debug: Start / Continue | confirm (run) |   |
 | `debug-step-into` | Debug: Step Into | confirm (run) |   |
 | `debug-step-out` | Debug: Step Out | confirm (run) |   |
@@ -3585,6 +3587,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `itermoc-profiles` | Itermoc: Profiles | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
 | `itermoc-services` | Itermoc: Services | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
 | `join-lines` | Edit: Join Lines | confirm (fileWrite) |   |
+| `kubernetes-add-cluster` | Kubernetes: Add Cluster to Kubeconfig… | never | the AI never edits the kubeconfig; only the person does, after a card with the diff |
 | `kubernetes-apply-file` | Kubernetes: Apply Current File… | never | use the typed tool kube_manage op apply |
 | `kubernetes-context` | Kubernetes: Switch Context… | never | use the typed tool kube_manage op use_context |
 | `kubernetes-helm` | Kubernetes: Helm Releases… | never | use the typed tool kube_manage op helm_list / helm_status / helm_history / helm_rollback / helm_uninstall |
