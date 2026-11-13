@@ -432,7 +432,46 @@ func (m *Model) webHTTPSource(root string, a *webproto.HTTPSendArgs) (string, []
 		body := a.Body
 		req.Body = &body
 	}
+	if len(a.Proto)+len(a.ProtoDirs) > 0 {
+		if !isGRPCRequest(req) {
+			return "", nil, req, webErr(webproto.CodeBadRequest, "@proto files belong to a GRPC request.")
+		}
+		dirs := map[string]string{}
+		for key, list := range map[string][]string{"proto": a.Proto, "proto-path": a.ProtoDirs} {
+			for _, rel := range list {
+				if err := m.webHTTPProtoCheck(root, rel, key == "proto-path"); err != nil {
+					return "", nil, req, err
+				}
+			}
+			if len(list) > 0 {
+				dirs[key] = strings.Join(list, " ")
+			}
+		}
+		req.Directives = dirs
+	}
 	return "", nil, req, nil
+}
+
+// webHTTPProtoCheck: a typed GRPC request's @proto file (or @proto-path
+// folder) is read from the workspace only: it exists, stays inside it
+// after symlinks, and is no secret file.
+func (m *Model) webHTTPProtoCheck(root, rel string, dir bool) error {
+	abs := filepath.Join(root, filepath.FromSlash(rel))
+	if webSecretFile(abs) {
+		return webErrSecret()
+	}
+	real, err := filepath.EvalSymlinks(abs)
+	rootReal, rerr := filepath.EvalSymlinks(root)
+	if err != nil || rerr != nil {
+		return webErr(webproto.CodeBadRequest, "There is no such @proto file or folder: "+rel)
+	}
+	if !webInside(filepath.Clean(rootReal), filepath.Clean(real)) || webSecretFile(real) {
+		return webErr(webproto.CodeForbidden, "An @proto file or folder must be inside the workspace.")
+	}
+	if st, err := os.Stat(real); err != nil || st.IsDir() != dir {
+		return webErr(webproto.CodeBadRequest, "There is no such @proto file or folder: "+rel)
+	}
+	return nil
 }
 
 func (m *Model) webHTTPSend(call *webCall) tea.Cmd {
@@ -524,11 +563,17 @@ func (m *Model) webHTTPStart(run *httpRun) tea.Cmd {
 	ctx, cancel := context.WithCancel(context.Background())
 	s.webRun, s.webCancel = run, cancel
 	snap := *run
+	grpcFile := snap.file
+	if grpcFile == "" { // typed on the page: relative @proto paths are the workspace's
+		if root, err := m.rootDir(); err == nil {
+			grpcFile = filepath.Join(root, "ad-hoc.http")
+		}
+	}
 	return func() tea.Msg {
 		defer cancel()
 		var resp *httpclient.Response
 		if isGRPCRequest(snap.rr.Request) {
-			resp = webHTTPGRPCDo(ctx, snap.rr, snap.file, hooks.Insecure)
+			resp = webHTTPGRPCDo(ctx, snap.rr, grpcFile, hooks.Insecure)
 		} else {
 			resp = webHTTPDo(ctx, client, snap.rr, hooks)
 		}
