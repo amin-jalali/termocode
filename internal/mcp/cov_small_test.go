@@ -247,3 +247,14 @@ func TestCovCompareAndAutoUpdate(t *testing.T) {
 		t.Error("ParseAutoUpdate")
 	}
 }
+
+// 1.2 and 1.2.0 are the same version: a catalog that writes the shorter
+// form must not show an update.
+func TestCovCompareVersionsMissingPartIsZero(t *testing.T) {
+	if compareVersions("1.2", "1.2.0") != 0 || compareVersions("1.2.0", "v1.2") != 0 {
+		t.Error("1.2 and 1.2.0 must be equal")
+	}
+	if compareVersions("1.2", "1.2.1") >= 0 || compareVersions("1.2.1", "1.2") <= 0 {
+		t.Error("1.2.1 is above 1.2")
+	}
+}
