@@ -12111,6 +12111,18 @@
         "path": {
           "type": "string"
         },
+        "proto": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "proto_dirs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "saved": {
           "type": "integer"
         },

@@ -135,8 +135,12 @@ function Quick({ done }: { done: () => void }) {
   const go = () => {
     if (!url.trim()) return;
     const args: Record<string, unknown> = { method: m, url: url.trim() };
-    const hs = hdrs
-      .split("\n")
+    const hl = hdrs.split("\n");
+    const at = (k: string) => hl.map((l) => l.trim()).filter((l) => l.startsWith(k + " ")).map((l) => l.slice(k.length + 1).trim());
+    if (at("@proto").length) args.proto = at("@proto");
+    if (at("@proto-path").length) args.proto_dirs = at("@proto-path");
+    const hs = hl
+      .filter((l) => !l.trim().startsWith("@proto"))
       .map((l) => l.split(":"))
       .filter((p) => p.length > 1 && p[0].trim())
       .map((p) => ({ name: p[0].trim(), value: p.slice(1).join(":").trim() }));

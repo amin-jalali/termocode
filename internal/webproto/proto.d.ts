@@ -358,6 +358,8 @@ export interface HTTPSendArgs {
   env?: string;
   history?: string;
   saved?: number;
+  proto?: string[];
+  proto_dirs?: string[];
 }
 
 export interface HTTPHeader {
