@@ -12,6 +12,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/containerhost"
 	"github.com/amin-jalali/termocode/internal/containers"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/services"
 )
 
@@ -152,7 +153,8 @@ var aiProbeContexts = func(ctx context.Context, h aiContainersHost, list []conta
 	var wg sync.WaitGroup
 	for _, c := range list {
 		wg.Add(1)
-		go func(name string) {
+		name := c.Name
+		crash.Go("app.aiProbeContexts", func() {
 			defer wg.Done()
 			e := webServerEngine(h, name)
 			e.Timeout = aiContainersProbeWait
@@ -170,7 +172,7 @@ var aiProbeContexts = func(ctx context.Context, h aiContainersHost, list []conta
 			mu.Lock()
 			out[name] = why
 			mu.Unlock()
-		}(c.Name)
+		})
 	}
 	wg.Wait()
 	return out
