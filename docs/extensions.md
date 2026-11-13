@@ -243,3 +243,10 @@ Any of these may also be sent as a request; termocode answers `null`.
   extensions you trust.
 - **AI:** the AI can run extension commands only after you confirm (class
   *run*), the same as Lua extension commands.
+
+## Bundle MCP servers with an extension
+
+An extension folder may hold an `mcp.json` (the same format as the user's `mcp.json`). Its
+servers appear in the MCP list as soon as the extension is installed. They run a command, so
+they count as project servers: each one asks for your trust before it starts, and a server of
+the same name in your own `mcp.json` or in the project wins over it.

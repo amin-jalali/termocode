@@ -832,3 +832,9 @@ attach a debugger to it. For a Node.js server, add
 A Python server can wait for a debugger with `debugpy --listen 5678
 --wait-for-client`. **Stop** in the servers list and the next tool call
 start it again with your changes.
+
+## Servers that come with an extension
+
+An extension can carry its own `mcp.json` (see Extensions). Those servers show in the MCP
+list with source `project` and wait for your trust like any server from a repo. Your own
+`mcp.json` and the project's files win when a name is the same.
