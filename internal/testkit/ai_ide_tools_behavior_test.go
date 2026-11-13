@@ -29,7 +29,9 @@ func fakeToolModel(t *testing.T, calls ...toolCall) (*aiScript, *httptest.Server
 func clickAIAllow(d *Driver) {
 	d.T.Helper()
 	for y, line := range strings.Split(screen(d), "\n") {
-		if !strings.Contains(line, "Deny") {
+		// Cards put the safe button first: "Deny", or "Cancel" on a
+		// destructive one (git_hunk discard).
+		if !strings.Contains(line, "Deny") && !strings.Contains(line, "Cancel") {
 			continue
 		}
 		if j := strings.Index(line, " Allow "); j >= 0 {
