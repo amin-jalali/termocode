@@ -22,11 +22,16 @@ func TestOracleDialectSyntax(t *testing.T) {
 	if got := d.ReadOnlyBegin(); got != "SET TRANSACTION READ ONLY" {
 		t.Errorf("ReadOnlyBegin = %s", got)
 	}
-	if got := d.Explain("SELECT 1 FROM dual", false); got != "EXPLAIN PLAN FOR SELECT 1 FROM dual" {
+	// The plan form: SQLSession.Run turns it into EXPLAIN PLAN and
+	// DBMS_XPLAN on one connection (Oracle has no analyze).
+	if got := d.Explain("SELECT 1 FROM dual", false); got != OraclePlanForm("SELECT 1 FROM dual") {
 		t.Errorf("Explain = %s", got)
 	}
-	if got := d.Explain("SELECT 1 FROM dual", true); got != "EXPLAIN PLAN FOR SELECT 1 FROM dual" {
+	if got := d.Explain("SELECT 1 FROM dual", true); got != OraclePlanForm("SELECT 1 FROM dual") {
 		t.Errorf("Explain analyze = %s", got)
+	}
+	if got := ExplainForms("oracle", "SELECT 1 FROM dual;", true, false); len(got) != 1 || got[0] != OraclePlanForm("SELECT 1 FROM dual") {
+		t.Errorf("ExplainForms = %q", got)
 	}
 	if !strings.Contains(OracleShowPlan, "DBMS_XPLAN.DISPLAY") {
 		t.Errorf("OracleShowPlan = %s", OracleShowPlan)

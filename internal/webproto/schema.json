@@ -8817,6 +8817,7 @@
             "sqlite",
             "redis",
             "sqlserver",
+            "oracle",
             "other"
           ]
         },
