@@ -87,6 +87,7 @@ func mountedSidecarHost(t *testing.T, mounted bool, mod ...func(*Config)) (*Host
 	d := fakedocker.New()
 	c := d.Add(t, "api-1")
 	c.Mkdir(t, "/app")
+	c.WriteFile(t, "/lib/ld-musl-x86_64.so.1", nil, 0o755) // libc=musl
 	c.Image = "golang:1.23"
 	if mounted {
 		c.Mounts = []fakedocker.Mount{{Type: "bind", Source: "/home/u/proj", Destination: "/app", RW: true}}
@@ -123,7 +124,7 @@ func TestSidecarArgvFollowsThePlan(t *testing.T) {
 		"--volumes-from", "api-1", "--network", "container:api-1", "--pid", "container:api-1",
 		"--user", strconv.Itoa(uid) + ":" + strconv.Itoa(gid), "--env-file", "/tmp/env",
 		"-v", "termocode-tools-" + arch + "-" + libc + ":/opt/termocode:ro",
-		"--entrypoint", "/opt/termocode/bin/tc-sleep", "golang:1.23"}
+		"--entrypoint", "/opt/termocode/bin/tc-sleep", "sha256:golang:1.23"} // the image ID: the exact image, even when its tag moved
 	if strings.Join(got, " ") != strings.Join(want, " ") {
 		t.Fatalf("argv\n got %q\nwant %q", got, want)
 	}
