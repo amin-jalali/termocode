@@ -210,3 +210,25 @@ func TestStartSidecarRefusesAMultiLineEnvValue(t *testing.T) {
 		t.Fatal("ran anyway")
 	}
 }
+
+// The sidecar gets the target's own environment (its Config.Env, the
+// image's and the run's -e values), so a program the debugger starts
+// sees what the container's own processes see. PATH and HOSTNAME stay
+// the sidecar's.
+func TestContainerEnvForTheSidecar(t *testing.T) {
+	d := fakedocker.New()
+	c := d.Add(t, "api-1")
+	c.Mkdir(t, "/app")
+	c.Env = []string{"PATH=/usr/local/go/bin:/usr/bin", "HOSTNAME=x", "DATABASE_URL=postgres://db/app", "EMPTY=", "BROKEN"}
+	h, err := New(context.Background(), Config{Container: "api-1", Root: "/app", X: d})
+	if err != nil {
+		t.Fatal(err)
+	}
+	env := h.ContainerEnv()
+	if env["DATABASE_URL"] != "postgres://db/app" || len(env) != 2 {
+		t.Fatalf("env = %v", env)
+	}
+	if v, ok := env["EMPTY"]; !ok || v != "" {
+		t.Fatalf("EMPTY = %q %v", v, ok)
+	}
+}

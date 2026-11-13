@@ -58,10 +58,11 @@ type Container struct {
 	Root string
 
 	// What `inspect` reports; set them before the code under test runs.
-	User   string  // Config.User
-	Image  string  // the image name ("" = "img")
-	Arch   string  // the image's Architecture ("" = "amd64")
-	Mounts []Mount // Mounts
+	User   string   // Config.User
+	Image  string   // the image name ("" = "img")
+	Arch   string   // the image's Architecture ("" = "amd64")
+	Mounts []Mount  // Mounts
+	Env    []string // Config.Env ("KEY=value")
 
 	d       *Docker
 	owners  map[string][2]int // container path → uid, gid
@@ -713,7 +714,7 @@ func (d *Docker) inspect(args []string) result {
 		"Id":     "id-" + c.Name,
 		"Name":   "/" + c.Name,
 		"State":  map[string]any{"Status": status, "Running": !c.stopped},
-		"Config": map[string]any{"User": c.User, "Image": img},
+		"Config": map[string]any{"User": c.User, "Image": img, "Env": c.Env},
 		"Image":  "sha256:" + img,
 		"Mounts": mounts,
 	}}
