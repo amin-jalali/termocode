@@ -90,3 +90,16 @@ func TestDBIntentSelection(t *testing.T) {
 		t.Fatal("selection outside the statement taken")
 	}
 }
+
+// The column types completion knows feed the table function intention.
+func TestDBKnownColumnTypes(t *testing.T) {
+	s := &dbState{}
+	s.setFullSchema("pg", dbclient.CompletionSchema{Cols: map[string][]dbclient.Column{"orders": {{Name: "id", Type: "bigint"}, {Name: "Total", Type: "numeric"}, {Name: "x"}}}})
+	got := s.knownColumnTypes("pg")
+	if got["orders"]["id"] != "bigint" || got["orders"]["total"] != "numeric" {
+		t.Fatalf("types = %v", got)
+	}
+	if _, ok := got["orders"]["x"]; ok {
+		t.Fatal("a column without a type was given one")
+	}
+}
