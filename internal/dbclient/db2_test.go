@@ -165,3 +165,11 @@ func TestDb2SessionRunsThroughTheSQLSession(t *testing.T) {
 		t.Fatalf("result = %+v", res)
 	}
 }
+
+// A schema option becomes SET SCHEMA on every new Db2 connection.
+func TestDb2StartSQLSetsTheSchema(t *testing.T) {
+	got := (ConnOptions{Schema: "APP"}).StartSQL("db2")
+	if len(got) != 1 || got[0] != `SET SCHEMA "APP"` {
+		t.Fatalf("start sql = %q", got)
+	}
+}
