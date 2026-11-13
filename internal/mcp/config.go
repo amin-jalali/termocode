@@ -323,7 +323,17 @@ func Load(userPath, projectPath string) ([]Server, []string) {
 func LoadAll(userPath, projectPath string) ([]Server, []string) {
 	by := map[string]Server{}
 	var warns []string
-	files := []struct{ path, source string }{{userPath, SourceUser}}
+	var files []struct{ path, source string }
+	// DI-20: an extension's own mcp.json, below every other file. It runs a
+	// command, so it counts as a project server: trusted only by the owner's yes.
+	if userPath != "" {
+		ext, _ := filepath.Glob(filepath.Join(filepath.Dir(userPath), "extensions", "*", "mcp.json"))
+		sort.Strings(ext)
+		for _, p := range ext {
+			files = append(files, struct{ path, source string }{p, SourceProject})
+		}
+	}
+	files = append(files, struct{ path, source string }{userPath, SourceUser})
 	if c := CommonProjectPath(projectPath); c != "" {
 		files = append(files, struct{ path, source string }{c, SourceProject})
 	}

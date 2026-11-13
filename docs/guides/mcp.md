@@ -849,3 +849,9 @@ example "my open issues"). Pick a tool to **Run** it or to add it to your **Favo
 (shown first, with a star; kept in `mcp-favorites.json` next to `config.json`). The result is a
 list of lines. Pick a line to attach it to the chat, then say what to do with it. Tools that
 change things never run from this list: use `/tool server.tool …` (it asks first) or the AI.
+
+## Servers that come with an extension
+
+An extension can carry its own `mcp.json` (see Extensions). Those servers show in the MCP
+list with source `project` and wait for your trust like any server from a repo. Your own
+`mcp.json` and the project's files win when a name is the same.
