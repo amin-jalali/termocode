@@ -49,6 +49,24 @@ type Sidecar struct {
 	h    *Host
 }
 
+// ContainerEnv is the target's environment (its Config.Env: the image's
+// and the run's values) for the sidecar, without PATH and HOSTNAME,
+// which stay the sidecar's own. Entries without "=" are dropped.
+func (h *Host) ContainerEnv() map[string]string {
+	h.mu.Lock()
+	list := append([]string(nil), h.env...)
+	h.mu.Unlock()
+	out := map[string]string{}
+	for _, kv := range list {
+		k, v, ok := strings.Cut(kv, "=")
+		if !ok || k == "" || k == "PATH" || k == "HOSTNAME" {
+			continue
+		}
+		out[k] = v
+	}
+	return out
+}
+
 // rootMounted reports whether the workspace root lies in a bind mount or
 // a volume of the target (not its writable layer).
 func (h *Host) rootMounted() bool {
