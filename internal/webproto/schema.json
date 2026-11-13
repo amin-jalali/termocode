@@ -10128,6 +10128,9 @@
         "dirty": {
           "type": "boolean"
         },
+        "rebased": {
+          "type": "boolean"
+        },
         "tick": {
           "type": "integer"
         }

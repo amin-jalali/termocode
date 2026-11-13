@@ -2351,6 +2351,7 @@ export interface ChatRef {
 export interface EditRes {
   tick: number;
   dirty: boolean;
+  rebased?: boolean;
 }
 
 export interface ImageRes {

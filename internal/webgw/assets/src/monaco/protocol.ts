@@ -164,9 +164,12 @@ export type ToFrame =
   /** diffGo: to the next (1) or previous (-1) change. */
   | { t: "diffGo"; dir: 1 | -1 }
   | ({ t: "opts" } & FrameOpts)
-  /** remote: the laptop's text. seen is the newest frame version the
-   * page had; a frame that changed since keeps its text and sends it. */
-  | { t: "remote"; text: string; seen: number }
+  /** remote: the laptop's text (with the page's unsent typing on it).
+   * seen is the newest frame version the page had and mine the page's
+   * text then; a frame that changed since moves the change over its
+   * newer typing (G-COL) and sends the text, or, when they overlap,
+   * keeps its text and sends it with lost. */
+  | { t: "remote"; text: string; seen: number; mine: string }
   /** replace: the user chose this text (one undo step). */
   | { t: "replace"; text: string }
   | { t: "hl"; rows: HlRow[] }
@@ -220,7 +223,9 @@ export type FromFrame =
   | { t: "ready" }
   /** text: the frame's text at version v; user says the user changed it
    * (typing, paste, undo), not the page. */
-  | { t: "text"; text: string; v: number; user: boolean; canUndo: boolean; canRedo: boolean }
+  /** text: the frame's text at version v; lost: a laptop change could
+   * not be placed over newer typing (the page shows the conflict). */
+  | { t: "text"; text: string; v: number; user: boolean; canUndo: boolean; canRedo: boolean; lost?: boolean }
   | { t: "viewport"; first: number; last: number }
   /** diff: the diff editor counted its changes (after each change). */
   | { t: "diff"; changes: number; added: number; removed: number }

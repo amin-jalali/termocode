@@ -12,7 +12,10 @@ import (
 // Bundle budgets of the page (web design 4.1), gzipped: a phone on a weak
 // link loads the whole UI in one short burst.
 const (
-	budgetJS    = 120 << 10
+	// budgetJS: 121 KiB since live editing together (G-COL): the page
+	// moves its unsent typing over the laptop's change (lib/live.ts),
+	// on the phone too; main was at 122.7 KB of 120 KiB before it.
+	budgetJS    = 121 << 10
 	budgetCSS   = 20 << 10
 	budgetHTML  = 4 << 10
 	budgetTotal = 150 << 10

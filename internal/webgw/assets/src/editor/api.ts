@@ -24,6 +24,9 @@ export interface EditorHost {
   label: string;
   /** onChange: the user changed the text (typing, paste, undo). */
   onChange(): void;
+  /** onRemoteLost: the editor could not show the laptop's change over
+   * typing it got meanwhile (G-COL; the desktop editor's frame). */
+  onRemoteLost?(): void;
   /** onSave: Ctrl/Cmd+S. onDone: Esc. */
   onSave(): void;
   onDone(): void;

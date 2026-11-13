@@ -3,16 +3,20 @@
 // changes go out as one buf.set_text per pause (150 ms), guarded by that
 // tick; nvim refuses a stale one. The laptop's changes come in as the
 // buf topic's deltas: when the user has nothing unsent they show in the
-// editor at once; when both sides changed, nothing is merged: the user's
-// text stays, the editor stops sending and shows the laptop's change
-// until the user chooses (use the laptop's text, or send theirs).
+// editor at once. When both sides changed (live editing together, G-COL)
+// and the changes do not touch the same text, the editor shows both: the
+// user's unsent typing is moved over the laptop's change (merge3, the
+// hub's edge rules) and goes out on the laptop's tick. Only a real
+// overlap stops it: the user's text stays, the editor stops sending and
+// shows the laptop's change until the user chooses (use the laptop's
+// text, or send theirs).
 import { computed, signal, type Signal } from "@preact/signals";
 import type { BufSnap, EditRes } from "../../../../webproto/proto";
 import type { EditorHandle } from "../editor/api";
 import { OfflineError, ReqError } from "../net/link";
 import { link, live } from "../session";
 import { own, save as saveBuf } from "./edit";
-import { diff, pos } from "./textdiff";
+import { diff, merge3, pos } from "./textdiff";
 import { focusSlot } from "./workbench";
 
 export type LivePhase = "synced" | "sending" | "waiting" | "conflict" | "error" | "gone";
@@ -54,6 +58,11 @@ export class LiveSync {
   private flying: Promise<void> | null = null;
   private conflict: { base: string } | null = null;
   private gone = false;
+  /** behind: the hub moved the last send over the laptop's edits; the
+   * laptop's text at known.tick is not known.text until its copy comes. */
+  private behind = false;
+  /** prior is the laptop's text before the last merge (lost shows it). */
+  private prior: string | null = null;
   /** status is this editor's state (shown above it and in its header). */
   readonly status: Signal<LiveStatus> = signal<LiveStatus>(SYNCED);
 
@@ -75,7 +84,7 @@ export class LiveSync {
   /** settled is the changedtick the page's text is known at: null while
    * text is unsent or on its way, in a conflict, or when the buffer is gone. */
   settled(): number | null {
-    if (this.conflict || this.gone || this.flying || this.dirty()) return null;
+    if (this.conflict || this.gone || this.flying || this.behind || this.dirty()) return null;
     return this.known.tick;
   }
 
@@ -102,6 +111,7 @@ export class LiveSync {
     if (this.flying || this.gone) return;
     const s = this.latest;
     if (s.tick < this.known.tick) return; // this page's own change is on its way
+    this.behind = false;
     const text = s.lines.join("\n");
     if (text === this.known.text) {
       this.known.tick = s.tick; // a save, or this page's own change
@@ -116,6 +126,16 @@ export class LiveSync {
       this.ed.remote(text);
       return;
     }
+    const merged = merge3(this.known.text, this.ed.text(), text);
+    if (merged !== null) {
+      // Both typed, apart: the laptop's change shows, the user's unsent
+      // typing stays where it was and goes out on the laptop's tick.
+      this.prior = this.known.text;
+      this.known = { text, tick: s.tick };
+      this.ed.remote(merged);
+      if (this.dirty()) this.local();
+      return;
+    }
     this.conflict = { base: this.known.text };
     clearTimeout(this.timer);
     this.status.value = { phase: "conflict", base: this.known.text, laptop: text };
@@ -126,6 +146,7 @@ export class LiveSync {
     clearTimeout(this.timer);
     if (this.flying) return this.flying;
     if (this.conflict || this.gone) return Promise.resolve();
+    if (this.behind) return Promise.resolve(); // process sends once the laptop's text is here
     const now = this.ed.text();
     const d = diff(this.known.text, now);
     if (!d) {
@@ -144,6 +165,7 @@ export class LiveSync {
         const r = res as EditRes;
         own.tick = Math.max(own.tick, r.tick);
         this.known = { text: now, tick: r.tick };
+        this.behind = r.rebased === true;
         this.flying = null;
         this.status.value = { phase: "synced" };
         this.process();
@@ -163,6 +185,17 @@ export class LiveSync {
       },
     );
     return this.flying;
+  }
+
+  /** lost: the editor could not show the laptop's change over typing it
+   * got meanwhile (the two overlap). Nothing more goes out: sending now
+   * would undo the laptop's change. The user chooses, as in a conflict. */
+  lost(): void {
+    if (this.gone) return;
+    const base = this.prior ?? this.known.text;
+    this.conflict = { base };
+    clearTimeout(this.timer);
+    this.status.value = { phase: "conflict", base, laptop: this.latest.lines.join("\n") };
   }
 
   /** takeLaptop shows the laptop's text; the user's text is one undo away. */

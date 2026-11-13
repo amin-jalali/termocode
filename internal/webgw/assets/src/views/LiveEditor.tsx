@@ -170,6 +170,7 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
           doc: first.lines.join("\n"),
           label: t("file.edit") + " " + path,
           onChange: () => sync?.local(),
+          onRemoteLost: () => sync?.lost(),
           onSave: saveLive,
           onDone: doneLive,
           onViewport: (a, b) => {

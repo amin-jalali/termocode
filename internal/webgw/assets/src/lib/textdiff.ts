@@ -54,3 +54,17 @@ export function pos(text: string, at: number): { row: number; col: number } {
   }
   return { row, col: utf8Len(text.slice(start, at)) };
 }
+
+/** merge3 joins two changes made on one base: mine (the page's) and
+ * theirs (the laptop's). When they do not touch the same text both land,
+ * with the hub's edge rules (internal/coedit): two inserts at one point
+ * put theirs first. An overlap is a real conflict: null. */
+export function merge3(base: string, mine: string, theirs: string): string | null {
+  const m = diff(base, mine);
+  const t = diff(base, theirs);
+  if (!m) return theirs;
+  if (!t) return mine;
+  if (t.to <= m.from) return base.slice(0, t.from) + t.insert + base.slice(t.to, m.from) + m.insert + base.slice(m.to);
+  if (m.to <= t.from) return base.slice(0, m.from) + m.insert + base.slice(m.to, t.from) + t.insert + base.slice(t.to);
+  return null;
+}

@@ -10,7 +10,7 @@
 import { ChangeSet, Text } from "@codemirror/state";
 import { dict } from "../state/dict";
 import { History } from "../editor/history";
-import { diff } from "../lib/textdiff";
+import { diff, merge3 } from "../lib/textdiff";
 import type { AICompletion, AINextEdit, LspCompletion, LspHover, LspLocations } from "../../../../webproto/proto";
 import type { HlRow } from "../editor/api";
 import { esc, md } from "./mdtext";
@@ -1362,7 +1362,16 @@ function onMessage(e: MessageEvent): void {
       return;
     case "remote": {
       if (m.seen < v) {
-        sendText(true); // the user typed since: the page sees it first
+        // The user typed since the page computed this text (G-COL): move
+        // the laptop's change over that typing; the page gets the result.
+        const both = merge3(m.mine, cur.toString(), m.text);
+        if (both === null) {
+          post({ t: "text", text: cur.toString(), v, user: true, canUndo: hist.canUndo(), canRedo: hist.canRedo(), lost: true });
+          return;
+        }
+        const cs = textChange(both);
+        if (cs) apply(cs, "remote");
+        sendText(true);
         return;
       }
       const cs = textChange(m.text);

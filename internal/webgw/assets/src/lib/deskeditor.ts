@@ -213,8 +213,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         canRedo = m.canRedo;
         if (m.text !== text) {
           text = m.text;
-          if (m.user) host.onChange();
-        }
+          if (m.lost) host.onRemoteLost?.();
+          else if (m.user) host.onChange();
+        } else if (m.lost) host.onRemoteLost?.();
         return;
       case "viewport":
         host.onViewport(m.first, m.last);
@@ -329,8 +330,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     text: () => text,
     remote(t) {
       if (t === text) return;
+      const mine = text;
       text = t;
-      send({ t: "remote", text: t, seen });
+      send({ t: "remote", text: t, seen, mine });
     },
     replace(t) {
       if (t === text) return;

@@ -176,7 +176,7 @@ func TestFrameRebasesRemoteOverNewerTyping(t *testing.T) {
 	for _, c := range []struct{ src, want, where string }{
 		{frame, "merge3(m.mine, cur.toString(), m.text)", "monaco/frame.ts"},
 		{frame, "lost: true", "monaco/frame.ts"},
-		{desk, `send({ t: "remote", text: t, seen, mine: text })`, "lib/deskeditor.ts"},
+		{desk, `send({ t: "remote", text: t, seen, mine })`, "lib/deskeditor.ts"},
 		{desk, "host.onRemoteLost?.()", "lib/deskeditor.ts"},
 		{proto, "lost?: boolean", "monaco/protocol.ts"},
 		{live, "onRemoteLost: () => sync?.lost()", "views/LiveEditor.tsx"},
