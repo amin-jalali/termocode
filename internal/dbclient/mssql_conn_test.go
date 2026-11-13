@@ -86,7 +86,7 @@ func TestParseURLSQLServer(t *testing.T) {
 	if err != nil || c.Database != "app" || !strings.Contains(SQLServerDSN(c, ""), "/SQLEXPRESS") {
 		t.Fatalf("instance: %+v, %v", c, err)
 	}
-	if err := Validate(c); err != nil {
-		t.Fatalf("validate: %v", err)
+	if c.ID = "app"; Validate(c) != nil {
+		t.Fatalf("validate: %v", Validate(c))
 	}
 }

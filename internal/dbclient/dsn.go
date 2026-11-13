@@ -53,6 +53,10 @@ func ParseURL(raw string) (Conn, error) {
 		u.Scheme = "sqlite"
 		raw = "sqlite" + strings.TrimPrefix(raw, "sqlcipher")
 		c.URL = ""
+	case "sqlserver", "mssql", "azuresql":
+		// SQL Server / Azure SQL (DBX-62): the database is ?database=
+		// (read below); a path is the instance name and stays in the URL.
+		c.Driver = "sqlserver"
 	case "firebird", "firebirdsql", "vertica", "hdb", "hana", "saphana", "exasol", "exa":
 		// DBX-71: c.Driver is the engine id (normDriver); the database is
 		// the path (Firebird: a server path or alias; Exasol: the schema).
@@ -165,6 +169,9 @@ func ParseURL(raw string) (Conn, error) {
 		return c, nil
 	}
 	c.Database = strings.TrimPrefix(u.Path, "/")
+	if c.Driver == "sqlserver" {
+		c.Database = u.Query().Get("database")
+	}
 	if c.Driver == "firebird" && strings.Contains(c.Database, "/") {
 		c.Database = u.Path // an absolute server path keeps its first slash
 	}
@@ -182,7 +189,7 @@ func ParseURL(raw string) (Conn, error) {
 		}
 	}
 	for k, v := range u.Query() {
-		if len(v) > 0 {
+		if len(v) > 0 && !(c.Driver == "sqlserver" && k == "database") {
 			c.Params[k] = v[len(v)-1]
 		}
 	}

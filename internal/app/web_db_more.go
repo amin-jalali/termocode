@@ -153,7 +153,7 @@ func (m *Model) webDBListed(call *webCall, conn, table string) (view, ok bool) {
 // webDBTableOf is the dbTable of a listed table (schema as db.rows reads it).
 func webDBTableOf(c dbclient.Conn, name string, view bool) dbTable {
 	t := dbTable{conn: c.ID, driver: c.Driver, name: name, view: view}
-	if c.Driver == "postgres" {
+	if webDBQualified(c.Driver) {
 		t.schema = webDBSchema(c)
 	}
 	return t

@@ -88,7 +88,7 @@ func dbAIConn(root, id string) (dbclient.Conn, error) {
 				// DBX-71: Exasol has no read-only transaction, so the AI's
 				// read-only guarantee would rest on the parser alone.
 				return c, fmt.Errorf("connection %s is Exasol: AI tools need a read-only transaction, which Exasol does not have", id)
-			case c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && !dbclient.IsExtraSQL(c.Driver):
+			case !dbAISQLDriver(c.Driver):
 				return c, fmt.Errorf("connection %s (%s) does not use SQL", id, c.Driver)
 			}
 			return c, nil
@@ -99,6 +99,17 @@ func dbAIConn(root, id string) (dbclient.Conn, error) {
 		return dbclient.Conn{}, fmt.Errorf("give conn (one of: %s; see db_connections)", dbAIList(ids))
 	}
 	return dbclient.Conn{}, fmt.Errorf("no connection %q; connections: %s (see db_connections)", sanitizeDBText(id), dbAIList(ids))
+}
+
+// dbAISQLDriver reports a driver the AI and MCP db tools read with SQL:
+// PostgreSQL, MySQL, SQLite, SQL Server (DBX-62: read-only through a
+// transaction that is rolled back) and the extra engines (DBX-71).
+func dbAISQLDriver(driver string) bool {
+	switch driver {
+	case "postgres", "mysql", "sqlite", "sqlserver":
+		return true
+	}
+	return dbclient.IsExtraSQL(driver)
 }
 
 // dbAIDefaultConn is the connection a db_* call without conn uses: the
