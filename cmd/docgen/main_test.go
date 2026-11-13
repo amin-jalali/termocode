@@ -57,3 +57,13 @@ func TestSettingsMDMCPServerInMCPGroup(t *testing.T) {
 	}
 	t.Fatal("settings.md has no mcp_server row")
 }
+
+// KB-3: the keys page prints the one table of shared panel keys.
+func TestKeysPageHasThePanelKeyTable(t *testing.T) {
+	page := renderKeys()
+	for _, want := range []string{"## Panel keys", "| `D` |", "| `$` |", "Databases", "Containers"} {
+		if !strings.Contains(page, want) {
+			t.Errorf("keys page lacks %q", want)
+		}
+	}
+}
