@@ -52,4 +52,7 @@ type ProjectItem struct {
 	// WS is the project's workspace key (MOB-50): what the page puts in
 	// a frame's ws to reach this project through the door.
 	WS string `json:"ws,omitempty"`
+	// Branch is the branch the folder is on (WEB-55, session picker),
+	// only for a project that runs; one clean line.
+	Branch string `json:"branch,omitempty"`
 }

@@ -42,6 +42,7 @@ type projectsInput struct {
 	sessions []session.Info
 	services []string
 	others   []agentroll.Rollup
+	branches map[string]string // folder -> branch, for the running ones (WEB-55)
 }
 
 // webProjectsRead reads the files (a seam for tests); it runs off the
@@ -51,6 +52,14 @@ var webProjectsRead = func() projectsInput {
 	if home, err := os.UserHomeDir(); err == nil {
 		in.services = svcinstall.Installed(runtime.GOOS, home)
 	}
+	var running []string
+	for _, si := range in.sessions {
+		running = append(running, si.Workspace)
+	}
+	for _, r := range in.others {
+		running = append(running, r.Workspace)
+	}
+	in.branches = webProjectBranches(running)
 	return in
 }
 
@@ -198,6 +207,11 @@ func projectsMerge(here string, own []agentroll.Item, in *projectsInput, home st
 				w, x := r.Counts()
 				it.Working += w
 				it.Waiting += x
+			}
+		}
+		for dir, b := range in.branches {
+			if it := by[filepath.Clean(dir)]; it != nil && it.State != "asleep" {
+				it.Branch = b
 			}
 		}
 	}
