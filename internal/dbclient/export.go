@@ -56,6 +56,7 @@ type ExportOptions struct {
 	NoHeader              bool
 	NullText              string
 	Columns               []string
+	Lua                   string // the script of a "lua:NAME" format
 }
 
 // RowSink receives a result one row at a time, so nothing has to hold the
@@ -90,6 +91,9 @@ func NewRowWriter(f ExportFormat, w io.Writer, o ExportOptions) (RowWriter, erro
 }
 
 func newFormatWriter(f ExportFormat, w io.Writer, o ExportOptions) (RowWriter, error) {
+	if strings.HasPrefix(string(f), FormatLuaPrefix) {
+		return newLuaWriter(w, o.Lua)
+	}
 	switch f {
 	case FormatCSV:
 		if err := checkSeparator(o.Separator); err != nil {
