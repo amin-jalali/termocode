@@ -232,6 +232,7 @@ export const SD = {
   "dev.viewers": "Browsers open now",
   "dev.viewer": "Read only",
   "dev.controller": "Read and change",
+  "dev.editor": "Read and edit files",
   "dev.devices": "Paired devices",
   "dev.pair": "Pair a Device…",
   "dev.list": "Devices…",

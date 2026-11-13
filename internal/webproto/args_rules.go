@@ -90,6 +90,13 @@ func (a *TermHistoryArgs) validate(int) error {
 	return nil
 }
 
+func (a *BufCursorArgs) validate(int) error {
+	if !validBuf(a.Buf) || a.Row < 0 || a.Col < 0 {
+		return invalid("bad buffer or position")
+	}
+	return nil
+}
+
 func (a *SetTextArgs) validate(int) error {
 	if !validBuf(a.Buf) || a.Tick < 0 {
 		return invalid("bad buffer or tick")

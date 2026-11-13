@@ -157,7 +157,7 @@ func registerViews(defs ...ViewDef) {
 			if !ok {
 				panic("webproto: view " + d.ID + ": unknown op " + d.Source.Op)
 			}
-			if p.Role == RoleController {
+			if p.Role == RoleController || p.Role == RoleEditor {
 				d.Role = RoleController
 			}
 		}

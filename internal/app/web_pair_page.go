@@ -186,7 +186,12 @@ func (m *Model) webPairDecide(role, by string) (cmd tea.Cmd, msg string) {
 	if role == webdevices.RoleControl && args.Guest {
 		role = ""
 	}
-	if role != webdevices.RoleViewer && role != webdevices.RoleControl {
+	// Edit rights (G-COL) are for a share, and only the laptop's card
+	// gives them.
+	if role == webdevices.RoleEdit && (!args.Guest || by != "laptop") {
+		role = ""
+	}
+	if role != webdevices.RoleViewer && role != webdevices.RoleControl && role != webdevices.RoleEdit {
 		role = ""
 	}
 	if by == "laptop" {

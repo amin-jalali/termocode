@@ -19,6 +19,10 @@ type Role string
 const (
 	RoleViewer     Role = "viewer"     // read topics and read ops only (v2)
 	RoleController Role = "controller" // may type, edit and answer cards
+	// RoleEditor is a share the owner let edit files (G-COL): what a
+	// viewer may, and the edit ops of the files it opened (an op row
+	// with Role RoleEditor); no terminal, git, chat or card.
+	RoleEditor Role = "editor"
 )
 
 // ErrCode is the fixed set of error codes in an err message.

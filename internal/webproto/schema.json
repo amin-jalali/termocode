@@ -172,7 +172,9 @@
         "TickDelta",
         "DirtyDelta",
         "ResetDelta",
-        "GoneDelta"
+        "GoneDelta",
+        "CursorDelta",
+        "PeersDelta"
       ]
     },
     {
@@ -688,7 +690,7 @@
       "op": "buf.set_text",
       "args": "SetTextArgs",
       "result": "EditRes",
-      "role": "controller",
+      "role": "editor",
       "rate": {
         "n": 20,
         "per_ms": 1000
@@ -702,7 +704,7 @@
       "op": "buf.save",
       "args": "BufArgs",
       "result": "EditRes",
-      "role": "controller",
+      "role": "editor",
       "rate": {
         "n": 20,
         "per_ms": 1000
@@ -716,7 +718,7 @@
       "op": "buf.undo",
       "args": "BufArgs",
       "result": "EditRes",
-      "role": "controller",
+      "role": "editor",
       "rate": {
         "n": 20,
         "per_ms": 1000
@@ -729,7 +731,7 @@
     {
       "op": "buf.close",
       "args": "BufArgs",
-      "role": "controller",
+      "role": "editor",
       "rate": {
         "n": 20,
         "per_ms": 1000
@@ -738,6 +740,20 @@
       "laptop_card": false,
       "audit": "no",
       "phase": "v1"
+    },
+    {
+      "op": "buf.cursor",
+      "args": "BufCursorArgs",
+      "result": "CursorRes",
+      "role": "editor",
+      "rate": {
+        "n": 20,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
     },
     {
       "op": "file.image",
@@ -7111,6 +7127,26 @@
       ],
       "additionalProperties": false
     },
+    "BufCursorArgs": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "col": {
+          "type": "integer"
+        },
+        "row": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "buf",
+        "row",
+        "col"
+      ],
+      "additionalProperties": false
+    },
     "BufHeadRes": {
       "type": "object",
       "properties": {
@@ -7248,6 +7284,9 @@
         "ft": {
           "type": "string"
         },
+        "laptop": {
+          "$ref": "#/defs/Cursor"
+        },
         "lines": {
           "items": {
             "type": "string"
@@ -7256,6 +7295,12 @@
         },
         "path": {
           "type": "string"
+        },
+        "peers": {
+          "items": {
+            "$ref": "#/defs/Peer"
+          },
+          "type": "array"
         },
         "readonly": {
           "type": "boolean"
@@ -8658,6 +8703,52 @@
         "t"
       ],
       "additionalProperties": false
+    },
+    "Cursor": {
+      "type": "object",
+      "properties": {
+        "col": {
+          "type": "integer"
+        },
+        "row": {
+          "type": "integer"
+        },
+        "sel": {
+          "$ref": "#/defs/Pos"
+        }
+      },
+      "required": [
+        "row",
+        "col"
+      ],
+      "additionalProperties": true
+    },
+    "CursorDelta": {
+      "type": "object",
+      "properties": {
+        "at": {
+          "$ref": "#/defs/Cursor"
+        },
+        "kind": {
+          "const": "cursor"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": true
+    },
+    "CursorRes": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key"
+      ],
+      "additionalProperties": true
     },
     "DBAddArgs": {
       "type": "object",
@@ -10189,6 +10280,9 @@
       "type": "object",
       "properties": {
         "dirty": {
+          "type": "boolean"
+        },
+        "rebased": {
           "type": "boolean"
         },
         "tick": {
@@ -14352,7 +14446,8 @@
         "role": {
           "enum": [
             "viewer",
-            "controller"
+            "controller",
+            "editor"
           ]
         },
         "t": {
@@ -14445,7 +14540,8 @@
         "role": {
           "enum": [
             "viewer",
-            "controller"
+            "controller",
+            "editor"
           ]
         },
         "t": {
@@ -14876,6 +14972,48 @@
       ],
       "additionalProperties": false
     },
+    "Peer": {
+      "type": "object",
+      "properties": {
+        "col": {
+          "type": "integer"
+        },
+        "key": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "row": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "key",
+        "name",
+        "row",
+        "col"
+      ],
+      "additionalProperties": true
+    },
+    "PeersDelta": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/Peer"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "const": "peers"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": true
+    },
     "PhoneInfo": {
       "type": "object",
       "properties": {
@@ -14915,7 +15053,8 @@
         "role": {
           "enum": [
             "viewer",
-            "controller"
+            "controller",
+            "editor"
           ]
         }
       },
@@ -18958,7 +19097,8 @@
         "role": {
           "enum": [
             "viewer",
-            "control"
+            "control",
+            "edit"
           ]
         },
         "self": {

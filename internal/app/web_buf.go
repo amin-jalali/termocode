@@ -213,7 +213,7 @@ func webBufSnapshot(m *Model, key string) (any, error) {
 	}
 	return webproto.BufSnap{Buf: b.buf, Path: b.path, Tick: b.tick, Lines: webNonNil(b.rows),
 		Dirty: b.dirty, Ft: b.ft, Readonly: b.readonly,
-		Tabstop: b.layout.ts, Expandtab: b.layout.et, Enc: b.layout.enc, Eol: b.layout.eol}, nil
+		Tabstop: b.layout.ts, Expandtab: b.layout.et, Enc: b.layout.enc, Eol: b.layout.eol, Laptop: m.webLaptopIn(b.buf), Peers: m.webPeersIn(b.buf)}, nil
 }
 
 func webNonNil(s []string) []string {
@@ -343,6 +343,18 @@ func webBufApply(snap, delta json.RawMessage) (json.RawMessage, error) {
 			return nil, err
 		}
 		s.Tick, s.Lines, s.Dirty = d.Tick, d.Lines, d.Dirty
+	case "cursor":
+		var d webproto.CursorDelta
+		if err := json.Unmarshal(delta, &d); err != nil {
+			return nil, err
+		}
+		s.Laptop = d.At
+	case "peers":
+		var d webproto.PeersDelta
+		if err := json.Unmarshal(delta, &d); err != nil {
+			return nil, err
+		}
+		s.Peers = d.Items
 	case "gone":
 	default:
 		return nil, fmt.Errorf("buf: unknown delta kind %q", k.Kind)

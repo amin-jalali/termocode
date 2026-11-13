@@ -32,6 +32,7 @@
       "/assets/strings-fa.js": ["./src/strings.fa.ts"],
       "/assets/home.js": ["./src/home.tsx"],
       "/assets/device.js": ["./src/device.tsx"],
+      "/assets/coedit.js": ["./src/coedit/main.ts"],
       "/assets/aictx.js": ["./src/aictx/main.tsx"],
       "/assets/monaco-vim.js": ["./src/monaco/vim.ts"]
     }

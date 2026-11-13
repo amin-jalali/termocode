@@ -44,7 +44,7 @@ func DecodeGatewayLine(b []byte) (Msg, error) {
 }
 
 // ValidRole reports whether r is a known role.
-func ValidRole(r Role) bool { return r == RoleViewer || r == RoleController }
+func ValidRole(r Role) bool { return r == RoleViewer || r == RoleController || r == RoleEditor }
 
 func (o *Open) validate(int) error {
 	if o.Conn == "" || hasControl(o.Conn) || o.Device == "" || hasControl(o.Device) {

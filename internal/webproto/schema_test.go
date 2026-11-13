@@ -47,7 +47,7 @@ func TestGeneratedTSCoversProtocol(t *testing.T) {
 		`  role: Role;`,
 		`  data: unknown;`,
 		`  code: CloseCode;`,
-		`export type Role = "viewer" | "controller";`,
+		`export type Role = "viewer" | "controller" | "editor";`,
 		`export type ClientMsg = Bye | Hello | Ping | Req | Sub | Unsub;`,
 		`  "buf.set_text": SetTextArgs;`,
 		`  lines: string[];`,

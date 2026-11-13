@@ -6,7 +6,7 @@
 // at hand at once.
 import { computed, effect, signal } from "@preact/signals";
 import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
-import { FRAME_PATH, type AiAct, type AiAt, type AiKind, type EditAct, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameHint, type FrameLines, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type NavKind, type ToFrame, type CursorOp } from "../monaco/protocol";
+import { FRAME_PATH, type AiAct, type AiAt, type AiKind, type EditAct, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameHint, type FrameLines, type FrameMarker, type FrameOpts, type FramePeer, type FromFrame, type LspKind, type NavKind, type ToFrame, type CursorOp } from "../monaco/protocol";
 import { dict } from "../state/dict";
 import type { Mark } from "./gutter";
 import { activeFile, closeTab, cursorAt, escapeKey, focusSlot, noteClip, quick, vimMode } from "./workbench";
@@ -91,6 +91,8 @@ export interface DeskHost extends EditorHost {
   onGlyph?(line: number, menu: boolean, x: number, y: number): void;
   /** onGitMark hears a click on a git change mark (1-based row). */
   onGitMark?(line: number): void;
+  /** onCaret hears the user's caret (1-based line and UTF-16 column). */
+  onCaret?(line: number, col: number): void;
 }
 
 /** DeskHandle is an EditorHandle with the settings the view changes. */
@@ -213,8 +215,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         canRedo = m.canRedo;
         if (m.text !== text) {
           text = m.text;
-          if (m.user) host.onChange();
-        }
+          if (m.lost) host.onRemoteLost?.();
+          else if (m.user) host.onChange();
+        } else if (m.lost) host.onRemoteLost?.();
         return;
       case "viewport":
         host.onViewport(m.first, m.last);
@@ -226,6 +229,7 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         rows = { from: m.from ?? m.line, to: m.to ?? m.line };
         if (host.path && !host.diff) noteCaret(host.path, m.line, m.col);
         if ((host.slot ?? "g0") === focusSlot.peek()) cursorAt.value = { line: m.line, col: m.col };
+        host.onCaret?.(m.line, m.col);
         return;
       case "save":
         host.onSave();
@@ -329,8 +333,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     text: () => text,
     remote(t) {
       if (t === text) return;
+      const mine = text;
       text = t;
-      send({ t: "remote", text: t, seen });
+      send({ t: "remote", text: t, seen, mine });
     },
     replace(t) {
       if (t === text) return;
@@ -375,6 +380,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     },
     markers(items) {
       send({ t: "markers", items });
+    },
+    peers(items) {
+      send({ t: "peers", items });
     },
     original(text) {
       send({ t: "original", text });

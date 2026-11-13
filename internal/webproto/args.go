@@ -67,6 +67,14 @@ type Pos struct {
 	Col int `json:"col"`
 }
 
+// BufCursorArgs is the page's caret in a buffer (G-COL): zero-based
+// row, byte column.
+type BufCursorArgs struct {
+	Buf int `json:"buf"`
+	Row int `json:"row"`
+	Col int `json:"col"`
+}
+
 // SetTextArgs replaces a range of a buffer if its changedtick is still Tick.
 type SetTextArgs struct {
 	Buf   int      `json:"buf"`

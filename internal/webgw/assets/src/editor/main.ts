@@ -5,12 +5,13 @@
 // laptop's); colours are nvim's (buf.hl), undo is the page's own
 // (history.ts). Native selection and touch handles: phone friendly.
 import { Annotation, ChangeSet, EditorState, StateEffect, StateField, type Text, type Transaction } from "@codemirror/state";
-import { Decoration, type DecorationSet, EditorView, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers } from "@codemirror/view";
+import { Decoration, type DecorationSet, EditorView, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, WidgetType } from "@codemirror/view";
 import type { EditorHandle, EditorHost, HlRow } from "./api";
 import { diff } from "../lib/textdiff";
 import { History } from "./history";
 import { HL_STYLES } from "./hlstyle";
 import { moveKeys } from "./moves";
+import { peerRanges } from "./peers";
 
 /** origin marks transactions that are not the user's typing. */
 const origin = Annotation.define<"remote" | "undo" | "replace">();
@@ -52,6 +53,35 @@ const flashField = StateField.define<DecorationSet>({
   provide: (f) => EditorView.decorations.from(f),
 });
 
+/** PeerCaret is another person's caret (G-COL): a thin bar, named. */
+class PeerCaret extends WidgetType {
+  constructor(readonly name: string) {
+    super();
+  }
+  eq(o: PeerCaret): boolean {
+    return o.name === this.name;
+  }
+  toDOM(): HTMLElement {
+    const s = document.createElement("span");
+    s.className = "cm-peer";
+    s.title = this.name;
+    s.setAttribute("aria-label", this.name);
+    return s;
+  }
+}
+
+const setPeers = StateEffect.define<DecorationSet>();
+
+const peerField = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(deco, tr) {
+    deco = deco.map(tr.changes);
+    for (const e of tr.effects) if (e.is(setPeers)) deco = e.value;
+    return deco;
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
+
 const theme = EditorView.theme({
   "&": { height: "100%", color: "var(--text)", backgroundColor: "var(--bg-panel)", fontSize: "var(--fs-edit, var(--fs-row))" },
   "&.cm-focused": { outline: "2px solid var(--focus)", outlineOffset: "-2px" },
@@ -62,6 +92,8 @@ const theme = EditorView.theme({
   ".cm-activeLine": { backgroundColor: "var(--bg-hover)" },
   ".cm-activeLineGutter": { backgroundColor: "var(--bg-hover)", color: "var(--text-2)" },
   ".cm-line.cm-laptop": { backgroundColor: "var(--sel)" },
+  ".cm-peer": { borderLeft: "2px solid var(--amber)", marginLeft: "-1px" },
+  ".cm-peer-sel": { backgroundColor: "color-mix(in srgb, var(--amber) 25%, transparent)" },
   "::selection": { backgroundColor: "var(--sel)" },
   ...HL_STYLES,
 });
@@ -108,6 +140,7 @@ export function mount(parent: HTMLElement, host: EditorHost): EditorHandle {
         EditorState.tabSize.of(4),
         hlField,
         flashField,
+        peerField,
         theme,
         EditorView.contentAttributes.of({ autocapitalize: "off", autocorrect: "off", spellcheck: "false", "aria-label": host.label, dir: "ltr" }),
         keymap.of([
@@ -148,6 +181,14 @@ export function mount(parent: HTMLElement, host: EditorHost): EditorHandle {
     replace(text) {
       const c = diff(view.state.doc.toString(), text);
       if (c) view.dispatch({ changes: c, annotations: origin.of("replace") });
+    },
+    peers(items) {
+      const marks = [];
+      for (const r of peerRanges(view.state.doc, items)) {
+        marks.push(Decoration.widget({ widget: new PeerCaret(r.name), side: 1 }).range(r.at));
+        if (r.from !== undefined && r.to !== undefined) marks.push(Decoration.mark({ class: "cm-peer-sel" }).range(r.from, r.to));
+      }
+      view.dispatch({ effects: setPeers.of(Decoration.set(marks, true)) });
     },
     setHl(rows: readonly HlRow[]) {
       const doc = view.state.doc;
