@@ -1,5 +1,7 @@
 package app
 
+import "testing"
+
 // DBX-37: an .xlsx file is converted to CSV first, like JSON.
 func TestDBImportKnowsExcelFiles(t *testing.T) {
 	for _, n := range []string{"a.xlsx", "B.XLSX"} {
