@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"testing"
 
@@ -58,10 +59,13 @@ func writeCQLConns(t *testing.T, root string) {
 	}
 }
 
-// shopStub is a keyspace "shop" with tables orders and users; orders has
-// 5 rows read 2 at a time (the page state is one byte: the next page).
+// shopStub is a keyspace "shop" with tables orders and users; a table read
+// has 250 rows, `size` at a time (the page state is one byte: the next page).
 func shopStub() *cqlStub {
-	rows := [][]dbclient.Cell{cqlRow("1", "a"), cqlRow("2", "b"), cqlRow("3", "c"), cqlRow("4", "d"), cqlRow("5", "e")}
+	var rows [][]dbclient.Cell
+	for i := 1; i <= 250; i++ {
+		rows = append(rows, cqlRow(strconv.Itoa(i), "n"+strconv.Itoa(i)))
+	}
 	return &cqlStub{fn: func(stmt string, args []any, size int, state []byte) (dbclient.CQLPage, error) {
 		switch stmt {
 		case "SELECT keyspace_name FROM system_schema.keyspaces":
