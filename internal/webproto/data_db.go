@@ -34,12 +34,12 @@ type DBConns struct {
 type DBConn struct {
 	ID       string `json:"id"`
 	Name     string `json:"name,omitempty"`
-	Driver   string `json:"driver" enum:"postgres|mysql|sqlite|redis|other"`
+	Driver   string `json:"driver" enum:"postgres|mysql|sqlite|redis|sqlserver|other"`
 	Database string `json:"database,omitempty"` // the database name (a file name for sqlite)
 	Env      string `json:"env,omitempty"`      // "production" …
 	ReadOnly bool   `json:"readonly,omitempty"`
 	Problem  string `json:"problem,omitempty"`
-	SQL      bool   `json:"sql"` // the web can browse it (postgres, mysql, sqlite)
+	SQL      bool   `json:"sql"` // the web can browse it (postgres, mysql, sqlite, sqlserver)
 	// The laptop's own session (web parity): connected, its transaction
 	// mode is manual, a transaction is open with Writes statements in it.
 	Connected bool `json:"connected,omitempty"`

@@ -55,3 +55,38 @@ func TestSQLServerDialectWired(t *testing.T) {
 		t.Fatal("postgres reported missing")
 	}
 }
+
+// From a URL (DBX-62): sqlserver:// (and mssql://, azuresql://) reads the
+// host, port, user, ?database= and the other options; the password moves
+// out of the saved URL; an instance name stays in the URL path.
+func TestParseURLSQLServer(t *testing.T) {
+	c, err := ParseURL("sqlserver://sa:s3cret@db.local:1444?database=shop&TrustServerCertificate=true")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Driver != "sqlserver" || c.Host != "db.local" || c.Port != 1444 || c.User != "sa" || c.Database != "shop" {
+		t.Fatalf("conn = %+v", c)
+	}
+	if c.Password != "s3cret" || strings.Contains(c.URL, "s3cret") {
+		t.Fatalf("password kept in the URL: %+v", c)
+	}
+	if c.Params["TrustServerCertificate"] != "true" || c.Params["database"] != "" {
+		t.Fatalf("params = %v", c.Params)
+	}
+	if dsn := SQLServerDSN(c, c.Password); strings.Count(dsn, "database=") != 1 || !strings.Contains(dsn, "sa:s3cret@db.local:1444") {
+		t.Fatalf("dsn = %s", dsn)
+	}
+	for _, raw := range []string{"mssql://sa@db", "azuresql://me@x.database.windows.net?database=d"} {
+		c, err := ParseURL(raw)
+		if err != nil || c.Driver != "sqlserver" || c.Port != 1433 {
+			t.Errorf("%s = %+v, %v", raw, c, err)
+		}
+	}
+	c, err = ParseURL("sqlserver://sa@db/SQLEXPRESS?database=app")
+	if err != nil || c.Database != "app" || !strings.Contains(SQLServerDSN(c, ""), "/SQLEXPRESS") {
+		t.Fatalf("instance: %+v, %v", c, err)
+	}
+	if c.ID = "app"; Validate(c) != nil {
+		t.Fatalf("validate: %v", Validate(c))
+	}
+}

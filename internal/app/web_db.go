@@ -40,10 +40,20 @@ func init() {
 // webDBSQL reports a driver the web can browse.
 func webDBSQL(driver string) bool {
 	switch driver {
-	case "postgres", "mysql", "sqlite":
+	case "postgres", "mysql", "sqlite", "sqlserver":
 		return true
 	}
 	return false
+}
+
+// webDBDriver is the driver name the page shows: the ones it knows, else
+// "other".
+func webDBDriver(driver string) string {
+	switch driver {
+	case "postgres", "mysql", "sqlite", "redis", "sqlserver":
+		return driver
+	}
+	return "other"
 }
 
 // webDBDatabase is the database name of c, never its host or user.
@@ -100,12 +110,7 @@ func (m *Model) webDBConns(call *webCall) tea.Cmd {
 			if i == webproto.MaxDBConns {
 				break
 			}
-			d := c.Driver
-			switch d {
-			case "postgres", "mysql", "sqlite", "redis":
-			default:
-				d = "other"
-			}
+			d := webDBDriver(c.Driver)
 			it := webproto.DBConn{ID: c.ID, Driver: d, Database: webDBDatabase(c), Env: c.Environment, ReadOnly: c.ReadOnly,
 				SQL: webDBSQL(c.Driver) && c.Problem == ""}
 			if n := dbConnName(c); n != c.ID {
@@ -181,6 +186,8 @@ func webDBSchema(c dbclient.Conn) string {
 		return webDBDatabase(c)
 	case "sqlite":
 		return "main"
+	case "sqlserver":
+		return "dbo"
 	}
 	return "public"
 }
@@ -246,12 +253,7 @@ func (m *Model) webDBRows(call *webCall) tea.Cmd {
 		call.fail(webproto.CodeNotFound, "That table is not in the list. Open the list again.")
 		return nil
 	}
-	d := dbAIDialect(w.c.Driver)
-	from := d.QuoteIdent(a.Table)
-	if w.c.Driver == "postgres" {
-		from = d.QuoteIdent(webDBSchema(w.c)) + "." + from
-	}
-	sql := "SELECT * FROM " + from + dbclient.OrderedLimit(d, webproto.DBPageRows+1, a.From)
+	sql := webDBRowsSQL(w.c, a.Table, a.From)
 	view := m.webDB().views[a.Conn][a.Table]
 	t := webDBTableOf(w.c, a.Table, view)
 	ctx, stop := m.webDBCtx(call, w.c.ID)
@@ -291,6 +293,23 @@ func (m *Model) webDBRows(call *webCall) tea.Cmd {
 		call.reply(out)
 		return nil
 	}
+}
+
+// webDBRowsSQL reads one page of table from row from (and one more row,
+// which says there is a next page).
+func webDBRowsSQL(c dbclient.Conn, table string, from int) string {
+	d := dbAIDialect(c.Driver)
+	name := d.QuoteIdent(table)
+	if webDBQualified(c.Driver) {
+		name = d.QuoteIdent(webDBSchema(c)) + "." + name
+	}
+	return "SELECT * FROM " + name + dbclient.OrderedLimit(d, webproto.DBPageRows+1, from)
+}
+
+// webDBQualified: the drivers whose table names the page writes with
+// their schema.
+func webDBQualified(driver string) bool {
+	return driver == "postgres" || driver == "sqlserver"
 }
 
 // webDBStatement is the one statement of sql and its kind.

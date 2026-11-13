@@ -8801,6 +8801,7 @@
             "mysql",
             "sqlite",
             "redis",
+            "sqlserver",
             "other"
           ]
         },
