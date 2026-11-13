@@ -87,6 +87,12 @@ function _G._termocode_lsp_start(buf)
       local plan = match and ctab.servers and ctab.servers[srv.name]
       if plan and type(plan.cmd) == 'table' and #plan.cmd > 0 then
         cmd, root, where = plan.cmd, ctab.root, plan.place
+        -- The file's own project root, looked up in the container (RC-6).
+        local ch = vim.g.termocode_channel
+        if srv.cfg.root and ch and ch > 0 then
+          local ok, r = pcall(vim.rpcrequest, ch, 'termocode_fs_root', start_dir, srv.cfg.root, ctab.root)
+          if ok and type(r) == 'string' and r ~= '' then root = r end
+        end
         if plan.mute then
           handlers = { ['textDocument/publishDiagnostics'] = function() end }
         end
@@ -112,6 +118,7 @@ function _G._termocode_lsp_start(buf)
         capabilities = vim.lsp.protocol.make_client_capabilities(),
       }, { bufnr = buf, reuse_client = where and function(client, conf)
         return client.name == conf.name and client.config._termocode_gen == conf._termocode_gen
+          and client.config.root_dir == conf.root_dir
       end or nil })
     end
   end

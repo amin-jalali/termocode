@@ -87,6 +87,11 @@ server like this:
    (the *mirror*, in `~/.cache/termocode/mirror/`, private to you).
 3. **None** when neither has it.
 
+Each server starts on the root of the file's own project: the nearest
+folder up to the workspace root with one of its markers (`go.mod`,
+`package.json`, `Cargo.toml`, …), so a monorepo gets one server per
+project.
+
 The status bar chip says where each server runs: `{} gopls · in api-1` or
 `{} ts_ls · local`.
 
