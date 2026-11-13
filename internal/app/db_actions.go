@@ -576,8 +576,10 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.databaseOpenTable()
 	case "d":
 		return m, m.databaseTableMeta(false)
-	case "D":
+	case "v": // KB-1: D means remove everywhere; Show DDL is v
 		return m, m.databaseShowDDLKey()
+	case "D":
+		return m, m.databaseDropKey()
 	case "s":
 		return m, m.databaseSelectInConsole()
 	case "c":
@@ -1364,7 +1366,8 @@ func dbTreeKeyRows() []confirm.KeyRow {
 		[]string{"x", "disconnect"},
 		[]string{"On a table or view"},
 		[]string{"o", "open the data"},
-		[]string{"d / D", "describe / show the DDL"},
+		[]string{"d / v", "describe / show the DDL"},
+		[]string{"D", "drop it (shows what depends on it, asks first)"},
 		[]string{"s", "select 100 rows in the console"},
 		[]string{"c", "generate code: SQL, types; routines: call with args; → inserts"},
 		[]string{"#", "count the rows"},

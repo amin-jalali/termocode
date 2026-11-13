@@ -91,8 +91,8 @@ when something changed. When you hide the view (another activity item,
 | `n` | create a network or volume; connect a registry |
 | `d` | read volume disk usage (on VOLUMES) |
 | `z` | prune what the section heading offers (asks first) |
-| `D` | remove, sign out or make default (asks first) |
-| `n` / `i` / `x` | on CONTEXTS: create a context (name, host, TLS files; asks first) / inspect it / remove it (asks first) |
+| `D` | remove (a container, image, network, volume, context) or sign out (asks first) |
+| `n` / `i` / `D` / `u` | on CONTEXTS: create a context (name, host, TLS files; asks first) / inspect it / remove it (asks first) / make it the default (asks first) |
 | `R` | refresh all |
 | `m` | choose the sections (the **⋯** menu) |
 | `!` | your custom commands for the row (see [Custom commands](#custom-commands)) |
@@ -822,14 +822,14 @@ files (CA, cert and key paths, or none); with Podman an `ssh://` host asks
 for the identity file. A card shows the exact `docker context create`
 command, Cancel first. Only the paths go into the context: termocode does
 not read the files. A new context is not used until you press `Enter` on it.
-`i` opens `docker context inspect` as read-only JSON. `x` removes a context
+`i` opens `docker context inspect` as read-only JSON. `D` removes a context
 after a card; `default`, the machine default and the context this session
 uses cannot be removed.
 
 | Key | Action |
 |---|---|
 | `Enter` / `l` / double-click | use the context **in this session only** |
-| `D` | make it the default (asks first) |
+| `u` | make it the default (asks first) |
 | `y` | copy the endpoint |
 
 Using a context sets `DOCKER_CONTEXT` on every engine call of this termocode
@@ -840,7 +840,7 @@ view (logs, shell, pull, compose) get the same `DOCKER_CONTEXT`. Closing
 termocode forgets the choice. The PROJECT section keeps using your own
 setting.
 
-**Make default…** (right-click menu, `D`, or **Containers: Make Context
+**Make default…** (right-click menu, `u`, or **Containers: Make Context
 Default…**) shows a card with the exact `docker context use <name>` command.
 This one does change the default for every terminal and app. Cancel or `Esc`
 runs nothing. **Containers: Switch Context…** is the palette version of
@@ -930,7 +930,7 @@ ls --format json`:
   own setting for "use this connection"), the sections list again and the
   event watcher restarts. Tabs you open from the view get it too. `Enter`
   on **local** goes back.
-- `D` (**Make default…**) shows a card with the exact `podman system
+- `u` (**Make default…**) shows a card with the exact `podman system
   connection default <name>` command. This changes Podman's default for
   every terminal. Cancel or `Esc` runs nothing.
 - Listing the connections and making one the default never use the
