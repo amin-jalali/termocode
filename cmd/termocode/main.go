@@ -322,6 +322,11 @@ func run(argv []string) int {
 				break // `termocode ai` with a folder named ai opens that folder
 			}
 			return runAI(args[1:])
+		case "chat":
+			if fi, err := os.Stat("chat"); len(args) == 1 && err == nil && fi.IsDir() {
+				break // `termocode chat` with a folder named chat opens that folder
+			}
+			return runChat(args[1:])
 		case "worktree":
 			return runWorktree(args[1:])
 		case "task", "tasks":
@@ -476,6 +481,8 @@ func printUsage() {
 	fmt.Println("  termocode acp              be the AI agent of another editor (ACP on stdio)")
 	fmt.Println("  termocode ai -x \"<prompt>\" [--output text|json|stream-json]")
 	fmt.Println("                             one AI turn without the UI, for scripts and CI (ai --help)")
+	fmt.Println("  termocode chat telegram|discord --allow <user-id>")
+	fmt.Println("                             ask the AI from your Telegram or Discord bot (chat --help)")
 	fmt.Println("  termocode worktree list|note|status|link")
 	fmt.Println("                             notes and status for the worktree you are in")
 	fmt.Println("  termocode task list|add|show|claim|status|note")
