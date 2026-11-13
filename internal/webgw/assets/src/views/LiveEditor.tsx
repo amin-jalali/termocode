@@ -220,13 +220,13 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
     if (snap) own?.store(snap, isGone(ts?.data));
   }, [snap, ready, own]);
   // Live editing together (G-COL): the laptop's cursor (and selection)
-  // in this file, drawn as a caret named Laptop.
+  // and the other pages' carets in this file.
   const laptopAt = snap?.laptop;
   useEffect(() => {
     const h = ed.current as DeskHandle | null;
     if (!desk || diff || !ready || !h) return;
     h.peers(coedit.peek()?.peersOf(snap, t("live.laptop_caret")) ?? []);
-  }, [ready, !!laptopAt, laptopAt?.row, laptopAt?.col, laptopAt?.sel?.row, laptopAt?.sel?.col]);
+  }, [ready, laptopAt, snap?.peers]);
   // Git change marks (desktop): the file's unstaged diff on disk, asked
   // again when the laptop saves or git's list changes.
   const gitData = desk ? (store.topic("git").value?.data as GitSnap | undefined) : undefined;

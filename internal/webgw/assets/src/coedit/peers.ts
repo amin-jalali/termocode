@@ -1,19 +1,25 @@
 // The other people's carets (G-COL), in coedit.js: the laptop's cursor
 // from the buf topic as the editor draws it, and this page's caret sent
 // to the laptop (its editor shows it with the device's name).
-import type { BufSnap } from "../../../../webproto/proto";
+import type { BufSnap, CursorRes } from "../../../../webproto/proto";
 import type { FramePeer } from "../monaco/protocol";
 import { utf8Len } from "../lib/textdiff";
 import { host } from "./host";
 import { colUtf16 } from "./merge";
 
+/** me is this page's key in the peers (buf.cursor answers it). */
+let me = "";
+
 /** peersOf is the carets to draw in a buffer: the laptop's, named
- * laptop. Columns become the editor's (1-based, UTF-16). */
+ * laptop, and the other pages' (never this page's own). Columns become
+ * the editor's (1-based, UTF-16). */
 export function peersOf(snap: BufSnap | null, laptop: string): FramePeer[] {
   const lines = snap?.lines ?? [];
   const at = (row: number, col: number) => ({ line: row + 1, col: colUtf16(lines[row] ?? "", col) + 1 });
   const c = snap?.laptop;
-  return c ? [{ ...at(c.row, c.col), sel: c.sel ? at(c.sel.row, c.sel.col) : undefined, name: laptop }] : [];
+  const out: FramePeer[] = c ? [{ ...at(c.row, c.col), sel: c.sel ? at(c.sel.row, c.sel.col) : undefined, name: laptop }] : [];
+  for (const p of snap?.peers ?? []) if (p.key !== me) out.push({ ...at(p.row, p.col), name: p.name });
+  return out;
 }
 
 /** carets are this page's carets waiting to go out, by buffer. */
@@ -32,7 +38,7 @@ export function caret(buf: number, line: number, col: number, text: () => string
     if (!c || !host.live()) return;
     const row = text().split("\n")[c.line - 1] ?? "";
     host.request("buf.cursor", { buf, row: c.line - 1, col: utf8Len(row.slice(0, c.col - 1)) }).then(
-      () => undefined,
+      (r) => void (me = (r as CursorRes | null)?.key ?? me),
       () => undefined,
     );
   }, 200);

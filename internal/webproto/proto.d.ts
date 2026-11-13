@@ -1601,12 +1601,20 @@ export interface BufSnap {
   enc?: string;
   eol?: string;
   laptop?: Cursor;
+  peers?: Peer[];
 }
 
 export interface Cursor {
   row: number;
   col: number;
   sel?: Pos;
+}
+
+export interface Peer {
+  key: string;
+  name: string;
+  row: number;
+  col: number;
 }
 
 export interface LinesDelta {
@@ -1641,6 +1649,11 @@ export interface GoneDelta {
 export interface CursorDelta {
   kind: "cursor";
   at?: Cursor;
+}
+
+export interface PeersDelta {
+  kind: "peers";
+  items?: Peer[];
 }
 
 export interface TermsSnap {
@@ -2370,6 +2383,10 @@ export interface EditRes {
   tick: number;
   dirty: boolean;
   rebased?: boolean;
+}
+
+export interface CursorRes {
+  key: string;
 }
 
 export interface ImageRes {
@@ -4329,7 +4346,7 @@ export interface TopicData {
   "cards": { snap: CardsSnap; delta: CardsDelta };
   "tree": { snap: TreeSnap; delta: TreeDirDelta | TreeRemoveDelta | TreeHiddenDelta | TreeRootsDelta };
   "bufs": { snap: BufsSnap; delta: BufsSnap };
-  "buf": { snap: BufSnap; delta: LinesDelta | TickDelta | DirtyDelta | ResetDelta | GoneDelta | CursorDelta };
+  "buf": { snap: BufSnap; delta: LinesDelta | TickDelta | DirtyDelta | ResetDelta | GoneDelta | CursorDelta | PeersDelta };
   "terms": { snap: TermsSnap; delta: TermsSnap };
   "term": { snap: TermSnap; delta: LinesDelta | TickDelta | TermResetDelta | TermModeDelta | GoneDelta };
   "git": { snap: GitSnap; delta: GitSnap };
@@ -4382,6 +4399,7 @@ export interface OpResult {
   "buf.set_text": EditRes;
   "buf.save": EditRes;
   "buf.undo": EditRes;
+  "buf.cursor": CursorRes;
   "file.image": ImageRes;
   "chat.image": ImageRes;
   "term.new": TermNewRes;

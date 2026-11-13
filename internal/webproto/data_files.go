@@ -123,6 +123,31 @@ type BufSnap struct {
 	// Laptop is the laptop's cursor when it is in this buffer (G-COL,
 	// live editing together): the page draws it.
 	Laptop *Cursor `json:"laptop,omitempty"`
+	// Peers are the carets of the pages that sent one (buf.cursor), so
+	// two pages see each other (G-COL).
+	Peers []Peer `json:"peers,omitempty"`
+}
+
+// Peer is a page's caret in a buffer: a key the hub gives the page (not
+// its connection id; buf.cursor answers it), its device's name, and a
+// zero-based row and byte column.
+type Peer struct {
+	Key  string `json:"key"`
+	Name string `json:"name"`
+	Row  int    `json:"row"`
+	Col  int    `json:"col"`
+}
+
+// PeersDelta: the pages' carets in this buffer now (none: no items).
+type PeersDelta struct {
+	Kind  string `json:"kind" const:"peers"`
+	Items []Peer `json:"items,omitempty"`
+}
+
+// CursorRes is the result of buf.cursor: the key of this page's caret
+// in the peers (the page draws the others).
+type CursorRes struct {
+	Key string `json:"key"`
 }
 
 // Cursor is a cursor in a buffer: zero-based row, byte column (as nvim
@@ -211,7 +236,8 @@ const (
 func init() {
 	registerTopic("tree", TreeSnap{}, TreeDirDelta{}, TreeRemoveDelta{}, TreeHiddenDelta{}, TreeRootsDelta{})
 	registerTopic("bufs", BufsSnap{}, BufsSnap{})
-	registerTopic("buf", BufSnap{}, LinesDelta{}, TickDelta{}, DirtyDelta{}, ResetDelta{}, GoneDelta{}, CursorDelta{})
+	registerTopic("buf", BufSnap{}, LinesDelta{}, TickDelta{}, DirtyDelta{}, ResetDelta{}, GoneDelta{}, CursorDelta{}, PeersDelta{})
+	registerResult(OpBufCursor, CursorRes{})
 	registerResult(OpTreeList, TreeListRes{})
 	registerResult(OpBufOpen, BufOpenRes{})
 	registerResult(OpBufHead, BufHeadRes{})

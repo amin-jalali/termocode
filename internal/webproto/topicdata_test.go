@@ -132,7 +132,7 @@ func TestFileTopicDataGenerated(t *testing.T) {
 	found := false
 	for _, tp := range s.Topics {
 		if tp.Name == "buf" {
-			found = tp.Snap == "BufSnap" && len(tp.Deltas) == 6
+			found = tp.Snap == "BufSnap" && len(tp.Deltas) == 7
 		}
 	}
 	if !found {

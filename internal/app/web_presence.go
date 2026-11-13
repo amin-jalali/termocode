@@ -1,6 +1,9 @@
 package app
 
 import (
+	"sort"
+	"strconv"
+
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/webproto"
@@ -90,25 +93,86 @@ func webOpBufCursor(m *Model, call *webCall) tea.Cmd {
 		webFail(call, err)
 		return nil
 	}
+	f := m.web.files
 	if shown {
-		if m.web.files.peers == nil {
-			m.web.files.peers = map[string]bool{}
+		if f.peers == nil {
+			f.peers = map[string]bool{}
 		}
-		m.web.files.peers[call.conn.id] = true
+		f.peers[call.conn.id] = true
 	}
-	call.reply(nil)
+	key := f.peerKey(call.conn.id)
+	if f.peerAt == nil {
+		f.peerAt = map[int]map[string]webproto.Peer{}
+	}
+	at := f.peerAt[b.buf]
+	if at == nil {
+		at = map[string]webproto.Peer{}
+		f.peerAt[b.buf] = at
+	}
+	at[call.conn.id] = webproto.Peer{Key: key, Name: name, Row: a.Row, Col: a.Col}
+	m.webPublish(b.topic(), webproto.PeersDelta{Kind: "peers", Items: m.webPeersIn(b.buf)})
+	call.reply(webproto.CursorRes{Key: key})
 	return nil
+}
+
+// peerKey is connection id's key in the peers: a short name of its own,
+// never the id (another page must not learn it).
+func (f *webFiles) peerKey(id string) string {
+	if k, ok := f.peerKeys[id]; ok {
+		return k
+	}
+	if f.peerKeys == nil {
+		f.peerKeys = map[string]string{}
+	}
+	f.peerSeq++
+	k := "p" + strconv.Itoa(f.peerSeq)
+	f.peerKeys[id] = k
+	return k
+}
+
+// webPeersIn is the pages' carets in buffer n, by key.
+func (m *Model) webPeersIn(n int) []webproto.Peer {
+	if m.web == nil || m.web.files == nil || len(m.web.files.peerAt[n]) == 0 {
+		return nil
+	}
+	out := make([]webproto.Peer, 0, len(m.web.files.peerAt[n]))
+	for _, p := range m.web.files.peerAt[n] {
+		out = append(out, p)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Key < out[j].Key })
+	return out
 }
 
 // webDropPeers takes away the carets of pages that are gone. It calls
 // nvim only when a page that showed one is gone.
 func (m *Model) webDropPeers(h *webHub, f *webFiles) {
-	if m.nvim == nil || len(f.peers) == 0 {
+	if m.nvim == nil || len(f.peers) == 0 && len(f.peerAt) == 0 {
 		return
 	}
 	keep := map[string]bool{"": true} // never empty: an empty Lua table must still be a table
 	for c := range h.live {
 		keep[c.id] = true
+	}
+	for n, at := range f.peerAt {
+		b := f.bufs[n]
+		changed := false
+		for id := range at {
+			if !keep[id] || b == nil {
+				delete(at, id)
+				changed = true
+			}
+		}
+		if len(at) == 0 {
+			delete(f.peerAt, n)
+		}
+		if changed && b != nil {
+			m.webPublish(b.topic(), webproto.PeersDelta{Kind: "peers", Items: m.webPeersIn(n)})
+		}
+	}
+	for id := range f.peerKeys {
+		if !keep[id] {
+			delete(f.peerKeys, id)
+		}
 	}
 	gone := false
 	for id := range f.peers {

@@ -173,7 +173,8 @@
         "DirtyDelta",
         "ResetDelta",
         "GoneDelta",
-        "CursorDelta"
+        "CursorDelta",
+        "PeersDelta"
       ]
     },
     {
@@ -742,6 +743,7 @@
     {
       "op": "buf.cursor",
       "args": "BufCursorArgs",
+      "result": "CursorRes",
       "role": "editor",
       "rate": {
         "n": 20,
@@ -7249,6 +7251,12 @@
         "path": {
           "type": "string"
         },
+        "peers": {
+          "items": {
+            "$ref": "#/defs/Peer"
+          },
+          "type": "array"
+        },
         "readonly": {
           "type": "boolean"
         },
@@ -8682,6 +8690,18 @@
       },
       "required": [
         "kind"
+      ],
+      "additionalProperties": true
+    },
+    "CursorRes": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key"
       ],
       "additionalProperties": true
     },
@@ -14853,6 +14873,48 @@
         "paths"
       ],
       "additionalProperties": false
+    },
+    "Peer": {
+      "type": "object",
+      "properties": {
+        "col": {
+          "type": "integer"
+        },
+        "key": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "row": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "key",
+        "name",
+        "row",
+        "col"
+      ],
+      "additionalProperties": true
+    },
+    "PeersDelta": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/Peer"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "const": "peers"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": true
     },
     "PhoneInfo": {
       "type": "object",
