@@ -61,9 +61,12 @@ func writeCQLConns(t *testing.T, root string) {
 
 // shopStub is a keyspace "shop" with tables orders and users; a table read
 // has 250 rows, `size` at a time (the page state is one byte: the next page).
-func shopStub() *cqlStub {
+func shopStub() *cqlStub { return shopStubN(250) }
+
+// shopStubN is shopStub with n rows in a table.
+func shopStubN(n int) *cqlStub {
 	var rows [][]dbclient.Cell
-	for i := 1; i <= 250; i++ {
+	for i := 1; i <= n; i++ {
 		rows = append(rows, cqlRow(strconv.Itoa(i), "n"+strconv.Itoa(i)))
 	}
 	return &cqlStub{fn: func(stmt string, args []any, size int, state []byte) (dbclient.CQLPage, error) {
@@ -82,15 +85,15 @@ func shopStub() *cqlStub {
 		case "SELECT release_version FROM system.local":
 			return dbclient.CQLPage{Rows: [][]dbclient.Cell{cqlRow("5.0")}}, nil
 		}
-		// A table or console read: pages of `size` rows; state[0] is the offset.
+		// A table or console read: pages of `size` rows; state is the offset in two bytes.
 		from := 0
 		if len(state) > 0 {
-			from = int(state[0])
+			from = int(state[0])<<8 | int(state[1])
 		}
 		end := min(from+size, len(rows))
 		p := dbclient.CQLPage{Columns: []dbclient.Column{{Name: "id"}, {Name: "name"}}, Rows: rows[from:end]}
 		if end < len(rows) {
-			p.Next = []byte{byte(end)}
+			p.Next = []byte{byte(end >> 8), byte(end)}
 		}
 		return p, nil
 	}}

@@ -119,3 +119,18 @@ func TestWebDBCassandraDDLAndExplain(t *testing.T) {
 		t.Fatalf("explain reached the server: %v", stub.calls[n:])
 	}
 }
+
+// Spec (DBX-67): a console read of more than 1000 rows shows the first 1000,
+// says it was cut and hands back the cursor of the rest.
+func TestWebDBCassandraQueryCut(t *testing.T) {
+	m, c := webTestCassandra(t, shopStubN(1500))
+	var r1, r2 webproto.DBRows
+	webTestData(t, webTestCallBg(t, m, c, webproto.OpDBQuery, `{"conn":"wide","sql":"SELECT * FROM shop.orders"}`), &r1)
+	if len(r1.Rows) != webproto.MaxDBRows || !r1.Truncated || r1.Cursor == "" {
+		t.Fatalf("first: %d rows truncated %v cursor %q", len(r1.Rows), r1.Truncated, r1.Cursor)
+	}
+	webTestData(t, webTestCallBg(t, m, c, webproto.OpDBQuery, `{"conn":"wide","sql":"SELECT * FROM shop.orders","cursor":"`+r1.Cursor+`"}`), &r2)
+	if len(r2.Rows) != 500 || r2.Truncated || r2.Cursor != "" || r2.Rows[0][0].V != "1001" {
+		t.Fatalf("rest: %d rows truncated %v cursor %q", len(r2.Rows), r2.Truncated, r2.Cursor)
+	}
+}
