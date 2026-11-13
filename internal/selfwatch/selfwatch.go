@@ -20,9 +20,10 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // Interval is how often the UI polls the file.
@@ -157,7 +158,7 @@ const probeMax = 4 << 10
 func Probe(path string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, path, "--version")
+	cmd := spawn.CommandContext(ctx, path, "--version")
 	cmd.Stdin = nil
 	cmd.WaitDelay = time.Second
 	var out bytes.Buffer
