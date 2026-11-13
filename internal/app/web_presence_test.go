@@ -136,3 +136,42 @@ func TestViewerMayNotSendACursor(t *testing.T) {
 		t.Fatal("a controller may not send buf.cursor")
 	}
 }
+
+// Spec (G-COL): two web pages see each other's carets: the hub relays
+// each page's buf.cursor to every page that follows the buffer (a peers
+// delta, and the snap), with the device's name and a key that is not
+// the connection id; the caller learns its own key from the answer.
+// When a page goes, its caret goes from the others too.
+func TestPagesSeeEachOthersCarets(t *testing.T) {
+	r, b := webEditRig(t, "one\ntwo\nthree\n")
+	topic := "buf:" + strconv.Itoa(b.Buf)
+	r.c.name = "Sara's Mac"
+	c2 := r.conn("c-2", webproto.RoleController)
+	r.subOn(c2, topic)
+	f := r.call(webproto.OpBufCursor, &webproto.BufCursorArgs{Buf: b.Buf, Row: 1, Col: 2})
+	var res webproto.CursorRes
+	webResData(t, f, &res)
+	if res.Key == "" || res.Key == r.c.id {
+		t.Fatalf("key %q", res.Key)
+	}
+	ds := r.deltasOn(c2, topic)
+	if len(ds) == 0 || ds[len(ds)-1]["kind"] != "peers" {
+		t.Fatalf("c-2 deltas: %v", ds)
+	}
+	items, _ := ds[len(ds)-1]["items"].([]any)
+	p, _ := items[0].(map[string]any)
+	if len(items) != 1 || p["key"] != res.Key || p["name"] != "Sara's Mac" || p["row"] != float64(1) || p["col"] != float64(2) {
+		t.Fatalf("peers: %v", items)
+	}
+	c3 := r.conn("c-3", webproto.RoleViewer)
+	if ps, _ := r.subOn(c3, topic)["peers"].([]any); len(ps) != 1 {
+		t.Fatalf("snapshot peers: %v", ps)
+	}
+	r.c.cancel()
+	delete(r.h.live, r.c)
+	r.track()
+	ds = r.deltasOn(c2, topic)
+	if len(ds) == 0 || ds[len(ds)-1]["kind"] != "peers" || ds[len(ds)-1]["items"] != nil {
+		t.Fatalf("after the page left: %v", ds)
+	}
+}

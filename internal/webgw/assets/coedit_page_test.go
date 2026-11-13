@@ -265,3 +265,32 @@ console.log("ok");
 		}
 	}
 }
+
+// Spec (G-COL): the page draws the laptop's caret and the other pages'
+// carets (the peers of the buf topic), never its own (the key the hub
+// gave its buf.cursor); the reducer keeps the peers.
+func TestPageDrawsOtherPagesCarets(t *testing.T) {
+	out := runJS(t, `
+import { signal } from "@preact/signals";
+import { setHost } from "../coedit/host";
+import { caret, peersOf } from "../coedit/peers";
+import { reduceBuf } from "../state/files";
+function eq(a: unknown, b: unknown, what: string) {
+  const x = JSON.stringify(a), y = JSON.stringify(b);
+  if (x !== y) throw new Error(what + ": got " + x + ", want " + y);
+}
+setHost({ signal, request: () => Promise.resolve({ key: "p1" }), live: () => true, ownTick() {}, save: () => Promise.resolve(true), isConflict: () => false, isOffline: () => false } as any);
+caret(3, 1, 1, () => "ab");
+await new Promise((r) => setTimeout(r, 300));
+let s: any = { buf: 3, path: "f", tick: 2, lines: ["ab", "cd"], dirty: false, ft: "", readonly: false };
+s = reduceBuf(s, { kind: "peers", items: [{ key: "p1", name: "me", row: 0, col: 0 }, { key: "p2", name: "Sara", row: 1, col: 1 }] });
+s = reduceBuf(s, { kind: "cursor", at: { row: 0, col: 2 } });
+eq(peersOf(s, "Laptop"), [{ line: 1, col: 3, name: "Laptop" }, { line: 2, col: 2, name: "Sara" }], "carets");
+s = reduceBuf(s, { kind: "peers" });
+eq("peers" in s, false, "no peers");
+console.log("ok");
+`, nil)
+	if !strings.Contains(out, "ok") {
+		t.Fatalf("harness: %s", out)
+	}
+}
