@@ -251,7 +251,7 @@ func main() {
 	mcp.RunShareIfHelper()       // a shared MCP server's broker (internal/mcp/share.go)
 	git.RunRebaseHelperIfAsked() // git's editor during an interactive rebase (internal/git/rebase_helper.go)
 	tuneGC()
-	os.Exit(run(os.Args[1:]))
+	exitProcess(run(os.Args[1:]))
 }
 
 // The parts of run that take over the terminal; tests replace them.
@@ -259,6 +259,10 @@ var (
 	startClient = runClient
 	startServer = runServer
 	startTUI    = runTUI
+	// runProgram runs the Bubble Tea program and exitProcess ends the
+	// process after a crash; tests replace both.
+	runProgram  = func(p *tea.Program) (tea.Model, error) { return p.Run() }
+	exitProcess = os.Exit
 )
 
 // run routes the command line (without the program name) and returns
@@ -582,7 +586,7 @@ func runTUI() {
 			app.StopTestRuns()   // and a test run in its own process group
 			app.StopWebHub()     // and the web hub socket
 			fmt.Fprintf(os.Stderr, "termocode panic: %v\n", r)
-			os.Exit(1)
+			exitProcess(1)
 		}
 	}()
 
@@ -637,7 +641,7 @@ func runTUI() {
 	stopProfile := startCPUProfile()
 	defer stopProfile()
 	defer writeHeapProfile()
-	if _, err := p.Run(); err != nil {
+	if _, err := runProgram(p); err != nil {
 		stopProfile()
 		// A crash or a lost terminal: keep the unsaved buffers.
 		app.FlushSession() // the last cursor positions (N1)
@@ -657,7 +661,8 @@ func runTUI() {
 		} else {
 			fmt.Fprintln(os.Stderr, err)
 		}
-		os.Exit(1)
+		exitProcess(1)
+		return
 	}
 	// Quit already wrote it; a hangup (p.Quit from watchHangup) too. A
 	// no-op then, but cheap insurance for any other way out of Run.
