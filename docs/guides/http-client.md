@@ -274,6 +274,8 @@ the call with the web's host rules and the call page is the answer's
 body: `200 OK` when the status is OK, otherwise the gRPC status is shown
 as the error.
 
+A request from a .http file uses its own `# @proto` lines. For a new request typed on the page, write them in the **Headers** box, one per line: `@proto proto/greeter.proto` and, for imports, `@proto-path proto`. The paths are inside the workspace (a file that is missing, outside it, a secret file or not `.proto` is refused); without them the server's reflection describes the method.
+
 ## More commands
 
 | Palette | What it does |

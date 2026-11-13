@@ -708,7 +708,7 @@ export const SD = {
   "http.new_req": "New request",
   "http.method": "Method",
   "http.url": "URL",
-  "http.headers": "Headers, one per line: Name: value",
+  "http.headers": "Headers, one per line: Name: value. GRPC: @proto file.proto",
   "http.body": "Body",
   "http.import": "Import from curl",
   "http.import_ok": "Import",

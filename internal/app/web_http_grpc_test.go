@@ -58,3 +58,52 @@ func TestWebHTTPSendGRPC(t *testing.T) {
 	}
 	webTestLaptopSelect(t, r.m, "cancel")
 }
+
+// A GRPC request typed on the page can name @proto files (and @proto-path
+// folders) of the workspace, as the same lines of a .http file do: the
+// call is described by them, not by the server's reflection. They are read
+// from the workspace only: nothing outside it, no secret file, no other
+// extension.
+func TestWebHTTPSendGRPCTypedProto(t *testing.T) {
+	r := newWebHTTPRig(t)
+	addr := startGRPCLoopback(t)
+	r.write("proto/echo.proto", "syntax = \"proto3\";\npackage t;\nmessage Msg { string text = 1; }\nservice Echo { rpc Say(Msg) returns (Msg); }\n")
+	send := func(body string) (webproto.HTTPResponse, map[string]any) {
+		var sent webproto.HTTPSent
+		f := r.do(webproto.OpHTTPSend, body)
+		if webTestErr(f) != "" {
+			return webproto.HTTPResponse{}, f
+		}
+		webTestData(t, f, &sent)
+		var res webproto.HTTPResponse
+		webTestData(t, r.do(webproto.OpHTTPResponse, fmt.Sprintf(`{"run":%d}`, sent.Run)), &res)
+		return res, nil
+	}
+	url := "grpc://" + addr + "/t.Echo/Say"
+	// With the file the call is built from it and reaches the server, which
+	// does not serve t.Echo; without it the reflection service does not know it.
+	res, f := send(`{"method":"GRPC","url":"` + url + `","body":"{\"text\":\"hi\"}","proto":["proto/echo.proto"]}`)
+	if f != nil || res.Running || !strings.Contains(res.Err, "unknown service t.Echo") {
+		t.Fatalf("with @proto: %+v %v", res, f)
+	}
+	res, f = send(`{"method":"GRPC","url":"` + url + `","body":"{\"text\":\"hi\"}"}`)
+	if f != nil || strings.Contains(res.Err, "unknown service t.Echo") || res.Err == "" {
+		t.Fatalf("without @proto: %+v %v", res, f)
+	}
+	for _, bad := range []string{
+		`"proto":["proto/missing.proto"]`,
+		`"proto":["proto/echo.proto"],"proto_dirs":["nowhere"]`,
+	} {
+		if f := r.do(webproto.OpHTTPSend, `{"method":"GRPC","url":"`+url+`",`+bad+`}`); webTestErr(f) == "" {
+			t.Errorf("%s was taken", bad)
+		}
+	}
+	r.write(".env.proto", "syntax = \"proto3\";\n")
+	if f := r.do(webproto.OpHTTPSend, `{"method":"GRPC","url":"`+url+`","proto":[".env.proto"]}`); webTestErr(f) != "forbidden" {
+		t.Errorf("a secret file name: %v", f)
+	}
+	// A plain HTTP request has no use for them.
+	if f := r.do(webproto.OpHTTPSend, `{"method":"GET","url":"http://127.0.0.1:1/","proto":["proto/echo.proto"]}`); webTestErr(f) != "bad_request" {
+		t.Errorf("proto on an HTTP request: %v", f)
+	}
+}

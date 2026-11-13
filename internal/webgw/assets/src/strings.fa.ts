@@ -1464,7 +1464,7 @@ export const FA: Record<TranslatedKey, string> = {
   "http.new_req": "درخواست تازه",
   "http.method": "متد",
   "http.url": "نشانی",
-  "http.headers": "سرآیندها، هر کدام در یک خط: نام: مقدار",
+  "http.headers": "سرآیندها، هر کدام در یک خط: نام: مقدار. GRPC: @proto file.proto",
   "http.body": "بدنه",
   "http.import": "وارد کردن از curl",
   "http.import_ok": "وارد کن",

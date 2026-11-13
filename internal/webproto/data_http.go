@@ -66,6 +66,7 @@ const (
 	MaxHTTPBody     = 512 << 10 // bytes of a request body from the page
 	MaxHTTPURL      = 8 << 10
 	MaxHTTPHeaders  = 50
+	MaxHTTPProtos   = 8       // @proto files, and @proto-path folders, of one typed request
 	MaxHTTPHeader   = 8 << 10 // bytes of one header value
 	MaxHTTPCurl     = 64 << 10
 	MaxHTTPName     = 200
@@ -122,6 +123,10 @@ type HTTPSendArgs struct {
 	Env     string       `json:"env,omitempty"`
 	History string       `json:"history,omitempty"`
 	Saved   int          `json:"saved,omitempty"`
+	// Proto and ProtoDirs are a typed GRPC request's @proto files and
+	// @proto-path folders (workspace paths), as in a .http file.
+	Proto     []string `json:"proto,omitempty"`
+	ProtoDirs []string `json:"proto_dirs,omitempty"`
 }
 
 // HTTPSent answers http.send: the run's number, or the laptop card's id
@@ -319,6 +324,21 @@ func (a *HTTPSendArgs) validate(int) error {
 		for _, h := range a.Headers {
 			if !validHTTPToken(h.Name, 256) || len(h.Value) > MaxHTTPHeader || hasControl(h.Value) {
 				return invalid("bad header")
+			}
+		}
+	}
+	if len(a.Proto)+len(a.ProtoDirs) > 0 {
+		if !typed || len(a.Proto) > MaxHTTPProtos || len(a.ProtoDirs) > MaxHTTPProtos {
+			return invalid("@proto belongs to a typed request, up to %d files and folders", MaxHTTPProtos)
+		}
+		for _, p := range a.Proto {
+			if !validPath(p, false) || !strings.HasSuffix(strings.ToLower(p), ".proto") || strings.ContainsAny(p, " ,\t") {
+				return invalid("bad @proto file")
+			}
+		}
+		for _, p := range a.ProtoDirs {
+			if !validPath(p, false) || strings.ContainsAny(p, " ,\t") {
+				return invalid("bad @proto-path folder")
 			}
 		}
 	}
