@@ -419,6 +419,9 @@ func renderServiceRow(svc services.Service, s services.Status, active, focused b
 	}
 	if upW > 0 {
 		up, ucol := svcUptime(s, now)
+		if active {
+			ucol = theme.TextSecondary // muted text is too faint on the selection wash
+		}
 		if s.State == services.Unknown {
 			up = ""
 		}

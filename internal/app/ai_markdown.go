@@ -67,7 +67,7 @@ func newMDStyles(bg theme.Color256) mdStyles {
 		dim:    st(theme.TextDim),
 		link:   st(theme.AccentBlue).Underline(true),
 		strike: st(theme.TextMuted).Strikethrough(true),
-		code:   lipgloss.NewStyle().Background(theme.Mix(bg, theme.TextPrimary, 0.12)).Foreground(theme.LG(theme.AccentAmber)),
+		code:   lipgloss.NewStyle().Background(theme.Mix(bg, theme.TextPrimary, 0.12)).Foreground(lightReadable(theme.AccentAmber, theme.Mix(bg, theme.TextPrimary, 0.12))),
 		// The heading ladder, as in the Markdown preview (UI review #11).
 		h1:         st(theme.TextWhite).Bold(true),
 		h2:         st(theme.AccentBlue).Bold(true),
