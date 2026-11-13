@@ -103,7 +103,7 @@ func TestLibSQLServerFailures(t *testing.T) {
 		case "fewer":
 			_, _ = w.Write([]byte(`{"baton":"","results":[]}`))
 		case "ok":
-			_, _ = w.Write([]byte(`{"baton":"b","base_url":"` + "http://" + r.Host + `/","results":[`+strings.TrimSuffix(strings.Repeat(`{"type":"ok","response":{"type":"execute","result":{"cols":[],"rows":[]}}},`, 3), ",")+`]}`))
+			_, _ = w.Write([]byte(`{"baton":"b","base_url":"` + "http://" + r.Host + `/","results":[` + strings.TrimSuffix(strings.Repeat(`{"type":"ok","response":{"type":"execute","result":{"cols":[],"rows":[]}}},`, 3), ",") + `]}`))
 		}
 	}))
 	defer srv.Close()
