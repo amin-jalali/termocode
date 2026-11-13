@@ -369,3 +369,68 @@ func dbDropSyntaxDiags(diags []map[string]any) []map[string]any {
 	}
 	return out
 }
+
+// dbEmbeddedDiagnostics are the inspection diagnostics of the SQL in the
+// strings of a code file (0-based lines, byte columns); syntaxOff drops
+// the syntax errors. Never nil, so the buffer still clears.
+func dbEmbeddedDiagnostics(src, lang string, sc dbclient.InspectSchema, syntaxOff bool) []map[string]any {
+	out := []map[string]any{}
+	for _, is := range dbclient.InspectEmbedded(src, lang, sc) {
+		sev := dbDiagWarn
+		if is.Kind == dbclient.IssueSyntax {
+			if syntaxOff {
+				continue
+			}
+			sev = dbDiagError
+		}
+		lnum, col := dbLineCol(src, is.Start)
+		elnum, ecol := dbLineCol(src, is.End)
+		d := map[string]any{"lnum": lnum, "col": col, "end_lnum": elnum, "end_col": ecol,
+			"severity": sev, "message": sanitizeDBText(is.Msg), "source": "termocode"}
+		if is.Fix != "" {
+			d["user_data"] = map[string]any{"fix": is.Fix}
+		}
+		out = append(out, d)
+	}
+	return out
+}
+
+// dbEmbeddedCheckLua sets the diagnostics on the current buffer; they
+// clear on the next change (the strings move) or when it is run again.
+const dbEmbeddedCheckLua = `local d=...
+local ns=vim.api.nvim_create_namespace('termocode_sql_embedded')
+local b=vim.api.nvim_get_current_buf()
+vim.diagnostic.set(ns,b,d)
+vim.api.nvim_create_autocmd({'TextChanged','TextChangedI'},{buffer=b,once=true,callback=function() vim.diagnostic.reset(ns,b) end})
+return #d`
+
+// databaseCheckEmbeddedSQL marks the SQL issues in the strings of the
+// code file in the editor. Names are checked against the file's attached
+// connection; with none only the syntax is checked.
+func (m *Model) databaseCheckEmbeddedSQL() tea.Cmd {
+	file, lines, ok := m.httpBufText(0)
+	lang := dbclient.EmbedLang(file)
+	if !ok || lang == "" || m.nvim == nil {
+		return m.pushToastDetail(toast.Info, "Open a code file", "This checks the SQL in the strings of a Go, Python or JavaScript/TypeScript file.")
+	}
+	m.ensureDatabasesLoaded()
+	src := strings.Join(lines, "\n")
+	if len(dbclient.FindEmbeddedSQL(src, lang)) == 0 {
+		return m.pushToastDetail(toast.Info, "No SQL in strings", "No string in "+sanitizeDBText(filepath.Base(file))+" reads as a SQL statement.")
+	}
+	sc := dbclient.InspectSchema{}
+	note := "Only the syntax is checked: no connection is attached to this file."
+	syntaxOff := false
+	if c, ok := m.databases.connection(m.dbConsole().consoleConn(file, lines)); ok {
+		sc = m.databases.inspectSchema(c.ID)
+		syntaxOff = loadDBConsoleSettings().syntaxOff(c.Driver)
+		note = "Names are checked against " + c.ID + "."
+	}
+	diags := dbEmbeddedDiagnostics(src, lang, sc, syntaxOff)
+	var n int
+	_ = m.nvim.ExecLuaResult(dbEmbeddedCheckLua, &n, diags)
+	if len(diags) == 0 {
+		return m.pushToastDetail(toast.Info, "SQL in strings looks fine", sanitizeDBText(note))
+	}
+	return m.pushToastDetail(toast.Info, fmt.Sprintf("%d SQL issues in strings", len(diags)), sanitizeDBText(note)+" The marks clear when you edit the file.")
+}

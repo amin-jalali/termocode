@@ -90,6 +90,7 @@ type EmbeddedSQL struct {
 	Col  int // 0-based byte column of the opening quote
 	Text string
 	Kind Kind
+	At   int // byte offset of Text in the source
 }
 
 // EmbedLang is the language FindEmbeddedSQL reads for path, "" = none.
@@ -143,7 +144,7 @@ func FindEmbeddedSQL(src, lang string) []EmbeddedSQL {
 		return nil
 	}
 	var out []EmbeddedSQL
-	add := func(at int, text string) {
+	add := func(at, open int, text string) {
 		if !LooksLikeSQL(text) {
 			return
 		}
@@ -153,6 +154,7 @@ func FindEmbeddedSQL(src, lang string) []EmbeddedSQL {
 			Col:  at - (strings.LastIndexByte(head, '\n') + 1),
 			Text: text,
 			Kind: classifyStatement(text, "").Kind,
+			At:   at + open,
 		})
 	}
 	for i := 0; i < len(src); {
@@ -177,14 +179,14 @@ func FindEmbeddedSQL(src, lang string) []EmbeddedSQL {
 			if j < 0 {
 				return out
 			}
-			add(i, src[i+3:i+3+j])
+			add(i, 3, src[i+3:i+3+j])
 			i += 3 + j + 3
 		case c == '`' && (lang == "go" || lang == "js"):
 			end := closeQuote(src, i, '`', lang == "js")
 			if end < 0 {
 				return out
 			}
-			add(i, src[i+1:end])
+			add(i, 1, src[i+1:end])
 			i = end + 1
 		case c == '"' || c == '\'':
 			end := closeQuote(src, i, c, true)
@@ -193,7 +195,7 @@ func FindEmbeddedSQL(src, lang string) []EmbeddedSQL {
 				continue
 			}
 			if c == '"' || lang != "go" { // a Go 'x' is a rune
-				add(i, src[i+1:end])
+				add(i, 1, src[i+1:end])
 			}
 			i = end + 1
 		default:
@@ -222,4 +224,25 @@ func closeQuote(src string, open int, q byte, esc bool) int {
 		}
 	}
 	return -1
+}
+
+// InspectEmbedded runs Inspect on the SQL in the strings of src (lang
+// from EmbedLang); Start/End are offsets in src. A string with a
+// backslash is left out: its text is not the SQL the program sends.
+func InspectEmbedded(src, lang string, sc InspectSchema) []Issue {
+	if lang == "" {
+		return nil
+	}
+	var out []Issue
+	for _, e := range FindEmbeddedSQL(src, lang) {
+		if strings.Contains(e.Text, "\\") {
+			continue
+		}
+		for _, is := range Inspect(e.Text, sc) {
+			is.Start += e.At
+			is.End += e.At
+			out = append(out, is)
+		}
+	}
+	return out
 }
