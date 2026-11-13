@@ -3341,6 +3341,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `debug-select-config` | Debug: Select Configuration... | never | opens a picker or prompt that only the user can answer; use a typed tool (debug_start with config) |
 | `debug-show-stack` | Debug: Show Call Stack | auto |   |
 | `debug-show-vars` | Debug: Show Variables | auto |   |
+| `debug-sidecar-start` | Debug: Start Tools Sidecar… | never | opens a card only the user answers; it starts a container |
+| `debug-sidecar-stop` | Debug: Stop Tools Sidecar | confirm (always asks) |   |
 | `debug-start` | Debug: Start / Continue | confirm (run) |   |
 | `debug-step-into` | Debug: Step Into | confirm (run) |   |
 | `debug-step-out` | Debug: Step Out | confirm (run) |   |

@@ -92,7 +92,7 @@ func TestSidecarStartAsksThenRunsAndRoutesTheDebugger(t *testing.T) {
 	if !m.confirmOpen || m.confirmKind != confirmKindSidecarStart || m.confirm.SafeID() != "cancel" {
 		t.Fatalf("card open %v kind %v safe %q", m.confirmOpen, m.confirmKind, m.confirm.SafeID())
 	}
-	if v := strings.Join(m.confirm.View(), " "); !strings.Contains(v, "api-1") || !strings.Contains(v, "removed when termocode quits") {
+	if v := m.confirm.Title() + " " + m.confirm.Message(); !strings.Contains(v, "api-1") || !strings.Contains(v, "removed when termocode quits") {
 		t.Errorf("card text %q", v)
 	}
 	if cmd := m.answerSidecarStart("cancel"); cmd != nil || len(*asked) != 0 {
