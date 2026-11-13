@@ -12,7 +12,7 @@ import (
 // Bundle budgets of the page (web design 4.1), gzipped: a phone on a weak
 // link loads the whole UI in one short burst.
 const (
-	budgetJS    = 120 << 10
+	budgetJS    = 121 << 10 // raised from 120 KiB: Cassandra paging (DBX-67)
 	budgetCSS   = 20 << 10
 	budgetHTML  = 4 << 10
 	budgetTotal = 150 << 10
@@ -25,7 +25,7 @@ const (
 	// worktrees, the data grid, settings, the git commands). Only screens
 	// 1200 px and wider load it, after the page; about 82 KiB today
 	// (raised from 80 KiB after merge5 brought its desktop views).
-	budgetWorkbench = 84 << 10
+	budgetWorkbench = 85 << 10 // raised from 84 KiB: Cassandra keyspaces and paging (DBX-67)
 	// budgetHome is the phone's own views (home.js, mobile plan Q4): This
 	// phone (MOBUX-20) and the Home (MOB-4). Only a phone loads it, when
 	// one opens; the desktop never does.

@@ -235,7 +235,10 @@ function Tables({ conn }: { conn: string }) {
 
 function Rows({ conn, table }: { conn: string; table: string }) {
   const [from, setFrom] = useState(0);
-  const { data, err } = useAsk("db.rows", { conn, table, from }, readDBRows, conn + "/" + table + "@" + from);
+  // Cassandra pages by cursor (no OFFSET): the cursors of the pages after the first.
+  const [cursors, setCursors] = useState<string[]>([]);
+  const cursor = cursors[cursors.length - 1] || undefined;
+  const { data, err } = useAsk("db.rows", { conn, table, from, cursor }, readDBRows, conn + "/" + table + "@" + from + (cursor ?? ""));
   if (err) return <p class="empty refused">{err}</p>;
   if (!data) return <SkeletonRows rows={8} />;
   return (
@@ -243,13 +246,18 @@ function Rows({ conn, table }: { conn: string; table: string }) {
       <RowsNotes r={data} />
       <RowsTable r={data} />
       <div class="choices">
-        {from > 0 && (
-          <Button small needsLink onClick={() => setFrom(Math.max(0, from - 100))}>
+        {(from > 0 || cursors.length > 0) && (
+          <Button small needsLink onClick={() => (cursors.length > 0 ? setCursors(cursors.slice(0, -1)) : setFrom(Math.max(0, from - 100)))}>
             {t("db.prev_rows")}
           </Button>
         )}
         {data.next > 0 && (
           <Button small needsLink onClick={() => setFrom(data.next)}>
+            {t("db.next_rows")}
+          </Button>
+        )}
+        {data.cursor !== "" && (
+          <Button small needsLink onClick={() => setCursors([...cursors, data.cursor])}>
             {t("db.next_rows")}
           </Button>
         )}

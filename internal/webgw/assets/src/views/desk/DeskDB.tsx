@@ -88,6 +88,7 @@ function read(op: string, args: unknown): void {
 
 function connItems(c: DBConnView): MenuItems {
   const act = canAct();
+  const cql = c.driver === "cassandra"; // no transactions, plan or schema compare in CQL
   const sql = c.sql;
   return [
     { label: t("dbv.new_query"), disabled: !sql, run: () => showFile(sqlTab(c.id)) },
@@ -98,19 +99,20 @@ function connItems(c: DBConnView): MenuItems {
     null,
     { label: t("dbv.commit"), disabled: !act || !c.tx, run: () => ask(t("dbv.commit"), "db.tx", { conn: c.id, verb: "commit" }) },
     { label: t("dbv.rollback"), disabled: !act || !c.tx, run: () => ask(t("dbv.rollback"), "db.tx", { conn: c.id, verb: "rollback" }) },
-    { label: t("dbv.tx_mode"), disabled: !act || !sql, run: () => (dbForm.value = { kind: "tx", conn: c.id }) },
+    { label: t("dbv.tx_mode"), disabled: !act || !sql || cql, run: () => (dbForm.value = { kind: "tx", conn: c.id }) },
     null,
-    { label: t("dbv.compare"), disabled: !sql, run: () => (dbForm.value = { kind: "compare", conn: c.id }) },
+    { label: t("dbv.compare"), disabled: !sql || cql, run: () => (dbForm.value = { kind: "compare", conn: c.id }) },
     { label: t("dbv.ssh"), disabled: !act || c.driver === "sqlite", run: () => (dbForm.value = { kind: "ssh", conn: c.id }) },
     { label: t("dbv.ssl"), disabled: !act || c.driver === "sqlite", run: () => (dbForm.value = { kind: "ssl", conn: c.id }) },
   ];
 }
 
 function tableItems(c: DBConnView, name: string, view: boolean): MenuItems {
+  const cql = c.driver === "cassandra";
   return [
     { label: t("dbv.open_rows"), run: () => showFile(dbTab(c.id, name)) },
     { label: t("dbv.ddl"), run: () => showFile(ddlTab(c.id, name)) },
-    { label: t("dbv.import"), disabled: !canAct() || view || c.readonly, run: () => (dbForm.value = { kind: "import", conn: c.id, table: name }) },
+    { label: t("dbv.import"), disabled: !canAct() || view || c.readonly || cql, run: () => (dbForm.value = { kind: "import", conn: c.id, table: name }) },
   ];
 }
 
@@ -214,7 +216,50 @@ function KeyRows({ c, v }: { c: DBConnView; v: RedisKeys }) {
   );
 }
 
+/** KeyspaceRows is a Cassandra connection's tables, one folder per keyspace
+ * (the connection's own is open; the others open on a click). */
+function KeyspaceRows({ c, v }: { c: DBConnView; v: Tables }) {
+  const conn = c.id;
+  const filtering = !!dbFilter.value?.trim();
+  const groups = new Map<string, Tables["tables"]>();
+  for (const x of v.tables.filter((y) => match(y.name))) groups.set(x.group, [...(groups.get(x.group) ?? []), x]);
+  return (
+    <>
+      {[...groups].map(([ks, items]) => {
+        const kk = conn + "/ks/" + ks;
+        // flip(kk) toggles away from the default: open for the own keyspace.
+        const isOpen = filtering || open.value.has(kk) !== (ks === v.schema);
+        return (
+          <Fragment key={ks}>
+            <Row level={1} twist={isOpen ? "open" : "closed"} onToggle={() => flip(kk)} icon={<Cod name="symbol-namespace" />} label={ks} data={{ schema: ks }} end={<span class="count">{items.length}</span>} />
+            {isOpen &&
+              items.map((x) => (
+                <Row
+                  key={x.name}
+                  level={2}
+                  twist={null}
+                  icon={<Cod name={x.view ? "eye" : "table"} />}
+                  label={x.name.slice(ks.length + 1)}
+                  title={x.name}
+                  data={{ table: x.name }}
+                  ai={{ item: "db_table", conn, table: x.name }}
+                  onClick={() => showFile(dbTab(conn, x.name), true)}
+                  onDblClick={() => showFile(dbTab(conn, x.name))}
+                  onContextMenu={onMenu(x.name, () => tableItems(c, x.name, x.view))}
+                  actions={<Act icon="code" label={t("dbv.ddl")} onClick={() => showFile(ddlTab(conn, x.name))} />}
+                />
+              ))}
+          </Fragment>
+        );
+      })}
+      {groups.size === 0 && <p class="tr-note">{t("db.no_tables")}</p>}
+      {v.more > 0 && <p class="tr-note">{t("dbv.more", { n: v.more })}</p>}
+    </>
+  );
+}
+
 function SchemaRows({ c, v }: { c: DBConnView; v: Tables }) {
+  if (c.driver === "cassandra") return <KeyspaceRows c={c} v={v} />;
   const conn = c.id;
   const sk = conn + "/" + (v.schema || "-");
   const base = v.schema ? 2 : 1;

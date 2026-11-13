@@ -154,7 +154,7 @@ export function readDBConns(data: unknown): DBConnView[] {
 }
 
 /** readDBTables reads the answer of db.tables. */
-export function readDBTables(data: unknown): { schema: string; tables: { name: string; view: boolean }[]; more: number } {
+export function readDBTables(data: unknown): { schema: string; tables: { name: string; view: boolean; group: string }[]; more: number } {
   const d = obj(data);
   return {
     schema: str(d.schema),
@@ -162,7 +162,7 @@ export function readDBTables(data: unknown): { schema: string; tables: { name: s
     tables: list(d.tables)
       .map(obj)
       .filter((x) => str(x.name) !== "")
-      .map((x) => ({ name: str(x.name), view: x.view === true })),
+      .map((x) => ({ name: str(x.name), view: x.view === true, group: str(x.group) })),
   };
 }
 
@@ -177,6 +177,8 @@ export interface DBRowsView {
   columns: string[];
   rows: DBCellView[][];
   next: number;
+  /** Cassandra: the cursor of the next page (CQL has no OFFSET); empty: the last page */
+  cursor: string;
   truncated: boolean;
   masked: number;
   ms: number;
@@ -195,6 +197,7 @@ export function readDBRows(data: unknown): DBRowsView {
         .map((c) => ({ v: str(c.v), n: c.n === true, m: c.m === true, c: c.c === true })),
     ),
     next: num(d.next),
+    cursor: str(d.cursor),
     truncated: d.truncated === true,
     masked: num(d.masked),
     ms: num(d.ms),

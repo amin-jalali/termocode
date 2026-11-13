@@ -256,6 +256,9 @@ export let pendingOf: { submit(): void; revert(): void; n: number } | null = nul
 /** DBTableTab is a table's rows, 100 at a time, editable with a key. */
 export function DBTableTab({ conn, table, slot }: { conn: string; table: string; slot: string }) {
   const [from, setFrom] = useState(0);
+  // Cassandra pages by cursor (no OFFSET): the cursors of the pages after
+  // the first, so Previous goes back one.
+  const [cursors, setCursors] = useState<string[]>([]);
   const [n, setN] = useState(0);
   const [res, setRes] = useState<{ r: DBRowsView | null; err: string }>({ r: null, err: "" });
   const [e, setE] = useState<Edit>(NO_EDIT);
@@ -266,16 +269,18 @@ export function DBTableTab({ conn, table, slot }: { conn: string; table: string;
     if (!on) return;
     let stop = false;
     setRes((x) => ({ r: x.r, err: "" }));
-    link.request("db.rows", { conn, table, from }).then(
+    link.request("db.rows", { conn, table, from, cursor: cursors[cursors.length - 1] || undefined }).then(
       (d) => !stop && (setRes({ r: readDBRows(d), err: "" }), setE(NO_EDIT), setSel(-1)),
       (err: unknown) => !stop && setRes({ r: null, err: dbErr(err) }),
     );
     return () => {
       stop = true;
     };
-  }, [conn, table, from, n, on]);
+  }, [conn, table, from, cursors, n, on]);
   const r = res.r;
   const cv = connView(conn);
+  const cql = cv?.driver === "cassandra";
+  const start = cql ? cursors.length * 100 : from;
   const editable = !!r && r.key.length > 0 && canAct() && !cv?.readonly;
   const dirty = editCount(e);
   const keyCol = (j: number) => !!r && r.key.includes(r.columns[j]);
@@ -345,7 +350,7 @@ export function DBTableTab({ conn, table, slot }: { conn: string; table: string;
           <span class="dbv-ro is-dirty">{t("dbv.pending", { n: dirty })}</span>
         ) : (
           <span class="dbv-ro">
-            <Cod name={editable ? "edit" : "lock"} /> {editable ? t("dbv.editable") : r && r.key.length === 0 ? t("dbv.no_key") : t("db.readonly")}
+            <Cod name={editable ? "edit" : "lock"} /> {editable ? t("dbv.editable") : r && r.key.length === 0 && !cql ? t("dbv.no_key") : t("db.readonly")}
           </span>
         )}
       </div>
@@ -365,12 +370,12 @@ export function DBTableTab({ conn, table, slot }: { conn: string; table: string;
         <p class="dbg-empty">{t("loading")}</p>
       ) : (
         <>
-          <DBGrid r={r} from={from} edit={grid} ai={{ conn, table }} />
+          <DBGrid r={r} from={start} edit={grid} ai={{ conn, table }} />
           <Meta r={r}>
             <span class="dbg-pages">
-              <Act icon="chevron-left" label={t("db.prev_rows")} disabled={from === 0 || dirty > 0} onClick={() => setFrom(Math.max(0, from - 100))} />
-              <span>{t("dbv.page", { a: r.rows.length ? from + 1 : 0, b: from + r.rows.length })}</span>
-              <Act icon="chevron-right" label={t("db.next_rows")} disabled={r.next === 0 || dirty > 0} onClick={() => setFrom(r.next)} />
+              <Act icon="chevron-left" label={t("db.prev_rows")} disabled={start === 0 || dirty > 0} onClick={() => (cql ? setCursors(cursors.slice(0, -1)) : setFrom(Math.max(0, from - 100)))} />
+              <span>{t("dbv.page", { a: r.rows.length ? start + 1 : 0, b: start + r.rows.length })}</span>
+              <Act icon="chevron-right" label={t("db.next_rows")} disabled={(cql ? r.cursor === "" : r.next === 0) || dirty > 0} onClick={() => (cql ? setCursors([...cursors, r.cursor]) : setFrom(r.next))} />
             </span>
           </Meta>
         </>
@@ -409,6 +414,7 @@ export function DBQueryTab({ conn, slot }: { conn: string; slot: string }) {
   const ed = useRef<DeskHandle | null>(null);
   const [step, setStep] = useState<"" | "ask" | "analyze" | "laptop">("");
   const [busy, setBusy] = useState(false);
+  const [ran, setRan] = useState("");
   const [res, setRes] = useState<{ o: Out | null; err: string }>({ o: null, err: "" });
   const [pins, setPins] = useState<DBRowsView[]>([]);
   const [shown, setShown] = useState(-1); // -1: the last result; else a pin
@@ -492,7 +498,13 @@ export function DBQueryTab({ conn, slot }: { conn: string; slot: string }) {
       )
       .finally(() => setBusy(false));
   };
-  const run = () => go("db.query", { conn, sql: text() }, false);
+  const run = () => {
+    setRan(text());
+    go("db.query", { conn, sql: text() }, false);
+  };
+  // Cassandra: the rest of the rows the last run read, by its cursor.
+  const more = (cursor: string) => go("db.query", { conn, sql: ran, cursor }, false);
+  const cql = connView(conn)?.driver === "cassandra";
   const explain = (analyze: boolean) => go("db.explain", { conn, sql: text(), analyze: analyze || undefined }, true);
   const last = res.o?.kind === "rows" ? res.o.r : null;
   const view: Out | null = shown >= 0 && pins[shown] ? { kind: "rows", r: pins[shown] } : res.o;
@@ -511,8 +523,8 @@ export function DBQueryTab({ conn, slot }: { conn: string; slot: string }) {
       <Portal into={"ed-actions-" + slot}>
         <div class="view-actions">
           {canQuery && <Act icon="play" act="run-query" label={t("db.run")} keys={`${modKey()}+Enter`} disabled={!live.value || busy || sql.trim() === ""} onClick={() => ask("ask")} />}
-          {canQuery && <Act icon="list-tree" act="explain" label={t("dbv.explain")} disabled={!live.value || busy || sql.trim() === ""} onClick={() => explain(false)} />}
-          {canQuery && <Act icon="pulse" act="analyze" label={t("dbv.analyze")} disabled={!live.value || busy || sql.trim() === ""} onClick={() => ask("analyze")} />}
+          {canQuery && !cql && <Act icon="list-tree" act="explain" label={t("dbv.explain")} disabled={!live.value || busy || sql.trim() === ""} onClick={() => explain(false)} />}
+          {canQuery && !cql && <Act icon="pulse" act="analyze" label={t("dbv.analyze")} disabled={!live.value || busy || sql.trim() === ""} onClick={() => ask("analyze")} />}
           {busy && <Act icon="debug-stop" act="cancel" label={t("dbv.cancel_q")} onClick={() => link.request("db.cancel", { conn }).catch(failed)} />}
           <Act icon="pin" act="pin" label={t("dbv.pin")} disabled={!last || pins.includes(last)} onClick={pin} />
           <Act icon="export" act="export" label={t("dbv.export")} disabled={!rows} onClick={(ev) => rows && exportMenu(ev, rows, "result")} />
@@ -551,7 +563,9 @@ export function DBQueryTab({ conn, slot }: { conn: string; slot: string }) {
         ) : view ? (
           <>
             <DBGrid r={view.r} />
-            <Meta r={view.r} />
+            <Meta r={view.r}>
+              {shown < 0 && view.r.cursor !== "" && <Act icon="chevron-right" label={t("db.next_rows")} disabled={busy || !live.value} onClick={() => more(view.r.cursor)} />}
+            </Meta>
           </>
         ) : (
           <p class="dbg-empty">{t("dbv.no_results", { keys: `${modKey()}+Enter` })}</p>
