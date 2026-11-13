@@ -342,3 +342,58 @@ func TestSendGoneAndErrors(t *testing.T) {
 		t.Error("a push went to a host that is not a push service")
 	}
 }
+
+// Spec (CMP-47): with detail title a push may carry the session name
+// (the folder name, short, plain characters) and the kinds done and
+// failed; count and none never carry the name; a name with code,
+// paths or control characters is cleaned or dropped.
+func TestPayloadForNamesTheSession(t *testing.T) {
+	cases := []struct {
+		detail, kind, session, want string
+	}{
+		{DetailTitle, "tool", "baaytona", `{"n":1,"k":"tool","s":"baaytona"}`},
+		{DetailTitle, "done", "my app", `{"n":0,"k":"done","s":"my app"}`},
+		{DetailTitle, "failed", "x", `{"n":0,"k":"failed","s":"x"}`},
+		{DetailCount, "tool", "baaytona", `{"n":1}`},
+		{DetailTitle, "tool", "", `{"n":1,"k":"tool"}`},
+		{DetailTitle, "tool", "a/b\"c\n$(rm)", `{"n":1,"k":"tool","s":"abcrm"}`},
+		{DetailTitle, "tool", strings.Repeat("a", 90), `{"n":1,"k":"tool","s":"` + strings.Repeat("a", 40) + `"}`},
+	}
+	for _, c := range cases {
+		n := 1
+		if c.kind == "done" || c.kind == "failed" {
+			n = 0
+		}
+		if got := string(PayloadFor(c.detail, n, c.kind, c.session)); got != c.want {
+			t.Errorf("%s/%s/%q: %s, want %s", c.detail, c.kind, c.session, got, c.want)
+		}
+	}
+	if p := PayloadFor(DetailNone, 1, "tool", "x"); p != nil {
+		t.Errorf("none: %q", p)
+	}
+}
+
+// Spec (CMP-47): the phone can decrypt a push that names the session.
+func TestSendCarriesTheSessionName(t *testing.T) {
+	b := newBrowser(t)
+	k, _ := NewKey(rand.Reader)
+	var body []byte
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ = io.ReadAll(r.Body)
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer srv.Close()
+	u, _ := url.Parse(srv.URL)
+	s := &Sender{Key: k, Subject: "mailto:me@example.org", Client: srv.Client(), Hosts: []string{u.Host}}
+	if _, err := s.Send(context.Background(), b.sub(srv.URL+"/p"), PayloadFor(DetailTitle, 1, "plan", "shop")); err != nil {
+		t.Fatal(err)
+	}
+	var got struct {
+		N int
+		K string
+		S string
+	}
+	if err := json.Unmarshal(b.decrypt(t, body), &got); err != nil || got.S != "shop" || got.K != "plan" || got.N != 1 {
+		t.Errorf("%+v %v", got, err)
+	}
+}
