@@ -702,7 +702,7 @@ func aiRightChip(label string, width int) aiLine {
 		label = runewidth.Truncate(label, max, "…")
 	}
 	chip := lipgloss.NewStyle().Background(theme.Mix(theme.BgPanel, theme.TextPrimary, 0.08)).
-		Foreground(theme.LG(theme.TextMuted)).Render(" " + label + " ")
+		Foreground(theme.LG(theme.TextSecondary)).Render(" " + label + " ")
 	x := width - 1 - runewidth.StringWidth(label) - 2
 	if x < 0 {
 		x = 0
