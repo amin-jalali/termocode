@@ -4387,7 +4387,7 @@
         "n": 5,
         "per_ms": 1000
       },
-      "max_bytes": 2048,
+      "max_bytes": 6144,
       "live": 1,
       "laptop_card": false,
       "audit": "no",
@@ -8801,6 +8801,7 @@
             "mysql",
             "sqlite",
             "redis",
+            "cassandra",
             "other"
           ]
         },
@@ -9141,6 +9142,9 @@
           },
           "type": "array"
         },
+        "cursor": {
+          "type": "string"
+        },
         "from": {
           "type": "integer"
         },
@@ -9186,6 +9190,9 @@
         "conn": {
           "type": "string"
         },
+        "cursor": {
+          "type": "string"
+        },
         "from": {
           "type": "integer"
         },
@@ -9203,6 +9210,9 @@
       "type": "object",
       "properties": {
         "conn": {
+          "type": "string"
+        },
+        "cursor": {
           "type": "string"
         },
         "sql": {
@@ -9312,6 +9322,9 @@
     "DBTable": {
       "type": "object",
       "properties": {
+        "group": {
+          "type": "string"
+        },
         "name": {
           "type": "string"
         },

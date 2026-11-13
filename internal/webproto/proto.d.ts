@@ -1014,11 +1014,13 @@ export interface DBRowsArgs {
   conn: string;
   table: string;
   from?: number;
+  cursor?: string;
 }
 
 export interface DBSQLArgs {
   conn: string;
   sql: string;
+  cursor?: string;
 }
 
 export interface DownloadArgs {
@@ -3574,7 +3576,7 @@ export interface DBConns {
 export interface DBConn {
   id: string;
   name?: string;
-  driver: "postgres" | "mysql" | "sqlite" | "redis" | "other";
+  driver: "postgres" | "mysql" | "sqlite" | "redis" | "cassandra" | "other";
   database?: string;
   env?: string;
   readonly?: boolean;
@@ -3596,6 +3598,7 @@ export interface DBTables {
 export interface DBTable {
   name: string;
   view?: boolean;
+  group?: string;
 }
 
 export interface DBRows {
@@ -3603,6 +3606,7 @@ export interface DBRows {
   rows: DBCell[][];
   from: number;
   next?: number;
+  cursor?: string;
   truncated?: boolean;
   masked?: number;
   ms: number;

@@ -17,7 +17,7 @@ func init() {
 const (
 	MaxDBConns    = 100
 	MaxDBTables   = 2000
-	MaxDBCursor   = 8 << 10  // chars of a db.rows / db.query cursor (a CQL page state, base64)
+	MaxDBCursor   = 4 << 10  // chars of a db.rows / db.query cursor (a CQL page state, base64)
 	DBPageRows    = 100      // rows of one db.rows page
 	MaxDBRows     = 1000     // rows of one db.query
 	MaxDBBytes    = 1 << 20  // bytes of cell text in one answer
@@ -35,7 +35,7 @@ type DBConns struct {
 type DBConn struct {
 	ID       string `json:"id"`
 	Name     string `json:"name,omitempty"`
-	Driver   string `json:"driver" enum:"postgres|mysql|sqlite|redis|other"`
+	Driver   string `json:"driver" enum:"postgres|mysql|sqlite|redis|cassandra|other"`
 	Database string `json:"database,omitempty"` // the database name (a file name for sqlite)
 	Env      string `json:"env,omitempty"`      // "production" …
 	ReadOnly bool   `json:"readonly,omitempty"`
@@ -61,6 +61,8 @@ type DBTables struct {
 type DBTable struct {
 	Name string `json:"name"`
 	View bool   `json:"view,omitempty"`
+	// Group is the keyspace of a Cassandra table (its name is keyspace.table).
+	Group string `json:"group,omitempty"`
 }
 
 // DBRows answers db.rows and db.query.
@@ -69,6 +71,7 @@ type DBRows struct {
 	Rows      [][]DBCell `json:"rows"`
 	From      int        `json:"from"`
 	Next      int        `json:"next,omitempty"`      // db.rows: the from of the next page; 0: the last page
+	Cursor    string     `json:"cursor,omitempty"`    // Cassandra: the cursor of the next page (db.rows, db.query); empty: the last page
 	Truncated bool       `json:"truncated,omitempty"` // rows or bytes were cut
 	Masked    int        `json:"masked,omitempty"`    // cells masked as secrets
 	Ms        int64      `json:"ms"`
