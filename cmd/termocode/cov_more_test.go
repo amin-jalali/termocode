@@ -110,3 +110,17 @@ func TestMCPAdminSecretFromStdinNeedsALine(t *testing.T) {
 		t.Errorf("odd value: %d %q", code, errs)
 	}
 }
+
+func TestMCPAdminFlagsWithEquals(t *testing.T) {
+	cwd := adminEnv(t)
+	if code, _, errs := runAdmin(t, cwd, "", "add", "--scope=project", "--dir="+cwd, "eq", "--", "srv"); code != 0 {
+		t.Fatalf("%d %q", code, errs)
+	}
+	if code, out, _ := runAdmin(t, cwd, "", "list", "--scope=project"); code != 0 || !strings.Contains(out, "eq") {
+		t.Errorf("list: %d %q", code, out)
+	}
+	// A secret value that is a broken reference is refused.
+	if code, _, errs := runAdmin(t, cwd, "${secret:\n", "add", "--secret", "K", "bad", "--", "srv"); code == 0 || errs == "" {
+		t.Errorf("broken ref: %d %q", code, errs)
+	}
+}

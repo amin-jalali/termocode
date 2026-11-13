@@ -205,3 +205,39 @@ func TestLanePackWithChatsFlag(t *testing.T) {
 		t.Fatalf("push: %d %q %s", code, out.String(), errw.String())
 	}
 }
+
+// pull packs on the far side over ssh (a fake that sends a pack made here)
+// and unpacks it into a new worktree.
+func TestLanePullUnpacksWhatSSHSends(t *testing.T) {
+	repo, home := laneRepo(t)
+	env := func(k string) string {
+		if k == "HOME" {
+			return home
+		}
+		return ""
+	}
+	pack := filepath.Join(t.TempDir(), "p.tlane")
+	var out, errw bytes.Buffer
+	if code := runLaneIn([]string{"pack", "--out", pack, repo}, nil, &out, &errw, env); code != 0 {
+		t.Fatalf("pack: %d %s", code, errw.String())
+	}
+	bin := t.TempDir()
+	if err := os.WriteFile(filepath.Join(bin, "ssh"), []byte("#!/bin/sh\ncat "+pack+"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+":"+os.Getenv("PATH"))
+	out.Reset()
+	errw.Reset()
+	code := runLaneIn([]string{"pull", "--repo", repo, "--name", "pulled", "host:/srv/proj"}, nil, &out, &errw, env)
+	if code != 0 || !strings.Contains(out.String(), "unpacked") {
+		t.Fatalf("pull: %d %q %s", code, out.String(), errw.String())
+	}
+	// Unpacking a pack that is not one fails with the reason.
+	junk := filepath.Join(t.TempDir(), "junk.tlane")
+	if err := os.WriteFile(junk, []byte("junk"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if code := runLaneIn([]string{"unpack", "--repo", repo, junk}, nil, &out, &errw, env); code != 1 {
+		t.Errorf("junk unpack: %d", code)
+	}
+}
