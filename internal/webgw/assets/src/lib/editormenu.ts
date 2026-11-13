@@ -11,6 +11,7 @@ import { openMenu, type MenuItems } from "../ui/ContextMenu";
 import { modKey } from "./platform";
 import { toast } from "./toasts";
 import { quick } from "./workbench";
+import { writeText } from "./clip";
 
 type MenuMsg = Extract<FromFrame, { t: "menu" }>;
 /** editorMenu opens the menu of a right click at (x, y) on the page. */
@@ -19,7 +20,7 @@ export function editorMenu(x: number, y: number, m: MenuMsg, edit: (e: ToFrame) 
   const fail = () => toast("warn", t("copy.failed"));
   const write = (then?: () => void) => {
     try {
-      navigator.clipboard.writeText(m.sel).then(then, fail);
+      writeText(m.sel).then(then, fail);
     } catch {
       fail();
     }
