@@ -66,6 +66,10 @@ type Settings struct {
 	// the same time get the team tools (notes between steps, shared
 	// claims). Edited by hand.
 	Team *bool `json:"ai_team_mode,omitempty"`
+	// ComputerUse is ai_computer_use (CMP-90; nil: off): the chat gets
+	// the desktop tools (screenshot, click, type, keys); each call asks.
+	// Edited by hand.
+	ComputerUse *bool `json:"ai_computer_use,omitempty"`
 	// PlanReviewRounds is ai_plan_review_rounds (OMX-14; 0: off, at most
 	// 5) and PlanFile ai_plan_file (nil: off): .termocode/plans/<slug>.md.
 	PlanReviewRounds int   `json:"ai_plan_review_rounds,omitempty"`
@@ -129,6 +133,9 @@ type Settings struct {
 
 // TeamMode reports ai_team_mode (off unless true).
 func (s Settings) TeamMode() bool { return s.Team != nil && *s.Team }
+
+// ComputerUseOn reports ai_computer_use (off unless true).
+func (s Settings) ComputerUseOn() bool { return s.ComputerUse != nil && *s.ComputerUse }
 
 // DefaultStepStall is the stall limit when ai_step_stall_minutes is
 // not set.

@@ -3876,6 +3876,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai_base_url` | never | AI provider, credentials and approvals stay with the user |
 | `ai_categories` | never | AI provider, credentials and approvals stay with the user |
 | `ai_compact` | never | AI provider, credentials and approvals stay with the user |
+| `ai_computer_use` | never | AI provider, credentials and approvals stay with the user; the AI never turns on its own desktop control |
 | `ai_concurrency` | never | AI provider, credentials and approvals stay with the user |
 | `ai_context_windows` | never | AI provider, credentials and approvals stay with the user |
 | `ai_critic` | never | AI provider, credentials and approvals stay with the user |

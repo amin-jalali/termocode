@@ -1510,6 +1510,25 @@ the chat. Each message is its own question (no memory between messages).
   hidden in every answer. Discord answers never ping anyone.
 - Ctrl+C stops the bot. A token the service does not take any more stops it too.
 
+## Computer use (experimental)
+
+The chat can look at your desktop and use it: take a screenshot, click,
+type and press keys. It is off. Turn it on by hand with
+`"ai_computer_use": true` in `config.json`; the AI cannot turn it on.
+
+- Every action shows a card with the exact action ("Click left at 412,
+  300", the text to type, the keys). There is no "Always allow", and
+  autopilot or allow rules never skip this card.
+- A screenshot is saved in `.termocode/screens/` in the project. The AI
+  looks at it with `look_at`. It shows every window, so close private
+  ones first.
+- It needs a desktop and small helper programs: on X11 `xdotool` and
+  `scrot` (or ImageMagick), on Wayland `grim` and `ydotool`, on macOS
+  `cliclick` (screenshots use the built-in `screencapture`). Over SSH
+  with no desktop, the tools say so.
+- Only the chat in termocode has these tools. `termocode ai -x`, chat
+  bots and agent CLIs do not.
+
 ## Keys at a glance
 
 | Key | Action |

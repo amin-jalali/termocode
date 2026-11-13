@@ -1375,6 +1375,7 @@ you change an answer.
 | `ai_parallel_max` | `1` | How many steps may run at the same time (at most 8). With 1, steps run in order and `deps` is refused. A planned run uses 3 when this is not set. |
 | `ai_worktrees` | `auto` | `auto`: writing steps that run at the same time get [their own worktree](#own-worktrees-for-parallel-steps). `off`: every step works in your tree. |
 | `ai_team_mode` | `false` | [Team mode](#team-mode-experimental): steps that run at the same time get notes between them and a shared claim list. |
+| `ai_computer_use` | `false` | [Computer use](ai-use.md#computer-use-experimental): the chat may take screenshots, click and type on your desktop. Every action asks. |
 | `ai_plan_approval` | `ask` | [Approve the plan](#approve-the-plan): `ask` before steps that change files or run commands, `always` for every plan, `auto` never. |
 | `ai_prices` | `{}` | Price overrides, $ per million tokens. |
 | `ai_context_windows` | `{}` | Context window overrides, in tokens. |

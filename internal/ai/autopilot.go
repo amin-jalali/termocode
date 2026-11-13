@@ -208,6 +208,9 @@ func ClassifyRisk(t Tool, args map[string]any) Risk {
 	case "git_push", "git_pull", "delete":
 		return RiskHigh
 	}
+	if strings.HasPrefix(t.Name, "computer_") { // CMP-90: the desktop, outside the workspace
+		return RiskHigh
+	}
 	if c := ArgString(args, "command"); c != "" {
 		return CommandRisk(c)
 	}

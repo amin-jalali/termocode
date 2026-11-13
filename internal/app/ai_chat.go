@@ -233,6 +233,7 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 	tools = append(tools, aiProofTool(root))                   // CMP-52: headless-browser screenshots as proof of work
 	tools = append(tools, aiWebTools()...)                     // OMX-13: only when turned on
 	tools = append(tools, m.aiImageTools(root, call)...)       // CMP-97: generate_image, only when turned on
+	tools = append(tools, aiComputerTools(root)...)            // CMP-90: the desktop, only when turned on; always asks
 	return aiRedactResults(tools)                              // known secrets (.env passwords, API keys) never reach the model
 }
 
