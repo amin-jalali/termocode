@@ -193,3 +193,24 @@
 .board-chips { display: flex; gap: var(--s2); overflow-x: auto; }
 .board-chip.is-on { border-color: var(--focus); }
 @media (prefers-reduced-motion: reduce) { .board * { transition: none; } }
+
+/* Session picker (WEB-55): a simple list of the running sessions, one 48 px
+   row each: name, folder, branch and last activity. Phone and desktop. */
+.sp { display: flex; flex-direction: column; min-height: 100dvh; }
+.sp-box { display: flex; flex-direction: column; gap: var(--s4); width: 100%; max-width: 34rem; margin: 0 auto; padding: var(--s6) var(--gutter) calc(var(--gutter) + env(safe-area-inset-bottom)); }
+.sp-title { font-size: 1.5rem; line-height: 2rem; font-weight: 700; margin: 0; }
+.sp-list { display: flex; flex-direction: column; gap: var(--s2); margin: 0; padding: 0; list-style: none; }
+.sp-row { display: flex; align-items: center; gap: var(--s3); width: 100%; min-height: 3rem; padding: var(--s3) var(--s4); text-align: start; color: var(--text); background: var(--bg-float); border: 1px solid var(--border); border-radius: var(--r-card); cursor: pointer; font: inherit; }
+.sp-row:hover { border-color: var(--muted); }
+.sp-row:focus-visible { outline: 2px solid var(--ai); outline-offset: 2px; }
+.sp-row.is-here { border-inline-start: 3px solid var(--ai); }
+.sp-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.sp-name { font-weight: 600; overflow-wrap: anywhere; }
+.sp-tag { margin-inline-start: var(--s2); font-size: 0.75rem; font-weight: 400; color: var(--muted); }
+.sp-where, .sp-facts { font-size: 0.8125rem; color: var(--muted); }
+.sp-where { font-family: var(--font-mono); overflow-wrap: anywhere; }
+.sp-facts { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s3); }
+.sp-branch { font-family: var(--font-mono); }
+.sp-need { color: var(--text); font-weight: 600; }
+.sp-go { color: var(--muted); font-size: 1.25rem; }
+.sp-skip { align-self: stretch; min-height: 3rem; }

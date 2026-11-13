@@ -2115,6 +2115,7 @@ export interface ProjectItem {
   waiting?: number;
   opened_at?: number;
   ws?: string;
+  branch?: string;
 }
 
 export interface RacesSnap {

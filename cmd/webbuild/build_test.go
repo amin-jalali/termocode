@@ -297,7 +297,13 @@ func TestBuildSplitsTheWorkbench(t *testing.T) {
 			t.Errorf("%s does not import the shared chunk", name)
 		}
 	}
-	if !strings.Contains(app+chunk, `import("/assets/workbench.js")`) {
+	var shared strings.Builder // app.js and every shared chunk: lib/lazy.ts may sit in any of them
+	for name, code := range out {
+		if strings.HasPrefix(name, "app") && strings.HasSuffix(name, ".js") {
+			shared.Write(code)
+		}
+	}
+	if !strings.Contains(shared.String(), `import("/assets/workbench.js")`) {
 		t.Error("the page does not load /assets/workbench.js")
 	}
 	if strings.Contains(app+chunk, "wb-panel-tabs") {

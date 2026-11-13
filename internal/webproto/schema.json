@@ -14952,6 +14952,9 @@
         "attached": {
           "type": "boolean"
         },
+        "branch": {
+          "type": "string"
+        },
         "id": {
           "type": "string"
         },

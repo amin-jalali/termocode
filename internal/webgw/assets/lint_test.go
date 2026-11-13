@@ -200,6 +200,7 @@ func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
 			text = strings.Replace(text, `import("/assets/workbench.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/strings-fa.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/home.js")`, "", 1)
+			text = strings.Replace(text, `import("/assets/picker.js")`, "", 1) // the session picker (WEB-55)
 		}
 		if pageFile(e.Path) { // lib/push.ts: the push-only worker (MOB-30)
 			text = strings.ReplaceAll(text, "navigator.serviceWorker", "")

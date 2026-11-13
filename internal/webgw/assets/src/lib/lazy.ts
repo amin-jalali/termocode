@@ -6,6 +6,7 @@
 //   workbench.js  the desktop workbench, on a wide screen only (a phone
 //                 never loads it); index.html preloads it there with its SRI
 //   strings-fa.js the Persian strings, when the UI language is Persian
+//   picker.js     the session picker's list (WEB-55), once after a passkey sign-in
 //   home.js       the phone's own views (This phone, MOBUX-20; the Home of
 //                 MOB-4; All tools, MOBUX-5; review, MOB-14), on a phone
 //                 only, when one opens
@@ -15,18 +16,20 @@ import type { HomeHost } from "../home/api";
 import { persian } from "../strings";
 import type * as Workbench from "../workbench";
 import type * as Home from "../home";
+import type * as Picker from "../picker/main";
 
-let loading: Promise<EditorModule> | null = null;
-
-export function loadEditor(): Promise<EditorModule> {
-  if (!loading) {
-    loading = import("/assets/editor.js").catch((e: unknown) => {
-      loading = null;
+/** once makes a loader that runs load one time and again after a
+ * failure (a failed load can be tried again). */
+const once = <T>(load: () => Promise<T>): (() => Promise<T>) => {
+  let p: Promise<T> | null = null;
+  return () =>
+    (p ??= load().catch((e: unknown) => {
+      p = null;
       throw e;
-    });
-  }
-  return loading;
-}
+    }));
+};
+
+export const loadEditor: () => Promise<EditorModule> = once(() => import("/assets/editor.js"));
 
 /** DeskModule is what workbench.js gives the page. */
 export type DeskModule = typeof Workbench;
@@ -36,41 +39,24 @@ export type DeskModule = typeof Workbench;
 export const desk = signal<DeskModule | null>(null);
 export const deskFailed = signal(false);
 
-let deskLoading: Promise<DeskModule> | null = null;
-
-export function loadDesk(): Promise<DeskModule> {
-  if (!deskLoading) {
-    deskFailed.value = false;
-    deskLoading = import("/assets/workbench.js").then(
-      (m: DeskModule) => (desk.value = m),
-      (e: unknown) => {
-        deskLoading = null;
-        deskFailed.value = true;
-        throw e;
-      },
-    );
-  }
-  return deskLoading;
-}
-
-let faLoading: Promise<void> | null = null;
+export const loadDesk: () => Promise<DeskModule> = once(() => {
+  deskFailed.value = false;
+  return import("/assets/workbench.js").then(
+    (m: DeskModule) => (desk.value = m),
+    (e: unknown) => {
+      deskFailed.value = true;
+      throw e;
+    },
+  );
+});
 
 /** loadPersian loads the Persian strings into persian (strings.ts); a
  * failed load can be tried again (the UI stays English meanwhile). */
-export function loadPersian(): Promise<void> {
-  if (!faLoading) {
-    faLoading = import("/assets/strings-fa.js").then(
-      (m) => {
-        persian.value = m.FA;
-      },
-      (e: unknown) => {
-        faLoading = null;
-        throw e;
-      },
-    );
-  }
-  return faLoading;
-}
+export const loadPersian: () => Promise<void> = once(() =>
+  import("/assets/strings-fa.js").then((m) => {
+    persian.value = m.FA;
+  }),
+);
 
 /** HomeModule is what home.js gives the page. */
 export type HomeModule = typeof Home;
@@ -80,7 +66,13 @@ export type HomeModule = typeof Home;
 export const home = signal<HomeModule | null>(null);
 export const homeFailed = signal(false);
 
-let homeLoading: Promise<HomeModule> | null = null;
+const homeModule = once(() => {
+  homeFailed.value = false;
+  return import("/assets/home.js").catch((e: unknown) => {
+    homeFailed.value = true;
+    throw e;
+  });
+});
 
 /** homeHosted: home.js has the Home's host (init ran); the Home draws
  * only then. */
@@ -91,18 +83,7 @@ export const homeHosted = signal(false);
  * page share one store and one link; This phone (MOBUX-20) and All tools
  * need no host, and a Home opened after them still gets it. */
 export function loadHome(host?: () => HomeHost): Promise<HomeModule> {
-  if (!homeLoading) {
-    homeFailed.value = false;
-    homeLoading = import("/assets/home.js").then(
-      (m: HomeModule) => m,
-      (e: unknown) => {
-        homeLoading = null;
-        homeFailed.value = true;
-        throw e;
-      },
-    );
-  }
-  return homeLoading.then((m) => {
+  return homeModule().then((m: HomeModule) => {
     if (host && !homeHosted.peek()) {
       m.init(host());
       homeHosted.value = true;
@@ -110,3 +91,9 @@ export function loadHome(host?: () => HomeHost): Promise<HomeModule> {
     return (home.value = m);
   });
 }
+
+/** PickerModule is what picker.js gives the page. */
+export type PickerModule = typeof Picker;
+
+/** loadPicker loads picker.js once; a failed load can be tried again. */
+export const loadPicker: () => Promise<PickerModule> = once(() => import("/assets/picker.js"));

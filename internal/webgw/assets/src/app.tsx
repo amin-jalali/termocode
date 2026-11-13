@@ -140,7 +140,10 @@ function Solo({ buf }: { buf: number }) {
 
 export function App() {
   const r = route.value;
-  const l = layout.value;
+  // A session picked after sign-in (WEB-55) stands on its own as its
+  // project page: the workbench shows only this laptop session, so a
+  // desktop draws that page in the tablet layout (its tabs lead back).
+  const l = layout.value === "desktop" && r.tab === "more" && r.rest.startsWith("projects/") ? "tablet" : layout.value;
   const solo = soloBuf(r);
   if (solo !== null) return <Solo buf={solo} />;
   if (l === "desktop") {

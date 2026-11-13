@@ -1,6 +1,7 @@
 // Entry of the termocode web UI. Built by cmd/webbuild (esbuild Go API).
 import { pairSecret, secret } from "./boot"; // first: safety hook, secrets out of the URL
 import { h, render } from "preact";
+import { useEffect, useState } from "preact/hooks";
 import { effect, signal } from "@preact/signals";
 import { AuthError, forgetToken, redeem, token } from "./net/auth";
 import "./styles/tokens.css";
@@ -29,13 +30,14 @@ import "./styles/race.css"; // moved from a chunk file (chunks may not import st
 import "./styles/phone-projects.css"; // moved from a chunk file (chunks may not import style sheets)
 import "./styles/mcpviews.css"; // moved from a chunk file (chunks may not import style sheets)
 import { App } from "./app";
-import { loadPersian } from "./lib/lazy";
+import { loadPersian, loadPicker, type PickerModule } from "./lib/lazy";
 import { prefs } from "./lib/prefs";
 import { setOnOpen, unseen } from "./lib/notify";
 import { soloBuf } from "./lib/popout";
+import { homeHost } from "./homehost";
 import { goTab, route } from "./lib/router";
 import { watchViewport } from "./lib/viewport";
-import { laptopTheme, link, waiting } from "./session";
+import { laptopTheme, link, store, waiting } from "./session";
 import { dict, has } from "./state/dict";
 import { THEME_TOKENS, themeTokens } from "./state/theme";
 import { TABS } from "./state/route";
@@ -45,7 +47,7 @@ import { PairScreen } from "./ui/PairScreen";
 import { SignInScreen, bookmarkRemoved, signInWithBookmark } from "./ui/SignInScreen";
 import { passkeysHere } from "./net/passkey";
 import { isRemembered } from "./net/devicekey";
-import { lang, persian, type Lang } from "./strings";
+import { lang, addStrings, persian, t, type Lang } from "./strings";
 
 const RTL_LANGS = /^(fa|ar|he|ur|ps|ckb|dv|yi|sd|ug)\b/i;
 
@@ -53,7 +55,7 @@ const RTL_LANGS = /^(fa|ar|he|ur|ps|ckb|dv|yi|sd|ug)\b/i;
 // pairs this device, and a page with neither offers the passkey sign-in
 // of a paired device (where the browser can, or with the bookmark key of
 // a remembered browser, WEBP-12) or says to use the link.
-const phase = signal<"connect" | "pair" | "signin" | "shell">(
+const phase = signal<"connect" | "pair" | "signin" | "pick" | "shell">(
   secret ? "connect" : pairSecret ? "pair" : passkeysHere() || isRemembered() ? "signin" : "connect",
 );
 const connect = signal<ConnectState>(secret ? "ready" : "nolink");
@@ -62,6 +64,26 @@ function startShell(): void {
   phase.value = "shell";
   link.subscribe("status", "toasts", "cards");
   link.start();
+}
+
+// After a passkey or bookmark sign-in (WEB-55) the link starts and the
+// page lists the owner's running sessions; a pick, or a single session,
+// opens the workspace. A launch link and a pairing go straight in.
+function startPick(): void {
+  startShell(); // the same link and topics, then the picker step first
+  phase.value = "pick";
+}
+
+const pickSession = () => (phase.value = "shell");
+
+/** PickerStep shows the session picker, drawn by picker.js (lib/lazy.ts);
+ * when that cannot load, the page opens this session as it always did. */
+function PickerStep() {
+  const [m, setM] = useState<PickerModule | null>(null);
+  useEffect(() => {
+    loadPicker().then(setM, () => pickSession());
+  }, []);
+  return m && <m.Step host={homeHost()} t={t} addStrings={addStrings} onPick={pickSession} />;
 }
 
 function open(): void {
@@ -79,7 +101,9 @@ function Root() {
     case "pair":
       return <PairScreen secret={pairSecret ?? ""} onDone={startShell} />;
     case "signin":
-      return <SignInScreen onDone={startShell} />;
+      return <SignInScreen onDone={startPick} />;
+    case "pick":
+      return <PickerStep />;
     default:
       return <ConnectScreen state={connect.value} onOpen={open} />;
   }
@@ -198,7 +222,7 @@ if (!secret && !pairSecret && token()) startShell();
 else if (!secret && !pairSecret && isRemembered()) {
   // A bookmark: sign in with the kept key; when it is refused here and
   // no passkey can be used, the page says to use the laptop's link.
-  void signInWithBookmark(startShell).then((going) => {
+  void signInWithBookmark(startPick).then((going) => {
     if (!going && !passkeysHere() && !bookmarkRemoved()) phase.value = "connect";
   });
 }

@@ -80,7 +80,8 @@ func englishStrings(t *testing.T) []entry {
 func translatedStrings(t *testing.T) []entry {
 	t.Helper()
 	out := append(parseStrings(t, "src/strings.ts", "S"), parseStrings(t, "src/strings.desk.ts", "SD")...)
-	return append(out, parseStrings(t, "src/aictx/strings.ts", "AS")...)
+	out = append(out, parseStrings(t, "src/aictx/strings.ts", "AS")...)
+	return append(out, parseStrings(t, "src/picker/strings.ts", "PS")...)
 }
 
 // allEnglishStrings adds the phone app's lazy views' strings

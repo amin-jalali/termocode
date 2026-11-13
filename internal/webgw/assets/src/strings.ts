@@ -9,6 +9,7 @@ import { dict, has } from "./state/dict";
 import type { SD } from "./strings.desk";
 import type { SP } from "./strings.phone";
 import type { AS } from "./aictx/strings";
+import type { PS } from "./picker/strings";
 
 export const S = {
   // Shell and connect
@@ -222,7 +223,6 @@ export const S = {
   "edit.save_err": "Could not save: {msg}",
 
   // Terminal
-  "term.ended": "This terminal ended (exit {code}).",
   "term.ended_now": "This terminal ended.",
   "term.gone": "This terminal was closed on the laptop.",
   "term.bell": "A shell rang",
@@ -985,7 +985,7 @@ export const S = {
 /** StringKey is a key of the page's strings, of the workbench's
  * (strings.desk.ts, in workbench.js) or of the phone app's lazy views
  * (strings.phone.ts, English only). */
-export type StringKey = keyof typeof S | keyof typeof SD | keyof typeof SP | keyof typeof AS;
+export type StringKey = keyof typeof S | keyof typeof SD | keyof typeof SP | keyof typeof AS | keyof typeof PS;
 
 /** PhoneOnlyKey is a phone app key: English only (owner 2026-11-07), the
  * same prefixes as strings_test.go englishOnly. */
@@ -993,7 +993,7 @@ type PhoneOnlyKey = Extract<keyof typeof S, `ph.${string}` | `chips.${string}` |
 
 /** TranslatedKey is a key strings.fa.ts translates: the phone app's
  * strings are English only (owner 2026-11-07). */
-export type TranslatedKey = Exclude<keyof typeof S, PhoneOnlyKey> | keyof typeof SD | keyof typeof AS;
+export type TranslatedKey = Exclude<keyof typeof S, PhoneOnlyKey> | keyof typeof SD | keyof typeof AS | keyof typeof PS;
 
 /** PhoneOnly keys are English only (the same set as PhoneOnlyKey): the
  * phone app UI is English (owner 2026-11-07), so strings.fa.ts has none. */
