@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"errors"
+	"github.com/amin-jalali/termocode/internal/runner"
 	"strings"
 	"syscall"
 	"testing"
@@ -118,5 +119,36 @@ func TestRunnerServeStopsOnInterrupt(t *testing.T) {
 		}
 	case <-time.After(15 * time.Second):
 		t.Fatal("serve did not stop")
+	}
+}
+
+// show prints the worktree, error, changed files and answer of a task that
+// has them; list says a task that is being stopped is stopping.
+func TestRunnerShowDetailsAndStopping(t *testing.T) {
+	dir, folder := t.TempDir(), t.TempDir()
+	_, out, _ := runnerCLIIn(t, dir, folder, "", "add", "--folder", folder, "think")
+	id := strings.TrimSpace(out)
+	store := &runner.Store{Dir: dir}
+	if _, err := store.Update(id, func(tk *runner.Task) error {
+		tk.State, tk.Worktree, tk.Branch, tk.Error, tk.Files, tk.Answer, tk.CancelAsked = runner.StateRunning, "/w/x", "feat/x", "it broke", []string{"a.go", "b.go"}, "the answer", true
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	code, out, _ := runnerCLIIn(t, dir, folder, "", "show", id)
+	for _, want := range []string{"Worktree /w/x (feat/x)", "Error    it broke", "Changed  a.go, b.go", "Answer:"} {
+		if code != 0 || !strings.Contains(out, want) {
+			t.Errorf("missing %q in\n%s", want, out)
+		}
+	}
+	if _, out, _ := runnerCLIIn(t, dir, folder, "", "list"); !strings.Contains(out, "(stopping)") {
+		t.Errorf("list: %s", out)
+	}
+	if code, out, _ := runnerCLIIn(t, dir, folder, "", "cancel", id); code != 0 || !strings.Contains(out, "asked the runner to stop") {
+		t.Errorf("cancel a running task: %d %q", code, out)
+	}
+	// The queue folder cannot be read.
+	if code, _, _ := runnerCLIIn(t, "/definitely/not/here", folder, "", "list"); code != 0 && code != 1 {
+		t.Errorf("unreadable queue: %d", code)
 	}
 }

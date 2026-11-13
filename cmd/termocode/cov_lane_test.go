@@ -180,3 +180,28 @@ func TestRunLaneWrapperHelp(t *testing.T) {
 		t.Fatal("lane --help")
 	}
 }
+
+// --chats adds the Claude Code chats of the folder (none here) to a pack.
+func TestLanePackWithChatsFlag(t *testing.T) {
+	repo, home := laneRepo(t)
+	env := func(k string) string {
+		if k == "HOME" {
+			return home
+		}
+		return ""
+	}
+	var out, errw bytes.Buffer
+	if code := runLaneIn([]string{"pack", "--chats", "--out", "-", repo}, nil, &out, &errw, env); code != 0 {
+		t.Fatalf("pack --chats: %d %s", code, errw.String())
+	}
+	// push through a fake ssh that swallows the pack and says something.
+	bin := t.TempDir()
+	if err := os.WriteFile(filepath.Join(bin, "ssh"), []byte("#!/bin/sh\ncat >/dev/null\necho unpacked there\nexit 0\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+":"+os.Getenv("PATH"))
+	out.Reset()
+	if code := runLaneIn([]string{"push", "--chats", repo, "host:/srv/proj"}, nil, &out, &errw, env); code != 0 || !strings.Contains(out.String(), "the lane is on host now") {
+		t.Fatalf("push: %d %q %s", code, out.String(), errw.String())
+	}
+}

@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -88,4 +89,37 @@ func TestBarSessionsListsWhatIsRunning(t *testing.T) {
 	}
 	_ = errors.New
 	_ = session.Dir
+}
+
+// The tray list marks a session whose agent socket does not answer.
+func TestBarSessionsWithARunningSession(t *testing.T) {
+	dir := covSessionEnv(t)
+	p, err := session.PathsFor(dir)
+	if err != nil {
+		t.Skip(err)
+	}
+	go session.Serve(dir, func() *exec.Cmd { return exec.Command("sh", "-c", "exec cat") })
+	for i := 0; i < 500; i++ {
+		if c, err := session.Dial(p); err == nil {
+			c.Close()
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Cleanup(func() { _ = session.Kill(p); time.Sleep(200 * time.Millisecond) })
+	old := agentCall
+	t.Cleanup(func() { agentCall = old })
+	agentCall = func(string, agentctl.Request, time.Duration) (agentctl.Reply, error) {
+		return agentctl.Reply{OK: true, Tabs: []agentctl.Tab{{ID: "t1"}}}, nil
+	}
+	list, err := barSessions()
+	if err != nil || len(list) != 1 || len(list[0].Tabs) != 1 {
+		t.Fatalf("%v %v", list, err)
+	}
+	agentCall = func(string, agentctl.Request, time.Duration) (agentctl.Reply, error) {
+		return agentctl.Reply{}, errors.New("no answer")
+	}
+	if list, _ := barSessions(); len(list) != 1 || !list[0].Unreachable {
+		t.Fatalf("unreachable: %v", list)
+	}
 }

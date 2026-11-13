@@ -66,3 +66,4 @@ func TestImportArgumentVariants(t *testing.T) {
 		t.Errorf("second import: %d %q", code, out)
 	}
 }
+
