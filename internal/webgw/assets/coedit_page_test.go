@@ -240,3 +240,28 @@ func TestDeskEditorShowsAndSendsCursors(t *testing.T) {
 		}
 	}
 }
+
+// Spec (G-COL): a share the owner let edit connects with the editor
+// role: the page takes it (meta) and opens the editor on a file, as for
+// a controller; a viewer still only reads.
+func TestPageEditorRole(t *testing.T) {
+	out := runJS(t, `
+import { checkServerMsg, PROTOCOL_VERSION } from "../proto/guard";
+import { mayEdit } from "./edit";
+const meta = (role: string) => ({ t: "meta", v: PROTOCOL_VERSION, conn: "c", role, device: "d", idle_s: 1, max_s: 1, viewers: 1, ui: { theme: "dark" }, caps: [] });
+checkServerMsg(meta("editor"));
+let bad = false;
+try { checkServerMsg(meta("owner")); } catch { bad = true; }
+if (!bad) throw new Error("an unknown role passed");
+if (!mayEdit("editor") || !mayEdit("controller") || mayEdit("viewer") || mayEdit(undefined)) throw new Error("mayEdit");
+console.log("ok");
+`, liveStubs)
+	if !strings.Contains(out, "ok") {
+		t.Fatalf("harness: %s", out)
+	}
+	for _, f := range []string{"views/FileView.tsx", "views/DiffView.tsx"} {
+		if !strings.Contains(raceSrc(t, f), "mayEdit(link.meta.value?.role)") {
+			t.Errorf("%s does not ask mayEdit", f)
+		}
+	}
+}
