@@ -146,7 +146,9 @@ func TestSQLRunIsNeverAnAIAction(t *testing.T) {
 func TestSQLRunPauseTogglesOutputOfTheRunTab(t *testing.T) {
 	var sent []string
 	old := dbRunChansend
-	dbRunChansend = func(_ *Model, buf int, text string) { sent = append(sent, strings.Join([]string{string(rune('0' + buf)), text}, ":")) }
+	dbRunChansend = func(_ *Model, buf int, text string) {
+		sent = append(sent, strings.Join([]string{string(rune('0' + buf)), text}, ":"))
+	}
 	defer func() { dbRunChansend = old }()
 
 	m := sqlRunsTestModel(t, "")

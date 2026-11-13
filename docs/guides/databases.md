@@ -231,6 +231,8 @@ A saved run plays one SQL file on one or more connections with their command lin
 
 Run **Databases: Saved SQL Runs…** and pick a run. A card shows the script, the connections, the before steps and the log file. Cancel is first. **Run** opens one terminal tab for the whole run. The first error stops it. Passwords go in the tab's environment only, never on the command line. The same limits as `$` apply: the client must be on your PATH, and a connection through an SSH tunnel cannot be used. **Edit sql-runs.json** at the end of the list opens the file. The AI cannot start a saved run.
 
+**Pause the output.** While a run is going, **Databases: Pause / Resume SQL Run Output** stops the output of its terminal tab (the client waits) and runs it again to go on. It finds the run even when another tab is in front.
+
 ## Disconnect
 
 Press `x` on a connection and choose **Disconnect** to close all its sessions. Sessions also close when you leave the Databases view, so a hidden view keeps no database process. A session with an open manual transaction stays open until you commit or roll back (see [Transactions](#transactions)); `x` then asks **Cancel**, **Commit** or **Roll back** (**Cancel** has the focus).

@@ -3276,6 +3276,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-open-sessions` | Databases: Sessions… | never | the user's sessions and transactions |
 | `db-param-info` | Databases: Show Parameter Info | auto |   |
 | `db-paste-connection` | Databases: Paste Connection from Clipboard | never | adds a connection from the clipboard; only the user does that |
+| `db-pause-run` | Databases: Pause / Resume SQL Run Output | never | it stops the output of a run the user started; only the user decides |
 | `db-pending-sources` | Databases: Pending Source Changes… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-pgtap-run` | Databases: Run pgTAP Tests… | never | it runs the user's test functions after a card only the user answers (db_query) |
 | `db-query-log` | Databases: Show Query Log | never | the log holds the literal values of every statement; only the user opens it |

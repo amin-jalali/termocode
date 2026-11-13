@@ -372,6 +372,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-new-console":                    aiNever(aiNoPicker),
 	"db-run":                            aiNever("SQL runs require the database query tool and its guard"),
 	"db-run-file":                       aiNever("SQL runs require the database query tool and its guard"),
+	"db-pause-run":                      aiNever("it stops the output of a run the user started; only the user decides"),
 	"db-saved-runs":                     aiNever("a saved run plays SQL and shell steps from a project file; only the user starts it"),
 	"db-run-from-caret":                 aiNever("SQL runs require the database query tool and its guard"),
 	"db-run-smallest":                   aiNever("SQL runs require the database query tool and its guard"),

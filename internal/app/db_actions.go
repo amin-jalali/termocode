@@ -42,6 +42,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-inline-clear", Title: "Databases: Clear Inline Results"},
 		{ID: "db-run-file", Title: "Databases: Run File"},
 		{ID: dbSQLRunPaletteID, Title: dbSQLRunPaletteTitle},
+		{ID: dbSQLRunPauseID, Title: "Databases: Pause / Resume SQL Run Output"},
 		{ID: "db-explain", Title: "Databases: Explain Statement"},
 		{ID: "db-sql-outline", Title: "Databases: Go to Statement…"},
 		{ID: "db-switch-connection", Title: "Databases: Switch File Connection…"},
@@ -172,6 +173,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseSend(true), true
 	case dbSQLRunPaletteID:
 		return m.databaseSavedRuns(), true
+	case dbSQLRunPauseID:
+		return m.databasePauseRun(), true
 	case "db-run-from-caret":
 		return m.databaseSendExec(false, nil, dbclient.ExecFromCaret.String()), true
 	case "db-run-smallest":

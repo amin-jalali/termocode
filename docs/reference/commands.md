@@ -364,6 +364,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Open Guide | `db-guide` |   |   |
 | Databases: Open Table Data | `db-data` |   |   |
 | Databases: Paste Connection from Clipboard | `db-paste-connection` |   | `connection JSON copied with Copy as JSON` |
+| Databases: Pause / Resume SQL Run Output | `db-pause-run` |   |   |
 | Databases: Pending Source Changes… | `db-pending-sources` |   |   |
 | Databases: Pin Result Tab | `db-result-pin` |   |   |
 | Databases: Quick Documentation | `db-quick-doc` |   |   |
