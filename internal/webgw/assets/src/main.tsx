@@ -32,6 +32,7 @@ import { App } from "./app";
 import { loadPersian } from "./lib/lazy";
 import { prefs } from "./lib/prefs";
 import { setOnOpen, unseen } from "./lib/notify";
+import { watchTap } from "./lib/pushtap";
 import { soloBuf } from "./lib/popout";
 import { goTab, route } from "./lib/router";
 import { watchViewport } from "./lib/viewport";
@@ -191,12 +192,7 @@ watchViewport();
 setOnOpen((kind) => (kind === "card" ? openCards() : goTab("more")));
 // A tap on a push (lib/push.ts) opens the cards as soon as one is here.
 const wantCards = signal(false);
-// A closed page is opened with ?open=cards, an open one gets a message (sw.js).
-navigator.serviceWorker?.addEventListener("message", (e: MessageEvent) => e.data?.open === "cards" && (wantCards.value = true));
-if (location.search.includes("open=cards")) {
-  history.replaceState(null, "", location.pathname + location.hash);
-  wantCards.value = true;
-}
+watchTap(() => (wantCards.value = true));
 effect(() => wantCards.value && waiting.value.count > 0 && ((wantCards.value = false), openCards()));
 
 // A popped-out terminal tab (WEBP-13) came with this session's token;
