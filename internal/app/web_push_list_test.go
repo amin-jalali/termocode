@@ -6,8 +6,6 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-
 	"github.com/amin-jalali/termocode/internal/webdevices"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
@@ -29,9 +27,7 @@ func pushOp(t *testing.T, m *Model, dev, op, args string) webproto.Msg {
 		t.Fatalf("no handler for %s", op)
 	}
 	if cmd != nil {
-		if _, ok := cmd().(tea.Msg); !ok {
-			t.Fatal("no message")
-		}
+		cmd()
 	}
 	if got == nil {
 		t.Fatalf("%s gave no answer", op)

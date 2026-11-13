@@ -34,6 +34,8 @@ func init() {
 	webOps[webproto.OpPushKey] = (*Model).webPushKeyOp
 	webOps[webproto.OpPushSubscribe] = (*Model).webPushSubscribe
 	webOps[webproto.OpPushUnsubscribe] = (*Model).webPushUnsubscribe
+	webOps[webproto.OpPushList] = (*Model).webPushListOp
+	webOps[webproto.OpPushRemove] = (*Model).webPushRemoveOp
 }
 
 const (
@@ -197,7 +199,7 @@ func (m *Model) webPushSubscribe(call *webCall) tea.Cmd {
 		call.fail(webproto.CodeBadRequest, "This push kind is kept by the gateway.")
 		return nil
 	}
-	sub := webpush.Sub{Endpoint: a.Endpoint, P256dh: a.P256dh, Auth: a.Auth}
+	sub := webpush.Sub{Endpoint: a.Endpoint, P256dh: a.P256dh, Auth: a.Auth, Added: time.Now().UnixMilli()}
 	dev := call.conn.device
 	call.later()
 	return func() tea.Msg {
@@ -424,4 +426,66 @@ func webPushSendAll(ctx context.Context, payload []byte, live map[string]bool) b
 		left = true
 	}
 	return left
+}
+
+// webPushItems lists the paired devices that have a subscription, in the
+// order of the device list; this marks the asking device. Only names and
+// dates: never an address or a key.
+func webPushItems(s webSecretStore, this string) []webproto.PushItem {
+	ds, err := webPushDevices()
+	items := []webproto.PushItem{}
+	if err != nil {
+		return items
+	}
+	for _, d := range ds {
+		if d.Guest || !webPushHasSub(s, d.ID) {
+			continue
+		}
+		it := webproto.PushItem{Device: d.ID, Name: d.Name, This: d.ID == this}
+		if v, ok, err := s.Get(webPushSubPrefix + d.ID); err == nil && ok {
+			var sub webpush.Sub
+			if json.Unmarshal([]byte(v), &sub) == nil {
+				it.Added = sub.Added
+			}
+		}
+		items = append(items, it)
+	}
+	return items
+}
+
+func (m *Model) webPushListOp(call *webCall) tea.Cmd {
+	dev := call.conn.device
+	call.later()
+	return func() tea.Msg {
+		s, err := webPushStore()
+		if err != nil || s == nil || s.Locked() {
+			call.reply(webproto.PushList{Items: []webproto.PushItem{}})
+			return nil
+		}
+		call.reply(webproto.PushList{Items: webPushItems(s, dev)})
+		return nil
+	}
+}
+
+func (m *Model) webPushRemoveOp(call *webCall) tea.Cmd {
+	target := call.args.(*webproto.PushRemoveArgs).Device
+	dev := call.conn.device
+	call.later()
+	return func() tea.Msg {
+		s, err := webPushStore()
+		if err != nil || s == nil || s.Locked() {
+			call.fail(webproto.CodeInternal, "The laptop's secret store is not open.")
+			return nil
+		}
+		if !webPushValidName(webPushSubPrefix+target) || !webPushHasSub(s, target) {
+			call.fail(webproto.CodeNotFound, "That device has no alerts on.")
+			return nil
+		}
+		if err := s.Delete(webPushSubPrefix + target); err != nil {
+			call.fail(webproto.CodeInternal, "Could not change it on the laptop.")
+			return nil
+		}
+		call.reply(webproto.PushList{Items: webPushItems(s, dev)})
+		return webPushSetAny(webPushAny(s))
+	}
 }

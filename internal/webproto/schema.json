@@ -4836,6 +4836,36 @@
       "phase": "v2"
     },
     {
+      "op": "push.list",
+      "args": "PushListArgs",
+      "result": "PushList",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "push.remove",
+      "args": "PushRemoveArgs",
+      "result": "PushList",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "push.unsubscribe",
       "args": "PushUnsubscribeArgs",
       "result": "PushState",
@@ -15189,6 +15219,29 @@
       ],
       "additionalProperties": false
     },
+    "PushItem": {
+      "type": "object",
+      "properties": {
+        "added": {
+          "type": "integer"
+        },
+        "device": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "this": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "device",
+        "name",
+        "added"
+      ],
+      "additionalProperties": true
+    },
     "PushKeyArgs": {
       "type": "object",
       "properties": {
@@ -15197,6 +15250,39 @@
         }
       },
       "required": [],
+      "additionalProperties": false
+    },
+    "PushList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/PushItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
+    "PushListArgs": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "PushRemoveArgs": {
+      "type": "object",
+      "properties": {
+        "device": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "device"
+      ],
       "additionalProperties": false
     },
     "PushState": {

@@ -24,6 +24,9 @@ type Sub struct {
 	Endpoint string `json:"endpoint"`
 	P256dh   string `json:"p256dh"` // the browser's P-256 public key, base64url
 	Auth     string `json:"auth"`   // the 16-byte auth secret, base64url
+	// Added is when the laptop stored it (ms since 1970); only for the
+	// list of subscriptions, never sent anywhere.
+	Added int64 `json:"added,omitempty"`
 }
 
 // errBadSub never names the values.
