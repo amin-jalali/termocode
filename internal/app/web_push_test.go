@@ -65,12 +65,15 @@ func newWebPushRig(t *testing.T) *webPushRig {
 	return r
 }
 
-func (r *webPushRig) subscribe(t *testing.T, dev string) {
+func (r *webPushRig) subscribe(t *testing.T, dev string) { r.subscribeAt(t, dev, 0) }
+
+// subscribeAt is subscribe with the time it was added (ms since 1970).
+func (r *webPushRig) subscribeAt(t *testing.T, dev string, added int64) {
 	t.Helper()
 	k, _ := ecdh.P256().GenerateKey(rand.Reader)
 	b64 := base64.RawURLEncoding
 	r.keys[dev] = k
-	sub := webpush.Sub{Endpoint: r.endpoint + "/" + dev, P256dh: b64.EncodeToString(k.PublicKey().Bytes()), Auth: b64.EncodeToString(make([]byte, 16))}
+	sub := webpush.Sub{Endpoint: r.endpoint + "/" + dev, P256dh: b64.EncodeToString(k.PublicKey().Bytes()), Auth: b64.EncodeToString(make([]byte, 16)), Added: added}
 	b, _ := json.Marshal(sub)
 	if err := r.store.Set(webPushSubPrefix+dev, string(b)); err != nil {
 		t.Fatal(err)
