@@ -174,10 +174,15 @@ func dbResultDDL(d dbclient.Dialect, table string, cols []dbclient.Column) strin
 // dbInlineLines is the short grid drawn under the query: the header, a
 // rule, up to dbInlineRows rows and how many more there are, cut to width.
 func dbInlineLines(r dbclient.Result, width int) []string {
+	return dbGridLines(r, width, dbInlineRows)
+}
+
+// dbGridLines is dbInlineLines for up to maxRows rows.
+func dbGridLines(r dbclient.Result, width, maxRows int) []string {
 	if r.Err != nil || len(r.Columns) == 0 {
 		return nil
 	}
-	rows := r.Rows[:min(len(r.Rows), dbInlineRows)]
+	rows := r.Rows[:min(len(r.Rows), maxRows)]
 	safe := func(s string) string { return sanitizeDBText(dbRedact(dbOneLine(s))) }
 	widths := make([]int, len(r.Columns))
 	for i, c := range r.Columns {

@@ -585,6 +585,7 @@ missing	db-run-to-file	Databases|S
 missing	db-er-path	Databases|S
 missing	db-inline-clear	Databases|S
 missing	db-query-log	Databases|S
+missing	db-result-beside	Databases|S
 missing	db-result-cell-menu	Databases|S
 missing	db-result-column-types	Databases|S
 missing	db-result-create-table	Databases|S

@@ -125,6 +125,7 @@ type dbConsoleState struct {
 	colTypes     *bool               // T: column types in the header (nil: db_column_types)
 	inline       map[string][]string // file + "\x00" + SQL → the inline result lines (db_inline_result)
 	inlineSeen   bool                // an inline result was drawn once (the lens refresh then redraws them)
+	beside       *dbTab              // the tab drawn next to the page's grid (db_result_beside.go)
 	menuRow      int                 // the cell the cell menu is for (m)
 	menuCol      int
 	// editing (db_edit.go)
@@ -1205,6 +1206,8 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 	switch m.pickerKind {
 	case pickerKindDBPageSize:
 		return m.databaseSetPageSize(id), true
+	case pickerKindDBBeside:
+		return m.databaseSetBeside(id), true
 	case pickerKindDBCellMenu:
 		return m.databaseCellMenuPick(id), true
 	case pickerKindDBExecMode:

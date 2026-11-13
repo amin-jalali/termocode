@@ -37,6 +37,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-result-load-all", Title: "Databases: Load All Result Rows"},
 		{ID: "db-result-row-numbers", Title: "Databases: Toggle Result Row Numbers"},
 		{ID: "db-result-column-types", Title: "Databases: Toggle Result Column Types"},
+		{ID: "db-result-beside", Title: "Databases: Show Result Beside…"},
 		{ID: "db-result-cell-menu", Title: "Databases: Result Cell Menu…"},
 		{ID: "db-result-create-table", Title: "Databases: Copy Result Columns as CREATE TABLE"},
 		{ID: "db-inline-clear", Title: "Databases: Clear Inline Results"},
@@ -192,6 +193,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseToggleRowNums(), true
 	case "db-result-column-types":
 		return m.databaseToggleColTypes(), true
+	case "db-result-beside":
+		return m.databaseBesidePicker(), true
 	case "db-result-cell-menu":
 		return m.databaseCellMenuAtCursor(), true
 	case "db-result-create-table":
