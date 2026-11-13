@@ -468,12 +468,19 @@ func (m *Model) webHTTPSend(call *webCall) tea.Cmd {
 		call.fail(webproto.CodeBadRequest, "Unknown variables: "+strings.Join(names, ", ")+". Define them in an environment file or with @name = value.")
 		return nil
 	}
-	if u, err := url.Parse(rr.URL); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		call.fail(webproto.CodeBadRequest, "Only http:// and https:// addresses can be sent.")
+	gateURL := rr.URL
+	if isGRPCRequest(rr.Request) {
+		if err := httpGRPCValidateURL(rr.URL); err != nil {
+			call.fail(webproto.CodeBadRequest, webHTTPMask(err.Error()))
+			return nil
+		}
+		gateURL = webHTTPGRPCGateURL(rr.URL)
+	} else if u, err := url.Parse(rr.URL); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		call.fail(webproto.CodeBadRequest, "Only http:// and https:// addresses (or a GRPC request) can be sent.")
 		return nil
 	}
 	run := &httpRun{rr: rr, file: file, line: req.Line, label: req.Label(), env: rr.Env}
-	host, ask, remember := s.webHTTPGate(rr.URL)
+	host, ask, remember := s.webHTTPGate(gateURL)
 	if !ask {
 		cmd := m.webHTTPStart(run)
 		call.reply(webproto.HTTPSent{Run: run.id})
@@ -519,7 +526,12 @@ func (m *Model) webHTTPStart(run *httpRun) tea.Cmd {
 	snap := *run
 	return func() tea.Msg {
 		defer cancel()
-		resp := webHTTPDo(ctx, client, snap.rr, hooks)
+		var resp *httpclient.Response
+		if isGRPCRequest(snap.rr.Request) {
+			resp = webHTTPGRPCDo(ctx, snap.rr, snap.file, hooks.Insecure)
+		} else {
+			resp = webHTTPDo(ctx, client, snap.rr, hooks)
+		}
 		if resp == nil {
 			resp = &httpclient.Response{Err: "no answer"}
 		}
