@@ -195,6 +195,13 @@ copies made in other apps.
 Nerd Font icons, copy a Nerd Font `.ttf` to `~/.termux/font.ttf` and run
 `termux-reload-settings`. Or set `TERMOCODE_ICON_MODE=ascii`.
 
+## Windows
+
+Use termocode inside WSL (Windows Subsystem for Linux): install it there
+like on Linux. A native Windows build compiles
+(`GOOS=windows go build ./cmd/termocode`), but it is not tested on
+Windows and has no persistent sessions, so WSL is the supported way.
+
 ## Run it
 
 ```sh

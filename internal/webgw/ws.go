@@ -108,8 +108,6 @@ const (
 	DefaultHubWait   = 15 * time.Second
 	DefaultPingEvery = 25 * time.Second
 	DefaultPongWait  = 10 * time.Second
-	// DefaultMaxViewers: the owner's limit of browsers at once.
-	DefaultMaxViewers = 4
 )
 
 // closeInternal (1011) is for a fault inside the gateway. It is not in
