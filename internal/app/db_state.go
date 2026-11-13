@@ -96,7 +96,8 @@ type dbState struct {
 	pendingPassword     string
 	pendingPasswordRef  dbTypedRef // what was typed when pendingPassword came from a reference
 	addFromURL          bool
-	addLibSQL           bool // the add flow started from the libSQL row: only libsql:// URLs
+	addLibSQL           bool   // the add flow started from the libSQL row: only libsql:// URLs
+	addEngine           string // the add flow started from a warehouse row (DBX-66): only its URLs
 	menuRow             dbTreeRow
 	pendingDisconnectID string
 	sqlRunPending       string                  // DBX-45: the saved run the card asks about

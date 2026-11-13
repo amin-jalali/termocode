@@ -1157,6 +1157,7 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 	}
 	s.pendingConn = dbclient.Conn{Source: dbclient.SourceUser}
 	s.pendingPassword = ""
+	s.addEngine = ""
 	if id, ok := strings.CutPrefix(kind, "engine:"); ok {
 		if e, known := dbclient.ExtraSQLEngineByID(id); known {
 			// Firebird, Vertica, Exasol, SAP HANA (DBX-71).
@@ -1170,6 +1171,15 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 		e, found := dbclient.HTTPEngineByID(id)
 		if !found {
 			return nil
+		}
+		if e.URLExample != "" {
+			// A cloud warehouse (DBX-66): its account, warehouse, project
+			// or region go in the URL; the token or key is asked next.
+			s.addFromURL, s.addLibSQL, s.addEngine = true, false, e.ID
+			s.remoteAdd, s.remoteNext = false, false
+			cmd := m.databaseAddPrompt(promptKindDBAdd, e.Title+": connection URL", "Edit the URL:", e.URLExample, false)
+			m.prompt.SetNote(e.Hint)
+			return cmd
 		}
 		s.addFromURL = false
 		s.remoteAdd, s.remoteNext = s.remoteNext, false
@@ -1845,6 +1855,9 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 		c, err := dbclient.ParseURL(value)
 		if err != nil {
 			return m.pushToastDetail(toast.Errr, "That connection URL could not be read", sanitizeDBText(err.Error()))
+		}
+		if e, ok := dbclient.HTTPEngineByID(s.addEngine); ok && c.Driver != e.ID {
+			return m.pushToastDetail(toast.Warn, "That is not a "+e.Title+" URL", "Enter a URL like "+e.URLExample)
 		}
 		if s.addLibSQL && c.Driver != "libsql" {
 			return m.pushToastDetail(toast.Warn, "That is not a libSQL URL", "Enter a libsql://host URL (for Turso: libsql://<db>-<org>.turso.io).")
