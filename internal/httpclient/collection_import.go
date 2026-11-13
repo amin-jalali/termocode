@@ -255,12 +255,13 @@ func pmToRequest(raw json.RawMessage, inherited *pmAuth) (Request, error) {
 			if b.GraphQL != nil {
 				m := map[string]any{"query": b.GraphQL.Query}
 				var v any
-				if json.Unmarshal(b.GraphQL.Variables, &v) == nil && v != nil {
-					m["variables"] = v
-				} else if s := strings.TrimSpace(scalar(b.GraphQL.Variables)); s != "" {
-					if json.Unmarshal([]byte(s), &v) == nil {
+				if s, isText := scalarOK(b.GraphQL.Variables); isText {
+					// Postman keeps the variables as JSON text.
+					if t := strings.TrimSpace(s); t != "" && json.Unmarshal([]byte(t), &v) == nil && v != nil {
 						m["variables"] = v
 					}
+				} else if json.Unmarshal(b.GraphQL.Variables, &v) == nil && v != nil {
+					m["variables"] = v
 				}
 				out, _ := json.Marshal(m)
 				body := string(out)
