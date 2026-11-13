@@ -44,13 +44,21 @@ const (
 	// overrun is how long past {seconds} the program may run before it is
 	// stopped for it.
 	overrun = 15 * time.Second
+	// transcribeWait caps the speech-to-text step of the pipeline.
+	transcribeWait = 5 * time.Minute
 )
 
 // Settings is voice.json.
 type Settings struct {
 	// Command is the program and its arguments, run without a shell.
 	// {lang} becomes Language ("auto" when empty), {seconds} the limit.
-	Command    []string `json:"command"`
+	Command []string `json:"command"`
+	// Record and Transcribe are the offline pipeline (G-VOC), used when
+	// Command is empty: Record writes the sound to {wav} (it stops by
+	// itself after {seconds}, or on an interrupt), then Transcribe reads
+	// {wav} and prints the words. The recording is deleted after.
+	Record     []string `json:"record,omitempty"`
+	Transcribe []string `json:"transcribe,omitempty"`
 	Language   string   `json:"language,omitempty"`
 	MaxSeconds int      `json:"max_seconds,omitempty"`
 }
@@ -74,7 +82,23 @@ func Load(dir string) (Settings, error) {
 
 // Configured reports whether a program is named.
 func (s Settings) Configured() bool {
-	return len(s.Command) > 0 && strings.TrimSpace(s.Command[0]) != ""
+	return named(s.Command) || s.pipeline()
+}
+
+// pipeline reports a recorder and a transcriber with no Command.
+func (s Settings) pipeline() bool {
+	return !named(s.Command) && named(s.Record) && named(s.Transcribe)
+}
+
+func named(argv []string) bool { return len(argv) > 0 && strings.TrimSpace(argv[0]) != "" }
+
+// Show is what the card shows: the command, or both pipeline commands.
+func (s Settings) Show() string {
+	if s.pipeline() {
+		const wav = "<recording>.wav"
+		return strings.Join(s.fill(s.Record, wav), " ") + "  →  " + strings.Join(s.fill(s.Transcribe, wav), " ")
+	}
+	return strings.Join(s.Argv(), " ")
 }
 
 // Seconds is the recording limit.
@@ -89,14 +113,17 @@ func (s Settings) Seconds() int {
 }
 
 // Argv is the command with its placeholders filled in.
-func (s Settings) Argv() []string {
+func (s Settings) Argv() []string { return s.fill(s.Command, "") }
+
+// fill puts {lang}, {seconds} and {wav} into argv.
+func (s Settings) fill(argv []string, wav string) []string {
 	lang := strings.TrimSpace(s.Language)
 	if lang == "" {
 		lang = "auto"
 	}
-	r := strings.NewReplacer("{lang}", lang, "{seconds}", strconv.Itoa(s.Seconds()))
-	out := make([]string, len(s.Command))
-	for i, a := range s.Command {
+	r := strings.NewReplacer("{lang}", lang, "{seconds}", strconv.Itoa(s.Seconds()), "{wav}", wav)
+	out := make([]string, len(argv))
+	for i, a := range argv {
 		out[i] = r.Replace(a)
 	}
 	return out
@@ -111,6 +138,10 @@ func DefaultBody() string {
   // without a shell; {seconds} and {lang} are filled in. It should stop
   // by itself after {seconds}, or on Ctrl+C (interrupt), and print what
   // it heard. Example: ["my-dictate", "--seconds", "{seconds}", "--language", "{lang}"]
+  // Or, offline in two steps: a recorder writes {wav}, then a local
+  // speech-to-text program reads it (used while "command" is empty):
+  //   "record": ["arecord", "-q", "-f", "S16_LE", "-r", "16000", "-c", "1", "-d", "{seconds}", "{wav}"],
+  //   "transcribe": ["whisper-cli", "-nt", "-l", "{lang}", "-m", "/path/to/ggml-base.bin", "-f", "{wav}"],
   "command": [],
   "language": "",
   "max_seconds": 60
@@ -165,6 +196,11 @@ type Session struct {
 	canceled bool
 	stopped  bool
 	cancel   context.CancelFunc
+
+	// The pipeline (G-VOC): the recording and the transcriber's argv.
+	wav        string
+	transcribe []string
+	tcancel    context.CancelFunc // ends the transcriber (nil until it runs)
 }
 
 // Start runs the program. It stops by itself after Seconds plus a short
@@ -174,14 +210,27 @@ func Start(ctx context.Context, s Settings) (*Session, error) {
 		return nil, errors.New("voice input is not set up: name a program in " + FileName)
 	}
 	argv := s.Argv()
+	var wav string
+	if s.pipeline() {
+		dir, err := os.MkdirTemp("", "tc-voice-")
+		if err != nil {
+			return nil, err
+		}
+		wav = filepath.Join(dir, "recording.wav")
+		argv = s.fill(s.Record, wav)
+	}
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.Seconds())*time.Second+overrun)
 	cmd := spawn.CommandContext(ctx, argv[0], argv[1:]...)
 	cmd.Cancel = func() error { return interrupt(cmd) }
 	cmd.WaitDelay = stopGrace
 	x := &Session{cmd: cmd, out: &capped{}, errOut: &capped{}, done: make(chan struct{}), ctx: ctx, cancel: cancel}
+	if wav != "" {
+		x.wav, x.transcribe = wav, s.fill(s.Transcribe, wav)
+	}
 	cmd.Stdout, cmd.Stderr = x.out, x.errOut
 	if err := cmd.Start(); err != nil {
 		cancel()
+		x.removeWav()
 		return nil, err
 	}
 	crash.Go("voice.Start", func() { x.wait() })
@@ -195,6 +244,12 @@ func (x *Session) wait() {
 	x.mu.Lock()
 	canceled, stopped := x.canceled, x.stopped || timedOut
 	x.mu.Unlock()
+	if x.wav != "" {
+		x.res = x.afterRecording(err, canceled, stopped)
+		x.removeWav()
+		close(x.done)
+		return
+	}
 	switch {
 	case canceled:
 		x.res = Result{Canceled: true}
@@ -208,6 +263,67 @@ func (x *Session) wait() {
 		x.res = Result{Text: Clean(x.out.String())}
 	}
 	close(x.done)
+}
+
+// afterRecording runs the transcriber on the recording.
+func (x *Session) afterRecording(recErr error, canceled, stopped bool) Result {
+	if canceled {
+		return Result{Canceled: true}
+	}
+	fi, statErr := os.Stat(x.wav)
+	if statErr != nil || fi.Size() == 0 || (recErr != nil && !stopped) {
+		msg := strings.TrimSpace(Clean(x.errOut.String()))
+		switch {
+		case msg != "":
+		case recErr != nil:
+			msg = recErr.Error()
+		default:
+			msg = "the recorder saved nothing"
+		}
+		return Result{Err: errors.New(msg)}
+	}
+	x.mu.Lock()
+	if x.canceled {
+		x.mu.Unlock()
+		return Result{Canceled: true}
+	}
+	tctx, tcancel := context.WithTimeout(context.Background(), transcribeWait)
+	x.tcancel = tcancel
+	x.mu.Unlock()
+	defer tcancel()
+	out, errOut := &capped{}, &capped{}
+	cmd := spawn.CommandContext(tctx, x.transcribe[0], x.transcribe[1:]...)
+	cmd.Stdout, cmd.Stderr = out, errOut
+	cmd.WaitDelay = stopGrace
+	err := cmd.Run()
+	x.mu.Lock()
+	canceled = x.canceled
+	x.mu.Unlock()
+	switch {
+	case canceled:
+		return Result{Canceled: true}
+	case err != nil:
+		msg := strings.TrimSpace(Clean(errOut.String()))
+		if msg == "" {
+			msg = err.Error()
+		}
+		return Result{Err: errors.New(msg)}
+	}
+	return Result{Text: Clean(out.String())}
+}
+
+// transcribing reports a running transcriber (tests).
+func (x *Session) transcribing() bool {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	return x.tcancel != nil
+}
+
+// removeWav deletes the recording and its folder.
+func (x *Session) removeWav() {
+	if x.wav != "" {
+		_ = os.RemoveAll(filepath.Dir(x.wav))
+	}
 }
 
 // Stop asks the program to finish and print what it heard: an
@@ -224,6 +340,9 @@ func (x *Session) Stop() {
 func (x *Session) Cancel() {
 	x.mu.Lock()
 	x.canceled = true
+	if x.tcancel != nil {
+		x.tcancel()
+	}
 	x.mu.Unlock()
 	if x.cmd.Process != nil {
 		_ = x.cmd.Process.Kill()

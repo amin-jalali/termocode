@@ -119,6 +119,13 @@ jobs:
             exit 1
           fi
 
+      # CMP-95: a native Windows build compiles and vets (no behavior
+      # claim beyond that; WSL stays the supported way on Windows).
+      - name: Windows native build
+        run: |
+          GOOS=windows GOARCH=amd64 go vet ./...
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o /dev/null ./...
+
       - name: Reference docs up to date
         run: go run ./cmd/docgen -check
 
