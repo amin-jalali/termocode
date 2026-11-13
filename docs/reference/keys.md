@@ -244,6 +244,26 @@ The editor is real Neovim. termocode adds these keys inside Neovim. They are not
 | `]x / [x` | Normal | Next / previous merge conflict. |
 | `Esc` | Insert | Back to Normal mode — the editor is real Neovim. |
 
+## Panel keys
+
+Databases and Containers share their letter keys. A key has one role; `D` always removes and always asks first. The `?` card of each panel shows the same keys.
+
+| Key | Role | Databases | Containers |
+| --- | --- | --- | --- |
+| `a` | add | add a connection |   |
+| `D` | remove (always asks first) | drop the table, view, schema or database | remove a container, image, network, volume or context; project down; sign out |
+| `s` | start |   | start a container or a project; on the SERVICES header, start all |
+| `x` | stop | disconnect | stop a container or a project; on the SERVICES header, stop all |
+| `$` | shell in a terminal | the connection's own CLI (psql, mysql…) | shell in a container or service |
+| `M` | mode | transaction mode of a connection |   |
+| `Q` | query | select 100 rows of the table in the console |   |
+| `v` | view the definition | show the DDL |   |
+| `U` | usage | run pgTAP tests (PostgreSQL) | read volume disk usage |
+| `f` | find |   | search Docker Hub (REGISTRIES) |
+| `u` | use or update |   | pull an image; make a context the default |
+| `y` | copy | copy the name | copy the id |
+| `R` | refresh | refresh the tree | refresh the rows |
+
 ## Change a key
 
 Use **Preferences: Customize Keybindings** in the palette, or edit `~/.config/termocode/keymap.json` (or `$XDG_CONFIG_HOME/termocode/keymap.json`). The file maps a key string to an action name from the tables above:
