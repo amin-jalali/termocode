@@ -600,7 +600,10 @@ func (m *Model) aiHTTPTools(root string, call aiIDECaller, base []ai.Tool) []ai.
 			}
 			set := loadHTTPSettings()
 			if isGRPCRequest(r.rr.Request) {
-				return httpAIGRPCRun(ctx, root, r, set.aiMaxBytes()), nil
+				return httpAIGRPCRun(ctx, root, r, set.aiMaxBytes(), func(run *httpRun) error {
+					_, err := call(ctx, func(m *Model) (string, tea.Cmd, error) { return "", m.httpShowAIRun(run), nil })
+					return err
+				}), nil
 			}
 			resp := httpAIClient(set).Send(ctx, r.rr, httpAIHooks(r.rr.Method, r.rr.URL))
 			run := &httpRun{rr: r.rr, resp: resp, file: r.file, line: r.req.Line, label: r.req.Label(), env: r.env, by: "ai", at: time.Now()}
