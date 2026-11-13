@@ -386,6 +386,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-result-load-all":                aiNever("SQL runs require the database query tool and its guard"),
 	"db-result-row-numbers":             aiAuto(), // DBX-26: display only
 	"db-result-column-types":            aiAuto(),
+	"db-result-beside":                  aiNever(aiNoPicker),
 	"db-result-cell-menu":               aiNever(aiNoPicker),
 	"db-result-create-table":            aiNever("writes the user's clipboard"),
 	"db-inline-clear":                   aiAuto(),
