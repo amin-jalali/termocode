@@ -59,11 +59,11 @@ Settings apply when you save `config.json`. No restart is needed.
 The link works **once**, for **5 minutes**. The page then gets its own
 key, which lives only in that tab. A new tab needs a new link.
 
-The panel also stops by itself:
-
-- after **15 minutes** with no use from any browser (`web_idle_minutes`),
-- **12 hours** after it started (`web_max_hours`),
-- when you quit termocode.
+The panel stays up while termocode runs, used or not, so a phone that
+was locked or out of reach connects again by itself. It stops only with
+**Web: Stop Panel** or when you quit termocode. A browser's sign-in ends
+after **15 minutes** with no use (`web_idle_minutes`) or **12 hours**
+(`web_max_hours`); a paired device signs in again by itself.
 
 Your work does not stop with it. Chats, terminals and runs go on in
 termocode.
@@ -325,9 +325,8 @@ There are three ways. Pick the one that fits your phone:
   its own link. The address is kept only while the panel runs; the
   phone gives it again each time it connects.
 - **Keep it running.** With `"web_phone": "on"` in `config.json`, a
-  paired phone with the panel open keeps the panel from stopping when
-  idle. Guests and the one-time link do not. `web_max_hours` still ends
-  it.
+  paired phone with the panel open keeps its sign-in while its screen is
+  off. Guests and the one-time link do not.
 
 What a Web Push says is set by `web_push_detail` in `config.json`:
 
@@ -634,15 +633,15 @@ issue.
 |---|---|---|
 | `web_panel` | `auto` | `auto`: open it on this computer. `on`: also over SSH, and a script's `--yes`. `off`: never. |
 | `web_port` | `0` | A fixed port on `127.0.0.1` (1024..65535); `0` picks a free one. |
-| `web_idle_minutes` | `15` | Stop after this many minutes without use (1..120). |
-| `web_max_hours` | `12` | Stop this many hours after the start (1..24). |
+| `web_idle_minutes` | `15` | A browser's sign-in ends after this many minutes without use (1..120); the panel stays up. |
+| `web_max_hours` | `12` | A browser's sign-in ends this many hours after it began (1..24); the panel stays up. |
 | `web_open_browser` | `true` | Open the link in this computer's browser on start. |
 | `web_max_viewers` | `4` | Browsers at once (1..8). |
 | `web_push_detail` | `count` | What a phone push says: `none`, `count` or `title` (a fixed text per kind). |
 | `web_listen` | `loopback` | `tailnet`: also reach it from your tailnet devices. `lan`: from devices on the same Wi-Fi (https, pinned certificate). |
 | `web_require_totp` | `false` | A paired device also types a code from an authenticator app. |
 | `web_app_key_login` | `false` | The Android app may pair and sign in with its own keystore key (when passkeys fail in the app). |
-| `web_phone` | `off` | `on`: a paired phone with the panel open keeps it running, screen off too (not guests). `web_max_hours` still applies. |
+| `web_phone` | `off` | `on`: a paired phone with the panel open keeps it running, screen off too (not guests). |
 | `web_projects_max` | `4` | Projects a phone may have open at once (1..8). |
 | `web_project_idle_minutes` | `60` | A project the phone started stops after this many idle minutes (5..240). |
 
@@ -664,8 +663,8 @@ cannot change them.
     on in termocode. If the panel was stopped, start it again.
 
 **"The web session stopped after 15 minutes without typing"**
-:   The panel stops when no one uses it. Start it again, or raise
-    `web_idle_minutes`.
+:   That browser's sign-in ended; the panel is still up. A paired device
+    signs in again by itself; raise `web_idle_minutes` for a longer one.
 
 **"Too many browsers are open on this session"**
 :   Close a tab you do not use, or raise `web_max_viewers`.

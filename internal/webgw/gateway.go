@@ -280,8 +280,6 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	ctlRef.Store(ctl)
 	defer ctl.Close()
 
-	var last atomic.Int64 // unix nanos of the last use
-	last.Store(time.Now().UnixNano())
 	var control *Control
 	if pairing != nil {
 		control = &Control{Passkeys: pairing.cfg.Passkeys, Tokens: tokens, Store: devices, Audit: audit, Now: now, Laptop: laptopName(),
@@ -295,7 +293,7 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 			}}
 	}
 	ws := NewWS(WSConfig{Site: site, Tokens: tokens, Audit: audit, Dial: cfg.Dial, Now: now, Devices: devices, Control: control,
-		Push: push, WatchTokens: watchToks, MaxViewers: cfg.MaxViewers, PhoneWatch: cfg.PhoneWatch, Activity: func() { last.Store(time.Now().UnixNano()) },
+		Push: push, WatchTokens: watchToks, MaxViewers: cfg.MaxViewers, PhoneWatch: cfg.PhoneWatch,
 		Home: cfg.Home, DialWS: cfg.DialWS, MaxHubs: cfg.MaxHubs})
 	wsRef.Store(ws)
 	mux := siteMux(site, auth, ws, cfg.Assets)
@@ -371,7 +369,7 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 		}
 	}
 
-	code, kind, why := waitStop(ctx, ctl, &last, cfg.Idle, started.Add(cfg.Max), tailCh)
+	code, kind, why := waitStop(ctx, ctl, tailCh)
 	if code == webproto.CloseStopped {
 		tokens.RevokeAll()
 	}
@@ -532,36 +530,24 @@ const (
 	EvRoleChange = "role"
 )
 
-// waitStop waits for the first reason to stop. The idle timer is one
-// timer moved forward only when it fires early: no ticking while idle.
-func waitStop(ctx context.Context, ctl *Ctl, last *atomic.Int64, idle time.Duration, maxAt time.Time, tail <-chan tailStop) (webproto.CloseCode, EventKind, string) {
-	idleT := time.NewTimer(idle)
-	defer idleT.Stop()
-	maxT := time.NewTimer(time.Until(maxAt))
-	defer maxT.Stop()
-	for {
-		select {
-		case <-ctl.Done():
-			switch ctl.Code() {
-			case webproto.CloseStopped:
-				return webproto.CloseStopped, EvKillSwitch, "kill_switch"
-			case webproto.CloseRestarting: // a reload into a new build (resume.go)
-				return webproto.CloseRestarting, EvStop, "restart"
-			}
-			return webproto.CloseHubGone, EvStop, "hub_gone"
-		case <-ctx.Done():
-			return webproto.CloseStopped, EvKillSwitch, "signal"
-		case <-maxT.C:
-			return webproto.CloseMaxLifetime, EvMaxStop, "max"
-		case ts := <-tail:
-			return webproto.CloseStopped, ts.kind, ts.why
-		case <-idleT.C:
-			since := time.Since(time.Unix(0, last.Load()))
-			if since >= idle {
-				return webproto.CloseIdle, EvIdleStop, "idle"
-			}
-			idleT.Reset(idle - since)
+// waitStop waits for the first reason to stop: Stop, the kill switch,
+// termocode's end or a reload. The gateway never stops by itself for
+// being unused or old (owner, 2026-11-09: with no laptop at hand nothing
+// could open it again); Idle and Max only end session tokens.
+func waitStop(ctx context.Context, ctl *Ctl, tail <-chan tailStop) (webproto.CloseCode, EventKind, string) {
+	select {
+	case <-ctl.Done():
+		switch ctl.Code() {
+		case webproto.CloseStopped:
+			return webproto.CloseStopped, EvKillSwitch, "kill_switch"
+		case webproto.CloseRestarting: // a reload into a new build (resume.go)
+			return webproto.CloseRestarting, EvStop, "restart"
 		}
+		return webproto.CloseHubGone, EvStop, "hub_gone"
+	case <-ctx.Done():
+		return webproto.CloseStopped, EvKillSwitch, "signal"
+	case ts := <-tail:
+		return webproto.CloseStopped, ts.kind, ts.why
 	}
 }
 
