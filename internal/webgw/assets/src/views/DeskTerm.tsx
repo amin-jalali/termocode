@@ -39,6 +39,7 @@ import { RowMenu, type MenuItem } from "../ui/RowMenu";
 import { Refused } from "./Placeholder";
 import { About, asRows, Screen, wrapRows } from "./Term";
 import { MAX_PASTE, PasteSheet, pasting } from "./TermInput";
+import { copyText as copy } from "../lib/clip";
 
 /** NEAR_BOTTOM_PX: closer than this to the end, new output keeps the view at the end. */
 const NEAR_BOTTOM_PX = 24;
@@ -106,15 +107,6 @@ function go(buf: number, text: string): void {
       waiting.delete(buf);
       if (q) go(buf, q);
     });
-}
-
-function copy(text: string): void {
-  const fail = () => toast("warn", t("copy.failed"));
-  try {
-    navigator.clipboard.writeText(text).then(() => toast("ok", t("copied")), fail);
-  } catch {
-    fail();
-  }
 }
 
 /** selectedIn is the page's selected text when it lies in el ("" none). */

@@ -33,6 +33,7 @@ import { SkeletonRows } from "../ui/Skeleton";
 import { Refused, TopicBody } from "./Placeholder";
 import { pasting, TermInput } from "./TermInput";
 import { View } from "./View";
+import { copyText as copy } from "../lib/clip";
 
 /** NEAR_BOTTOM_PX: closer than this to the end, new output keeps the view at the end. */
 const NEAR_BOTTOM_PX = 48;
@@ -168,16 +169,6 @@ function Chips({ terms, cur }: { terms: TermItem[]; cur: number | undefined }) {
       ))}
     </div>
   );
-}
-
-/** copy puts text on the clipboard (writing only; the page never reads it). */
-function copy(text: string): void {
-  const fail = () => toast("warn", t("copy.failed"));
-  try {
-    navigator.clipboard.writeText(text).then(() => toast("ok", t("copied")), fail);
-  } catch {
-    fail();
-  }
 }
 
 /** rowMenu is what a long press on a terminal row offers. */
