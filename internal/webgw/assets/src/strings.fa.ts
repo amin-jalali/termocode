@@ -205,6 +205,7 @@ export const FA: Record<TranslatedKey, string> = {
   "live.send_mine": "متن من را بفرست",
   "live.save_first": "اول انتخاب کنید: لپ‌تاپ این فایل را تغییر داد.",
   "live.not_sent": "فرستاده نشد: {msg}",
+  "live.laptop_caret": "مکان‌نمای لپ‌تاپ",
   "img.loading": "تصویر بار می‌شود…",
   "img.alt": "تصویر {name}",
   "img.too_big": "برای نمایش اینجا خیلی بزرگ است. آن را روی لپ‌تاپ باز کنید.",

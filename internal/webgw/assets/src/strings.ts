@@ -209,6 +209,7 @@ export const S = {
   "live.send_mine": "Send mine",
   "live.save_first": "Choose first: the laptop changed this file.",
   "live.not_sent": "Not sent: {msg}",
+  "live.laptop_caret": "Laptop's cursor",
   "img.loading": "Loading the image…",
   "img.alt": "Image {name}",
   "img.too_big": "Too big to show here. Open it on the laptop.",

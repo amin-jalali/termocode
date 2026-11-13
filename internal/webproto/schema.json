@@ -172,7 +172,8 @@
         "TickDelta",
         "DirtyDelta",
         "ResetDelta",
-        "GoneDelta"
+        "GoneDelta",
+        "CursorDelta"
       ]
     },
     {
@@ -737,6 +738,19 @@
       "laptop_card": false,
       "audit": "no",
       "phase": "v1"
+    },
+    {
+      "op": "buf.cursor",
+      "args": "BufCursorArgs",
+      "role": "controller",
+      "rate": {
+        "n": 20,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
     },
     {
       "op": "file.image",
@@ -7066,6 +7080,26 @@
       ],
       "additionalProperties": false
     },
+    "BufCursorArgs": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "col": {
+          "type": "integer"
+        },
+        "row": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "buf",
+        "row",
+        "col"
+      ],
+      "additionalProperties": false
+    },
     "BufHeadRes": {
       "type": "object",
       "properties": {
@@ -7202,6 +7236,9 @@
         },
         "ft": {
           "type": "string"
+        },
+        "laptop": {
+          "$ref": "#/defs/Cursor"
         },
         "lines": {
           "items": {
@@ -8613,6 +8650,40 @@
         "t"
       ],
       "additionalProperties": false
+    },
+    "Cursor": {
+      "type": "object",
+      "properties": {
+        "col": {
+          "type": "integer"
+        },
+        "row": {
+          "type": "integer"
+        },
+        "sel": {
+          "$ref": "#/defs/Pos"
+        }
+      },
+      "required": [
+        "row",
+        "col"
+      ],
+      "additionalProperties": true
+    },
+    "CursorDelta": {
+      "type": "object",
+      "properties": {
+        "at": {
+          "$ref": "#/defs/Cursor"
+        },
+        "kind": {
+          "const": "cursor"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": true
     },
     "DBAddArgs": {
       "type": "object",

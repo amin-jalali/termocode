@@ -6,7 +6,7 @@
 // at hand at once.
 import { computed, effect, signal } from "@preact/signals";
 import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
-import { FRAME_PATH, type AiAct, type AiAt, type AiKind, type EditAct, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameHint, type FrameLines, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type NavKind, type ToFrame, type CursorOp } from "../monaco/protocol";
+import { FRAME_PATH, type AiAct, type AiAt, type AiKind, type EditAct, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameHint, type FrameLines, type FrameMarker, type FrameOpts, type FramePeer, type FromFrame, type LspKind, type NavKind, type ToFrame, type CursorOp } from "../monaco/protocol";
 import { dict } from "../state/dict";
 import type { Mark } from "./gutter";
 import { activeFile, closeTab, cursorAt, escapeKey, focusSlot, noteClip, quick, vimMode } from "./workbench";
@@ -91,6 +91,8 @@ export interface DeskHost extends EditorHost {
   onGlyph?(line: number, menu: boolean, x: number, y: number): void;
   /** onGitMark hears a click on a git change mark (1-based row). */
   onGitMark?(line: number): void;
+  /** onCaret hears the user's caret (1-based line and UTF-16 column). */
+  onCaret?(line: number, col: number): void;
 }
 
 /** DeskHandle is an EditorHandle with the settings the view changes. */
@@ -109,6 +111,8 @@ export interface DeskHandle extends EditorHandle {
   /** reveal shows a 1-based line (and column) with the cursor there. */
   reveal(line: number, col?: number): void;
   markers(items: FrameMarker[]): void;
+  /** peers draws the other people's carets (G-COL). */
+  peers(items: FramePeer[]): void;
   /** original sets a diff editor's older text. */
   original(text: string): void;
   diffView(o: { inline?: boolean; collapse?: boolean }): void;
@@ -227,6 +231,7 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         rows = { from: m.from ?? m.line, to: m.to ?? m.line };
         if (host.path && !host.diff) noteCaret(host.path, m.line, m.col);
         if ((host.slot ?? "g0") === focusSlot.peek()) cursorAt.value = { line: m.line, col: m.col };
+        host.onCaret?.(m.line, m.col);
         return;
       case "save":
         host.onSave();
@@ -377,6 +382,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     },
     markers(items) {
       send({ t: "markers", items });
+    },
+    peers(items) {
+      send({ t: "peers", items });
     },
     original(text) {
       send({ t: "original", text });

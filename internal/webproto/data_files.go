@@ -120,6 +120,24 @@ type BufSnap struct {
 	Expandtab bool   `json:"et,omitempty"`
 	Enc       string `json:"enc,omitempty"`
 	Eol       string `json:"eol,omitempty"`
+	// Laptop is the laptop's cursor when it is in this buffer (G-COL,
+	// live editing together): the page draws it.
+	Laptop *Cursor `json:"laptop,omitempty"`
+}
+
+// Cursor is a cursor in a buffer: zero-based row, byte column (as nvim
+// counts), and Sel, the other end of a selection when there is one.
+type Cursor struct {
+	Row int  `json:"row"`
+	Col int  `json:"col"`
+	Sel *Pos `json:"sel,omitempty"`
+}
+
+// CursorDelta: the laptop's cursor moved in this buffer; At is nil when
+// it left the buffer (G-COL).
+type CursorDelta struct {
+	Kind string  `json:"kind" const:"cursor"`
+	At   *Cursor `json:"at,omitempty"`
 }
 
 // LinesDelta replaces rows [First, Last) with Lines (as
@@ -193,7 +211,7 @@ const (
 func init() {
 	registerTopic("tree", TreeSnap{}, TreeDirDelta{}, TreeRemoveDelta{}, TreeHiddenDelta{}, TreeRootsDelta{})
 	registerTopic("bufs", BufsSnap{}, BufsSnap{})
-	registerTopic("buf", BufSnap{}, LinesDelta{}, TickDelta{}, DirtyDelta{}, ResetDelta{}, GoneDelta{})
+	registerTopic("buf", BufSnap{}, LinesDelta{}, TickDelta{}, DirtyDelta{}, ResetDelta{}, GoneDelta{}, CursorDelta{})
 	registerResult(OpTreeList, TreeListRes{})
 	registerResult(OpBufOpen, BufOpenRes{})
 	registerResult(OpBufHead, BufHeadRes{})

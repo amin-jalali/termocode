@@ -64,6 +64,7 @@ const (
 	OpBufSave          = "buf.save"
 	OpBufUndo          = "buf.undo"
 	OpBufClose         = "buf.close"
+	OpBufCursor        = "buf.cursor"
 	OpBufHl            = "buf.hl"
 	OpFilesList        = "files.list"
 	OpFileImage        = "file.image"
@@ -148,6 +149,8 @@ var opTable = []Policy{
 	{Op: OpBufSave, New: newOf[BufArgs](), Role: RoleController, Rate: perSec(20), MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV1},
 	{Op: OpBufUndo, New: newOf[BufArgs](), Role: RoleController, Rate: perSec(20), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV1},
 	{Op: OpBufClose, New: newOf[BufArgs](), Role: RoleController, Rate: perSec(20), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV1},
+	// The page's caret, shown in the laptop's editor (G-COL).
+	{Op: OpBufCursor, New: newOf[BufCursorArgs](), Role: RoleController, Rate: perSec(20), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV2},
 
 	// Images (v2): bytes for the page to show, never a URL.
 	{Op: OpFileImage, New: newOf[PathArgs](), Role: RoleController, Rate: perSec(4), MaxBytes: 8 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},

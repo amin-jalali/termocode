@@ -61,6 +61,16 @@ export type EditAct =
   | "collapseBlankLines"
   | "replaceInFile";
 
+/** FramePeer is another person's caret (G-COL: the laptop's): 1-based
+ * line, 1-based column in UTF-16 units, the other end of a selection,
+ * and the name its hover shows. */
+export interface FramePeer {
+  line: number;
+  col: number;
+  sel?: { line: number; col: number };
+  name: string;
+}
+
 /** FrameMarker is one diagnostic for the editor's squiggles: rows and
  * columns 1-based in the editor's units (UTF-16), the end excluded. */
 export interface FrameMarker {
@@ -193,6 +203,8 @@ export type ToFrame =
   | { t: "edit"; op: "cut" | "def" | "refs" | "format" | NavKind }
   /** markers: the file's diagnostics (all of them, each time). */
   | { t: "markers"; items: FrameMarker[] }
+  /** peers: the other people's carets (G-COL), drawn over the text. */
+  | { t: "peers"; items: FramePeer[] }
   /** glyphs: the glyph margin's marks (all of them, each time) and the
    * row the debugger stopped on (0: none). */
   | { t: "glyphs"; items: FrameGlyph[]; stop: number }

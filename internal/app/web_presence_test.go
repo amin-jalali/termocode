@@ -12,20 +12,20 @@ import (
 // laptop's cursor in a file a page follows rides on the buf topic; a
 // page's cursor shows in the laptop's editor as a mark with its name.
 
-// webCursorDeltas pumps nvim until a cursor delta of topic is queued on
-// the rig's connection and returns the cursor deltas.
-func webCursorDeltas(r *webFilesRig, topic string) []map[string]any {
+// webCursorDelta pumps nvim until a cursor delta of topic that ok
+// accepts is queued on the rig's connection (the laptop's BufEnter
+// sends one at the top of the buffer first).
+func webCursorDelta(r *webFilesRig, topic string, ok func(at map[string]any) bool) {
 	r.t.Helper()
-	var got []map[string]any
 	r.pumpUntil("a cursor delta", func() bool {
 		for _, d := range r.deltas(topic) {
-			if d["kind"] == "cursor" {
-				got = append(got, d)
+			at, _ := d["at"].(map[string]any)
+			if d["kind"] == "cursor" && ok(at) {
+				return true
 			}
 		}
-		return len(got) > 0
+		return false
 	})
-	return got
 }
 
 // Spec (G-COL): the laptop's cursor in a file the page follows reaches
@@ -39,21 +39,14 @@ func TestLaptopCursorReachesThePage(t *testing.T) {
 vim.api.nvim_set_current_buf(b)
 vim.api.nvim_win_set_cursor(0, { 2, 1 })
 vim.api.nvim_exec_autocmds('CursorMoved', {})`, nil, b.Buf)
-	ds := webCursorDeltas(r, topic)
-	at, _ := ds[len(ds)-1]["at"].(map[string]any)
-	if at == nil || at["row"] != float64(1) || at["col"] != float64(1) {
-		t.Fatalf("cursor delta: %v", ds)
-	}
+	webCursorDelta(r, topic, func(at map[string]any) bool { return at != nil && at["row"] == float64(1) && at["col"] == float64(1) })
 	c2 := r.conn("c-2", webproto.RoleController)
 	snap := r.subOn(c2, topic)
 	if l, _ := snap["laptop"].(map[string]any); l == nil || l["row"] != float64(1) || l["col"] != float64(1) {
 		t.Fatalf("snapshot: %v", snap["laptop"])
 	}
 	r.lua(`vim.cmd('enew') vim.api.nvim_exec_autocmds('CursorMoved', {})`, nil)
-	ds = webCursorDeltas(r, topic)
-	if d := ds[len(ds)-1]; d["at"] != nil {
-		t.Fatalf("the laptop left the buffer: %v", d)
-	}
+	webCursorDelta(r, topic, func(at map[string]any) bool { return at == nil })
 }
 
 // Spec (G-COL): the cursor delta folds into the snapshot the same way

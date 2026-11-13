@@ -45,6 +45,19 @@ export function utf8Len(s: string): number {
   return n;
 }
 
+/** colUtf16 turns a byte column of line (nvim) into UTF-16 units (the
+ * editor's), at most the line's length. */
+export function colUtf16(line: string, bytes: number): number {
+  let n = 0, i = 0;
+  while (i < line.length && n < bytes) {
+    const c = line.charCodeAt(i);
+    const pair = isHigh(c) && i + 1 < line.length && isLow(line.charCodeAt(i + 1));
+    n += c < 0x80 ? 1 : c < 0x800 ? 2 : pair ? 4 : 3;
+    i += pair ? 2 : 1;
+  }
+  return i;
+}
+
 /** pos is offset at in text as nvim's (row, byte column). */
 export function pos(text: string, at: number): { row: number; col: number } {
   let row = 0, start = 0;

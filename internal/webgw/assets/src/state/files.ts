@@ -106,7 +106,8 @@ export function isGone(data: unknown): boolean {
 }
 
 /** buf:<n>: lines replaces rows, tick and dirty set one field, reset
- * replaces the whole buffer, gone ends the topic. */
+ * replaces the whole buffer, cursor sets (or without at, drops) the
+ * laptop's cursor (G-COL), gone ends the topic. */
 export const reduceBuf: Reducer = (data, delta) => {
   const s = obj(data, "buf") as unknown as BufSnap;
   const d = obj(delta, "buf delta");
@@ -123,6 +124,10 @@ export const reduceBuf: Reducer = (data, delta) => {
       return { ...s, lines, dirty: bool(d.on, "dirty") };
     case "reset":
       return { ...s, tick: int(d.tick, "tick"), lines: strs(d.lines, "lines"), dirty: bool(d.dirty, "dirty") };
+    case "cursor": {
+      const { laptop: _, ...rest } = s;
+      return d.at === undefined || d.at === null ? { ...rest, lines } : { ...rest, lines, laptop: obj(d.at, "at") as unknown as BufSnap["laptop"] };
+    }
     case "gone":
       return markGone({ ...s, lines });
     default:

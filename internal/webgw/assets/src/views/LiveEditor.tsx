@@ -25,6 +25,29 @@ import { t } from "../strings";
 import { Button } from "../ui/Button";
 import { DiffRow } from "../ui/rows";
 import { diffRows } from "./EditSheet";
+import { colUtf16, utf8Len } from "../lib/textdiff";
+
+/** carets are the page's carets waiting to go to the laptop, by buffer. */
+const carets = new Map<number, { line: number; col: number }>();
+
+/** sendCaret tells the laptop where this page's caret is (G-COL: its
+ * editor shows it with the device's name), at most every 200 ms; the
+ * newest caret wins. line and col are the editor's (1-based, UTF-16). */
+function sendCaret(buf: number, line: number, col: number, text: () => string): void {
+  const waiting = carets.has(buf);
+  carets.set(buf, { line, col });
+  if (waiting) return;
+  setTimeout(() => {
+    const c = carets.get(buf);
+    carets.delete(buf);
+    if (!c || !live.peek()) return;
+    const row = text().split("\n")[c.line - 1] ?? "";
+    link.request("buf.cursor", { buf, row: c.line - 1, col: utf8Len(row.slice(0, c.col - 1)) }).then(
+      () => undefined,
+      () => undefined,
+    );
+  }, 200);
+}
 
 function readBuf(data: unknown): BufSnap | null {
   if (typeof data !== "object" || data === null) return null;
@@ -158,6 +181,8 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
               onDiff: (n, a, r) => diffRef.current?.onCount(n, a, r),
               onGlyph: diff ? undefined : (line, menu, x, y) => onGlyph(path, line, menu, x, y),
               onGitMark: diff ? undefined : (line) => peekChange(path, line),
+              // Live editing together (G-COL): the laptop sees this caret.
+              onCaret: diff || d.readOnly ? undefined : (line, col) => sendCaret(buf, line, col, () => ed.current?.text() ?? ""),
             }),
         })
       : loadEditor();
@@ -216,6 +241,16 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
   useEffect(() => {
     if (snap) own?.store(snap, isGone(ts?.data));
   }, [snap, ready, own]);
+  // Live editing together (G-COL): the laptop's cursor (and selection)
+  // in this file, drawn as a caret named Laptop.
+  const laptopAt = snap?.laptop;
+  useEffect(() => {
+    const h = ed.current as DeskHandle | null;
+    if (!desk || diff || !ready || !h) return;
+    const lines = snap?.lines ?? [];
+    const at = (row: number, col: number) => ({ line: row + 1, col: colUtf16(lines[row] ?? "", col) + 1 });
+    h.peers(laptopAt ? [{ ...at(laptopAt.row, laptopAt.col), sel: laptopAt.sel ? at(laptopAt.sel.row, laptopAt.sel.col) : undefined, name: t("live.laptop_caret") }] : []);
+  }, [ready, !!laptopAt, laptopAt?.row, laptopAt?.col, laptopAt?.sel?.row, laptopAt?.sel?.col]);
   // Git change marks (desktop): the file's unstaged diff on disk, asked
   // again when the laptop saves or git's list changes.
   const gitData = desk ? (store.topic("git").value?.data as GitSnap | undefined) : undefined;

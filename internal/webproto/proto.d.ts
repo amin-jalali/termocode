@@ -231,6 +231,12 @@ export interface Pos {
   col: number;
 }
 
+export interface BufCursorArgs {
+  buf: number;
+  row: number;
+  col: number;
+}
+
 export interface ChatImageArgs {
   i: number;
   n: number;
@@ -1594,6 +1600,13 @@ export interface BufSnap {
   et?: boolean;
   enc?: string;
   eol?: string;
+  laptop?: Cursor;
+}
+
+export interface Cursor {
+  row: number;
+  col: number;
+  sel?: Pos;
 }
 
 export interface LinesDelta {
@@ -1623,6 +1636,11 @@ export interface ResetDelta {
 
 export interface GoneDelta {
   kind: "gone";
+}
+
+export interface CursorDelta {
+  kind: "cursor";
+  at?: Cursor;
 }
 
 export interface TermsSnap {
@@ -3992,6 +4010,7 @@ export interface OpArgs {
   "buf.save": BufArgs;
   "buf.undo": BufArgs;
   "buf.close": BufArgs;
+  "buf.cursor": BufCursorArgs;
   "file.image": PathArgs;
   "chat.image": ChatImageArgs;
   "term.send": TermSendArgs;
@@ -4310,7 +4329,7 @@ export interface TopicData {
   "cards": { snap: CardsSnap; delta: CardsDelta };
   "tree": { snap: TreeSnap; delta: TreeDirDelta | TreeRemoveDelta | TreeHiddenDelta | TreeRootsDelta };
   "bufs": { snap: BufsSnap; delta: BufsSnap };
-  "buf": { snap: BufSnap; delta: LinesDelta | TickDelta | DirtyDelta | ResetDelta | GoneDelta };
+  "buf": { snap: BufSnap; delta: LinesDelta | TickDelta | DirtyDelta | ResetDelta | GoneDelta | CursorDelta };
   "terms": { snap: TermsSnap; delta: TermsSnap };
   "term": { snap: TermSnap; delta: LinesDelta | TickDelta | TermResetDelta | TermModeDelta | GoneDelta };
   "git": { snap: GitSnap; delta: GitSnap };
