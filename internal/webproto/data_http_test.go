@@ -30,7 +30,7 @@ func TestHTTPRows(t *testing.T) {
 func TestHTTPArgsRules(t *testing.T) {
 	good := map[string][]string{
 		OpHTTPSend: {`{"path":"api/users.http","index":2}`, `{"method":"POST","url":"https://api.example.com/x","headers":[{"name":"Content-Type","value":"application/json"}],"body":"{}","env":"dev"}`,
-			`{"url":"http://localhost:8080/health"}`, `{"history":"h-12ab"}`, `{"saved":1}`, `{"path":"a.http","index":1,"env":"-"}`},
+			`{"url":"http://localhost:8080/health"}`, `{"method":"GRPC","url":"grpc://h:1/a.B/C","proto":["proto/a.proto"],"proto_dirs":["proto","third_party"]}`, `{"history":"h-12ab"}`, `{"saved":1}`, `{"path":"a.http","index":1,"env":"-"}`},
 		OpHTTPResponse:   {`{}`, `{"run":3}`},
 		OpHTTPCurl:       {`{"run":0}`, `{"path":"a.http","index":1}`},
 		OpHTTPEnvSelect:  {`{"name":"dev"}`, `{"name":""}`},
@@ -42,7 +42,10 @@ func TestHTTPArgsRules(t *testing.T) {
 	bad := map[string][]string{
 		OpHTTPSend: {`{}`, `{"path":"a.http"}`, `{"path":"a.http","index":1,"url":"https://x"}`, `{"path":"../a.http","index":1}`, `{"path":"/etc/a.http","index":1}`,
 			`{"url":"https://x","method":"GET X"}`, `{"url":"https://x","headers":[{"name":"Bad Name","value":"v"}]}`,
-			`{"url":"https://x","headers":[{"name":"X","value":"a\nb"}]}`, `{"url":"https://x\n"}`, `{"saved":-1}`, `{"history":"a b"}`},
+			`{"url":"https://x","headers":[{"name":"X","value":"a\nb"}]}`, `{"proto":["a.proto"]}`, `{"path":"a.http","index":1,"proto":["a.proto"]}`,
+			`{"method":"GRPC","url":"grpc://h:1/a.B/C","proto":["/etc/a.proto"]}`, `{"method":"GRPC","url":"grpc://h:1/a.B/C","proto":["../a.proto"]}`,
+			`{"method":"GRPC","url":"grpc://h:1/a.B/C","proto":["a.txt"]}`, `{"method":"GRPC","url":"grpc://h:1/a.B/C","proto_dirs":["../x"]}`,
+			`{"method":"GRPC","url":"grpc://h:1/a.B/C","proto":["a.proto","b.proto","c.proto","d.proto","e.proto","f.proto","g.proto","h.proto","i.proto"]}`, `{"url":"https://x\n"}`, `{"saved":-1}`, `{"history":"a b"}`},
 		OpHTTPResponse:   {`{"run":-1}`},
 		OpHTTPEnvSelect:  {`{"name":"a\nb"}`},
 		OpHTTPSave:       {`{"run":1,"name":""}`, `{"run":1,"name":"a\nb"}`},
