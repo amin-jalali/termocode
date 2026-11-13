@@ -544,6 +544,12 @@ func (s *RedisSession) Listen(ctx context.Context, pattern string, max int) (msg
 			if ctx.Err() != nil {
 				return msgs, false, nil
 			}
+			// The read deadline comes from the context and may fire a
+			// moment before the context reports it: still the normal end.
+			var ne net.Error
+			if dl, ok := ctx.Deadline(); ok && errors.As(v, &ne) && ne.Timeout() && !time.Now().Before(dl.Add(-100*time.Millisecond)) {
+				return msgs, false, nil
+			}
 			return msgs, false, redisError(v, s.password)
 		}
 	}

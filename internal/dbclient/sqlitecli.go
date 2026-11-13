@@ -113,6 +113,9 @@ type SQLiteSession struct {
 	// cipherKey unlocks a SQLCipher file (DBX-64); "" = plain sqlite3.
 	// It is sent on stdin only, never on the command line or in history.
 	cipherKey string
+	// starting is set while start() sets a new process up: a failure then
+	// ends the setup instead of restarting the process again.
+	starting bool
 }
 
 type sqliteProcess struct {
@@ -172,6 +175,8 @@ func sqliteVersionOf(ctx context.Context, path string) (SQLiteVersion, error) {
 }
 
 func (s *SQLiteSession) start(path string, readonly bool) error {
+	s.starting = true
+	defer func() { s.starting = false }()
 	args := []string{"-batch", "-json"}
 	if readonly {
 		args = append(args, "-readonly", "-safe")
@@ -233,6 +238,9 @@ func (s *SQLiteSession) exchangeLocked(ctx context.Context, sql string, maxRows 
 	sentinel := fmt.Sprintf("__TC_END_%d__", s.seq)
 	if _, err := io.WriteString(p.in, sql+"\n;\n.print "+sentinel+"\n"); err != nil {
 		writeErr := err
+		if s.starting {
+			return nil, 0, fmt.Errorf("write sqlite3 statement: %w", writeErr)
+		}
 		if restartErr := s.restartProcess(p, false); restartErr != nil {
 			return nil, 0, fmt.Errorf("write sqlite3 statement: %w; session restart failed: %v", writeErr, restartErr)
 		}
@@ -300,6 +308,9 @@ func (s *SQLiteSession) exchangeLocked(ctx context.Context, sql string, maxRows 
 	case r := <-ch:
 		if r.err != nil {
 			stopErr := r.err
+			if s.starting {
+				return nil, 0, fmt.Errorf("sqlite3 stopped while it was being set up: %w", stopErr)
+			}
 			if restartErr := s.restartProcess(p, false); restartErr != nil {
 				return nil, 0, fmt.Errorf("sqlite3 stopped mid-query after %s; the result is not complete and the session restart failed (%v): %w", rowCount(r.rows), restartErr, stopErr)
 			}

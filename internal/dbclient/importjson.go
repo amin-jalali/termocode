@@ -91,6 +91,9 @@ func readJSONRows(data []byte) ([]jsonRow, error) {
 			}
 			rows = append(rows, r)
 		}
+		if _, err := dec.Token(); err != nil { // the closing ]
+			return nil, fmt.Errorf("the array is cut off after %d rows: %w", len(rows), err)
+		}
 		return rows, nil
 	}
 	sc := bufio.NewScanner(bytes.NewReader(trim))
