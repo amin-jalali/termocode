@@ -12,7 +12,7 @@ import (
 // originals stay out of the binary.
 //
 //go:embed index.html app.js app-chunk*.js workbench.js aictx.js home.js editor.js strings-fa.js device.js app.css desk.css licenses.txt icon.svg icon-maskable.svg manifest.webmanifest fonts/nf-*.woff2 assets.lock
-//go:embed monaco.html monaco-amd.js monaco-frame.js monaco-vim.js monaco-frame.css monaco/editor.js monaco/editor-host.js monaco/editor-contrib.js monaco/editor.css icons/codicon.ttf
+//go:embed relay.html relay.js monaco.html monaco-amd.js monaco-frame.js monaco-vim.js monaco-frame.css monaco/editor.js monaco/editor-host.js monaco/editor-contrib.js monaco/editor.css icons/codicon.ttf
 var files embed.FS
 
 // FS returns the built files.

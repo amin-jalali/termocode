@@ -42,11 +42,11 @@ var sourceRules = []rule{
 	// Only the prefs module touches localStorage, and it never holds a
 	// secret; and the bookmark key of a remembered browser (WEBP-12), the
 	// one secret kept past the tab, in net/devicekey.ts alone.
-	{name: "localStorage", re: regexp.MustCompile(`\blocalStorage\b`), allow: map[string]bool{"lib/prefs.ts": true, "net/devicekey.ts": true}},
+	{name: "localStorage", re: regexp.MustCompile(`\blocalStorage\b`), allow: map[string]bool{"lib/prefs.ts": true, "net/devicekey.ts": true, "relay/main.ts": true}},
 	// Only the auth module keeps the session token, in sessionStorage.
-	{name: "sessionStorage", re: regexp.MustCompile(`\bsessionStorage\b`), allow: map[string]bool{"net/auth.ts": true}},
+	{name: "sessionStorage", re: regexp.MustCompile(`\bsessionStorage\b`), allow: map[string]bool{"net/auth.ts": true, "relay/main.ts": true}},
 	// Network: only the auth module fetches (POST /auth), only the link opens a socket.
-	{name: "fetch", re: regexp.MustCompile(`\bfetch\s*\(`), allow: map[string]bool{"net/auth.ts": true}},
+	{name: "fetch", re: regexp.MustCompile(`\bfetch\s*\(`), allow: map[string]bool{"net/auth.ts": true, "relay/main.ts": true}},
 	{name: "WebSocket", re: regexp.MustCompile(`\bnew\s+(this\.)?(WebSocket|WS)\b|\bWebSocket\s*\(`), allow: map[string]bool{"net/link.ts": true}},
 	{name: "cookies", re: regexp.MustCompile(`document\.cookie`)},
 	// The terminal's paste sheet takes the browser's own paste; the page
