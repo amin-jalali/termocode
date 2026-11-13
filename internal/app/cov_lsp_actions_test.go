@@ -459,3 +459,34 @@ func TestCovRoutePickerSelectCodeActions(t *testing.T) {
 		t.Error("no editor")
 	}
 }
+
+func TestCovCodeActionsFetchAndApplyThroughServer(t *testing.T) {
+	m, dir := goRepoModel(t)
+	lib := filepath.Join(dir, "lib.go")
+	openAt(t, &m, lib, 3)
+	covStartLSP(t, &m, map[string]any{
+		"textDocument/codeAction": []any{
+			map[string]any{"title": "Add header", "kind": "quickfix", "isPreferred": true,
+				"edit": map[string]any{"changes": map[string]any{"file://" + lib: []any{
+					map[string]any{"range": lspRng(0, 0), "newText": "// header\n"}}}}},
+			map[string]any{"title": "Other", "kind": "refactor"},
+		},
+	})
+	msg, ok := m.fetchCodeActionsCmd()().(CodeActionsMsg)
+	if !ok || len(msg.Actions) != 2 {
+		t.Fatalf("msg %+v", msg)
+	}
+	m.applyCodeActionsMsg(msg)
+	if m.preferredCodeAction == nil || m.preferredCodeActionLine != 3 {
+		t.Fatalf("preferred %+v line %d", m.preferredCodeAction, m.preferredCodeActionLine)
+	}
+	if m.applyPreferredCodeActionFromCache() == nil {
+		t.Error("toast expected")
+	}
+	text, _ := m.nvim.EvalLuaString(`return table.concat(vim.api.nvim_buf_get_lines(0, 0, 1, false), '\n')`)
+	if text != "// header" {
+		t.Errorf("first line %q", text)
+	}
+	// the picker route: id -> index -> nvim
+	m.applySelectedCodeAction("ca-" + "2")
+}
