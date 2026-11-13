@@ -133,6 +133,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	if c, ok := m.handleContainerLSPMsg(msg); ok { // container_lsp.go
 		return m, c
 	}
+	if c, ok := m.handleSidecarMsg(msg); ok { // container_sidecar.go
+		return m, c
+	}
 	if c, ok := m.handleDevContainerMsg(msg); ok { // devcontainer_open.go
 		return m, c
 	}

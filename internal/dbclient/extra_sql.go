@@ -21,8 +21,8 @@ import (
 
 // More SQL engines on pure-Go drivers (DBX-71): Firebird, Vertica,
 // Exasol and SAP HANA. They run on SQLSession with their own dialect;
-// only the way to open the pool differs. IBM Db2 is not here: its only
-// driver needs cgo.
+// only the way to open the pool differs. IBM Db2 is here too, but its
+// driver needs cgo: it is linked in only with -tags db2 (db2.go).
 
 // ExtraSQLEngine is one of these engines.
 type ExtraSQLEngine struct {
@@ -43,8 +43,15 @@ var extraSQLEngines = []ExtraSQLEngine{
 	{ID: "vertica", Title: "Vertica", Port: 5433, User: "dbadmin", Hint: "default port 5433", DBLabel: "Database:"},
 	{ID: "exasol", Title: "Exasol", Port: 8563, User: "sys", Hint: "default port 8563; TLS on by default",
 		DBLabel: "Schema to open (empty: none):", DBOptional: true},
+	{ID: "db2", Title: "IBM Db2", Port: 50000, User: "db2inst1", Hint: db2Hint, DBLabel: "Database name:"},
 	{ID: "hana", Title: "SAP HANA", Port: 39017, User: "SYSTEM", Hint: "default port 39017 (tenant 3NN15/3NN41 also)",
 		DBLabel: "Default schema (empty: the user's schema):", DBOptional: true},
+}
+
+// ExtraSQLEngineTitle is the name of an engine ("" for another driver).
+func ExtraSQLEngineTitle(id string) string {
+	e, _ := ExtraSQLEngineByID(id)
+	return e.Title
 }
 
 // ExtraSQLEngines lists the engines in menu order.
@@ -78,6 +85,8 @@ func extraSQLDialect(driver string) Dialect {
 		return ExasolDialect{}
 	case "hana":
 		return HANADialect{}
+	case "db2":
+		return Db2Dialect{}
 	}
 	return nil
 }
@@ -291,6 +300,12 @@ func openExtraSQLDB(conn Conn, password string) (*sql.DB, func(), error) {
 			return nil, noop, e
 		}
 		connector, err = dsnConnector("exasol", dsn)
+	case "db2":
+		connector, err = openDb2(relayed, password)
+		if errors.Is(err, errDb2Missing) {
+			release()
+			return nil, noop, err
+		}
 	case "hana":
 		cfg, e := HANAConfig(conn, password)
 		if e != nil {

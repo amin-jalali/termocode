@@ -178,10 +178,10 @@ func (m *Model) runFindInFilesWith(query string, opts search.Options) tea.Cmd {
 	roots := workspaceRoots()
 	opts.MaxResults = searchMaxResults(loadSettings())
 	engine := "basic"
-	if fsys, ok := m.remoteFS(); ok {
+	if containerSearchOptions(m.workspace(), &opts) {
 		// A container workspace (FIX-3): its one root, read through the
-		// Host, never the local disk.
-		roots, opts.FS = []string{m.workspace().Root}, fsys
+		// Host, never the local disk; rg or grep there pick the files.
+		roots = []string{m.workspace().Root}
 	} else if search.Available() {
 		engine = "rg"
 	}

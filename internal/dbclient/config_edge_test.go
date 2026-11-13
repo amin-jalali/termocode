@@ -13,7 +13,7 @@ func TestParseConfigMarksEachProblem(t *testing.T) {
 	  {"id":"dup","driver":"postgres","host":"h","port":5432},
 	  {"id":"dup","driver":"postgres","host":"h","port":5432},
 	  {"id":"url-pw","driver":"postgres","url":"postgres://u:hunter2@h/db"},
-	  {"id":"db2","driver":"db2","host":"h","port":50000},
+	  {"id":"inf","driver":"informix","host":"h","port":9088},
 	  {"id":"ref","driver":"postgres","host":"h","port":5432,"password":"${vault:x}"}
 	]}`
 	cs, err := ParseConfig([]byte(body), SourceProject, "p", t.TempDir())

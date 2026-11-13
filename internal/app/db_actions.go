@@ -1113,7 +1113,7 @@ func dbTypePickerItems(remote bool) []picker.Item {
 	for _, p := range dbclient.MySQLPresets() {
 		items = append(items, picker.Item{ID: "preset:" + p.ID, Title: p.Title, Hint: p.Hint})
 	}
-	// Firebird, Vertica, Exasol, SAP HANA (DBX-71), also over SSH.
+	// Firebird, Vertica, Exasol, SAP HANA, Db2 (DBX-71), also over SSH.
 	for _, e := range dbclient.ExtraSQLEngines() {
 		items = append(items, picker.Item{ID: "engine:" + e.ID, Title: e.Title, Hint: e.Hint})
 	}

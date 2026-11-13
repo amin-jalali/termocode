@@ -108,7 +108,7 @@ With no connections yet, the view lists the suggestions and offers **a add** and
 
 ## Add a connection
 
-Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, SQL Server / Azure SQL, Oracle Database, Trino, Presto, DuckDB, Cassandra / ScyllaDB, ClickHouse, libSQL / Turso, MongoDB, Firebird, Vertica, Exasol, SAP HANA, or **From a URL**.
+Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, SQL Server / Azure SQL, Oracle Database, Trino, Presto, DuckDB, Cassandra / ScyllaDB, ClickHouse, libSQL / Turso, MongoDB, Firebird, Vertica, Exasol, SAP HANA, IBM Db2, or **From a URL**.
 
 The MySQL family has presets on the MySQL driver: MariaDB, TiDB (port 4000), PlanetScale / Vitess and Amazon Aurora (MySQL) (both with TLS), and SingleStore. A preset fills the port, user and SSL mode, shows a short note on what differs from MySQL, and is saved as `"preset"` in the connection; the tree shows its name next to the host.
 
@@ -626,15 +626,16 @@ Reads run at once. A write, an index change or an `aggregate` with `$out` or `$m
 
 Documents show as rows: `_id` first, then every top-level field in the order first seen; nested objects and arrays as compact JSON, an ObjectId as `ObjectId("…")` so you can paste it into a filter. One batch is read (up to `db_max_rows` documents, or your `limit`); when the server has more, the page says so and the cursor is closed. `bulkWrite` and `renameCollection` are not supported in the console. There are no SQL transactions: each command commits on its own.
 
-## Firebird, Vertica, Exasol and SAP HANA
+## Firebird, Vertica, Exasol, SAP HANA and IBM Db2
 
-These four engines use the SQL console, result pages, tree, history and exports like PostgreSQL. Their drivers are built in (pure Go). IBM Db2 is not available: its only driver needs C libraries.
+These engines use the SQL console, result pages, tree, history and exports like PostgreSQL. Their drivers are built in (pure Go). IBM Db2 is a fifth engine, but its driver needs C libraries: see **Build with IBM Db2** below.
 
 | Engine | `driver` | Port | `database` means | URL |
 | --- | --- | --- | --- | --- |
 | Firebird 3+ | `firebird` | 3050 | a path on the server (`/var/lib/firebird/data/app.fdb`) or an alias (`employee`) | `firebird://SYSDBA@host/employee` |
 | Vertica | `vertica` | 5433 | the database | `vertica://dbadmin@host:5433/vmart` |
 | Exasol | `exasol` | 8563 | the schema to open (optional) | `exasol://sys@host:8563/RETAIL` |
+| IBM Db2 (LUW) | `db2` | 50000 | the database name | `db2://db2inst1@host:50000/SAMPLE` |
 | SAP HANA | `hana` | 39017 | the default schema (optional); the tenant is `params.databaseName` | `hdb://SYSTEM@host:39017?databaseName=HXE` |
 
 - **Tree.** Schemas, tables and views, columns, primary keys, foreign keys, and (where the engine has them) indexes, routines, sequences and triggers. Firebird has no schemas, so it shows one schema named `default`. Firebird, Exasol and SAP HANA have no SQL function for a table's CREATE statement: termocode builds a simple one from the columns. Vertica asks the server (`EXPORT_TABLES`).
@@ -642,8 +643,22 @@ These four engines use the SQL console, result pages, tree, history and exports 
 - **TLS.** Vertica and SAP HANA use the `ssl` block like PostgreSQL. Exasol encrypts by default; `ssl.mode` `disable` turns it off, `require` does not check the server, and a pinned certificate goes in `params.certificatefingerprint` (a CA file is not supported). Firebird has no TLS: its `wire_crypt` (on by default since Firebird 3) encrypts the link, and an `ssl` block is refused.
 - **SSH tunnels** work for all four. For Firebird, Vertica and Exasol, termocode opens a local port on `127.0.0.1` that only forwards to the tunnel. With Exasol's server check on, use `params.certificatefingerprint` over a tunnel, because the host name is `127.0.0.1`.
 - **Options.** `options.schema` sets the search path (Vertica), `OPEN SCHEMA` (Exasol) or `SET SCHEMA` (SAP HANA); `options.timeZone` works on Vertica, Exasol and Firebird 4+; `options.isolation` works on Vertica. The init SQL runs on every new connection.
-- **Read-only.** A read-only session opens a read-only transaction on Firebird, Vertica and SAP HANA. Exasol has none, so its read-only session only checks each statement before it runs, and the AI tools do not work on Exasol connections.
-- **Web page and outside agents.** The web page lists and pages the tables of Firebird, Vertica (the `public` schema) and SAP HANA (the default schema, else the user's), and outside agents get the `db_*` tools for them through the MCP server. Exasol is not offered there, for the same reason.
+- **Read-only.** A read-only session opens a read-only transaction on Firebird, Vertica and SAP HANA. Exasol and Db2 have none, so their read-only session only checks each statement before it runs, and the AI tools do not work on Exasol or Db2 connections.
+- **Web page and outside agents.** The web page lists and pages the tables of Firebird, Vertica (the `public` schema) and SAP HANA (the default schema, else the user's), and outside agents get the `db_*` tools for them through the MCP server. Exasol and Db2 are not offered there, for the same reason.
+
+### Build with IBM Db2
+
+The Db2 driver (`github.com/ibmdb/go_ibm_db`) calls IBM's CLI driver through cgo, so the normal build leaves it out. With the normal build a Db2 connection says `built without Db2: rebuild with -tags db2`.
+
+To build with it:
+
+1. Install IBM's CLI driver (`clidriver`): `go run $(go list -m -f '{{.Dir}}' github.com/ibmdb/go_ibm_db)/installer/setup.go`, or unpack IBM's "ibm_data_server_driver_for_odbc_cli" yourself.
+2. Set `IBM_DB_HOME` to the `clidriver` folder, and `CGO_CFLAGS=-I$IBM_DB_HOME/include`, `CGO_LDFLAGS=-L$IBM_DB_HOME/lib`. On Linux also `LD_LIBRARY_PATH=$IBM_DB_HOME/lib`; on macOS `DYLD_LIBRARY_PATH`.
+3. `CGO_ENABLED=1 go build -tags db2 ./cmd/termocode`.
+
+`go test -tags db2 ./internal/dbclient -run Db2` skips when `IBM_DB_HOME` is missing; set `TC_DB2_TEST_DSN` (`HOSTNAME=…;DATABASE=…;PORT=…;UID=…;PWD=…`) to open a real server.
+
+The ssl block sets `SECURITY=SSL` (and `ssl.ca` becomes `SSLServerCertificate`); `params` are added to the connection string as they are (`CurrentSchema`, `ConnectTimeout`, …). `options.schema` runs `SET SCHEMA`. There is no EXPLAIN statement: Db2 writes plans to tables you create first.
 
 ## AI tools and their rules
 

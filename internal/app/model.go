@@ -732,6 +732,10 @@ type Model struct {
 	// RC-6 (container_lsp.go): where the language servers of a
 	// container workspace run, and the local mirror.
 	containerLSP *containerLSPState
+	// RC-8 (container_sidecar.go): the running tools sidecar the
+	// debugger goes through (nil = none), and a start in flight.
+	sidecar         toolsSidecar
+	sidecarStarting bool
 	// RC-7 (devcontainer_open.go): the setup the trust card asks about,
 	// and the one running.
 	devcontainerPending *devcontainerRun
@@ -1506,6 +1510,7 @@ func (m *Model) Close() error {
 	if m.ext != nil && m.ext.proc != nil {
 		m.ext.proc.Close() // process extensions and their children
 	}
+	m.stopSidecarNow()      // the tools sidecar of a container workspace (container_sidecar.go)
 	m.services.shutdown()   // the docker events watcher (services_state.go)
 	m.kube.shutdown()       // kubectl loads and port-forwards (kube_state.go)
 	m.databasesClose(false) // database sessions are idle unless the view is visible
