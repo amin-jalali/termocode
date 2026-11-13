@@ -16,6 +16,7 @@ require (
 	github.com/creack/pty v1.1.24
 	github.com/evanw/esbuild v0.28.2
 	github.com/exasol/exasol-driver-go v1.2.0
+	github.com/flynn/noise v1.1.0
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/go-webauthn/webauthn v0.18.2
 	github.com/gomodule/redigo v1.9.2
