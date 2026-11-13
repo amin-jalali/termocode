@@ -67,3 +67,32 @@ func TestFindEmbeddedSQL(t *testing.T) {
 		}
 	}
 }
+
+// The SQL in strings gets the same inspections as a SQL file, at its
+// place in the code file; a string with backslash escapes is not
+// checked (its text is not the SQL the program sends).
+func TestInspectEmbedded(t *testing.T) {
+	sc := InspectSchema{Tables: map[string]map[string]bool{"": {"users": true}}, Complete: true, Columns: map[string][]string{"users": {"id", "name"}}}
+	src := "package x\nvar q = `\n  SELECT id\n  FROM users WHERE (id = 1`\nvar u = \"SELECT u.nme FROM users u\"\n"
+	got := InspectEmbedded(src, "go", sc)
+	if len(got) != 2 {
+		t.Fatalf("issues = %+v", got)
+	}
+	if got[0].Kind != IssueSyntax || src[got[0].Start:got[0].End] != "(" {
+		t.Fatalf("syntax issue = %+v (%q)", got[0], src[got[0].Start:got[0].End])
+	}
+	if got[1].Kind != IssueColumn || src[got[1].Start:got[1].End] != "nme" || got[1].Fix != "name" {
+		t.Fatalf("column issue = %+v (%q)", got[1], src[got[1].Start:got[1].End])
+	}
+	py := "q = \"\"\"\nSELECT * FROM userz\n\"\"\"\n"
+	if got := InspectEmbedded(py, "python", sc); len(got) != 1 || py[got[0].Start:got[0].End] != "userz" {
+		t.Fatalf("python = %+v", got)
+	}
+	js := "const q = 'SELECT \\'it\\' FROM (users';\n"
+	if got := InspectEmbedded(js, "js", sc); len(got) != 0 {
+		t.Fatalf("escaped string checked: %+v", got)
+	}
+	if got := InspectEmbedded(src, "", sc); got != nil {
+		t.Fatalf("no lang = %+v", got)
+	}
+}
