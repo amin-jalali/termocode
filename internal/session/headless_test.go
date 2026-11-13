@@ -112,3 +112,37 @@ func TestWaitWebHub(t *testing.T) {
 		t.Fatal("an old socket counted as fresh")
 	}
 }
+
+// Spec (MOB-51): StartHeadless starts a session with its UI and no
+// terminal (started true); a second call finds the UI running and reports
+// started false. UIRunning is true only once the web hub socket exists.
+func TestStartHeadlessThroughASpawnedServer(t *testing.T) {
+	r := newRig(t, "sleep 30")
+	spawn := func() error { _, err := r.spawn(); return err }
+	if UIRunning(r.p) {
+		t.Fatal("nothing runs yet")
+	}
+	started, err := StartHeadless(r.p, 0, spawn)
+	if err != nil || !started {
+		t.Fatalf("first start: %v %v", started, err)
+	}
+	if UIRunning(r.p) {
+		t.Fatal("the UI runs but its web hub socket is not there yet")
+	}
+	ln, err := net.Listen("unix", r.p.WebSocket)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	if !UIRunning(r.p) {
+		t.Fatal("UI and hub socket are there")
+	}
+	started, err = StartHeadless(r.p, 0, spawn)
+	if err != nil || started {
+		t.Fatalf("second start: %v %v", started, err)
+	}
+	// no server and none can be spawned: an error
+	if _, err := StartHeadless(Paths{Socket: filepath.Join(t.TempDir(), "none.sock")}, 0, func() error { return os.ErrPermission }); err == nil {
+		t.Error("a failing spawn must fail")
+	}
+}
