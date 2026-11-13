@@ -35,3 +35,28 @@ func TestPushOpenAndUnavailableNote(t *testing.T) {
 		t.Error("strings.phone.ts lacks ph.alerts_nopush")
 	}
 }
+
+// Spec (CMP-47): This phone lists the devices that get pushes (name and
+// day added) with a Remove button for each, for a controller only; the
+// list comes from push.list and a removal is push.remove, both texts in
+// strings.phone.ts.
+func TestPushDeviceListOnThisPhone(t *testing.T) {
+	read := func(p string) string {
+		b, err := os.ReadFile(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+	phone, strs := read("src/views/phone/ThisPhone.tsx"), read("src/strings.phone.ts")
+	for _, want := range []string{`"push.list"`, `"push.remove"`, "ph.push_remove", "ph.push_title", `role === "controller"`} {
+		if !strings.Contains(phone, want) {
+			t.Errorf("ThisPhone.tsx lacks %s", want)
+		}
+	}
+	for _, key := range []string{"ph.push_title", "ph.push_none", "ph.push_remove", "ph.push_added"} {
+		if !strings.Contains(strs, `"`+key+`"`) {
+			t.Errorf("strings.phone.ts lacks %s", key)
+		}
+	}
+}
