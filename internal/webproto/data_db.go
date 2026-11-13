@@ -17,6 +17,7 @@ func init() {
 const (
 	MaxDBConns    = 100
 	MaxDBTables   = 2000
+	MaxDBCursor   = 8 << 10  // chars of a db.rows / db.query cursor (a CQL page state, base64)
 	DBPageRows    = 100      // rows of one db.rows page
 	MaxDBRows     = 1000     // rows of one db.query
 	MaxDBBytes    = 1 << 20  // bytes of cell text in one answer
