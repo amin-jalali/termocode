@@ -697,3 +697,18 @@ agent thread. On the web, this is not there yet.
 | Auto-accept did not answer | The prompt showed a risky command, or it was a question with its own choices. Answer it yourself. |
 | Auto-continue did not type | A question was on the screen, or the agent was working again. The toast says why. |
 | A resumed agent starts a new session | No session id was known. Turn on `agent_transcripts` so termocode can keep it. |
+
+## Switch the signed-in account in place (off by default)
+
+**Agent: Accounts…** gives each account its own folder and never touches `~/.claude` or `~/.codex`.
+If you want the CLI's own sign-in itself to change, set `agent_account_swap` to `true` in
+`config.json`. Then **Agent: Switch Account…** can:
+
+- **Save the signed-in account as…** — keeps a copy of the CLI's sign-in file in the secret store
+  (never shown, never in a log).
+- **Use `<name>`** — a card shows the file and its size (the contents are hidden), **Cancel** first.
+  **Switch** keeps the old file as `<file>.termocode-backup` and writes the saved one.
+- **Undo the last switch** — puts the old file back.
+
+A switch is refused while an agent of that CLI runs, and for a file that is a link. Claude Code on
+a Mac keeps its sign-in in the Keychain: the row says so and termocode does not touch it.
