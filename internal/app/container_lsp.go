@@ -514,6 +514,20 @@ func noteMirrorWrite(p string, data []byte) {
 	}
 }
 
+// noteMirrorRename and noteMirrorRemove follow the explorer's renames,
+// moves and deletes in the container (remote_file_ops.go).
+func noteMirrorRename(from, to string) {
+	if mr := activeLSPMirror.Load(); mr != nil {
+		_ = mr.Rename(from, to)
+	}
+}
+
+func noteMirrorRemove(p string) {
+	if mr := activeLSPMirror.Load(); mr != nil {
+		_ = mr.Remove(p)
+	}
+}
+
 // ─── palette ──────────────────────────────────────────────────────────
 
 func containerLSPPaletteItems() []picker.Item {

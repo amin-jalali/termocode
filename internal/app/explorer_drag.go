@@ -288,6 +288,7 @@ func (m *Model) remoteExplorerMoves(fsys workspace.FS, moves []git.Move) tea.Cmd
 				fail = remoteErrText(label, err)
 				break
 			}
+			noteMirrorRename(mv.From, mv.To) // RC-6 (container_lsp.go)
 			done = append(done, mv)
 		}
 		return applyMsg(func(m *Model) tea.Cmd {

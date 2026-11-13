@@ -110,8 +110,8 @@ Local Diagnostics in Container Workspace**.
 
 The mirror leaves out `node_modules`, `.venv`, `vendor`, `target`,
 `__pycache__` and `.git/objects`, holds at most 512 MB per folder and
-2 GB in all (the oldest go first). Your saves from termocode update it at
-once. In `config.json` the settings are `container_lsp`
+2 GB in all (the oldest go first). Your saves, renames, moves and
+deletes from termocode update it at once. In `config.json` the settings are `container_lsp`
 (`auto`, `image`, `local`, `off`) and `container_local_lsp_diagnostics`
 (`on`, `off`).
 
