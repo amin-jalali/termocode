@@ -645,6 +645,7 @@ type Model struct {
 	kube *kubeState
 	// pendingKubeHelm is the helm repo / install card's answer (kube_install.go).
 	pendingKubeHelm kubeHelmTarget
+	pendingKubeAdd  kubeAddClusterPlan // the Add Cluster card's new kubeconfig (kube_kubeconfig.go)
 	// wt is the WORKTREES view (worktrees_state.go).
 	wt *wtState
 	// specOpen is the spec whose card is open (specs_ui.go).

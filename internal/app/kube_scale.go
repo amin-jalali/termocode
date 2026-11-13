@@ -63,6 +63,9 @@ func (m *Model) handleKubePromptSubmit(value string) (tea.Cmd, bool) {
 	if cmd, ok := m.handleKubeInstallPrompt(value); ok { // kube_install.go
 		return cmd, true
 	}
+	if cmd, ok := m.handleKubeAddClusterPrompt(value); ok { // kube_kubeconfig.go
+		return cmd, true
+	}
 	if m.kube != nil {
 		if cmd, ok := m.handleKubeFilePrompt(value); ok { // kube_podfiles.go
 			return cmd, true
