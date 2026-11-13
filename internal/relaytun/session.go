@@ -453,6 +453,10 @@ func (st *stream) Close() error {
 	return st.s.writeFrame(frClose, st.id, nil)
 }
 
+// Peer is the other end's proven static key (the gateway's HTTP server
+// reads it to know which phone a request came from).
+func (st *stream) Peer() PeerKey { return st.s.peer }
+
 func (st *stream) LocalAddr() net.Addr  { return addr{} }
 func (st *stream) RemoteAddr() net.Addr { return addr{} }
 

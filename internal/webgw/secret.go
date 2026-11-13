@@ -99,6 +99,23 @@ func (s *LaunchSecret) Redeem(plain string, now time.Time) error {
 	return nil
 }
 
+// Matches reports whether plain is the secret and it is still open at
+// now, without using it up (the relay's gate, before the pairing itself
+// redeems it inside the tunnel). A wrong plain counts as a wrong try.
+func (s *LaunchSecret) Matches(plain string, now time.Time) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.used || s.bad >= MaxBadTries || !now.Before(s.exp) {
+		return false
+	}
+	sum := sha256.Sum256([]byte(plain))
+	if subtle.ConstantTimeCompare(sum[:], s.hash[:]) != 1 {
+		s.bad++
+		return false
+	}
+	return true
+}
+
 // String never shows the digest or anything else secret.
 func (s *LaunchSecret) String() string { return "LaunchSecret{…}" }
 

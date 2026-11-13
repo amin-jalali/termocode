@@ -98,6 +98,11 @@ type RunConfig struct {
 	// a hand-over file read (and removed) once the lock is held.
 	Resume     *Resume
 	ResumeFrom string
+	// Relay, when set, is web_relay (ADR 0022): the gateway also waits in
+	// its room on this relay and serves paired phones through it. It
+	// needs DevicesDir. The key and room come later, from the UI
+	// (EvRelayKey).
+	Relay *RelayConfig
 }
 
 // Status is what the gateway writes to its status file. It holds no
@@ -112,6 +117,8 @@ type Status struct {
 	MaxS    int       `json:"max_s"`
 	// PhoneWatch: a watching phone keeps the gateway up (MOB-31).
 	PhoneWatch bool `json:"phone_watch,omitempty"`
+	// Relay is the relay's address with web_relay on (ADR 0022).
+	Relay string `json:"relay,omitempty"`
 }
 
 // handoff is what the gateway writes on fd 3 once it serves: the port
@@ -205,6 +212,7 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	var pairing *Pairing
 	var devices *webdevices.Store
 	var wsRef atomic.Pointer[WS]
+	var relayRef atomic.Pointer[relayLink]
 	var watchRef atomic.Pointer[Watch]
 	var login *Login
 	var watchToks *WatchTokens
@@ -272,7 +280,7 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 			Why: n.Why, Summary: n.Summary, By: "web:" + n.Device})
 	}, Event: func(kind string, data json.RawMessage) {
 		onCtlEvent(kind, data, ctlTargets{pairing: pairing, tokens: tokens, ws: wsRef.Load(), audit: audit,
-			watchToks: watchToks, watch: watchRef.Load(), inbox: inbox, push: push, ctx: pushCtx})
+			watchToks: watchToks, watch: watchRef.Load(), inbox: inbox, push: push, ctx: pushCtx, relay: relayRef.Load()})
 	}})
 	if err != nil {
 		return 0, fmt.Errorf("reach termocode: %w", err)
@@ -317,6 +325,18 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	srv := NewServer(site, mux, DefaultLimits, audit)
 	crash.Go("web gateway: the server", func() { _ = srv.Serve(LimitConns(ln, DefaultLimits.MaxConns)) })
 	defer func() { _ = srv.Close() }()
+	var rl *relayLink
+	if cfg.Relay != nil {
+		if pairing == nil {
+			return 0, errors.New("the relay needs the paired-device folder")
+		}
+		if _, err := CheckRelayURL(cfg.Relay.URL); err != nil {
+			return 0, err
+		}
+		rl = newRelayLink(*cfg.Relay, site, mux, audit, devices, pairing)
+		relayRef.Store(rl)
+		defer rl.stop()
+	}
 
 	url := site.Scheme + "://" + site.Hosts[0] + "/"
 	where := "127.0.0.1:" + strconv.Itoa(port)
@@ -351,6 +371,9 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	}
 	st := Status{PID: os.Getpid(), Port: port, URL: url, Sock: cfg.UnixPath, Started: started,
 		IdleS: int(cfg.Idle / time.Second), MaxS: int(cfg.Max / time.Second), PhoneWatch: cfg.PhoneWatch}
+	if cfg.Relay != nil {
+		st.Relay = cfg.Relay.URL
+	}
 	if err := writeStatus(cfg.StatusPath, st); err != nil {
 		return 0, err
 	}
@@ -387,6 +410,9 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	_ = audit.Log(Event{Kind: kind, Code: int(code)})
 	ws.CloseAll(code, time.Second)
 	_ = srv.Close()
+	if rl != nil {
+		rl.stop() // its sessions' WebSockets are closed above, with the code
+	}
 	ws.Wait()
 	_ = audit.Log(Event{Kind: EvStop, Code: int(code), Why: why})
 	return code, nil
@@ -446,6 +472,7 @@ type ctlTargets struct {
 	inbox     *InboxMux
 	push      *UnifiedPush    // nil: no paired devices here
 	ctx       context.Context // the wakes' context (ends with the run)
+	relay     *relayLink      // nil: no web_relay
 }
 
 // onCtlEvent handles the hub's other events: a new pairing link
@@ -473,6 +500,9 @@ func onCtlEvent(kind string, data json.RawMessage, t ctlTargets) {
 		}
 		if t.watch != nil {
 			n += t.watch.CloseDevice(d.Device)
+		}
+		if t.relay != nil {
+			t.relay.recheck()
 		}
 		_ = t.audit.Log(Event{Kind: EvRevoke, Device: d.Device, Summary: fmt.Sprintf("%d sessions closed", n)})
 	case EvRoleChange:
@@ -504,6 +534,10 @@ func onCtlEvent(kind string, data json.RawMessage, t ctlTargets) {
 		}
 		if b, err := hex.DecodeString(d.SHA256); err == nil && len(b) == sha256.Size {
 			pairing.SetSecret([sha256.Size]byte(b), ttl, d.Guest)
+		}
+	case EvRelayKey:
+		if t.relay != nil {
+			t.relay.setKey(data)
 		}
 	case EvPairClose:
 		if pairing != nil {
