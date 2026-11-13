@@ -62,6 +62,8 @@ type webPanelState struct {
 	resumed    bool
 	resumePort int
 	resumeTry  int
+	// relay is web_relay's link parts once armed (web_relay.go); nil: none.
+	relay *webRelayInfo
 }
 
 // webGatewayProc is a started gateway process.
@@ -194,6 +196,9 @@ func (m *Model) startWebPanelWith(o webStartOpts) tea.Cmd {
 	}
 	m.webPanel = &webPanelState{proc: proc, plain: plain, open: open && cfg.OpenBrowser, copy: copyLink, sshPort: sshPort,
 		resumed: o.resume, resumePort: o.resumePort, resumeTry: o.try}
+	if err := m.webRelayArm(cfg); err != nil {
+		cmds = append(cmds, m.webToast(toast.Warn, "The relay is off: "+err.Error()+"."))
+	}
 	if o.resume {
 		return tea.Batch(cmds...) // quiet: the panel only comes back
 	}
@@ -640,6 +645,9 @@ func webGatewayArgs(cfg webConfig, dir, audit, devices string, sshPort int) []st
 	}
 	if cfg.PhoneWatch {
 		args = append(args, "--phone-watch") // MOB-31
+	}
+	if cfg.Relay != "" {
+		args = append(args, "--relay", cfg.Relay) // the address only; the key goes over the hub socket
 	}
 	switch {
 	case sshPort > 0:

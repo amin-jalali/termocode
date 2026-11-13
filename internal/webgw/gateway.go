@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/crash"
+	"github.com/amin-jalali/termocode/internal/relay"
 	"github.com/amin-jalali/termocode/internal/webdevices"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
@@ -330,7 +331,7 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 		if pairing == nil {
 			return 0, errors.New("the relay needs the paired-device folder")
 		}
-		if _, err := CheckRelayURL(cfg.Relay.URL); err != nil {
+		if _, err := relay.CheckURL(cfg.Relay.URL); err != nil {
 			return 0, err
 		}
 		rl = newRelayLink(*cfg.Relay, site, mux, audit, devices, pairing)

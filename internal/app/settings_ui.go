@@ -117,6 +117,8 @@ type settingsConfig struct {
 	// WebPushDetail: what a phone push says (MOB-30, web_push.go).
 	WebPushDetail string `json:"web_push_detail,omitempty"`
 	WebPhone      string `json:"web_phone,omitempty"` // MOB-31
+	// WebRelay: the relay's https address (ADR 0022, web_relay.go). File only.
+	WebRelay string `json:"web_relay,omitempty"`
 	// WebApproveOnLaptop: a web action that needs a confirm waits for a
 	// card on the laptop, as before 2026-11-08 (web_ask.go). File only.
 	WebApproveOnLaptop *bool `json:"web_approve_on_laptop,omitempty"`
