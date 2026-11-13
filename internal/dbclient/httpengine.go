@@ -44,6 +44,11 @@ type HTTPEngine struct {
 	LineBased bool
 	// FixURL adjusts a connection parsed from one of Schemes (nil: none).
 	FixURL func(*Conn)
+	// QueryParams keeps the URL's query as Conn.Params ("?warehouse=WH").
+	QueryParams bool
+	// URLExample makes the add flow ask for a URL of this shape instead
+	// of a host and port (the cloud warehouses, DBX-66).
+	URLExample string
 }
 
 var httpEngines = map[string]HTTPEngine{}

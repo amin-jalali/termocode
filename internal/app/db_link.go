@@ -338,7 +338,7 @@ func (m *Model) databaseOpenTargetRevealed(t dbRuntimeTarget) tea.Cmd {
 		c.ID = base + "-" + strconv.Itoa(t.port)
 	}
 	c.Name = c.ID
-	s.pendingConn, s.pendingPassword, s.addFromURL, s.addLibSQL = c, "", false, false
+	s.pendingConn, s.pendingPassword, s.addFromURL, s.addLibSQL, s.addEngine = c, "", false, false, ""
 	if t.isCont {
 		s.databaseSelectPath("suggest-container-" + t.cont.ID)
 	} else {
