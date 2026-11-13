@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phone screens</title>
+<!-- MOBUX-24: static mockups of every phone screen, light and dark, for
+     the owner's review before build. One file, no network, no build.
+     Colours are the web panel's tokens (src/styles/tokens.css) and the
+     phone roles of MOBUX-1 (src/styles/phone.css); status is always a
+     colour and a shape (● ◐ ◆ ✓ ✗ ○ ◌). Each screen is written once in a
+     <template>; the small script at the end draws it twice, light and dark.
+     Open it in any browser: file:// is fine. -->
+<style>
+  /* web tokens (tokens.css), dark and light */
+  .theme-dark { --bg:#1c1c1c; --bg-2:#303030; --bg-panel:#121212; --bg-float:#303030; --bg-hover:#262626; --strip:#0070b8; --on-strip:#fff; --text:#d0d0d0; --text-2:#bcbcbc; --muted:#9e9e9e; --border:#444; --focus:#0087d7; --ai:#bb86fc; --blue:#00afff; --green:#5fd787; --amber:#d7af00; --red:#ff7070; --add-bg:rgba(95,215,135,.12); --del-bg:rgba(215,95,95,.14); --scrim:rgba(0,0,0,.55); --shadow:0 16px 40px rgba(0,0,0,.35); }
+  .theme-light { --bg:#fafaf8; --bg-2:#f0f0ee; --bg-panel:#fff; --bg-float:#fff; --bg-hover:#ebebe9; --strip:#0070b8; --on-strip:#fff; --text:#1c1c1c; --text-2:#3a3a3a; --muted:#6b6b6b; --border:#d9d9d6; --focus:#0087d7; --ai:#6f3ff5; --blue:#0070c0; --green:#18763f; --amber:#8a6400; --red:#c8322b; --add-bg:rgba(27,127,69,.1); --del-bg:rgba(176,42,42,.1); --scrim:rgba(20,20,20,.35); --shadow:0 16px 40px rgba(0,0,0,.12); }
+  /* phone roles (phone.css) */
+  .theme-dark, .theme-light { --p-bg:var(--bg-panel); --p-surface:var(--bg); --p-surface-2:var(--bg-2); --p-raised:var(--bg-float); --p-text:var(--text); --p-text-2:var(--text-2); --p-muted:var(--muted); --p-line:var(--border); --p-accent:var(--strip); --p-on-accent:var(--on-strip); --p-ai:var(--ai); --st-needs:var(--amber); --st-working:var(--blue); --st-review:var(--ai); --st-done:var(--green); --st-failed:var(--red); --st-idle:var(--muted); }
+
+  :root { color-scheme: light dark; --page-bg:#e9e9e6; --page-fg:#1c1c1c; --page-mute:#5d5d5d; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --page-bg:#0b0b0b; --page-fg:#e0e0e0; --page-mute:#a0a0a0; } }
+  :root[data-theme="dark"] { --page-bg:#0b0b0b; --page-fg:#e0e0e0; --page-mute:#a0a0a0; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--page-bg); color:var(--page-fg); font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header.page { max-width:1180px; margin:0 auto; padding:24px 16px 8px; }
+  header.page h1 { margin:0 0 4px; font-size:24px; }
+  header.page p { margin:0 0 8px; color:var(--page-mute); max-width:760px; }
+  nav.toc { display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 0; }
+  nav.toc a { color:inherit; text-decoration:none; border:1px solid color-mix(in srgb, var(--page-fg) 25%, transparent); border-radius:999px; padding:3px 10px; font-size:13px; }
+  section.screen { max-width:1180px; margin:0 auto; padding:24px 16px; border-top:1px solid color-mix(in srgb, var(--page-fg) 12%, transparent); }
+  section.screen h2 { margin:0 0 4px; font-size:18px; }
+  section.screen > p { margin:0 0 14px; color:var(--page-mute); max-width:760px; }
+  .pair { display:flex; flex-wrap:wrap; gap:24px; }
+  .frame { width:360px; max-width:100%; }
+  .frame .cap { font-size:12px; color:var(--page-mute); margin:0 0 6px; }
+
+  /* the phone */
+  .phone { position:relative; height:740px; border-radius:28px; overflow:hidden; background:var(--p-bg); color:var(--p-text); border:1px solid var(--p-line); display:flex; flex-direction:column; font:0.9375rem/1.4667 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; box-shadow:var(--shadow); }
+  .sys { height:28px; padding:6px 20px 0; display:flex; justify-content:space-between; font-size:12px; color:var(--p-muted); }
+  .top { display:flex; align-items:center; gap:8px; padding:6px 12px 10px; border-bottom:1px solid var(--p-line); }
+  .top .proj { font-weight:600; font-size:1.0625rem; }
+  .top .proj small { font-weight:400; color:var(--p-muted); }
+  .top .sp { flex:1; }
+  .live { font-size:12px; color:var(--st-done); }
+  .live.off { color:var(--p-muted); }
+  .icon { width:44px; height:44px; display:grid; place-items:center; border-radius:10px; color:var(--p-text); font-size:20px; }
+  .body { flex:1; overflow:hidden; padding:12px 16px; display:flex; flex-direction:column; gap:12px; }
+  .muted { color:var(--p-muted); }
+  .meta { font-size:0.8125rem; line-height:1.125rem; color:var(--p-muted); }
+  .cap12 { font-size:0.75rem; letter-spacing:.04em; text-transform:uppercase; color:var(--p-muted); }
+  .mono { font-family:ui-monospace,"JetBrains Mono","SF Mono",Menlo,monospace; font-size:13px; }
+
+  .chips { display:flex; gap:8px; overflow:hidden; white-space:nowrap; }
+  .chip { display:inline-flex; align-items:center; gap:6px; min-height:36px; padding:0 14px; border-radius:999px; border:1px solid var(--p-line); background:var(--p-surface); font-size:14px; }
+  .chip.needs { border-color:var(--st-needs); color:var(--st-needs); font-weight:600; }
+  .chip .n { background:var(--st-needs); color:#1c1c1c; border-radius:999px; padding:0 6px; font-size:12px; }
+
+  .block { background:var(--p-surface); border:1px solid var(--p-line); border-radius:12px; padding:10px 12px; }
+  .block .bh { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .block .bh .t { flex:1; }
+  .rows > div { display:flex; gap:8px; align-items:baseline; padding:6px 0; border-top:1px solid var(--p-line); }
+  .rows > div:first-child { border-top:0; }
+  .rows .grow { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .st { width:16px; display:inline-block; text-align:center; }
+  .needs { color:var(--st-needs); } .working { color:var(--st-working); } .review { color:var(--st-review); } .done { color:var(--st-done); } .failed { color:var(--st-failed); } .idle { color:var(--st-idle); }
+  .acts { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+
+  .btn { min-height:44px; padding:0 16px; border-radius:10px; border:1px solid var(--p-line); background:var(--p-surface); color:var(--p-text); font:inherit; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+  .btn.sm { min-height:36px; padding:0 12px; font-size:14px; }
+  .btn.pri { background:var(--p-accent); color:var(--p-on-accent); border-color:transparent; }
+  .btn.focus { outline:2px solid var(--focus); outline-offset:2px; }
+  .btn.danger { color:var(--st-failed); border-color:var(--st-failed); }
+  .btn.arming { position:relative; overflow:hidden; color:var(--p-muted); }
+  .btn.arming::after { content:""; position:absolute; left:0; bottom:0; height:3px; width:55%; background:var(--st-failed); }
+  .btn.ghost { border-color:transparent; background:transparent; color:var(--p-accent); }
+  .btn.wide { width:100%; }
+  .btn[disabled] { opacity:.45; }
+
+  .msg { max-width:88%; }
+  .msg.me { align-self:flex-end; background:var(--p-surface-2); padding:8px 12px; border-radius:14px 14px 4px 14px; }
+  .msg.ai::before { content:"✦ "; color:var(--p-ai); }
+
+  .composer { border-top:1px solid var(--p-line); padding:8px 12px 18px; background:var(--p-bg); }
+  .pill { display:flex; align-items:center; gap:4px; border:1px solid var(--p-line); border-radius:24px; padding:4px 4px 4px 6px; background:var(--p-surface); }
+  .pill .ph { flex:1; color:var(--p-muted); padding:0 4px; }
+  .pill .send { width:40px; height:40px; border-radius:50%; background:var(--p-accent); color:var(--p-on-accent); display:grid; place-items:center; }
+  .pill .stop { width:40px; height:40px; border-radius:50%; background:var(--p-text); color:var(--p-bg); display:grid; place-items:center; font-size:12px; }
+  .attach { display:flex; gap:6px; margin-bottom:6px; }
+  .attach .chip { min-height:28px; font-size:12px; padding:0 10px; }
+
+  .card { border:1px solid var(--st-needs); border-left-width:4px; border-radius:10px; padding:10px 12px; background:var(--p-surface); }
+  .card .k { font-size:12px; color:var(--st-needs); font-weight:600; }
+
+  .scrim { position:absolute; inset:0; background:var(--scrim); }
+  .sheet { position:absolute; left:0; right:0; bottom:0; background:var(--p-raised); border-radius:14px 14px 0 0; padding:8px 16px 22px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:10px; }
+  .sheet .grab { width:36px; height:4px; border-radius:2px; background:var(--p-line); margin:2px auto 4px; }
+  .sheet h3 { margin:0; font-size:1.0625rem; }
+  .stack { display:flex; flex-direction:column; gap:8px; }
+  .twin { display:flex; gap:8px; } .twin > * { flex:1; }
+
+  .diff { font-family:ui-monospace,Menlo,monospace; font-size:12px; line-height:18px; border:1px solid var(--p-line); border-radius:8px; overflow:hidden; }
+  .diff div { padding:0 8px; white-space:pre; overflow:hidden; text-overflow:ellipsis; }
+  .diff .a { background:var(--add-bg); } .diff .d { background:var(--del-bg); }
+  .diff .h { background:var(--p-surface-2); color:var(--p-muted); display:flex; gap:8px; align-items:center; padding:6px 8px; font-family:system-ui,sans-serif; font-size:13px; }
+  .box { width:20px; height:20px; border-radius:5px; border:2px solid var(--p-accent); display:inline-grid; place-items:center; font-size:13px; color:var(--p-on-accent); background:var(--p-accent); }
+  .box.off { background:transparent; }
+  .note { border-left:3px solid var(--p-ai); background:var(--p-surface-2); padding:6px 8px; font-size:13px; font-family:system-ui,sans-serif; white-space:normal; }
+
+  .bar { padding:8px 16px; font-size:13px; display:flex; gap:8px; align-items:center; }
+  .bar.off { background:var(--p-surface-2); color:var(--p-text); border-bottom:1px solid var(--p-line); }
+  .bar.err { color:var(--st-failed); }
+  .skel { height:14px; border-radius:6px; background:var(--p-surface-2); }
+
+  .list > div { display:flex; gap:10px; align-items:center; min-height:48px; border-bottom:1px solid var(--p-line); }
+  .list > div .grow { flex:1; }
+  .field { min-height:44px; border:1px solid var(--p-line); border-radius:10px; padding:0 12px; display:flex; align-items:center; color:var(--p-muted); background:var(--p-surface); }
+  .seg { display:flex; border:1px solid var(--p-line); border-radius:10px; overflow:hidden; }
+  .seg span { flex:1; text-align:center; padding:8px 0; font-size:14px; }
+  .seg span.on { background:var(--p-accent); color:var(--p-on-accent); }
+  .code6 { font:600 32px/1 ui-monospace,Menlo,monospace; letter-spacing:.25em; text-align:center; padding:12px 0; }
+  .qr { width:180px; height:180px; margin:8px auto; border-radius:12px; background:
+    repeating-linear-gradient(90deg, var(--p-text) 0 8px, transparent 8px 16px),
+    repeating-linear-gradient(0deg, var(--p-text) 0 8px, transparent 8px 20px); opacity:.85; }
+  .center { text-align:center; }
+  .toggle { width:44px; height:26px; border-radius:13px; background:var(--p-accent); position:relative; }
+  .toggle::after { content:""; position:absolute; right:3px; top:3px; width:20px; height:20px; border-radius:50%; background:#fff; }
+  .toggle.off { background:var(--p-line); } .toggle.off::after { right:auto; left:3px; }
+  .queue { border:1px dashed var(--p-line); border-radius:10px; padding:6px 10px; display:flex; flex-direction:column; gap:4px; }
+  .queue > div { display:flex; gap:8px; align-items:center; font-size:14px; }
+  .queue .grow { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .laptop { border:1px solid var(--st-working); border-radius:12px; padding:10px 12px; background:var(--p-surface); display:flex; flex-direction:column; gap:8px; }
+  .dots::after { content:"…"; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Phone screens</h1>
+  <p>Every screen of the phone page and app, light and dark, for review before build. Colours, type and sizes are the panel's tokens (MOBUX-1). Status is a colour and a shape. Touch targets are 44 px or more. The thumb zone is the lower half: the composer, chips and sheet buttons live there.</p>
+  <nav class="toc" id="toc"></nav>
+</header>
+<main id="screens"></main>
+
+<!-- 1 -->
+<template data-id="connect" data-title="1. Connect (app)" data-note="The app's own first screen. It ships with the app; everything after it comes from the laptop. Saved laptops first; Forget asks with Cancel first.">
+  <div class="sys"><span>9:41</span><span>▮▮▮ ◔</span></div>
+  <div class="body">
+    <h2 style="margin:24px 0 0;font-size:1.25rem">termocode</h2>
+    <p class="muted" style="margin:0">Your laptop's work, on your phone. Over your own tailnet; no account.</p>
+    <div class="cap12" style="margin-top:12px">Your laptops</div>
+    <div class="list">
+      <div><span class="st done">●</span><span class="grow">box<br><span class="meta">box.tail1234.ts.net · last 2 min ago</span></span><span class="btn sm pri">Open</span></div>
+      <div><span class="st idle">○</span><span class="grow">work-mac<br><span class="meta">last 3 days ago</span></span><span class="btn sm">⋯</span></div>
+    </div>
+    <div style="flex:1"></div>
+    <span class="btn pri wide">Scan the code</span>
+    <span class="meta center">On the laptop: Web: Pair a Device…</span>
+  </div>
+</template>
+
+<!-- 2 -->
+<template data-id="pair" data-title="2. Pair this phone" data-note="After the scan. The same 6 digits show on the laptop's card; the laptop picks Not now (first), viewer or control. Then the passkey.">
+  <div class="sys"><span>9:41</span><span>▮▮▮ ◔</span></div>
+  <div class="top"><span class="proj">Pair with box</span></div>
+  <div class="body">
+    <p style="margin:0">Check that the laptop shows the same code.</p>
+    <div class="code6">482 913</div>
+    <div class="block"><div class="meta">Waiting for the laptop<span class="dots"></span></div><div class="meta">The link works once, for 2 minutes.</div></div>
+    <div style="flex:1"></div>
+    <label class="list"><div><span class="box">✓</span><span class="grow">Remember this phone<br><span class="meta">Open from the icon without the passkey</span></span></div></label>
+    <span class="btn wide">Cancel</span>
+  </div>
+</template>
+
+<!-- 3 -->
+<template data-id="signin" data-title="3. Sign in" data-note="A paired phone that was signed out. One button; no passwords. A removed phone gets Pair again instead.">
+  <div class="sys"><span>9:41</span><span>▮▮▮ ◔</span></div>
+  <div class="body" style="justify-content:center;text-align:center">
+    <div style="font-size:40px">◆</div>
+    <h2 style="margin:0;font-size:1.25rem">box</h2>
+    <p class="muted" style="margin:0 0 16px">This phone is signed out.</p>
+    <span class="btn pri wide">Sign in with passkey</span>
+    <span class="btn ghost wide">Pair again</span>
+  </div>
+</template>
+
+<!-- 4 -->
+<template data-id="home" data-title="4. Home (the chat)" data-note="The phone's Home is a chat. Pinned views on top, then the chips (Needs you first while something waits), then the stream. The composer is a pill at the bottom: attach, mic, send.">
+  <div class="sys"><span>9:41</span><span>▮▮▮ ◔</span></div>
+  <div class="top"><span class="proj">shop ▾ <small>· box</small></span><span class="sp"></span><span class="live">● live</span><span class="icon">≡</span></div>
+  <div class="body">
+    <div class="block"><div class="bh"><span>📌</span><span class="t">PRs to review <span class="muted">3</span></span><span class="meta">live</span></div>
+      <div class="rows"><div><span class="mono">#418</span><span class="grow">fix toast</span><span class="failed">✗</span><span class="meta">2 h</span></div></div></div>
+    <div class="chips"><span class="chip needs">Needs you <span class="n">2</span></span><span class="chip">Board</span><span class="chip">Projects</span><span class="chip">Views</span><span class="chip">Tasks</span></div>
+    <div class="msg me">show open PRs as a table, newest first</div>
+    <div class="msg ai">5 open pull requests:</div>
+    <div class="block"><div class="bh"><span class="cap12 t">Pull requests · table</span><span class="icon" style="width:32px;height:32px;font-size:16px">⚙</span></div>
+      <div class="rows">
+        <div><span class="mono">418</span><span class="grow">fix toast</span><span class="failed">✗</span><span class="meta">2 h</span></div>
+        <div><span class="mono">412</span><span class="grow">login rate limit</span><span class="working">◐</span><span class="meta">1 d</span></div>
+        <div><span class="mono">409</span><span class="grow">docs: relay</span><span class="done">✓</span><span class="meta">2 d</span></div>
+      </div>
+      <div class="acts"><span class="btn sm">Customize</span><span class="btn sm">Save…</span><span class="btn sm">Refresh</span></div></div>
+  </div>
+  <div class="composer"><div class="pill"><span class="icon" style="width:40px;height:40px">＋</span><span class="ph">What do you want?</span><span class="icon" style="width:40px;height:40px">🎤</span><span class="send">↑</span></div></div>
+</template>
+
+<!-- 5 -->
+<template data-id="remote" data-title="5. Phone remote: needs you, laptop AI, steer and queue (CMP-46)" data-note="While the laptop's AI works, the Home shows it on top: Stop, and a box to queue the next message. Queued messages wait in order and go when the turn ends; Send now stops the turn and sends that one. Waiting cards come next, safe answer first.">
+  <div class="sys"><span>9:41</span><span>▮▮▮ ◔</span></div>
+  <div class="top"><span class="proj">shop ▾ <small>· box</small></span><span class="sp"></span><span class="live">● live</span><span class="icon">≡</span></div>
+  <div class="body">
+    <div class="laptop">
+      <div style="display:flex;gap:8px;align-items:center"><span class="working">◐</span><span style="flex:1"><b>Laptop AI</b> <span class="meta">· Fix the login rate limit</span></span><span class="btn sm danger">■ Stop</span></div>
+      <div class="meta">Running go test ./internal/auth<span class="dots"></span> · 3 min</div>
+      <div class="queue">
+        <div class="cap12">Queued · 2</div>
+        <div><span class="meta">1</span><span class="grow">then update the docs</span><span class="btn sm ghost">Send now</span><span class="btn sm ghost" aria-label="Remove">✕</span></div>
+        <div><span class="meta">2</span><span class="grow">and open a draft PR</span><span class="btn sm ghost">Send now</span><span class="btn sm ghost" aria-label="Remove">✕</span></div>
+      </div>
+      <div class="pill"><span class="ph">Queue a message…</span><span class="btn sm pri" style="border-radius:20px">Queue</span></div>
+    </div>
+    <div class="cap12">Needs you · 2</div>
+    <div class="card"><div class="k">▲ Allow a command</div><div>go test ./... -race</div><div class="meta">shop · lane fix-login</div>
+      <div class="acts"><span class="btn sm focus">Deny</span><span class="btn sm">Allow</span><span class="btn sm ghost">Later</span></div></div>
+    <div class="card"><div class="k">◆ Review changes</div><div>internal/auth/limit.go <span class="meta">+41 −9 · 3 changes</span></div>
+      <div class="acts"><span class="btn sm focus">Reject</span><span class="btn sm">Open changes</span></div></div>
+  </div>
+  <div class="composer"><div class="pill"><span class="icon" style="width:40px;height:40px">＋</span><span class="ph">Ask the phone chat…</span><span class="icon" style="width:40px;height:40px">🎤</span><span class="send">↑</span></div></div>
+</template>
+
+<!-- 6 -->
+<template data-id="approve" data-title="6. Approval sheet" data-note="Deny is first and has the focus. Allow arms after 600 ms (the bar fills). A destructive card says Approve on laptop only. Swipe down is no answer.">
+  <div class="sys"><span>9:41</span><span>▮▮▮ ◔</span></div>
+  <div class="top"><span class="proj">shop ▾</span><span class="sp"></span><span class="live">● live</span><span class="icon">≡</span></div>
+  <div class="body"><div class="skel" style="width:70%"></div><div class="skel" style="width:50%"></div></div>
+  <div class="scrim"></div>
+  <div class="sheet"><div class="grab"></div>
+    <div class="k needs" style="font-size:12px;font-weight:600">▲ THE AI WANTS TO RUN A COMMAND</div>
+    <h3>go test ./... -race</h3>
+    <div class="meta">in ~/shop · lane fix-login · asked 20 s ago</div>
+    <div class="block mono">cd ~/shop &amp;&amp; go test ./... -race</div>
+    <div class="twin"><span class="btn focus">Deny</span><span class="btn pri arming" style="background:var(--p-surface);">Allow</span></div>
+    <span class="btn ghost wide">Later</span>
+  </div>
+</template>
+
+<!-- 7 -->
+<template data-id="hunks" data-title="7. Review changes: approve hunks" data-note="A review card with two or more changes has a box per change. Untick to leave a change out; Accept takes only the ticked ones. Reject is first.">
+  <div class="sys"><span>9:41</span><span>▮▮▮ ◔</span></div>
+  <div class="scrim"></div>
+  <div class="sheet" style="top:40px"><div class="grab"></div>
+    <div class="k review" style="font-size:12px;font-weight:600">◆ REVIEW CHANGES</div>
+    <h3>internal/auth/limit.go</h3>
+    <div class="meta">+41 −9 · 3 changes · 2 kept</div>
+    <div class="diff">
+      <div class="h"><span class="box">✓</span>@@ -10,3 +10,6 @@ func Limit</div>
+      <div>  func Limit(ip string) bool {</div>
+      <div class="d">-   return false</div>
+      <div class="a">+   n := hits.Add(ip)</div>
+      <div class="a">+   return n &gt; maxPerMinute</div>
+      <div class="h"><span class="box off"></span>@@ -40,2 +43,4 @@ const</div>
+      <div class="a">+ const maxPerMinute = 5</div>
+      <div class="h"><span class="box">✓</span>@@ -71,1 +76,3 @@ func reset</div>
+      <div class="a">+   hits.Clear()</div>
+    </div>
+    <div style="flex:1"></div>
+    <div class="twin"><span class="btn focus">Reject</span><span class="btn pri">Accept 2 of 3</span></div>
+    <span class="btn ghost wide">Later</span>
+  </div>
+</template>
+
+<!-- 8 -->
+<template data-id="panels" data-title="8. Panels drawer (≡)" data-note="The old tabs and the project switcher live behind ≡. The Home stays the default.">
+  <div class="sys"><span>9:41</span><span>▮▮▮ ◔</span></div>
+  <div class="scrim"></div>
+  <div style="position:absolute;top:0;bottom:0;right:0;width:300px;background:var(--p-raised);padding:36px 12px 12px;display:flex;flex-direction:column;gap:4px">
+    <div class="cap12">Project</div>
+    <div class="list">
+      <div><span class="st done">●</span><span class="grow">shop</span><span class="meta">open</span></div>
+      <div><span class="st working">◐</span><span class="grow">api</span><span class="meta">1 run</span></div>
+      <div><span class="st idle">◌</span><span class="grow">infra</span><span class="meta">asleep</span></div>
+    </div>
+    <div class="cap12" style="margin-top:10px">Panels</div>
+    <div class="list">
+      <div><span>▦</span><span class="grow">Views</span></div><div><span>🗂</span><span class="grow">Files</span></div><div><span>›_</span><span class="grow">Terminal</span></div><div><span>⑂</span><span class="grow">Git</span></div><div><span>⋯</span><span class="grow">More</span></div><div><span>📱</span><span class="grow">This phone</span></div>
+    </div>
+  </div>
+</template>
+
+<!-- 9 -->
+<template data-id="views" data-title="9. Views menu" data-note="Every feature has a view. Search on top; groups below; MCP servers list their tools. A view with params asks for them in a small form.">
+  <div class="sys"><span>9:41</span><span>▮▮▮ ◔</span></div>
+  <div class="top"><span class="icon">‹</span><span class="proj">Views</span><span class="sp"></span><span class="chip">shop ▾</span></div>
+  <div class="body">
+    <div class="field">Search views…</div>
+    <div class="list">
+      <div><b style="width:96px">Git</b><span class="grow meta">status · diff · log · branches</span></div>
+      <div><b style="width:96px">Lanes</b><span class="grow meta">lanes · lane diff · races</span></div>
+      <div><b style="width:96px">Runs</b><span class="grow meta">runs · run · usage</span></div>
+      <div><b style="width:96px">CI / PRs</b><span class="grow meta">pull requests · checks</span></div>
+      <div><b style="width:96px">Database</b><span class="grow meta">connections · tables · rows</span></div>
+      <div><b style="width:96px">Containers</b><span class="grow meta">list · logs</span></div>
+      <div><b style="width:96px">Tests</b><span class="grow meta">tests · output</span></div>
+      <div><b style="width:96px">MCP</b><span class="grow meta">github (28) · linear (12)</span></div>
+      <div><b style="width:96px">Saved</b><span class="grow meta">PRs to review · Failing CI</span></div>
+    </div>
+  </div>
+</template>
+
+<!-- 10 -->
+<template data-id="customize" data-title="10. Customize sheet (⚙)" data-note="Change a block without the AI. Cancel first; Apply; Save as… asks a name and Pin to Home.">
+  <div class="sys"><span>9:41</span><span>▮▮▮ ◔</span></div>
+  <div class="scrim"></div>
+  <div class="sheet"><div class="grab"></div>
+    <h3>Pull requests · customize</h3>
+    <div class="cap12">Layout</div><div class="seg"><span class="on">Table</span><span>List</span><span>Cards</span></div>
+    <div class="cap12">Fields</div>
+    <div class="chips" style="flex-wrap:wrap;white-space:normal"><span class="chip">☑ number</span><span class="chip">☑ title</span><span class="chip">☑ checks</span><span class="chip">☑ age</span><span class="chip muted">☐ author</span><span class="chip muted">☐ branch</span></div>
+    <div class="cap12">Filter · sort</div>
+    <div class="list"><div><span class="grow">checks is fail</span><span class="btn sm ghost">✕</span></div><div><span class="grow">age ↓</span><span class="meta">limit 50</span></div></div>
+    <span class="btn ghost wide">Ask the AI to change it…</span>
+    <div class="twin"><span class="btn">Cancel</span><span class="btn pri">Apply</span><span class="btn">Save as…</span></div>
+  </div>
+</template>
+
+<!-- 11 -->
+<template data-id="task" data-title="11. A task and its action sheet" data-note="Tap a task (an issue, a TASKS.md line, a PR). Actions say what they do; one that needs a laptop card says so. A viewer sees only Open and Add to message.">
+  <div class="sys"><span>9:41</span><span>▮▮▮ ◔</span></div>
+  <div class="scrim"></div>
+  <div class="sheet"><div class="grab"></div>
+    <h3>shop · #412 login rate limit</h3>
+    <div class="meta">GitHub issue · open · 2 days</div>
+    <div class="stack">
+      <span class="btn wide" style="justify-content:space-between">Start a task here <span class="meta">asks the AI</span></span>
+      <span class="btn wide" style="justify-content:space-between">Race 2–4 agents <span class="meta">laptop card</span></span>
+      <span class="btn wide" style="justify-content:space-between">Compare models <span class="meta">laptop card</span></span>
+      <span class="btn wide" style="justify-content:space-between">Plan and run <span class="meta">laptop card</span></span>
+      <span class="btn wide" style="justify-content:space-between">Queue for later <span class="meta">after the current turn</span></span>
+      <span class="btn wide" style="justify-content:space-between">Add to message <span class="meta">chip</span></span>
+      <span class="btn wide" style="justify-content:space-between">Open on laptop</span>
+    </div>
+    <span class="btn ghost wide">Cancel</span>
+  </div>
+</template>
+
+<!-- 12 -->
+<template data-id="board" data-title="12. Live board" data-note="All projects in one block, live. Needs you first. Filters at the bottom, in thumb reach.">
+  <div class="sys"><span>9:41</span><span>▮▮▮ ◔</span></div>
+  <div class="top"><span class="icon">‹</span><span class="proj">Board</span><span class="sp"></span><span class="meta">$4.20 today</span></div>
+  <div class="body">
+    <div class="block"><div class="bh"><b class="t">shop</b><span class="needs">● 1 needs you</span></div>
+      <div class="rows">
+        <div><span class="st needs">▲</span><span class="grow">card: run go test · fix-login</span></div>
+        <div><span class="st working">◐</span><span class="grow">run "rate limit" 3/5</span><span class="meta">$0.80</span></div>
+        <div><span class="st working">◐</span><span class="grow">race #3 · 2 done, 1 working</span></div>
+        <div><span class="st done">✓</span><span class="grow">lane fix-login +41 −9</span><span class="failed">CI ✗</span></div>
+      </div></div>
+    <div class="block"><div class="bh"><b class="t">api</b><span class="working">◐ workflow nightly 3/5</span></div><div class="meta">waits: write a PR comment</div></div>
+    <div class="block"><div class="bh"><b class="t">docs</b><span class="idle">○ idle</span></div></div>
+    <div class="block"><div class="bh"><b class="t">infra</b><span class="idle">◌ asleep</span><span class="btn sm">Open</span></div></div>
+    <div style="flex:1"></div>
+    <div class="chips"><span class="chip">Only needs you</span><span class="chip">Only running</span></div>
+  </div>
+</template>
+
+<!-- 13 -->
+<template data-id="race" data-title="13. Race / compare" data-note="Lanes side by side as rows. Summarise and Verify run on the laptop; Merge and Discard are laptop cards. Stop asks with Cancel first.">
+  <div class="sys"><span>9:41</span><span>▮▮▮ ◔</span></div>
+  <div class="top"><span class="icon">‹</span><span class="proj">Race #3</span><span class="sp"></span><span class="working">◐ 1 working</span></div>
+  <div class="body">
+    <div class="meta">Fix the login rate limit · 3 lanes</div>
+    <div class="block"><div class="rows">
+      <div><span class="st done">✓</span><span class="grow">lane a · sonnet</span><span class="meta">+41 −9 · tests ✓</span></div>
+      <div><span class="st done">✓</span><span class="grow">lane b · gpt</span><span class="meta">+63 −12 · tests ✗</span></div>
+      <div><span class="st working">◐</span><span class="grow">lane c · local</span><span class="meta">step 4/6</span></div>
+    </div></div>
+    <div class="block"><div class="cap12">Summary</div><div>Lane a is the smallest change and passes tests. Lane b changes the API.</div></div>
+    <div style="flex:1"></div>
+    <div class="twin"><span class="btn">Summarise</span><span class="btn">Verify</span></div>
+    <div class="twin"><span class="btn">Review lane a</span><span class="btn danger">Stop lanes</span></div>
+  </div>
+</template>
+
+<!-- 14 -->
+<template data-id="review" data-title="14. Review in chat" data-note="A diff block in the stream. Tap a line to add a note; the notes go to the AI in one message.">
+  <div class="sys"><span>9:41</span><span>▮▮▮ ◔</span></div>
+  <div class="top"><span class="icon">‹</span><span class="proj">Review · lane a</span></div>
+  <div class="body">
+    <div class="meta">internal/auth/limit.go · +41 −9</div>
+    <div class="diff">
+      <div>  func Limit(ip string) bool {</div>
+      <div class="d">-   return false</div>
+      <div class="a">+   n := hits.Add(ip)</div>
+      <div class="note">You: use the user id, not the IP, when signed in</div>
+      <div class="a">+   return n &gt; maxPerMinute</div>
+      <div>  }</div>
+    </div>
+    <div class="meta">internal/auth/limit_test.go · +22</div>
+    <div class="diff"><div class="a">+ func TestLimitSixth(t *testing.T) {</div><div class="a">+   for i := 0; i &lt; 6; i++ {</div></div>
+    <div style="flex:1"></div>
+    <span class="btn pri wide">Send 1 note</span>
+  </div>
+</template>
+
+<!-- 15 -->
+<template data-id="workflow" data-title="15. Workflow from a task" data-note="Draft → dry run → run. The run itself is a laptop card; the phone shows what it would do first.">
+  <div class="sys"><span>9:41</span><span>▮▮▮ ◔</span></div>
+  <div class="top"><span class="icon">‹</span><span class="proj">Workflow draft</span></div>
+  <div class="body">
+    <div class="seg"><span class="on">Draft</span><span>Dry run</span><span>Run</span></div>
+    <div class="block"><div class="cap12">From</div><div>GitHub issues labelled <span class="mono">bug</span> in shop</div></div>
+    <div class="block"><div class="cap12">Each item</div><div class="rows">
+      <div><span class="meta">1</span><span class="grow">AI reads it, plans a fix</span></div>
+      <div><span class="meta">2</span><span class="grow">a lane makes the change, runs tests</span></div>
+      <div><span class="meta">3</span><span class="grow">draft PR <span class="needs">· write: asks first</span></span></div>
+    </div></div>
+    <div class="block"><div class="cap12">Dry run</div><div>4 items · 0 writes · about $1.20</div></div>
+    <div style="flex:1"></div>
+    <div class="twin"><span class="btn">Save</span><span class="btn pri">Run… (laptop card)</span></div>
+  </div>
+</template>
+
+<!-- 16 -->
+<template data-id="thisphone" data-title="16. This phone" data-note="What this phone does and how to stop it. Forget asks with Cancel first.">
+  <div class="sys"><span>9:41</span><span>▮▮▮ ◔</span></div>
+  <div class="top"><span class="icon">‹</span><span class="proj">This phone</span></div>
+  <div class="body">
+    <div class="meta">Pixel 8 · paired with control · since 3 Nov</div>
+    <div class="list">
+      <div><span class="grow">Home is the chat</span><span class="toggle"></span></div>
+      <div><span class="grow">Watch while closed<br><span class="meta">a quiet notice stays on</span></span><span class="toggle"></span></div>
+      <div><span class="grow">Pushes<br><span class="meta">a count only, never content</span></span><span class="toggle"></span></div>
+      <div><span class="grow">Lock after 5 min</span><span class="toggle off"></span></div>
+      <div><span class="grow">Projects open now</span><span class="meta">shop, api</span></div>
+    </div>
+    <div style="flex:1"></div>
+    <span class="btn wide">Forget this browser</span>
+    <span class="btn danger wide">Unpair this phone…</span>
+  </div>
+</template>
+
+<!-- 17 -->
+<template data-id="states" data-title="17. States: offline, asleep, loading, error" data-note="Offline: a bar on top, answers greyed, nothing queued. Laptop asleep: the last time seen. Loading: skeletons. An error says what failed, with Retry.">
+  <div class="sys"><span>9:41</span><span>▮▮▮ ◔</span></div>
+  <div class="top"><span class="proj">shop ▾</span><span class="sp"></span><span class="live off">○ offline</span><span class="icon">≡</span></div>
+  <div class="bar off">◌ Offline — answers are not saved</div>
+  <div class="body">
+    <div class="card" style="opacity:.6"><div class="k">▲ Allow a command</div><div>go test ./...</div>
+      <div class="acts"><span class="btn sm" disabled>Deny</span><span class="btn sm" disabled>Allow</span></div></div>
+    <div class="block"><div class="bh"><span class="idle">◌</span><span class="t">Laptop asleep</span></div><div class="meta">Last seen 9:12 · the phone wakes it on the next push</div></div>
+    <div class="block"><div class="skel" style="width:60%;margin-bottom:8px"></div><div class="skel" style="width:85%;margin-bottom:8px"></div><div class="skel" style="width:40%"></div></div>
+    <div class="block"><div class="bar err" style="padding:0">✗ Could not load the pull requests: gh is not signed in on the laptop.</div><div class="acts"><span class="btn sm">Retry</span></div></div>
+  </div>
+  <div class="composer"><div class="pill" style="opacity:.6"><span class="ph">Offline</span><span class="send">↑</span></div></div>
+</template>
+
+<script>
+  // Draw each screen twice, light and dark, and list them in the top bar.
+  (function () {
+    var main = document.getElementById("screens"), toc = document.getElementById("toc");
+    document.querySelectorAll("template[data-id]").forEach(function (t) {
+      var s = document.createElement("section");
+      s.className = "screen"; s.id = t.dataset.id;
+      var h = document.createElement("h2"); h.textContent = t.dataset.title;
+      var p = document.createElement("p"); p.textContent = t.dataset.note;
+      var pair = document.createElement("div"); pair.className = "pair";
+      ["light", "dark"].forEach(function (th) {
+        var f = document.createElement("div"); f.className = "frame";
+        var c = document.createElement("div"); c.className = "cap"; c.textContent = th === "light" ? "Light" : "Dark";
+        var ph = document.createElement("div"); ph.className = "phone theme-" + th;
+        ph.appendChild(t.content.cloneNode(true));
+        f.append(c, ph); pair.appendChild(f);
+      });
+      s.append(h, p, pair); main.appendChild(s);
+      var a = document.createElement("a"); a.href = "#" + t.dataset.id; a.textContent = t.dataset.title.replace(/ \(.*\)$/, "");
+      toc.appendChild(a);
+    });
+  })();
+</script>
+</body>
+</html>

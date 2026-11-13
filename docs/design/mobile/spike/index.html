@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="tc spike">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; manifest-src 'self'">
+<link rel="manifest" href="manifest.webmanifest">
+<title>termocode device spike</title>
+<style>
+  :root { color-scheme: light dark; --bg: #fff; --fg: #1f2328; --mute: #59636e; --line: #d1d9e0; --ok: #1a7f37; --bad: #cf222e; --acc: #0b6bcb; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0d1117; --fg: #e6edf3; --mute: #9198a1; --line: #30363d; --ok: #3fb950; --bad: #f85149; --acc: #4493f8; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, -apple-system, sans-serif; }
+  h1 { font-size: 20px; margin: 4px 0 4px; }
+  p { margin: 0 0 12px; color: var(--mute); }
+  .row { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+  button, input { font: inherit; min-height: 44px; border-radius: 10px; }
+  button { flex: 1 1 40%; border: 0; background: var(--acc); color: #fff; padding: 0 12px; }
+  button.quiet { background: transparent; color: var(--acc); border: 1px solid var(--line); }
+  input { width: 100%; border: 1px solid var(--line); background: transparent; color: var(--fg); padding: 0 12px; }
+  ul { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--line); }
+  li { padding: 10px 0; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 52px 1fr; gap: 2px 8px; }
+  .m { font-weight: 600; font-size: 13px; }
+  .pass { color: var(--ok); } .FAIL { color: var(--bad); } .info { color: var(--mute); }
+  .d { grid-column: 2; color: var(--mute); font-size: 13px; overflow-wrap: anywhere; }
+  textarea { width: 100%; height: 160px; margin-top: 12px; font: 12px ui-monospace, monospace; background: transparent; color: var(--fg); border: 1px solid var(--line); border-radius: 10px; padding: 8px; }
+</style>
+</head>
+<body>
+<h1>termocode device spike (MOB-1)</h1>
+<p>Checks what this phone's browser engine can do for the panel. Nothing leaves the phone. Open it, close the app fully, then open it again: the second visit shows what was kept.</p>
+<input id="device" placeholder="Phone and OS, e.g. Pixel 8 · Android 16 · app WebView" autocomplete="off">
+<div class="row">
+  <button id="make" type="button">Make a passkey</button>
+  <button id="use" type="button">Sign in with it</button>
+</div>
+<ul id="spike-out" aria-live="polite"></ul>
+<div class="row">
+  <button id="again" class="quiet" type="button">Run again</button>
+  <button id="copy" class="quiet" type="button">Copy the result table</button>
+</div>
+<textarea id="md" readonly aria-label="Result table"></textarea>
+<script src="spike.js"></script>
+<script src="page.js"></script>
+</body>
+</html>
