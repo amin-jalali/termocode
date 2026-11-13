@@ -82,7 +82,7 @@ function toggle(id: string): void {
   shut.value = n;
 }
 
-const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
+const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", "GRPC"];
 
 /** Form is one small form: its fields and OK / Cancel (Cancel first). */
 function Form({ label, ok, onOK, onCancel, children }: { label: string; ok: StringKey; onOK: () => void; onCancel: () => void; children: ComponentChildren }) {
