@@ -342,6 +342,11 @@ func (s *SQLSession) KeepIdle(n int, idle time.Duration) {
 }
 
 func (s *SQLSession) Run(ctx context.Context, statement string, opts RunOptions) (result Result) {
+	if s.name == "oracle" {
+		if stmt, ok := oraclePlanTarget(statement); ok {
+			return s.runOraclePlan(ctx, stmt) // dialect_oracle.go
+		}
+	}
 	if s.name == "sqlserver" {
 		if stmt, analyze, ok := sqlServerPlanTarget(statement); ok {
 			return s.runSQLServerPlan(ctx, stmt, analyze) // mssql_conn.go
@@ -475,6 +480,10 @@ func (s *SQLSession) runOne(ctx context.Context, query string, kind Kind, maxRow
 			if err == nil {
 				_, err = conn.ExecContext(ctx, "SET LOCK_TIMEOUT 30000")
 			}
+		} else if s.name == "oracle" {
+			// SET TRANSACTION READ ONLY; no statement_timeout (the 30 s
+			// context above stops a long read).
+			_, err = conn.ExecContext(ctx, s.dialect.ReadOnlyBegin())
 		} else if IsExtraSQL(s.name) {
 			// DBX-71: the engine's own read-only begin, no PostgreSQL
 			// statement_timeout (Exasol has no read-only transaction).
