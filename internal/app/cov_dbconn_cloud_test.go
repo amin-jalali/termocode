@@ -274,13 +274,6 @@ func TestCovDBCloudSmallHelpers(t *testing.T) {
 	if err != nil || p < 1 {
 		t.Fatalf("port %d %v", p, err)
 	}
-	// the kube-forwarded Redis session ends its forward on Close
-	stopped := 0
-	r := dbStopRedis{stop: func() { stopped++ }}
-	func() {
-		defer func() { _ = recover() }() // the embedded session is nil
-		_ = r.Close()
-	}()
 }
 
 func TestCovDBCloudDefaultsRunRealCLIsThroughTheGuard(t *testing.T) {
@@ -290,5 +283,61 @@ func TestCovDBCloudDefaultsRunRealCLIsThroughTheGuard(t *testing.T) {
 	}
 	if _, err := dbCloudCapture(ctx, []string{"false"}); err == nil {
 		t.Fatal("a failing CLI reads as success")
+	}
+}
+
+// A connection with a kube block opens through a port-forward; a Redis
+// session ends the forward when it closes, others through OnClose.
+func TestCovDBCloudKubeOpenEndsTheForwardOnClose(t *testing.T) {
+	stopped := 0
+	old := dbKubeForward
+	t.Cleanup(func() { dbKubeForward = old })
+	dbKubeForward = func(_ context.Context, c dbclient.Conn) (int, func(), error) {
+		return 41234, func() { stopped++ }, nil
+	}
+	kube := &dbclient.KubeConfig{Pod: "redis-0", Port: 6379}
+	f := cdbRedisSeed()
+	oldDial := dbRedisDial
+	dbRedisDial = f.Dial
+	t.Cleanup(func() { dbRedisDial = oldDial; f.Close() })
+	c := dbclient.Conn{ID: "k", Driver: "redis", Kube: kube}
+	sess, err := dbKubeOpen(context.Background(), c, func(c dbclient.Conn) (dbclient.Session, error) {
+		if c.Host != "127.0.0.1" || c.Port != 41234 {
+			t.Errorf("not forwarded: %+v", c)
+		}
+		return dbRedisSessionFactory(context.Background(), c, "")
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := sess.(dbStopRedis); !ok {
+		t.Fatalf("a %T", sess)
+	}
+	if stopped != 0 {
+		t.Fatal("stopped early")
+	}
+	_ = sess.Close()
+	if stopped != 1 {
+		t.Fatalf("stopped %d", stopped)
+	}
+	// a plain SQL session, a sqlite file, a refused forward, a failed open
+	pg := dbclient.Conn{ID: "p", Driver: "postgres", Kube: kube}
+	sess, err = dbKubeOpen(context.Background(), pg, func(dbclient.Conn) (dbclient.Session, error) { return &cdbSession{}, nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = sess.Close()
+	if stopped != 2 {
+		t.Fatalf("stopped %d", stopped)
+	}
+	if _, err := dbKubeOpen(context.Background(), dbclient.Conn{Driver: "sqlite", Kube: kube}, func(dbclient.Conn) (dbclient.Session, error) { return &cdbSession{}, nil }); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := dbKubeOpen(context.Background(), pg, func(dbclient.Conn) (dbclient.Session, error) { return nil, errors.New("refused") }); err == nil || stopped != 3 {
+		t.Fatalf("failed open: %v stopped %d", err, stopped)
+	}
+	dbKubeForward = func(context.Context, dbclient.Conn) (int, func(), error) { return 0, nil, errors.New("no kubectl") }
+	if _, err := dbKubeOpen(context.Background(), pg, nil); err == nil || !strings.Contains(err.Error(), "port-forward to pod") {
+		t.Fatalf("%v", err)
 	}
 }
