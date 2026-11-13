@@ -11,9 +11,11 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/session"
 )
 
-// runMCP is `termocode mcp [--dir <workspace>]`: a stdio MCP server for
+// runMCP is `termocode mcp [--dir <workspace> | --workspace <id>]`: a stdio MCP server for
 // an agent CLI, relayed to the termocode UI of the workspace.
 func runMCP(args []string) int {
 	cwd, _ := os.Getwd()
@@ -22,7 +24,7 @@ func runMCP(args []string) int {
 
 // runMCPIn is runMCP with its streams and current folder passed in.
 func runMCPIn(args []string, in io.Reader, out, errw io.Writer, cwd string) int {
-	dir, explicit, sock := "", false, ""
+	dir, explicit, sock, wsID := "", false, "", ""
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		switch {
@@ -45,6 +47,21 @@ func runMCPIn(args []string, in io.Reader, out, errw io.Writer, cwd string) int 
 			dir, explicit = args[i], true
 		case strings.HasPrefix(a, "--dir="):
 			dir, explicit = strings.TrimPrefix(a, "--dir="), true
+		case a == "--workspace" || strings.HasPrefix(a, "--workspace="):
+			v, found := strings.CutPrefix(a, "--workspace=")
+			if !found {
+				if i+1 >= len(args) {
+					fmt.Fprintf(errw, "termocode mcp: --workspace needs a workspace ID\n\n%s", mcpUsage)
+					return mcpExitUsage
+				}
+				i++
+				v = args[i]
+			}
+			if _, err := session.PathsForID(v); err != nil {
+				fmt.Fprintf(errw, "termocode mcp: %v\n\n%s", err, mcpUsage)
+				return mcpExitUsage
+			}
+			wsID = v
 		default:
 			fmt.Fprintf(errw, "termocode mcp: unknown argument %q\n\n%s", a, mcpUsage)
 			return mcpExitUsage
@@ -57,6 +74,20 @@ func runMCPIn(args []string, in io.Reader, out, errw io.Writer, cwd string) int 
 			return mcpExitLost
 		}
 		return relayMCP(in, out, conn, errw, "this AI step")
+	}
+	if wsID != "" && explicit {
+		fmt.Fprintf(errw, "termocode mcp: give --workspace or --dir, not both\n\n%s", mcpUsage)
+		return mcpExitUsage
+	}
+	if wsID != "" {
+		p, _ := session.PathsForID(wsID) // checked above
+		if isSocket(p.MCPSocket) {
+			if conn, err := net.DialTimeout("unix", p.MCPSocket, 2*time.Second); err == nil {
+				return relayMCP(in, out, conn, errw, wsID)
+			}
+			return serveStaticMCP(in, out, errw, wsID, "the socket does not answer", staticMCPTools())
+		}
+		return serveStaticMCP(in, out, errw, wsID, "", staticMCPTools())
 	}
 	if explicit {
 		if info, err := os.Stat(dir); err != nil || !info.IsDir() {

@@ -64,6 +64,42 @@ vim.api.nvim_create_autocmd('BufReadCmd', { group = g, pattern = pat, callback =
   vim.api.nvim_exec_autocmds('BufReadPost', { buffer = b, modeline = false })
 end })
 
+-- _G._termocode_remote_reload reads every loaded remote buffer again
+-- (RC-5): :checktime never rereads a BufReadCmd buffer, so after a
+-- discard, a git op or an AI write in the container the buffer kept the
+-- old text. Called only after those (checkTimeAllLua, aiCheckTimeLua),
+-- never by the 2 s timer: each read is an engine call. A buffer with
+-- unsaved edits keeps them and is marked termocode_disk_warned once.
+_G._termocode_remote_reload = function()
+  for _, b in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_loaded(b) and vim.b[b].termocode_remote and not vim.b[b].termocode_remote_failed then
+      local name = vim.api.nvim_buf_get_name(b)
+      local r = req('termocode_fs_read', name)
+      if r.ok and not r.new then
+        local lines = vim.split(r.text, '\n', { plain = true })
+        if #lines > 1 and lines[#lines] == '' then table.remove(lines) end
+        if vim.bo[b].fileformat == 'dos' then
+          for i, l in ipairs(lines) do if l:sub(-1) == '\r' then lines[i] = l:sub(1, -2) end end
+        end
+        local cur = vim.api.nvim_buf_get_lines(b, 0, -1, false)
+        if not vim.deep_equal(cur, lines) then
+          if vim.bo[b].modified then
+            if not vim.b[b].termocode_disk_warned then
+              vim.b[b].termocode_disk_warned = 'changed'
+              vim.notify('termocode: ' .. tail(name) .. ' changed in the container; your unsaved edits are kept', vim.log.levels.WARN)
+            end
+          else
+            vim.bo[b].modifiable = true
+            vim.api.nvim_buf_set_lines(b, 0, -1, false, lines)
+            vim.b[b].termocode_remote_empty = r.text == ''
+            vim.bo[b].modified = false
+          end
+        end
+      end
+    end
+  end
+end
+
 vim.api.nvim_create_autocmd('BufWriteCmd', { group = g, pattern = pat, callback = function(ev)
   local b = ev.buf
   local name = vim.api.nvim_buf_get_name(b)
