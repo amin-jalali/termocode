@@ -55,12 +55,12 @@ func TestAgentSwapCaptureUseAndUndoOnACard(t *testing.T) {
 	vault := fakeSwapVault{}
 	m.aiS().swapVault = vault
 	m.dispatchGitxPalette(agentSwapPaletteID)
-	if !m.pickerOpen || !strings.Contains(pickerIDs(m), "cli-codex") {
-		t.Fatalf("CLI rows: %s", pickerIDs(m))
+	if !m.pickerOpen || !strings.Contains(swapPickerIDs(m), "cli-codex") {
+		t.Fatalf("CLI rows: %s", swapPickerIDs(m))
 	}
 	m.gitx.onPick(m, "cli-codex")
-	if !strings.Contains(pickerIDs(m), "capture") {
-		t.Fatalf("actions: %s", pickerIDs(m))
+	if !strings.Contains(swapPickerIDs(m), "capture") {
+		t.Fatalf("actions: %s", swapPickerIDs(m))
 	}
 	m.gitx.onPick(m, "capture")
 	if !m.promptOpen {
@@ -76,8 +76,8 @@ func TestAgentSwapCaptureUseAndUndoOnACard(t *testing.T) {
 	}
 	m.dispatchGitxPalette(agentSwapPaletteID)
 	m.gitx.onPick(m, "cli-codex")
-	if !strings.Contains(pickerIDs(m), "use-work") {
-		t.Fatalf("saved accounts: %s", pickerIDs(m))
+	if !strings.Contains(swapPickerIDs(m), "use-work") {
+		t.Fatalf("saved accounts: %s", swapPickerIDs(m))
 	}
 	m.gitx.onPick(m, "use-work")
 	if !m.confirmOpen {
@@ -109,3 +109,18 @@ type fakeSwapVault map[string]string
 func (v fakeSwapVault) Get(n string) (string, bool, error) { s, ok := v[n]; return s, ok, nil }
 func (v fakeSwapVault) Set(n, s string) error              { v[n] = s; return nil }
 func (v fakeSwapVault) Delete(n string) error              { delete(v, n); return nil }
+func (v fakeSwapVault) Names() []string {
+	var out []string
+	for n := range v {
+		out = append(out, n)
+	}
+	return out
+}
+
+func swapPickerIDs(m *Model) string {
+	var ids []string
+	for _, it := range m.gitx.items {
+		ids = append(ids, it.ID)
+	}
+	return strings.Join(ids, ",")
+}

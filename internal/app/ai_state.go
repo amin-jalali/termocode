@@ -137,6 +137,12 @@ type aiState struct {
 	// packs is the open agent-pack flow (agent_packs_ui.go).
 	packs *agentPacksState
 	// agentPickPending is the agent the open install / sign-in card is about (agent_install.go).
+	// swapVault replaces the secret store in tests (agent_swap.go).
+	swapVault interface {
+		Get(string) (string, bool, error)
+		Set(string, string) error
+		Delete(string) error
+	}
 	agentPickPending string
 	// agentAccountPending is the sign-in line of the open account card (agent_accounts.go).
 	agentAccountPending string
