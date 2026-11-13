@@ -49,7 +49,10 @@ func TestAgentCLIUsageAndFailedCalls(t *testing.T) {
 
 func TestAgentReportForms(t *testing.T) {
 	var got []agentctl.Request
-	rec := func(r agentctl.Request) (agentctl.Reply, error) { got = append(got, r); return agentctl.Reply{}, errors.New("gone") }
+	rec := func(r agentctl.Request) (agentctl.Reply, error) {
+		got = append(got, r)
+		return agentctl.Reply{}, errors.New("gone")
+	}
 	env := map[string]string{"TERMOCODE_SOCKET": "/s", "TERMOCODE_TAB_ID": "t9", "TERMOCODE_AGENT_DEBUG": "1"}
 	code, _, errw := agentCLI(t, env, rec, "", "report", "waiting", "--agent=codex", "--tab", "t2", `{"event":"x"}`)
 	if code != 0 || len(got) != 1 || got[0].Agent != "codex" || got[0].Tab != "t2" {
