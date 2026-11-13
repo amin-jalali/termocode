@@ -2,7 +2,10 @@ package containerhost
 
 import (
 	"context"
+	"github.com/amin-jalali/termocode/internal/containerhost/fakedocker"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -121,5 +124,57 @@ func TestMuxThatDiesAtOnceFallsBack(t *testing.T) {
 	}
 	if h.MuxRunning() {
 		t.Error("a dead mux is not running")
+	}
+}
+
+func TestExecWithoutACommandIsRefused(t *testing.T) {
+	h, _, _ := newHost(t)
+	x := h.Exec()
+	if _, _, code, err := x.CaptureInput(t.Context(), "", []byte("in")); err == nil || code != -1 {
+		t.Errorf("CaptureInput without a command = %d, %v", code, err)
+	}
+	if _, _, err := x.Stream(t.Context(), ""); err == nil {
+		t.Error("Stream without a command: want error")
+	}
+	if _, _, code, err := x.Capture(t.Context(), ""); err == nil || code != -1 {
+		t.Errorf("Capture without a command = %d, %v", code, err)
+	}
+}
+
+// switchedExec fails every engine call once down is set.
+type switchedExec struct {
+	services.Exec
+	down *bool
+}
+
+func (s switchedExec) Capture(ctx context.Context, dir string, argv ...string) (string, string, int, error) {
+	if *s.down {
+		return "", "something broke", 1, nil
+	}
+	return s.Exec.Capture(ctx, dir, argv...)
+}
+
+func TestFindCommandsReportsAnEngineFailure(t *testing.T) {
+	down := false
+	h, _, _ := newHost(t, func(c *Config) { c.X = switchedExec{Exec: c.X, down: &down} })
+	if !h.Caps().HasShell {
+		t.Skip("the fake image has no shell")
+	}
+	down = true
+	if _, err := h.FindCommands(t.Context(), []string{"gopls"}); err == nil {
+		t.Error("an engine that fails: want error")
+	}
+}
+
+func TestMountFSNotUsedWhenTheSourceIsAFile(t *testing.T) {
+	h, _, _ := mounted(t, true, func(c *fakedocker.Container) []fakedocker.Mount {
+		file := filepath.Join(c.Root, "afile")
+		if err := os.WriteFile(file, []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return []fakedocker.Mount{{Type: "bind", Source: file, Destination: "/app", RW: true}}
+	})
+	if h.Caps().MountOf != "" {
+		t.Errorf("a file cannot stand in for the folder, MountOf = %q", h.Caps().MountOf)
 	}
 }
