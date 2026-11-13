@@ -1327,6 +1327,10 @@ func (m *Model) submitAIInput() tea.Cmd {
 		if cmd, ok := m.aiMCPPromptSubmit(text); ok { // "/server.prompt" (MCPX-13)
 			return cmd
 		}
+		if cmd, ok := m.aiMCPToolSubmit(text); ok { // "/tool server.tool" (UX-10)
+			s.input, s.caret = nil, 0
+			return cmd
+		}
 	}
 	var attach tea.Cmd
 	if _, ok := m.aiReady(); ok && !s.streaming {

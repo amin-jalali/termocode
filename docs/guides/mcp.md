@@ -832,3 +832,11 @@ attach a debugger to it. For a Node.js server, add
 A Python server can wait for a debugger with `debugpy --listen 5678
 --wait-for-client`. **Stop** in the servers list and the next tool call
 start it again with your changes.
+
+## Call a tool by name from the chat
+
+Type `/tool server.tool key=value …` in the chat to call one tool yourself, without the AI.
+A value is read as JSON when it is valid JSON (`n=3`, `on=true`), else it is text; for exact
+control give one JSON object: `/tool notes.write_note {"title":"Plan","body":"…"}`.
+A read-only tool runs at once. Any other tool shows a card with the exact call, **Cancel**
+first. The result appears as a note in the chat. It is shown to you and not sent to the model.
