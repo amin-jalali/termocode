@@ -37,7 +37,7 @@ var sourceRules = []rule{
 	// loads Add to AI Chat (aictx.js, lib/aictx.ts) and This device, Pair
 	// a Device… and Devices… (device.js, lib/device.tsx). Each is a
 	// fixed path.
-	{name: "dynamic import", re: regexp.MustCompile(`\bimport\s*\(`), allow: map[string]bool{"lib/lazy.ts": true, "monaco/frame.ts": true, "lib/device.tsx": true, "lib/aictx.ts": true}},
+	{name: "dynamic import", re: regexp.MustCompile(`\bimport\s*\(`), allow: map[string]bool{"lib/lazy.ts": true, "monaco/frame.ts": true, "lib/device.tsx": true, "lib/aictx.ts": true, "lib/parquet.ts": true}},
 	{name: "remote script/style", re: regexp.MustCompile(`(?i)@import|url\(\s*["']?(https?:)?//`)},
 	// Only the prefs module touches localStorage, and it never holds a
 	// secret; and the bookmark key of a remembered browser (WEBP-12), the
@@ -207,6 +207,7 @@ func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
 		if e.Path == "workbench.js" { // the workbench's one dynamic import: This device, Pair a Device… and Devices… (lib/device.tsx), a fixed path
 			text = strings.Replace(text, `import("/assets/device.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/aictx.js")`, "", 1) // Add to AI Chat (lib/aictx.ts), a fixed path
+			text = strings.Replace(text, `import("/assets/parquet.js")`, "", 1) // Export as Parquet (lib/parquet.ts), a fixed path
 		}
 		if e.Path == "monaco-frame.js" { // the frame's one dynamic import: Vim mode (WEBP-1), a fixed path
 			text = strings.Replace(text, `import("/assets/monaco-vim.js")`, "", 1)
