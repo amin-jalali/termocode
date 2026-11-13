@@ -34,6 +34,7 @@ picked over a clear alternative. A normal feature does not need one.
 | [0020](0020-web-ui.md) | Web UI: a second UI over one structured WebSocket | Accepted |
 | [0021](0021-workflows.md) | Workflows run in the UI process; files in the repo; state outside | Accepted |
 | [0022](0022-web-relay.md) | Web relay: a blind byte pipe, end-to-end encrypted from QR pairing | Accepted, pending hosting |
+| [0023](0023-push-bridge.md) | Push bridge: a self-hostable APNs / FCM forwarder for opaque wakes, no accounts | Proposed |
 
 > The folder was started after the project was already running, so 0001–0005
 > backfill decisions that were made earlier. Dates are the best guess from git
