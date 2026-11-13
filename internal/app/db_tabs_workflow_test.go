@@ -44,7 +44,7 @@ func toAny(in []string) []any {
 func TestDBResultTabsPinSwitchAndReplace(t *testing.T) {
 	s := newEditSession(5)
 	d := editDriver(t, 120, 30, s, "")
-	d.Key("s")
+	d.Key("Q")
 	dbWaitPage(t, d, "LIMIT 100")
 	if strings.Contains(pageRow1(t, d), "[1]") {
 		t.Fatalf("one result shows a tab strip: %s", pageRow1(t, d))

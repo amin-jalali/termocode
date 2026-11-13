@@ -31,3 +31,23 @@ func TestKB1VShowsTheTableDDL(t *testing.T) {
 		t.Fatalf("v did not open the DDL buffer: %s\n%s", dbBufName(t, d), ansi.Strip(d.Frame()))
 	}
 }
+
+// KB-2: M is the transaction mode (t is a terminal, as in Containers) and
+// Q runs the select (s means start).
+func TestKB2MOpensTheTransactionModePicker(t *testing.T) {
+	d, _ := tableDriver(t, 100, 30)
+	d.Key("g") // the connection row
+	d.Key("M")
+	if !d.WaitForText("Transaction mode for local", 2*time.Second) {
+		t.Fatalf("M did not open the mode picker:\n%s", ansi.Strip(d.Frame()))
+	}
+}
+
+func TestKB2QSelectsRowsInTheConsole(t *testing.T) {
+	d, s := tableDriver(t, 100, 30)
+	d.Key("Q")
+	dbWaitPage(t, d, "user-000@example.com")
+	if got := s.selects(); len(got) != 1 || got[0] != "SELECT * FROM `app`.`users` LIMIT 100;" {
+		t.Fatalf("Q ran %v", got)
+	}
+}

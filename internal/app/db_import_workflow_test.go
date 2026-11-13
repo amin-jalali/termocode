@@ -273,7 +273,7 @@ func TestDBImportWithoutCSVFilesAsksForAPath(t *testing.T) {
 func TestDBImportInsideAManualTransactionJoinsIt(t *testing.T) {
 	s := newEditSession(0)
 	d := importDriver(t, s, "", map[string]string{"data.csv": importCSV})
-	d.Key("t") // transaction mode picker
+	d.Key("M") // transaction mode picker
 	if !d.WaitForText("Manual", 2*time.Second) {
 		t.Fatalf("no mode picker:\n%s", frameText(d))
 	}

@@ -61,7 +61,7 @@ func TestCovSvcRegistryMenus(t *testing.T) {
 	}
 	// Keys: s searches, b browses, u on the section asks for any image.
 	selectRegistry(t, st, "ghcr.io")
-	press(m, "s")
+	press(m, "f")
 	if m.promptKind != promptKindContainerSearch {
 		t.Error("s: no search")
 	}

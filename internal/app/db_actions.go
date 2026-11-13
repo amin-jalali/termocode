@@ -457,7 +457,7 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	}
 	if have && row.kind == dbNodeVirtualView {
 		switch k.String() {
-		case "right", "l", "enter", " ", "o", "s":
+		case "right", "l", "enter", " ", "o", "s", "Q":
 			return m, m.databaseOpenVirtualView(row)
 		}
 	}
@@ -553,7 +553,7 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if have && row.kind == dbNodeConnection {
 			return m, m.databaseStartService(row.conn)
 		}
-	case "t":
+	case "M": // KB-2: t is a terminal (Containers), M is the mode
 		if have && row.conn != "" {
 			return m, m.databaseTxModePicker(row.conn)
 		}
@@ -580,7 +580,7 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.databaseShowDDLKey()
 	case "D":
 		return m, m.databaseDropKey()
-	case "s":
+	case "Q": // KB-2: s means start
 		return m, m.databaseSelectInConsole()
 	case "c":
 		return m, m.databaseCodeGenStart()
@@ -1369,7 +1369,7 @@ func dbTreeKeyRows() []confirm.KeyRow {
 		[]string{"T", "test the connection"},
 		[]string{"S", "start a stopped service"},
 		[]string{"U", "run pgTAP tests (PostgreSQL)"},
-		[]string{"t", "transaction mode"},
+		[]string{"M", "transaction mode"},
 		[]string{"p", "set the password"},
 		[]string{"n / $", "new SQL console / psql, mysql… in a terminal"},
 		[]string{"H", "SQL history"},
@@ -1378,7 +1378,7 @@ func dbTreeKeyRows() []confirm.KeyRow {
 		[]string{"o", "open the data"},
 		[]string{"d / v", "describe / show the DDL"},
 		[]string{"D", "drop it (shows what depends on it, asks first)"},
-		[]string{"s", "select 100 rows in the console"},
+		[]string{"Q", "select 100 rows in the console"},
 		[]string{"c", "generate code: SQL, types; routines: call with args; → inserts"},
 		[]string{"#", "count the rows"},
 		[]string{"i", "import a CSV file"},

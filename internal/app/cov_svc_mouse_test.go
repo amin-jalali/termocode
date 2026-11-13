@@ -166,16 +166,17 @@ func TestCovSvcProjectKeysByState(t *testing.T) {
 	st := m.services
 	var clip []string
 	defer SetClipboardSink(func(s string) { clip = append(clip, s) })()
-	// a / A with Docker off.
+	// s / x on the SERVICES header (KB-2) with Docker off.
 	st.problem.Kind = services.ProblemDaemonDown
-	for _, k := range []string{"a", "A"} {
+	selectRow(t, st, func(r svcRow) bool { return r.kind == svcRowSection && r.section == svcSecCompose })
+	for _, k := range []string{"s", "x"} {
 		press(m, k)
 		if !strings.Contains(regToast(m), "Docker is off") {
 			t.Errorf("%s toast = %q", k, regToast(m))
 		}
 	}
 	st.problem.Kind = services.ProblemNone
-	runServicesCmds(t, m, press(m, "A"))
+	runServicesCmds(t, m, press(m, "x"))
 	selectRow(t, st, func(r svcRow) bool { return r.kind == svcRowService && r.name == "redis" })
 	runServicesCmds(t, m, press(m, "x"))
 	if !strings.Contains(covSvcCalls(f), "stop redis") {
