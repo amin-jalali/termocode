@@ -143,3 +143,32 @@ func TestDatabaseHintContrast(t *testing.T) {
 		}
 	}
 }
+
+// SCN-34: Catppuccin Latte's accent and syntax colours (status letters, code
+// tokens) read at 3:1 on the editor and on the sidebar.
+func TestLatteTextColoursContrast(t *testing.T) {
+	var latte Spec
+	for _, s := range SpecThemes {
+		if s.ID == "catppuccin-latte" {
+			latte = s
+		}
+	}
+	for name, hex := range map[string]string{
+		"Red": latte.Red, "Orange": latte.Orange, "Yellow": latte.Yellow, "Green": latte.Green,
+		"Teal": latte.Teal, "Cyan": latte.Cyan, "Blue": latte.Blue, "Purple": latte.Purple, "Pink": latte.Pink,
+		"Keyword": latte.Keyword, "Function": latte.Function, "Type": latte.Type, "String": latte.String,
+		"Number": latte.Number, "Constant": latte.Constant, "Regex": latte.Regex, "Operator": latte.Operator,
+		"Comment": latte.Comment,
+	} {
+		fg, ok := ParseHex(hex)
+		if !ok {
+			t.Fatalf("%s: bad colour %q", name, hex)
+		}
+		for bgName, bgHex := range map[string]string{"editor": latte.Base, "sidebar": latte.Mantle} {
+			bg, _ := ParseHex(bgHex)
+			if r := contrastRatio(fg, bg); r < 3.0 {
+				t.Errorf("Latte %s %s on the %s: %.2f:1 < 3:1", name, hex, bgName, r)
+			}
+		}
+	}
+}

@@ -58,7 +58,7 @@ func refreshCommitBoxColors() {
 	gitInputBg = theme.Mix(theme.BgSidebar, theme.TextPrimary, 0.07) // raised field, readable on any theme
 	gitInputFg = theme.LG(theme.TextPrimary)
 	gitInputFocusFg = theme.LG(theme.TextWhite)
-	gitInputPlace = theme.LG(theme.TextMuted)
+	gitInputPlace = lightReadable(theme.TextMuted, gitInputBg)
 	gitInputAccent = theme.LG(theme.BorderFocus) // focus bar, matches the cursor-row accent
 	gitInputRail = theme.LG(theme.BorderDefault) // quiet rail when the field is blurred
 	gitCommitReadyBg = theme.LG(theme.BorderFocus)
@@ -475,4 +475,13 @@ func padBgRight(s string, w int, bg lipgloss.Color) string {
 		return s
 	}
 	return s + lipgloss.NewStyle().Background(bg).Render(strings.Repeat(" ", w-cur))
+}
+
+// lightReadable is c, and on a light theme at least 3:1 on bg (dim hints and
+// placeholders read there; dark themes keep their quieter look).
+func lightReadable(c theme.Color256, bg lipgloss.Color) lipgloss.Color {
+	if theme.IsLight() {
+		return theme.ReadableOn(c, bg, 3.0)
+	}
+	return theme.LG(c)
 }
