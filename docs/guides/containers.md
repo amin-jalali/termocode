@@ -263,7 +263,9 @@ branches all work there (git must be in the image). Staging, unstaging
 or discarding one hunk or a few lines works too: the patch goes to
 `git apply` on its input, so no file is written in the container.
 **Replace in Workspace** reads and writes the files through the
-container too.
+container too. **Find in Files** asks `rg` in the container which files
+hold the text, or `grep` when the image has no `rg` (plain text searches;
+a regex search with only `grep` reads every file), and reads only those.
 
 The **Testing** view finds the tests in the container's files and runs
 them there (`go test`, `pytest`, `cargo test`, jest or vitest must be
