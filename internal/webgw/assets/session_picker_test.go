@@ -59,7 +59,7 @@ func TestSessionPickerStepAfterSignIn(t *testing.T) {
 	pk := pickerSrc(t, "src/ui/SessionPicker.tsx")
 	for _, want := range []string{
 		`link.subscribe("projects")`,
-		`rows.length === 1`,
+		`rows.length <= 1`,
 		`<ul class="sp-list"`,
 		`t("sp.title")`,
 		`t("sp.here")`,

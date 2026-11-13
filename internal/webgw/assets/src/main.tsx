@@ -33,7 +33,8 @@ import { loadPersian } from "./lib/lazy";
 import { prefs } from "./lib/prefs";
 import { setOnOpen, unseen } from "./lib/notify";
 import { soloBuf } from "./lib/popout";
-import { goTab, route } from "./lib/router";
+import { go, goTab, route } from "./lib/router";
+import type { SessionRow } from "./lib/sessions";
 import { watchViewport } from "./lib/viewport";
 import { laptopTheme, link, waiting } from "./session";
 import { dict, has } from "./state/dict";
@@ -42,6 +43,7 @@ import { TABS } from "./state/route";
 import { openCards } from "./ui/CardSheet";
 import { ConnectScreen, type ConnectState } from "./ui/ConnectScreen";
 import { PairScreen } from "./ui/PairScreen";
+import { SessionPicker } from "./ui/SessionPicker";
 import { SignInScreen, bookmarkRemoved, signInWithBookmark } from "./ui/SignInScreen";
 import { passkeysHere } from "./net/passkey";
 import { isRemembered } from "./net/devicekey";
@@ -53,7 +55,7 @@ const RTL_LANGS = /^(fa|ar|he|ur|ps|ckb|dv|yi|sd|ug)\b/i;
 // pairs this device, and a page with neither offers the passkey sign-in
 // of a paired device (where the browser can, or with the bookmark key of
 // a remembered browser, WEBP-12) or says to use the link.
-const phase = signal<"connect" | "pair" | "signin" | "shell">(
+const phase = signal<"connect" | "pair" | "signin" | "pick" | "shell">(
   secret ? "connect" : pairSecret ? "pair" : passkeysHere() || isRemembered() ? "signin" : "connect",
 );
 const connect = signal<ConnectState>(secret ? "ready" : "nolink");
@@ -62,6 +64,20 @@ function startShell(): void {
   phase.value = "shell";
   link.subscribe("status", "toasts", "cards");
   link.start();
+}
+
+// After a passkey or bookmark sign-in (WEB-55) the link starts and the
+// page lists the owner's running sessions; a pick, or a single session,
+// opens the workspace. A launch link and a pairing go straight in.
+function startPick(): void {
+  phase.value = "pick";
+  link.subscribe("status", "toasts", "cards", "projects");
+  link.start();
+}
+
+function pickSession(row?: SessionRow): void {
+  phase.value = "shell";
+  if (row) go({ tab: "more", rest: "projects/" + row.id, query: {} }, true);
 }
 
 function open(): void {
@@ -79,7 +95,9 @@ function Root() {
     case "pair":
       return <PairScreen secret={pairSecret ?? ""} onDone={startShell} />;
     case "signin":
-      return <SignInScreen onDone={startShell} />;
+      return <SignInScreen onDone={startPick} />;
+    case "pick":
+      return <SessionPicker onPick={pickSession} />;
     default:
       return <ConnectScreen state={connect.value} onOpen={open} />;
   }
@@ -198,7 +216,7 @@ if (!secret && !pairSecret && token()) startShell();
 else if (!secret && !pairSecret && isRemembered()) {
   // A bookmark: sign in with the kept key; when it is refused here and
   // no passkey can be used, the page says to use the laptop's link.
-  void signInWithBookmark(startShell).then((going) => {
+  void signInWithBookmark(startPick).then((going) => {
     if (!going && !passkeysHere() && !bookmarkRemoved()) phase.value = "connect";
   });
 }

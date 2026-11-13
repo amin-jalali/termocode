@@ -138,11 +138,35 @@ function Solo({ buf }: { buf: number }) {
   );
 }
 
+/** OtherSession is a session picked after sign-in (WEB-55) on a desktop:
+ * the workbench shows only this laptop session, so the picked one stands
+ * on its own as its project page, with a way back. */
+function OtherSession() {
+  return (
+    <div class="shell layout-tablet layout-other">
+      <div class="bars">
+        <OfflineBar />
+        <ViewerBar />
+      </div>
+      <button type="button" class="btn btn-neutral sp-back" onClick={() => go({ tab: "chat", rest: "", query: {} })}>
+        {t("sp.back")}
+      </button>
+      <main class="main" id="main" tabIndex={-1}>
+        <MoreView />
+      </main>
+      {route.value.card && <CardSheet key={route.value.card} id={route.value.card} />}
+      <HereAsks />
+      <Toasts />
+    </div>
+  );
+}
+
 export function App() {
   const r = route.value;
   const l = layout.value;
   const solo = soloBuf(r);
   if (solo !== null) return <Solo buf={solo} />;
+  if (l === "desktop" && r.tab === "more" && r.rest.startsWith("projects/")) return <OtherSession />;
   if (l === "desktop") {
     // The desktop is the workbench: the TUI's layout, the status bar at
     // the bottom as on the laptop.
