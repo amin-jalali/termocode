@@ -299,3 +299,55 @@ func TestPairStartSaysGuest(t *testing.T) {
 		t.Fatal("a plain pairing says guest")
 	}
 }
+
+// Spec (G-COL): the owner may let a share edit files (the laptop's card
+// only): the guest device is "edit" and its session the editor role.
+// A plain pairing never gets that role (it is viewer or control).
+func TestPairGuestMayEdit(t *testing.T) {
+	r := newPairRig(t)
+	r.open(true)
+	id, _ := r.start("Sara")
+	r.approve(webdevices.RoleEdit)
+	r.waitState(id, "approved")
+	_, m := r.post("/pair/finish", `{"pair_id":"`+id+`"}`)
+	if m["role"] != webdevices.RoleEdit {
+		t.Fatalf("finish: %v", m)
+	}
+	sess, err := r.tokens.Check(m["token"].(string), r.clock.Now())
+	if err != nil || sess.Role != RoleEdit || hubRole(sess.Role) != webproto.RoleEditor {
+		t.Fatalf("guest session %+v %v", sess, err)
+	}
+	d, _, _ := r.store.Get(sess.Device)
+	if !d.Guest || d.Role != webdevices.RoleEdit {
+		t.Fatalf("guest device %+v", d)
+	}
+
+	r2 := newPairRig(t)
+	id, _ = r2.start("Phone")
+	r2.approve(webdevices.RoleEdit)
+	r2.waitState(id, "approved")
+	_, m = r2.post("/pair/finish", `{"pair_id":"`+id+`"}`)
+	if m["role"] != webdevices.RoleViewer {
+		t.Fatalf("a plain pairing got %v", m["role"])
+	}
+}
+
+// Spec (G-COL): the edit role survives a gateway restart (resume) and a
+// role change from the laptop.
+func TestEditRoleIsKept(t *testing.T) {
+	if sessionRole(webdevices.RoleEdit) != RoleEdit {
+		t.Fatal("sessionRole(edit)")
+	}
+	if hubRole(RoleViewer) != webproto.RoleViewer || hubRole(RoleControl) != webproto.RoleController {
+		t.Fatal("hubRole changed")
+	}
+	tk := NewTokens(DefaultIdle, DefaultMax)
+	now := time.Unix(1700000000, 0)
+	if _, _, err := tk.Issue("dev-a", RoleEdit, now); err != nil {
+		t.Fatal(err)
+	}
+	back := NewTokens(DefaultIdle, DefaultMax)
+	if n := back.Import(tk.Export(now), now); n != 1 {
+		t.Fatalf("restored %d sessions", n)
+	}
+}

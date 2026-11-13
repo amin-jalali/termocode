@@ -108,7 +108,7 @@ export function checkServerMsg(v: unknown): ServerMsg {
       if (uint(v, "v") !== PROTOCOL_VERSION) fail("meta.v: unsupported version");
       str(v, "conn");
       const role = str(v, "role");
-      if (role !== "viewer" && role !== "controller") fail("meta.role: unknown");
+      if (role !== "viewer" && role !== "controller" && role !== "editor") fail("meta.role: unknown");
       str(v, "device");
       uint(v, "idle_s");
       uint(v, "max_s");

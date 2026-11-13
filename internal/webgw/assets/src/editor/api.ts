@@ -2,6 +2,7 @@
 // editor lives in its own file, editor.js (CodeMirror and this glue, no
 // Preact), which the page loads only when the user starts editing; the
 // page imports nothing from it but these types.
+import type { FramePeer } from "../monaco/protocol";
 
 /** HlSeg is a coloured run of one row: UTF-16 columns and a class. */
 export interface HlSeg {
@@ -24,6 +25,9 @@ export interface EditorHost {
   label: string;
   /** onChange: the user changed the text (typing, paste, undo). */
   onChange(): void;
+  /** onRemoteLost: the editor could not show the laptop's change over
+   * typing it got meanwhile (G-COL; the desktop editor's frame). */
+  onRemoteLost?(): void;
   /** onSave: Ctrl/Cmd+S. onDone: Esc. */
   onSave(): void;
   onDone(): void;
@@ -40,6 +44,9 @@ export interface EditorHandle {
   /** replace sets the text as one undo step (the user chose it). */
   replace(text: string): void;
   setHl(rows: readonly HlRow[]): void;
+  /** peers draws the other people's carets (G-COL: the laptop's and
+   * the other pages'). */
+  peers(items: FramePeer[]): void;
   undo(): boolean;
   redo(): boolean;
   canUndo(): boolean;

@@ -143,7 +143,7 @@ export function DevicePage() {
       <section class="set-group" data-group="link" aria-label={t("dev.link")}>
         <h2 class="set-group-h">{t("dev.link")}</h2>
         <Fact title={t("dev.name")} value={m?.device || "—"} />
-        <Fact title={t("dev.role")} value={m ? t(m.role === "viewer" ? "dev.viewer" : "dev.controller") : "—"} />
+        <Fact title={t("dev.role")} value={m ? t(m.role === "viewer" ? "dev.viewer" : m.role === "editor" ? "dev.editor" : "dev.controller") : "—"} />
         <Fact title={t("dev.viewers")} value={m ? String(m.viewers) : "—"} />
         <host.BookmarkField desk />
       </section>

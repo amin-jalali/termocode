@@ -86,6 +86,7 @@ func webOpBufSetText(m *Model, call *webCall) tea.Cmd {
 		lines = []string{""}
 	}
 	var res webLuaEdit
+	rebased, row := false, a.Start.Row
 	if err := m.nvim.ExecLuaResult(webLuaSetText, &res, b.buf, a.Tick, a.Start.Row, a.Start.Col, a.End.Row, a.End.Col, lines); err != nil {
 		webFail(call, err)
 		return nil
@@ -100,7 +101,7 @@ func webOpBufSetText(m *Model, call *webCall) tea.Cmd {
 				webFail(call, err)
 				return nil
 			}
-			res = again
+			res, rebased, row = again, again.Err == "", moved.Start.Row
 		}
 	}
 	switch res.Err {
@@ -110,8 +111,8 @@ func webOpBufSetText(m *Model, call *webCall) tea.Cmd {
 			device = "web"
 		}
 		// The mark is a hint: an error leaves the edit as it is.
-		_ = m.nvim.ExecLuaArgs(webLuaEditMark, b.buf, a.Start.Row+len(lines)-1, device)
-		call.reply(webproto.EditRes{Tick: res.Tick, Dirty: res.Dirty})
+		_ = m.nvim.ExecLuaArgs(webLuaEditMark, b.buf, row+len(lines)-1, device)
+		call.reply(webproto.EditRes{Tick: res.Tick, Dirty: res.Dirty, Rebased: rebased})
 	case "conflict":
 		webFailData(call, webproto.CodeConflict, "The file changed on the laptop. Check and send again.", webproto.ConflictData{Tick: res.Tick})
 	case "range":

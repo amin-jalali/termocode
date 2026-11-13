@@ -63,7 +63,8 @@ type PairingConfig struct {
 	Store  *webdevices.Store
 	Audit  *Audit
 	// Ask shows the laptop's card and returns the role the owner picked
-	// (webdevices.RoleViewer or RoleControl), or an error for Not now.
+	// (webdevices.RoleViewer or RoleControl; RoleEdit for a share, G-COL),
+	// or an error for Not now.
 	Ask func(ctx context.Context, a webproto.PairAskArgs) (string, error)
 	// Now is the clock of secrets and pairings (nil: time.Now).
 	Now func() time.Time
@@ -126,7 +127,8 @@ func NewPairing(cfg PairingConfig) *Pairing {
 }
 
 // SetSecret opens a pairing link whose secret only the UI knows; the old
-// one closes. guest marks a share with another person (viewer only).
+// one closes. guest marks a share with another person (a viewer, or an
+// editor of files when the owner says so).
 func (p *Pairing) SetSecret(digest [sha256.Size]byte, ttl time.Duration, guest bool) {
 	s := LaunchSecretFromDigest(digest, p.cfg.Now())
 	s.exp = p.cfg.Now().Add(ttl)
@@ -285,11 +287,14 @@ func (p *Pairing) ask(pp *pendingPair) {
 	ctx, cancel := context.WithTimeout(context.Background(), pp.until.Sub(p.cfg.Now())+time.Second)
 	defer cancel()
 	role, err := p.cfg.Ask(ctx, webproto.PairAskArgs{PairID: pp.id, Name: pp.name, Code: pp.code, Guest: pp.guest})
-	if err == nil && role != webdevices.RoleViewer && role != webdevices.RoleControl {
+	if err == nil && role != webdevices.RoleViewer && role != webdevices.RoleControl && role != webdevices.RoleEdit {
 		err = errors.New("no role")
 	}
-	if pp.guest {
-		role = webdevices.RoleViewer // a share is never more than a viewer
+	switch {
+	case pp.guest && role == webdevices.RoleEdit:
+		// A share the owner let edit files (G-COL): still no control.
+	case pp.guest || role == webdevices.RoleEdit:
+		role = webdevices.RoleViewer // a share is never more; edit is for a share only
 	}
 	var reg *passkeyReg
 	var opts json.RawMessage
@@ -494,8 +499,11 @@ func (p *Pairing) finish(w http.ResponseWriter, r *http.Request) {
 
 // sessionRole is the session role of a device role.
 func sessionRole(role string) Role {
-	if role == webdevices.RoleControl {
+	switch role {
+	case webdevices.RoleControl:
 		return RoleControl
+	case webdevices.RoleEdit:
+		return RoleEdit
 	}
 	return RoleViewer
 }

@@ -26,6 +26,9 @@ type Role string
 const (
 	RoleControl Role = "control"
 	RoleViewer  Role = "viewer"
+	// RoleEdit is a share the owner let edit files (G-COL): the hub's
+	// editor role.
+	RoleEdit Role = "edit"
 )
 
 // ErrTokenUnknown: no live session has this token. Errors never hold the
