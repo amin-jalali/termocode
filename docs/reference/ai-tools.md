@@ -4015,6 +4015,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `web_projects_max` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web_push` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web_push_detail` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
+| `web_relay` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web_require_totp` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `word_wrap` | confirm (settings) |   |
 | `workflows_agent_sandbox` | never | where outside agents may write; only the user changes it |

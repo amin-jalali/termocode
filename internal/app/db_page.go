@@ -330,6 +330,10 @@ func (m *Model) databasePage() dbPage {
 	chips := make([]string, dbViewCount)
 	copy(chips, dbViewNames[:])
 	plan := r.plan != nil && res.Err == nil && len(res.Columns) > 0
+	docs := m.databaseDocView(r.conn) // DBX-68: items as JSON documents
+	if docs {
+		chips[dbViewJSON] = "Documents"
+	}
 	if plan {
 		chips[dbViewGrid], chips[dbViewJSON] = "Plan", "Raw"
 	}
@@ -339,6 +343,9 @@ func (m *Model) databasePage() dbPage {
 	sep := "  "
 	if ansi.StringWidth(summary)+3+ansi.StringWidth(strings.Join(chips, sep)) > width {
 		chips, sep = []string{"Grid", "JSON", "Msgs"}, " "
+		if docs {
+			chips[dbViewJSON] = "Docs"
+		}
 		if plan {
 			chips[dbViewGrid], chips[dbViewJSON] = "Plan", "Raw"
 		}
@@ -427,7 +434,11 @@ func (m *Model) databasePage() dbPage {
 		}
 		var b bytes.Buffer
 		page := s.pageResult()
-		if json.Indent(&b, []byte(dbclient.ToJSON(page)), " ", "  ") == nil {
+		toJSON := dbclient.ToJSON
+		if docs {
+			toJSON = dbclient.ToDocsJSON
+		}
+		if json.Indent(&b, []byte(toJSON(page)), " ", "  ") == nil {
 			for _, l := range strings.Split(dbSafeMultiline(" "+b.String()), "\n") {
 				p.add(l)
 			}
@@ -436,6 +447,16 @@ func (m *Model) databasePage() dbPage {
 		databaseMessages(&p, r)
 	}
 	return p
+}
+
+// databaseDocView reports a connection whose items are documents: the JSON
+// view shows each as a nested JSON document (DBX-68).
+func (m *Model) databaseDocView(conn string) bool {
+	if m.databases == nil {
+		return false
+	}
+	c, ok := m.databases.connection(conn)
+	return ok && c.Driver == "dynamodb"
 }
 
 func dbPlural(n int, word string) string {

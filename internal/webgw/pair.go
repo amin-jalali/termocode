@@ -108,6 +108,9 @@ type pendingPair struct {
 	changed        chan struct{}   // closed on the next state change
 	reg            *passkeyReg     // the passkey being made (WEB-33)
 	options        json.RawMessage // its creation options
+	// relayKey is the phone's relay key when the pairing came through the
+	// relay (ADR 0022): no passkey then, and the device is bound to it.
+	relayKey string
 }
 
 // NewPairing makes the endpoints; no pairing is open until SetSecret.
@@ -130,6 +133,15 @@ func (p *Pairing) SetSecret(digest [sha256.Size]byte, ttl time.Duration, guest b
 	p.mu.Lock()
 	p.secret, p.guest = s, guest
 	p.mu.Unlock()
+}
+
+// Open reports whether plain is the open pairing link's secret, without
+// using it up (the relay lets such a page in to pair).
+func (p *Pairing) Open(plain string) bool {
+	p.mu.Lock()
+	s := p.secret
+	p.mu.Unlock()
+	return s != nil && s.Matches(plain, p.cfg.Now())
 }
 
 // CloseSecret closes the open pairing link, if any.
@@ -218,6 +230,11 @@ func (p *Pairing) start(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusServiceUnavailable, errorReply("busy"))
 		return
 	}
+	if peer, ok := relayPeer(r.Context()); ok {
+		p.mu.Lock()
+		pp.relayKey = peer.String()
+		p.mu.Unlock()
+	}
 	_ = p.cfg.Audit.Log(Event{Kind: EvPairStart, Device: pp.name, Summary: tailnetUser(r)})
 	crash.Go("web gateway: a pairing card", func() { p.ask(pp) })
 	writeJSON(w, http.StatusOK, map[string]any{"pair_id": pp.id, "code": pp.code, "guest": pp.guest,
@@ -276,7 +293,10 @@ func (p *Pairing) ask(pp *pendingPair) {
 	}
 	var reg *passkeyReg
 	var opts json.RawMessage
-	if err == nil && p.cfg.Passkeys != nil {
+	p.mu.Lock()
+	viaRelay := pp.relayKey != ""
+	p.mu.Unlock()
+	if err == nil && p.cfg.Passkeys != nil && !viaRelay {
 		reg, opts, err = p.cfg.Passkeys.BeginRegistration(pp.name)
 	}
 	p.mu.Lock()
@@ -384,8 +404,16 @@ func (p *Pairing) finish(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusGone, errorReply("expired"))
 		return
 	}
-	useAppKey := p.cfg.AppKeys && !pp.guest && req.AppKey != "" // a guest is for one visit
-	if p.cfg.Passkeys != nil && len(req.Credential) == 0 && !useAppKey {
+	p.mu.Lock()
+	relayKey := pp.relayKey
+	p.mu.Unlock()
+	// A relay pairing ends only through the relay, from the same phone key.
+	if peer, ok := relayPeer(r.Context()); ok != (relayKey != "") || (ok && peer.String() != relayKey) {
+		writeJSON(w, http.StatusForbidden, errorReply("not_approved"))
+		return
+	}
+	useAppKey := p.cfg.AppKeys && !pp.guest && req.AppKey != "" && relayKey == "" // a guest is for one visit
+	if p.cfg.Passkeys != nil && len(req.Credential) == 0 && !useAppKey && relayKey == "" {
 		writeJSON(w, http.StatusBadRequest, errorReply("need_passkey"))
 		return
 	}
@@ -419,8 +447,8 @@ func (p *Pairing) finish(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, errorReply("internal"))
 		return
 	}
-	d := webdevices.Device{ID: id, Name: pp.name, Role: pp.role, Guest: pp.guest, Created: now.UTC(), LastSeen: now.UTC(), AppKey: appKey}
-	if p.cfg.Passkeys != nil && len(req.Credential) > 0 {
+	d := webdevices.Device{ID: id, Name: pp.name, Role: pp.role, Guest: pp.guest, Created: now.UTC(), LastSeen: now.UTC(), AppKey: appKey, RelayKey: relayKey}
+	if p.cfg.Passkeys != nil && len(req.Credential) > 0 && relayKey == "" {
 		key, err := p.cfg.Passkeys.FinishRegistration(pp.reg, req.Credential)
 		if err != nil {
 			_ = p.cfg.Audit.Log(Event{Kind: EvPairFail, Device: pp.name, Why: passkeyWhy(err)})
@@ -430,7 +458,8 @@ func (p *Pairing) finish(w http.ResponseWriter, r *http.Request) {
 		d.CredID, d.PublicKey, d.SignCount, d.AAGUID, d.UserID, d.RPID = key.CredID, key.PublicKey, key.SignCount, key.AAGUID, key.UserID, key.RPID
 	}
 	devKey := ""
-	if origin := r.Header.Get("Origin"); req.Remember && !pp.guest && origin != "" { // a guest is for one visit
+	// A guest is for one visit; a relay phone signs in with its relay key.
+	if origin := r.Header.Get("Origin"); req.Remember && !pp.guest && origin != "" && relayKey == "" {
 		k, h, err := NewDeviceKey(id)
 		if err == nil {
 			devKey, d.Bookmark = k, rotated(nil, h, origin, now)

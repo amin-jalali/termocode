@@ -93,7 +93,9 @@ async function wait(): Promise<void> {
     if (r.status === 200 && r.data.state === "approved") {
       options = r.data.options;
       appKeys = r.data.app_keys === true && inApp();
-      plain.value = !appKeys && (options === undefined || options === null) && lanHere();
+      // No options: the laptop wants no passkey here (LAN mode, or the
+      // relay, whose origin is not the laptop's: ADR 0022).
+      plain.value = !appKeys && (options === undefined || options === null);
       if (plain.value) remember.value = true; // with no passkey, the remembered key is how it signs in again
       state.value = appKeys || plain.value || passkeysHere() ? "approved" : "nopasskey";
       return;

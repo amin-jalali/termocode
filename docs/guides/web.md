@@ -217,6 +217,61 @@ not need Tailscale or any cloud. Add to `config.json`:
 - Share as Viewer needs tailnet mode.
 - The AI can never change `web_listen`.
 
+### Or: the relay (any network, no VPN app)
+
+A relay lets a paired phone reach the panel from any network: mobile
+data, a hotel Wi-Fi, a work phone with no VPN app. Add the relay's
+address to `config.json`:
+
+```json
+{ "web_panel": "on", "web_relay": "https://relay.example.org" }
+```
+
+- **The relay cannot read anything.** It only passes encrypted bytes
+  between this computer and the phone. Both ends hold the keys; the
+  relay holds none. It sees only sizes and timing.
+- This computer dials out to the relay. Nothing listens on the network.
+- termocode makes a relay key and a random room id once and keeps them
+  in your secret store (`web.relay.key`). They never go in `config.json`,
+  a command line or a log.
+- **Web: Pair a Device…** then shows a QR code for the relay
+  (`https://relay…/#r=<room>&k=<key>&p=<one-time secret>`). The part
+  after `#` never reaches the relay. The phone makes its own key and
+  keeps it in the browser (it cannot be copied out).
+- A phone the laptop does not know is turned away before it sees
+  anything. A paired phone signs in again with its key alone.
+- No passkey over the relay: a passkey belongs to one web address, and
+  the relay's address is not the laptop's. The phone's own key takes
+  its place. A sign-in code (`web_require_totp`) is not asked over the
+  relay yet; see Limits.
+- **Web: Devices…** removes a phone: its relay sessions end at once.
+- Stopping the panel stops the relay too.
+- The AI can never change `web_relay`.
+
+#### Run your own relay
+
+The relay is one small program, `termocode-relay`. No database, no
+account. Run it on any server you trust:
+
+```sh
+go build -o termocode-relay ./cmd/termocode-relay
+# behind your own TLS proxy (Caddy, nginx, …) on the same machine:
+./termocode-relay -listen 127.0.0.1:8787 -trust-proxy
+# or with its own certificate:
+./termocode-relay -listen :443 -tls-cert cert.pem -tls-key key.pem
+```
+
+- It refuses to listen beyond `127.0.0.1` without TLS: it serves the
+  page's code, and only TLS keeps that code whole on the way.
+- Limits per pair: 4 MiB/s (`-rate`), 15 minutes idle (`-idle`),
+  12 hours at most (`-max-life`). Per room: 2 waiting laptop
+  connections, 4 phones. Per client address: 20 connections
+  (`-max-conns-per-ip`). In all: 10000 rooms (`-max-rooms`).
+- Its log (stderr, one JSON line per event) has connects, ends, byte
+  counts and a short hash of the room id. Never the room id, never a
+  byte of what passes. Keep it at most 7 days.
+- `/healthz` answers `ok` for your monitor.
+
 ### Pair your phone
 
 1. In termocode, run **Web: Pair a Device…**. A QR code shows. It works
@@ -656,6 +711,10 @@ issue.
 - At most 32 paired devices.
 - At most **4** projects open at once from a phone (`web_projects_max`,
   up to 8).
+- Over the relay: at most **4** phones at once; a sign-in code
+  (`web_require_totp`) is not asked there yet, so a phone with one set
+  signs in on the tailnet or LAN instead; Share as Viewer and phone
+  pushes do not go through the relay.
 
 ## Settings
 
@@ -675,6 +734,7 @@ issue.
 | `web_phone` | `off` | `on`: a paired phone with the panel open keeps it running, screen off too (not guests). |
 | `web_projects_max` | `4` | Projects a phone may have open at once (1..8). |
 | `web_project_idle_minutes` | `60` | A project the phone started stops after this many idle minutes (5..240). |
+| `web_relay` | (none) | The address of a relay (`https://host[:port]`) so a paired phone reaches the panel from any network. The relay passes only encrypted bytes. |
 
 These settings live only in your own `config.json`. A project's settings
 cannot change them.
