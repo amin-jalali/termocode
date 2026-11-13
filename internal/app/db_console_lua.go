@@ -39,7 +39,7 @@ return vim.json.encode({line=first,col=col,selection=selection})
 const dbConsoleLua = `
 if _G._termocode_sql then return end
 local api=vim.api
-local S={rows={},running=false,schema={},want=nil}
+local S={rows={},running=false,schema={},want=nil,embed={},prev={}}
 _G._termocode_sql=S
 local ns=api.nvim_create_namespace('termocode_sql_lens')
 api.nvim_set_decoration_provider(ns,{
@@ -63,9 +63,12 @@ local function unq(s) return (s:gsub('^[\34\96]',''):gsub('[\34\96]$','')) end
 local function quoted(S1,name)
  if name:match('^[a-z_][a-z0-9_$]*$') then return name end
  local q=S1.quote or '\34'
- return q..name:gsub(q,q..q)..q
+ local w=q..name:gsub(q,q..q)..q
+ if S.embed_q==q then w=w:gsub(q,'\\'..q) end -- inside a code string quoted with q
+ return w
 end
 local function statement_text()
+ if S.embed_text then return S.embed_text end
  local row=api.nvim_win_get_cursor(0)[1]
  local lines=api.nvim_buf_get_lines(0,0,-1,false)
  local first,last=1,#lines
@@ -276,6 +279,58 @@ function _G._termocode_sql_omni(findstart,base)
  end
  return out
 end
+-- SQL in the strings of a code file (DBX-41, db_embed_complete.go): Go
+-- pushes S.embed[buf] = the string ranges; inside one the SQL omnifunc
+-- runs on that string, elsewhere the buffer's own omnifunc.
+local function embed_at(buf)
+ local r=S.embed[buf]
+ if not r then return nil end
+ local pos=api.nvim_win_get_cursor(0)
+ local row,col=pos[1]-1,pos[2]
+ for _,e in ipairs(r) do
+  if (row>e.SR or row==e.SR and col>=e.SC) and (row<e.ER or row==e.ER and col<=e.EC) then return e end
+ end
+end
+local function prev_omni(buf,findstart,base)
+ local p=S.prev[buf]
+ local f
+ if p and p~='' then
+  local path=p:match('^v:lua%.(.+)$')
+  if path then
+   f=_G
+   for k in path:gmatch('[^.]+') do f=type(f)=='table' and f[k] or nil end
+  else
+   f=function(a,b) return vim.fn[p](a,b) end
+  end
+ end
+ if type(f)~='function' then
+  if findstart==1 then return -3 end
+  return {}
+ end
+ return f(findstart,base)
+end
+function _G._termocode_sql_embed_omni(findstart,base)
+ local buf=api.nvim_get_current_buf()
+ local e=embed_at(buf)
+ if not e then return prev_omni(buf,findstart,base) end
+ local ok,lines=pcall(api.nvim_buf_get_text,buf,e.SR,e.SC,e.ER,e.EC,{})
+ S.embed_text=ok and table.concat(lines,' ') or ''
+ S.embed_q=e.Q~='' and e.Q or nil
+ local ok2,res=pcall(_G._termocode_sql_omni,findstart,base)
+ S.embed_text,S.embed_q=nil,nil
+ if not ok2 then
+  if findstart==1 then return -3 end
+  return {}
+ end
+ if findstart==1 and api.nvim_win_get_cursor(0)[1]-1==e.SR and res<e.SC then res=e.SC end -- never the code's quote
+ return res
+end
+function S.wrap_omni(buf)
+ local cur=vim.bo[buf].omnifunc
+ if cur=='v:lua._termocode_sql_embed_omni' then return end
+ S.prev[buf]=cur
+ vim.bo[buf].omnifunc='v:lua._termocode_sql_embed_omni'
+end
 -- Go pushed new columns: open the popup again where the user waited.
 function S.retrigger(buf,table_)
  local w=S.want
@@ -294,8 +349,26 @@ local function changed(buf)
   if api.nvim_buf_is_valid(buf) and _G.termocode_notify then _G.termocode_notify('termocode_db_buf',buf) end
  end,150)
 end
+local etimers={}
+local function embed_changed(buf)
+ if etimers[buf] then etimers[buf]:stop() end
+ etimers[buf]=vim.defer_fn(function()
+  etimers[buf]=nil
+  if api.nvim_buf_is_valid(buf) and _G.termocode_notify then _G.termocode_notify('termocode_db_embed',buf) end
+ end,150)
+end
 vim.filetype.add({extension={cql='sql'}})
 local g=api.nvim_create_augroup('termocode_sql',{clear=true})
+api.nvim_create_autocmd('FileType',{group=g,pattern={'go','python','javascript','typescript','javascriptreact','typescriptreact'},callback=function(args)
+ local buf=args.buf
+ api.nvim_create_autocmd('InsertEnter',{group=g,buffer=buf,callback=function() S.wrap_omni(buf) end})
+ api.nvim_create_autocmd('BufWipeout',{group=g,buffer=buf,callback=function() S.embed[buf]=nil;S.schema[buf]=nil;S.prev[buf]=nil end})
+ if not vim.b[buf].termocode_sql_embed then
+  vim.b[buf].termocode_sql_embed=true
+  api.nvim_buf_attach(buf,false,{on_lines=function() embed_changed(buf) end,on_detach=function() pcall(function() vim.b[buf].termocode_sql_embed=nil end) end})
+ end
+ embed_changed(buf)
+end})
 api.nvim_create_autocmd('FileType',{group=g,pattern='sql',callback=function(args)
  local buf=args.buf
  vim.bo[buf].omnifunc='v:lua._termocode_sql_omni'

@@ -20,7 +20,7 @@ func TestDBEmbeddedSQLCompletion(t *testing.T) {
 	d.Key("esc")
 	// Go pushes the SQL string ranges of the buffer.
 	if !d.WaitFor(func() bool {
-		return dbLua(t, d, `local r=_G._termocode_sql and _G._termocode_sql.embed[vim.api.nvim_get_current_buf()];return r and #r or 0`) == "1"
+		return dbLua(t, d, `local r=_G._termocode_sql and _G._termocode_sql.embed[vim.api.nvim_get_current_buf()];return tostring(r and #r or 0)`) == "1"
 	}, 3*time.Second) {
 		t.Fatalf("no SQL string ranges pushed: %s", dbLua(t, d, `return vim.inspect(_G._termocode_sql and _G._termocode_sql.embed)`))
 	}
