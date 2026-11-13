@@ -135,3 +135,36 @@ func TestPortForwardNotReadyAndBrowserFailure(t *testing.T) {
 		t.Errorf("notes %q", notes)
 	}
 }
+
+// After Close a hand-off is dropped; a changed port restarts the forward; a
+// browser that cannot open and a page that cannot be written say so.
+func TestWebForwardClosedRestartAndOpenFailures(t *testing.T) {
+	f, ff := newTestForward(t)
+	f.Handoff(session.WebHandoff{Port: 41001, Sock: "/s1", Secret: "x"})
+	waitCond(t, "the page", func() bool { _, o, _, _ := ff.snapshot(); return len(o) == 1 })
+	// A new port: the old forward is killed and a new one starts.
+	f.Handoff(session.WebHandoff{Port: 41002, Sock: "/s2", Secret: "x"})
+	waitCond(t, "the restart", func() bool { argv, _, _, k := ff.snapshot(); return len(argv) == 2 && k >= 1 })
+	f.Close()
+	f.Handoff(session.WebHandoff{Port: 41003, Sock: "/s3"}) // dropped
+	if argv, _, _, _ := ff.snapshot(); len(argv) != 2 {
+		t.Errorf("a closed forward started %d", len(argv))
+	}
+
+	g, gg := newTestForward(t)
+	g.open = func(string) error { return errors.New("no browser") }
+	g.Handoff(session.WebHandoff{Port: 41010, Sock: "/s", Secret: "x"})
+	waitCond(t, "the note", func() bool { g.mu.Lock(); defer g.mu.Unlock(); return len(g.notes) >= 1 })
+	if notes := g.Close(); len(notes) == 0 || !strings.Contains(notes[0], "could not open a browser") {
+		t.Errorf("notes %q", notes)
+	}
+	_ = gg
+
+	h, _ := newTestForward(t)
+	h.dir = "/definitely/not/a/folder"
+	h.Handoff(session.WebHandoff{Port: 41020, Sock: "/s", Secret: "x"})
+	waitCond(t, "the write note", func() bool { h.mu.Lock(); defer h.mu.Unlock(); return len(h.notes) >= 1 })
+	if notes := h.Close(); !strings.Contains(notes[0], "could not open the web panel") {
+		t.Errorf("notes %q", notes)
+	}
+}

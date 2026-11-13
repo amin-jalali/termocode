@@ -107,3 +107,20 @@ func TestWorkflowCLIFailingDryRunAndAgain(t *testing.T) {
 		t.Errorf("again unseen: %d %q", code, errw)
 	}
 }
+
+// Without a home or state folder there is nowhere to keep runs: every
+// command that needs the ledger says so.
+func TestWorkflowCLIWithoutAStateFolder(t *testing.T) {
+	for _, k := range []string{"HOME", "XDG_STATE_HOME", "XDG_CONFIG_HOME"} {
+		t.Setenv(k, "")
+	}
+	if _, err := ledger.Root(t.TempDir()); err == nil {
+		t.Skip("the ledger root does not need a home here")
+	}
+	if code, _, errw := cliRun(t.TempDir(), "list"); code != 1 || errw == "" {
+		t.Errorf("list: %d %q", code, errw)
+	}
+	if workflowPrivateDir() != "" {
+		t.Error("private dir without a home")
+	}
+}

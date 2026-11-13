@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	tea "github.com/charmbracelet/bubbletea"
 	"os"
@@ -122,5 +123,25 @@ func TestMCPAdminFlagsWithEquals(t *testing.T) {
 	// A secret value that is a broken reference is refused.
 	if code, _, errs := runAdmin(t, cwd, "${secret:\n", "add", "--secret", "K", "bad", "--", "srv"); code == 0 || errs == "" {
 		t.Errorf("broken ref: %d %q", code, errs)
+	}
+}
+
+// Without a config folder every admin command reports it instead of
+// guessing a place.
+func TestMCPAdminWithoutAConfigFolder(t *testing.T) {
+	for _, k := range []string{"HOME", "XDG_CONFIG_HOME", "XDG_STATE_HOME"} {
+		t.Setenv(k, "")
+	}
+	if _, err := ai.ConfigDir(); err == nil {
+		t.Skip("a config folder is found anyway")
+	}
+	for _, a := range [][]string{
+		{"list"}, {"get", "x"}, {"remove", "x"}, {"add", "https://example.com/mcp"}, {"add", "x", "--", "srv"},
+	} {
+		var out, errb bytes.Buffer
+		code, ok := runMCPAdmin(a, strings.NewReader(""), &out, &errb, t.TempDir())
+		if !ok || code == 0 || errb.Len() == 0 {
+			t.Errorf("%v: %d %q", a, code, errb.String())
+		}
 	}
 }
