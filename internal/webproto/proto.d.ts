@@ -3575,7 +3575,7 @@ export interface DBConns {
 export interface DBConn {
   id: string;
   name?: string;
-  driver: "postgres" | "mysql" | "sqlite" | "redis" | "sqlserver" | "other";
+  driver: "postgres" | "mysql" | "sqlite" | "redis" | "sqlserver" | "oracle" | "other";
   database?: string;
   env?: string;
   readonly?: boolean;

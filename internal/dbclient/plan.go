@@ -75,6 +75,8 @@ func ExplainForms(driver, stmt string, analyze, mariadb bool) []string {
 		return []string{"EXPLAIN QUERY PLAN " + stmt}
 	case "sqlserver":
 		return []string{SQLServerPlanForm(stmt, analyze)} // SHOWPLAN XML batches (mssql_conn.go)
+	case "oracle":
+		return []string{OraclePlanForm(stmt)} // EXPLAIN PLAN + DBMS_XPLAN (dialect_oracle.go); no analyze
 	}
 	return nil
 }
