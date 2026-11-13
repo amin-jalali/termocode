@@ -58,7 +58,8 @@ func PayloadFor(detail string, n int, kind, session string) []byte {
 	}
 	n = max(0, min(n, 999))
 	out := `{"n":` + strconv.Itoa(n)
-	if detail == DetailTitle && slices.Contains(Kinds, kind) {
+	ended := kind == "done" || kind == "failed" // nothing waits: say so at count too
+	if (detail == DetailTitle || ended) && slices.Contains(Kinds, kind) {
 		out += `,"k":"` + kind + `"`
 	}
 	if detail == DetailTitle {
