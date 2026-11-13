@@ -5,6 +5,7 @@ package main
 import (
 	"bytes"
 	"errors"
+	tea "github.com/charmbracelet/bubbletea"
 	"io"
 	"os"
 	"os/exec"
@@ -165,5 +166,43 @@ func TestReadSecretFromATerminal(t *testing.T) {
 	v, err := a.readSecret("API_KEY")
 	if err != nil || v != "sk-test0123456789abcdef" || !strings.Contains(errw.String(), "Value for API_KEY") {
 		t.Fatalf("%q %v %q", v, err, errw.String())
+	}
+}
+
+// With a terminal on stdin and stdout, the UI starts its input behind the
+// transfer filter and probes the terminal (no icon override set).
+func TestRunTUIOnATerminal(t *testing.T) {
+	for _, k := range []string{"TERMOCODE_ICON_MODE", "TERMOCODE_NERD_FONT"} {
+		t.Setenv(k, "")
+	}
+	t.Setenv("TERMOCODE_PROBE", "off")
+	home := scratchDir(t)
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", "")
+	t.Setenv("XDG_STATE_HOME", scratchDir(t))
+	ptyStdio(t)
+	oldRun, oldExit := runProgram, exitProcess
+	t.Cleanup(func() { runProgram, exitProcess = oldRun, oldExit })
+	exitProcess = func(int) {}
+	runProgram = func(*tea.Program) (tea.Model, error) { return nil, nil }
+	runTUI()
+	if inputOption() == nil {
+		t.Fatal("no input option")
+	}
+	_ = applyFontDelta(0)
+}
+
+func TestRunDispatchesBarAndLSPProxyAndGateway(t *testing.T) {
+	t.Setenv("HOME", scratchDir(t))
+	t.Setenv("XDG_STATE_HOME", scratchDir(t))
+	t.Setenv("XDG_RUNTIME_DIR", scratchDir(t))
+	if run([]string{"bar", "--help"}) != 0 {
+		t.Error("bar")
+	}
+	if run([]string{"lsp-proxy", "--help"}) != 0 {
+		t.Error("lsp-proxy")
+	}
+	if run([]string{webGatewayArg, "--bogus"}) != 2 {
+		t.Error("web gateway with bad args")
 	}
 }
