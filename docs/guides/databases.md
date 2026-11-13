@@ -455,6 +455,14 @@ CSV and TSV protect spreadsheets from formula injection: a cell that starts with
 - **Replace a literal with a parameter**: `status = 'open'` becomes `status = :status` (the same string everywhere in the statement); the run asks for the value.
 - **DISTINCT ↔ GROUP BY**, when the select list has no aggregate and no `*`.
 
+Select part of the statement first (or leave visual mode with the cursor at an end of the selection) for these:
+
+- **Extract expression into subquery column**: select `price * qty`; the table of that `SELECT` becomes `(SELECT items.*, price * qty AS expr FROM items) items`, and every same expression in that `SELECT` reads `expr`. If the selection is a select item with an alias (`… AS total`), the new column takes that name.
+- **Extract expression into CTE**: the same, as a `WITH items_expr AS (…)` entry.
+- **Extract the selected subquery as CTE**: a selected `(SELECT …)` in the select list or `WHERE` moves to `WITH sub AS (…)` and reads `(SELECT * FROM sub)`.
+
+They are not offered for an aggregate or window expression, a `SELECT` with more than one table, an expression that uses an outer query's names, a selection that is not a whole expression, or a subquery that uses an outer query's names. In a nested `SELECT`, Extract expression needs the table's columns.
+
 Qualify and Expand `*` use the columns the editor already knows for completion; connect the file's connection first. A rewrite is only offered when the statement is read clearly; nothing is sent to the server.
 
 ## EXPLAIN and ANALYZE

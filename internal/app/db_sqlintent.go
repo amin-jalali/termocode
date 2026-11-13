@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"strings"
+	"unicode/utf8"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -21,11 +22,58 @@ import (
 
 const pickerKindDBSQLIntent pickerKindEnum = 5391
 
-// dbSQLCursorLua returns the cursor line (1-based) and byte column.
+// dbSQLCursorLua returns the cursor line (1-based) and byte column, and
+// the last visual selection when the cursor stands at one of its ends
+// (marks '< and '>: 1-based lines, 0-based byte columns, '> on the
+// first byte of the last character).
 const dbSQLCursorLua = `
 local c=vim.api.nvim_win_get_cursor(0)
-return vim.json.encode({line=c[1],col=c[2]})
+local out={line=c[1],col=c[2]}
+local m=vim.fn.mode()
+local vs,ve
+if m=='v' or m=='V' or m=='\22' then
+ vs,ve=vim.fn.getpos('v'),vim.fn.getpos('.')
+ if vs[2]>ve[2] or vs[2]==ve[2] and vs[3]>ve[3] then vs,ve=ve,vs end
+ out.mode=m
+else
+ vs,ve=vim.fn.getpos("'<"),vim.fn.getpos("'>")
+ out.mode=vim.fn.visualmode()
+end
+local live=m=='v' or m=='V' or m=='\22'
+local at_end=(c[1]==vs[2] and c[2]==vs[3]-1) or (c[1]==ve[2] and c[2]==math.min(ve[3]-1,math.max(#vim.fn.getline(ve[2])-1,0)))
+if out.mode=='V' and (c[1]==vs[2] or c[1]==ve[2]) then at_end=true end
+if vs[2]>0 and ve[2]>0 and (live or at_end) then
+ out.sel={vs[2],vs[3]-1,ve[2],ve[3]-1}
+end
+return vim.json.encode(out)
 `
+
+// dbIntentSelRange turns a selection (from/to: 1-based line, 0-based
+// byte column; to is on the first byte of the last character) into byte
+// offsets inside the statement lines [start, end). Linewise takes whole
+// lines. ok=false when it is not inside the statement.
+func dbIntentSelRange(lines []string, start, end int, from, to [2]int, linewise bool) (int, int, bool) {
+	if from[0] < start+1 || to[0] > end || from[0] > to[0] || to[0] > len(lines) {
+		return 0, 0, false
+	}
+	off := func(line, col int) int {
+		o := 0
+		for i := start; i < line-1; i++ {
+			o += len(lines[i]) + 1
+		}
+		return o + col
+	}
+	fl, tl := lines[from[0]-1], lines[to[0]-1]
+	fc, tc := min(max(from[1], 0), len(fl)), min(max(to[1], 0), len(tl))
+	if linewise {
+		fc, tc = 0, len(tl)
+	} else if tc < len(tl) {
+		_, n := utf8.DecodeRuneInString(tl[tc:])
+		tc += n
+	}
+	s, e := off(from[0], fc), off(to[0], tc)
+	return s, e, e > s
+}
 
 // dbIntentTarget is the statement the intention picker was opened on.
 type dbIntentTarget struct {
@@ -35,6 +83,7 @@ type dbIntentTarget struct {
 	cur        int // cursor byte offset in stmt
 	dialect    string
 	cols       map[string][]string
+	opts       dbclient.SQLIntentOpts // the selection, if any
 }
 
 // dbIntentStatement finds the whole lines of the statement at the cursor
@@ -72,8 +121,12 @@ func dbIntentStatement(lines []string, line, col int, dialect string) (start, en
 
 // dbSQLIntentItems are the picker rows: ID is the intention id.
 func dbSQLIntentItems(stmt, dialect string, cur int, cols map[string][]string) []picker.Item {
+	return dbSQLIntentItemsWith(stmt, dialect, cur, cols, dbclient.SQLIntentOpts{})
+}
+
+func dbSQLIntentItemsWith(stmt, dialect string, cur int, cols map[string][]string, o dbclient.SQLIntentOpts) []picker.Item {
 	var items []picker.Item
-	for _, in := range dbclient.SQLIntentions(stmt, dialect, cur, cols) {
+	for _, in := range dbclient.SQLIntentionsWith(stmt, dialect, cur, cols, o) {
 		items = append(items, picker.Item{ID: in.ID, Title: sanitizeDBText(in.Title)})
 	}
 	return items
@@ -111,8 +164,10 @@ func (m *Model) databaseSQLIntentions() tea.Cmd {
 	}
 	lines := strings.Split(src, "\n")
 	var pos struct {
-		Line int `json:"line"`
-		Col  int `json:"col"`
+		Line int    `json:"line"`
+		Col  int    `json:"col"`
+		Mode string `json:"mode"`
+		Sel  []int  `json:"sel"`
 	}
 	var raw string
 	_ = m.nvim.ExecLuaResult(dbSQLCursorLua, &raw)
@@ -129,10 +184,15 @@ func (m *Model) databaseSQLIntentions() tea.Cmd {
 	}
 	t := &dbIntentTarget{start: start, end: end, orig: lines[start:end], cur: cur, dialect: dialect, cols: m.databases.knownColumns(connID)}
 	t.stmt = strings.Join(t.orig, "\n")
-	items := dbSQLIntentItems(t.stmt, dialect, cur, t.cols)
+	if len(pos.Sel) == 4 {
+		if s, e, ok := dbIntentSelRange(lines, start, end, [2]int{pos.Sel[0], pos.Sel[1]}, [2]int{pos.Sel[2], pos.Sel[3]}, pos.Mode == "V"); ok {
+			t.opts = dbclient.SQLIntentOpts{SelStart: s, SelEnd: e}
+		}
+	}
+	items := dbSQLIntentItemsWith(t.stmt, dialect, cur, t.cols, t.opts)
 	if len(items) == 0 {
 		return m.pushToastDetail(toast.Info, "No SQL intentions here",
-			"Put the cursor on a table, a *, a literal, a subquery or a CTE. Expand * and Qualify need the columns: connect the file first.")
+			"Put the cursor on a table, a *, a literal, a subquery or a CTE, or select an expression or a subquery. Expand * and Qualify need the columns: connect the file first.")
 	}
 	m.dbConsole().intent = t
 	m.picker = picker.NewItems("SQL intentions", items)
@@ -151,7 +211,7 @@ func (m *Model) databaseSQLIntentPicked(id string) tea.Cmd {
 	if t == nil || m.nvim == nil {
 		return nil
 	}
-	out, err := dbclient.ApplySQLIntention(t.stmt, t.dialect, id, t.cur, t.cols)
+	out, err := dbclient.ApplySQLIntentionWith(t.stmt, t.dialect, id, t.cur, t.cols, t.opts)
 	if err != nil {
 		return m.pushToastDetail(toast.Warn, "SQL not changed", sanitizeDBText(err.Error()))
 	}
