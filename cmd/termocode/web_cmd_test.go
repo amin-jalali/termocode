@@ -403,6 +403,27 @@ func TestWebGatewayPhoneWatchFlag(t *testing.T) {
 	}
 }
 
+// Spec (ADR 0022): --relay <address> turns on the gateway's relay side;
+// a bad address is refused; without it there is no relay.
+func TestWebGatewayRelayFlag(t *testing.T) {
+	sessionEnv(t)
+	ws := shortTemp(t)
+	var errb bytes.Buffer
+	cfg, ok := webGatewayConfig([]string{"--dir", ws, "--audit", "/a.jsonl", "--devices", "/d", "--relay", "https://relay.example.org"}, &errb)
+	if !ok || cfg.Relay == nil || cfg.Relay.URL != "https://relay.example.org" {
+		t.Fatalf("ok %v relay %+v: %s", ok, cfg.Relay, errb.String())
+	}
+	if cfg, _ := webGatewayConfig([]string{"--dir", ws, "--audit", "/a.jsonl"}, &errb); cfg.Relay != nil {
+		t.Error("relay on without the flag")
+	}
+	if _, ok := webGatewayConfig([]string{"--dir", ws, "--audit", "/a.jsonl", "--devices", "/d", "--relay", "http://relay.example.org"}, &errb); ok {
+		t.Error("a plain http relay was taken")
+	}
+	if _, ok := webGatewayConfig([]string{"--dir", ws, "--audit", "/a.jsonl", "--relay", "https://relay.example.org"}, &errb); ok {
+		t.Error("a relay without the device folder was taken")
+	}
+}
+
 // Spec (reload on a new build): every gateway writes its resume file to
 // the folder's own path on a restart (never a path from argv); --resume
 // takes the sessions the last one left there, once it holds the lock
