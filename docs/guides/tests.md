@@ -70,6 +70,10 @@ after you add new tests.
 
 PostgreSQL test functions written with pgTAP run from the Databases view: press `U` on a PostgreSQL connection, or run **Databases: Run pgTAP Tests…**. Their results show here under a **pgTAP** node, one row per connection. See [pgTAP tests](databases.md#pgtap-tests).
 
+## Database tests (tSQLt)
+
+SQL Server tests written with tSQLt run from the Databases view: press `U` on a SQL Server connection, or run **Databases: Run tSQLt Tests…**. Their results show here under a **tSQLt** node, one row per connection and one per test. Run on a row to run it again.
+
 ## Keys at a glance
 
 | Key | Action |
