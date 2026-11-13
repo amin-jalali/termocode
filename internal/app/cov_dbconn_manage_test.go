@@ -345,7 +345,7 @@ func TestCovDBManageDelete(t *testing.T) {
 	m.databases.sessions["pg/db"] = closed
 	m.databases.nodes["pg/db"] = dbNode{kind: dbNodeDatabase, name: "db", path: "pg/db", conn: "pg"}
 	m.databaseManagePick("delete")
-	cdbConfirm(t, m, "delete") 
+	cdbConfirm(t, m, "delete")
 	if _, ok := m.databases.connection("pg"); ok {
 		t.Fatal("not deleted")
 	}
