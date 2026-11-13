@@ -97,3 +97,25 @@ func TestWebDBCassandraQuery(t *testing.T) {
 		}
 	}
 }
+
+// Spec (DBX-67): db.ddl of a Cassandra table is its CREATE TABLE built from
+// the keyspace's catalog; db.explain says Cassandra has no plan here and
+// reaches no server.
+func TestWebDBCassandraDDLAndExplain(t *testing.T) {
+	stub := shopStub()
+	m, c := webTestCassandra(t, stub)
+	var tb webproto.DBTables
+	webTestData(t, webTestCallBg(t, m, c, webproto.OpDBTables, `{"conn":"wide"}`), &tb)
+	var ddl webproto.DBText
+	webTestData(t, webTestCallBg(t, m, c, webproto.OpDBDDL, `{"conn":"wide","table":"shop.orders"}`), &ddl)
+	if !strings.Contains(ddl.Text, `CREATE TABLE "shop"."orders"`) || !strings.Contains(ddl.Text, `PRIMARY KEY`) {
+		t.Fatalf("ddl: %q", ddl.Text)
+	}
+	n := len(stub.calls)
+	if f := webTestCallBg(t, m, c, webproto.OpDBExplain, `{"conn":"wide","sql":"SELECT * FROM shop.orders"}`); webTestErr(f) != "bad_request" {
+		t.Fatalf("explain: %v", f)
+	}
+	if len(stub.calls) != n {
+		t.Fatalf("explain reached the server: %v", stub.calls[n:])
+	}
+}
