@@ -214,5 +214,3 @@
 .sp-need { color: var(--text); font-weight: 600; }
 .sp-go { color: var(--muted); font-size: 1.25rem; }
 .sp-skip { align-self: stretch; min-height: 3rem; }
-.sp-back { margin: var(--s2) var(--gutter); align-self: flex-start; }
-.layout-other .main { overflow: auto; }

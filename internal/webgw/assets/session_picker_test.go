@@ -50,23 +50,23 @@ func TestSessionPickerStepAfterSignIn(t *testing.T) {
 		`<SignInScreen onDone={startPick} />`,
 		`signInWithBookmark(startPick)`,
 		`<PairScreen secret={pairSecret ?? ""} onDone={startShell} />`,
-		`<m.SessionPicker onPick={pickSession} />`,
-		`loadPicker()`,
+		`<m.Step host={homeHost()}`,
+		`loadPicker().then(`,
 	} {
 		if !strings.Contains(main, want) {
 			t.Errorf("main.tsx lost %q", want)
 		}
 	}
-	pk := pickerSrc(t, "src/ui/SessionPicker.tsx")
+	pk := main + pickerSrc(t, "src/picker/main.tsx")
 	for _, want := range []string{
 		`link.subscribe("projects")`,
 		`rows.length <= 1`,
-		`<ul class="sp-list"`,
+		`class: "sp-list"`,
 		`t("sp.title")`,
 		`t("sp.here")`,
 	} {
 		if !strings.Contains(pk, want) {
-			t.Errorf("SessionPicker.tsx lost %q", want)
+			t.Errorf("the picker lost %q", want)
 		}
 	}
 	if strings.Contains(pk, "project.open") {
@@ -78,7 +78,7 @@ func TestSessionPickerStepAfterSignIn(t *testing.T) {
 // stands on its own, since the workbench shows only this session.
 func TestSessionPickerOtherSessionOnDesktop(t *testing.T) {
 	app := pickerSrc(t, "src/app.tsx")
-	for _, want := range []string{`OtherSession`, `projects/`, `t("sp.back")`} {
+	for _, want := range []string{`layout.value === "desktop" && r.tab === "more" && r.rest.startsWith("projects/") ? "tablet"`} {
 		if !strings.Contains(app, want) {
 			t.Errorf("app.tsx lost %q", want)
 		}

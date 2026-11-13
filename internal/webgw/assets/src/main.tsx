@@ -1,6 +1,7 @@
 // Entry of the termocode web UI. Built by cmd/webbuild (esbuild Go API).
 import { pairSecret, secret } from "./boot"; // first: safety hook, secrets out of the URL
 import { h, render } from "preact";
+import { useEffect, useState } from "preact/hooks";
 import { effect, signal } from "@preact/signals";
 import { AuthError, forgetToken, redeem, token } from "./net/auth";
 import "./styles/tokens.css";
@@ -29,25 +30,24 @@ import "./styles/race.css"; // moved from a chunk file (chunks may not import st
 import "./styles/phone-projects.css"; // moved from a chunk file (chunks may not import style sheets)
 import "./styles/mcpviews.css"; // moved from a chunk file (chunks may not import style sheets)
 import { App } from "./app";
-import { loadPersian } from "./lib/lazy";
+import { loadPersian, loadPicker, type PickerModule } from "./lib/lazy";
 import { prefs } from "./lib/prefs";
 import { setOnOpen, unseen } from "./lib/notify";
 import { soloBuf } from "./lib/popout";
-import { go, goTab, route } from "./lib/router";
-import type { SessionRow } from "./lib/sessions";
+import { homeHost } from "./homehost";
+import { goTab, route } from "./lib/router";
 import { watchViewport } from "./lib/viewport";
-import { laptopTheme, link, waiting } from "./session";
+import { laptopTheme, link, store, waiting } from "./session";
 import { dict, has } from "./state/dict";
 import { THEME_TOKENS, themeTokens } from "./state/theme";
 import { TABS } from "./state/route";
 import { openCards } from "./ui/CardSheet";
 import { ConnectScreen, type ConnectState } from "./ui/ConnectScreen";
 import { PairScreen } from "./ui/PairScreen";
-import { SessionPicker } from "./ui/SessionPicker";
 import { SignInScreen, bookmarkRemoved, signInWithBookmark } from "./ui/SignInScreen";
 import { passkeysHere } from "./net/passkey";
 import { isRemembered } from "./net/devicekey";
-import { lang, persian, type Lang } from "./strings";
+import { lang, addStrings, persian, t, type Lang } from "./strings";
 
 const RTL_LANGS = /^(fa|ar|he|ur|ps|ckb|dv|yi|sd|ug)\b/i;
 
@@ -70,14 +70,20 @@ function startShell(): void {
 // page lists the owner's running sessions; a pick, or a single session,
 // opens the workspace. A launch link and a pairing go straight in.
 function startPick(): void {
+  startShell(); // the same link and topics, then the picker step first
   phase.value = "pick";
-  link.subscribe("status", "toasts", "cards", "projects");
-  link.start();
 }
 
-function pickSession(row?: SessionRow): void {
-  phase.value = "shell";
-  if (row) go({ tab: "more", rest: "projects/" + row.id, query: {} }, true);
+const pickSession = () => (phase.value = "shell");
+
+/** PickerStep shows the session picker, drawn by picker.js (lib/lazy.ts);
+ * when that cannot load, the page opens this session as it always did. */
+function PickerStep() {
+  const [m, setM] = useState<PickerModule | null>(null);
+  useEffect(() => {
+    loadPicker().then(setM, () => pickSession());
+  }, []);
+  return m && <m.Step host={homeHost()} t={t} addStrings={addStrings} onPick={pickSession} />;
 }
 
 function open(): void {
@@ -97,7 +103,7 @@ function Root() {
     case "signin":
       return <SignInScreen onDone={startPick} />;
     case "pick":
-      return <SessionPicker onPick={pickSession} />;
+      return <PickerStep />;
     default:
       return <ConnectScreen state={connect.value} onOpen={open} />;
   }

@@ -496,8 +496,8 @@ session running, the page opens it at once.
 - Each pick is written to `web-audit.jsonl` as a `switch` line with the
   device and the session key.
 - On a desktop screen the workbench shows the session that started the
-  panel; a session you pick there opens as its own project page, with
-  **Back to this session**.
+  panel; a session you pick there opens as its own project page in the tablet
+  layout; use the Chat tab to come back.
 
 ### Without Tailscale
 

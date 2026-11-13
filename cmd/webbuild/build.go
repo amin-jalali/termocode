@@ -51,6 +51,13 @@ var workbenchChunk = page{Name: "workbench", Entry: "workbench.tsx"}
 // init(host).
 var homeChunk = page{Name: "home", Entry: "home.tsx"}
 
+// pickerChunk is the session picker (picker.js, WEB-55): the list of
+// running sessions shown once after a passkey sign-in. app.js loads it
+// with a dynamic import (lib/lazy.ts) only in that step, so the page's
+// first files do not carry it. It shares the page's modules through
+// app-chunk.js.
+var pickerChunk = page{Name: "picker", Entry: "picker/main.tsx"}
+
 var appPage = page{Name: "app", Entry: "main.tsx", Template: "index.html", HTML: "index.html", With: []page{workbenchChunk, homeChunk}}
 
 // editorChunk is the in-page editor (WEB-39): CodeMirror and its glue,
@@ -97,7 +104,7 @@ var aictxChunk = page{Name: "aictx", Entry: "aictx/main.tsx"}
 var deskChunk = page{Name: "desk", Entry: "desk.ts", CSSOnly: true}
 
 // chunkPaths are the only dynamic imports a page may make.
-var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true, "/assets/" + workbenchChunk.Name + ".js": true, "/assets/" + homeChunk.Name + ".js": true, "/assets/" + persianChunk.Name + ".js": true, "/assets/" + monacoVim.Name + ".js": true, "/assets/" + deviceChunk.Name + ".js": true, "/assets/" + aictxChunk.Name + ".js": true}
+var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true, "/assets/" + workbenchChunk.Name + ".js": true, "/assets/" + homeChunk.Name + ".js": true, "/assets/" + persianChunk.Name + ".js": true, "/assets/" + monacoVim.Name + ".js": true, "/assets/" + deviceChunk.Name + ".js": true, "/assets/" + aictxChunk.Name + ".js": true, "/assets/" + pickerChunk.Name + ".js": true}
 
 // kitPage is the component kit (WEB-UX-1). It is always built, so CI keeps
 // it fresh, but only a webdev build embeds and serves it.
@@ -127,7 +134,7 @@ func Build(dir string) (map[string][]byte, error) {
 	if err := copyServed(vendorDir, pkgs, out); err != nil {
 		return nil, err
 	}
-	for _, p := range []page{deskChunk, appPage, editorChunk, persianChunk, deviceChunk, aictxChunk, monacoAMD, monacoVim, monacoFrame, kitPage} {
+	for _, p := range []page{deskChunk, appPage, editorChunk, persianChunk, deviceChunk, aictxChunk, pickerChunk, monacoAMD, monacoVim, monacoFrame, kitPage} {
 		if p.Name != appPage.Name {
 			if _, err := os.Stat(filepath.Join(abs, "src", p.Entry)); errors.Is(err, os.ErrNotExist) {
 				continue // a folder without the kit or the editor (test fixtures)

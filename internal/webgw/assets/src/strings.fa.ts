@@ -41,7 +41,6 @@ export const FA: Record<TranslatedKey, string> = {
   "sp.loading": "در حال جست‌وجوی نشست‌های شما…",
   "sp.here": "همین نشست",
   "sp.continue": "باز کردن همین نشست",
-  "sp.back": "بازگشت به همین نشست",
   "sp.waiting": "{n} در انتظار",
   "sp.working": "{n} در حال کار",
   "sp.ago_now": "همین حالا",
@@ -230,7 +229,6 @@ export const FA: Record<TranslatedKey, string> = {
   "edit.save_err": "ذخیره نشد: {msg}",
 
   // Terminal
-  "term.ended": "این ترمینال تمام شد (کد خروج {code}).",
   "term.ended_now": "این ترمینال تمام شد.",
   "term.gone": "این ترمینال روی لپ‌تاپ بسته شد.",
   "term.bell": "یک پوسته زنگ زد",
