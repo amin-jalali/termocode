@@ -347,6 +347,7 @@
     "answered": "Answered",
     "ask": "AskCard",
     "attention": "Attention",
+    "fwd.ready": "FwdReady",
     "pair.ask": "PairAsk",
     "pair.end": "PairEnd",
     "search.batch": "SearchBatch",
@@ -3779,6 +3780,20 @@
       },
       "max_bytes": 2048,
       "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "web.forward",
+      "args": "WebForwardArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
       "audit": "yes",
       "phase": "v2"
     },
@@ -10369,6 +10384,29 @@
       },
       "required": [
         "paths"
+      ],
+      "additionalProperties": true
+    },
+    "FwdReady": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "enum": [
+            "tailnet",
+            "local",
+            "ssh"
+          ]
+        },
+        "port": {
+          "type": "integer"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "port",
+        "mode"
       ],
       "additionalProperties": true
     },
@@ -18838,6 +18876,18 @@
         "items"
       ],
       "additionalProperties": true
+    },
+    "WebForwardArgs": {
+      "type": "object",
+      "properties": {
+        "port": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "port"
+      ],
+      "additionalProperties": false
     },
     "WebOpenArgs": {
       "type": "object",

@@ -9,6 +9,7 @@ import { signal } from "@preact/signals";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { TermItem, TermNewRes } from "../../../../webproto/proto";
 import { rang } from "../lib/attention";
+import { linkItems } from "../lib/links";
 import { useLongPress } from "../lib/longpress";
 import { prefs, setPref } from "../lib/prefs";
 import { usePinch } from "../lib/rowfont";
@@ -187,7 +188,7 @@ function rowMenu(row: string, all: string, canPaste: boolean): MenuItem[] {
     { label: t("term.copy_all"), pick: () => copy(all) },
   ];
   if (canPaste) items.push({ label: t("term.paste"), pick: () => (pasting.value = true) });
-  return items;
+  return [...items, ...linkItems(row)];
 }
 
 function Rows({ buf, item, body }: { buf: number; item: TermItem | undefined; body: { current: HTMLElement | null } }) {
