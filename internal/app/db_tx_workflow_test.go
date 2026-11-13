@@ -18,7 +18,7 @@ func manualMode(t *testing.T, d *testkit.Driver) {
 	d.Type("Databases: Focus")
 	d.Key("enter")
 	d.Key("g") // the connection row
-	d.Key("t")
+	d.Key("M")
 	if !d.WaitForText("Transaction mode for local", time.Second) {
 		t.Fatalf("no mode picker:\n%s", ansi.Strip(d.Frame()))
 	}

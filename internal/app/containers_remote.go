@@ -554,7 +554,7 @@ func (m *Model) remoteRowKey(key string, r svcRow) (tea.Cmd, bool) {
 			m.askBrowse(prefill)
 			return nil, true
 		}
-	case "s":
+	case "f": // KB-2: s means start
 		if r.hostSectionID() == "registries" {
 			m.askSearch()
 			return nil, true

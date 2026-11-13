@@ -392,7 +392,7 @@ func TestDBTableCountAndCopyNameOnTheTree(t *testing.T) {
 
 func TestDBTableSelectKeyRunsInTheConsole(t *testing.T) {
 	d, s := tableDriver(t, 100, 30)
-	d.Key("s")
+	d.Key("Q")
 	dbWaitPage(t, d, "user-000@example.com")
 	if got := s.selects(); len(got) != 1 || got[0] != "SELECT * FROM `app`.`users` LIMIT 100;" {
 		t.Fatalf("s ran %v", got)
@@ -550,11 +550,11 @@ func TestDBTableIdleSendsNothing(t *testing.T) {
 
 func TestDBTableSelectKeyTwiceUsesTheSameLine(t *testing.T) {
 	d, s := tableDriver(t, 100, 30)
-	d.Key("s")
+	d.Key("Q")
 	dbWaitPage(t, d, "user-000@example.com")
 	d.Key("gd", "esc", "f1")
 	d.Type("Databases: Focus")
-	d.Key("enter", "s")
+	d.Key("enter", "Q")
 	if !d.WaitFor(func() bool { return len(s.selects()) == 2 }, 3*time.Second) {
 		t.Fatalf("second s did not run: %v", s.selects())
 	}

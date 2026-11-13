@@ -642,7 +642,7 @@ func TestDBEditPagingWithChangesAsksFirst(t *testing.T) {
 func TestDBEditConsoleResultLooksUpItsKey(t *testing.T) {
 	s := newEditSession(5)
 	d := editDriver(t, 100, 30, s, "")
-	d.Key("s") // SELECT * FROM `app`.`users` LIMIT 100; in the console
+	d.Key("Q") // SELECT * FROM `app`.`users` LIMIT 100; in the console
 	dbWaitPage(t, d, "user-001@example.com")
 	before := s.intro
 	cursorTo(t, d, "user-002@example.com")

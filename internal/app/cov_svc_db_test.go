@@ -229,9 +229,9 @@ func TestCovSvcDBTreeKeys(t *testing.T) {
 	}
 	m.promptOpen = false
 	covSvcDBSelect(t, m, "pg")
-	covSvcDBKey(m, "t")
+	covSvcDBKey(m, "M")
 	if !m.pickerOpen {
-		t.Error("t: no transaction picker")
+		t.Error("M: no transaction picker")
 	}
 	m.pickerOpen = false
 	// e on a project connection opens .termocode/databases.json; m opens

@@ -308,7 +308,7 @@ Move to a table or view in the tree and press:
 | `d` | describe: columns, types, null, defaults, keys, indexes, foreign keys, triggers |
 | `v` | the DDL in a read-only SQL buffer (`q` goes back) |
 | `D` | drop it: a card shows the exact SQL and what depends on it, Cancel first |
-| `s` | write `SELECT * FROM <table> LIMIT 100;` at the end of the connection's console and run it there |
+| `Q` | write `SELECT * FROM <table> LIMIT 100;` at the end of the connection's console and run it there |
 | `c` | generate code from the table's columns and copy it: SELECT, INSERT, UPDATE, DELETE, CREATE or DROP (names quoted, placeholders for values; nothing runs), the column names, qualified column names, a Go struct, a TypeScript interface or a Python dataclass. In the list Enter copies and `→` inserts the text at the editor cursor. On a routine (PostgreSQL, MySQL), `c` offers **Call with arguments…**: it asks for each argument (blank for NULL) and makes `SELECT * FROM f(…)` or `CALL p(…)`, and DROP with the argument types |
 | `#` | count the rows |
 | `i` | import a CSV file into the table (not for views) |
@@ -386,7 +386,7 @@ Changes stay on the page until you submit them. The left margin marks each row: 
 
 ## Transactions
 
-Each connection starts in auto-commit mode: every statement is saved at once. Press `t` on a connection (or use **Databases: Transaction Mode…**) and choose **Manual** to group your work: the first statement begins a transaction, the next ones join it, and nothing is saved until you commit.
+Each connection starts in auto-commit mode: every statement is saved at once. Press `M` on a connection (or use **Databases: Transaction Mode…**) and choose **Manual** to group your work: the first statement begins a transaction, the next ones join it, and nothing is saved until you commit.
 
 - `K` on the result page or **Databases: Commit** saves the changes; `Z` or **Databases: Roll Back** drops them.
 - The status bar and the result page show `manual commit · 2 not committed` while changes wait. Typed `BEGIN`, `COMMIT` or `ROLLBACK` statements are not sent in manual mode; use `K` and `Z`.

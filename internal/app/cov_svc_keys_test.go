@@ -157,7 +157,7 @@ func TestCovSvcContainerKeys(t *testing.T) {
 	if len(clip) != 1 || clip[0] != "c1" || !strings.Contains(regToast(m), "Copied container id") {
 		t.Errorf("copy: %q %q", clip, regToast(m))
 	}
-	for key, want := range map[string]string{"e": "Cannot open shell", "t": "Cannot open attach", "S": "Cannot open stats", "enter": "Cannot open logs"} {
+	for key, want := range map[string]string{"$": "Cannot open shell", "t": "Cannot open attach", "S": "Cannot open stats", "enter": "Cannot open logs"} {
 		covSvcContainer(t, m, "c1")
 		covSvcKey(m, key)
 		if !strings.Contains(regToast(m), want) {
@@ -389,13 +389,13 @@ func TestCovSvcSectionKeys(t *testing.T) {
 		t.Errorf("create error toast = %q", regToast(m))
 	}
 	covSvcSection(t, m, "volumes")
-	pumpHost(t, m, covSvcKey(m, "d"))
+	pumpHost(t, m, covSvcKey(m, "U"))
 	if !strings.Contains(regToast(m), "Cannot read disk usage") {
 		t.Errorf("df error toast = %q", regToast(m))
 	}
 	f.Remove("all.err")
 	covSvcSection(t, m, "volumes")
-	pumpHost(t, m, covSvcKey(m, "d"))
+	pumpHost(t, m, covSvcKey(m, "U"))
 	if m.services.volumeRows[0].Size != "42MB" {
 		t.Errorf("volume size = %q", m.services.volumeRows[0].Size)
 	}

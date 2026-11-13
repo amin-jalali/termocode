@@ -65,13 +65,13 @@ when something changed. When you hide the view (another activity item,
 | `Space` | fold / open the section or group under the cursor |
 | `Enter` / `l` | on a container: logs tab; on a context: use it; on an image tag: run it (asks); on a HELP row: run it |
 | `s` / `x` / `r` | start / stop / restart the selected container; on a project group, start / stop / restart that project |
-| `a` / `A` | start all / stop all of the project's services (the **Start all** and **Stop all** buttons); off while the engine is down |
+| `s` / `x` on the SERVICES header | start all / stop all of the project's services (the **Start all** and **Stop all** buttons); off while the engine is down |
 | `p` | pause or unpause the selected container |
 | `K` | kill the selected container (asks first: Cancel, Stop gently with TERM, or Kill) |
 | `N` | rename the selected container |
 | `w` | change the selected container: restart policy, CPU and memory limits, connect to or disconnect from a network (each asks first) |
 | `O` | sort the containers (name, image, state, created, size) inside each project; turn the SIZE column on or off |
-| `e` | shell in the selected container (terminal tab) |
+| `$` | shell in the selected container (terminal tab) |
 | `E` | exec with options: shell or command, user, start folder |
 | `W` | open a folder of the running container as the workspace |
 | `t` | attach to a container; on an image, tag it |
@@ -85,11 +85,11 @@ when something changed. When you hide the view (another activity item,
 | `y` | copy the ID, name, host or endpoint of the row |
 | `u` | pull an image |
 | `b` | on an image: show its remote tags; in REGISTRIES: browse the tags of a repository |
-| `s` | in REGISTRIES: search Docker Hub |
+| `f` | in REGISTRIES: search Docker Hub |
 | `P` / `h` | push an image (asks first) / image history |
 | `c` / `C` | on an image: scan it for vulnerabilities / make its SBOM (needs docker scout, trivy, grype or syft) |
 | `n` | create a network or volume; connect a registry |
-| `d` | read volume disk usage (on VOLUMES) |
+| `U` | read volume disk usage (on VOLUMES) |
 | `z` | prune what the section heading offers (asks first) |
 | `D` | remove (a container, image, network, volume, context) or sign out (asks first) |
 | `n` / `i` / `D` / `u` | on CONTEXTS: create a context (name, host, TLS files; asks first) / inspect it / remove it (asks first) / make it the default (asks first) |
@@ -158,7 +158,7 @@ CONTAINERS · /pos▏
 ## Containers
 
 On a CONTAINERS row, `s`, `x`, and `r` start, stop, and restart it; `p`
-pauses or resumes it. `l` follows logs, `e` opens a shell, `t` attaches,
+pauses or resumes it. `l` follows logs, `$` opens a shell, `t` attaches,
 `S` follows stats, `i` opens a read-only JSON inspect page, `o` opens its
 first published port, `y` copies its full ID, and `D` asks before removal.
 Removing a running container shows one card with the exact stop and remove
@@ -421,7 +421,7 @@ checks which containers use it. `n` asks for a name and creates a network or
 volume. `D` shows the exact remove command and users before removing; a volume
 in use is kept, and built-in networks cannot be removed. `z` on either heading
 asks before pruning. Volume pruning lists only unnamed volumes (their data
-is deleted); volumes with a name are kept. On VOLUMES, `d` reads disk usage once and fills in the
+is deleted); volumes with a name are kept. On VOLUMES, `U` reads disk usage once and fills in the
 reported sizes. Disk usage is not queried in the background.
 
 ## Dockerfiles and compose files
@@ -758,7 +758,7 @@ sign-in. For `ghcr.io` the user prompt says which GitHub token to use.
 
 ### Search Docker Hub
 
-`s` in REGISTRIES (or **Containers: Search Docker Hub…**) asks for a word
+`f` in REGISTRIES (or **Containers: Search Docker Hub…**) asks for a word
 and runs `docker search --format '{{json .}}' --limit 25 --no-trunc
 <word>` (Podman: `podman search`). termocode sends no request of its own.
 The results open in a picker with the stars and the description. Pick one

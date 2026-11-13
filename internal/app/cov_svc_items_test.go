@@ -290,7 +290,7 @@ func TestCovSvcContextKeys(t *testing.T) {
 		t.Errorf("copy: %q %q", clip, regToast(m))
 	}
 	covSvcHostItem(t, m, hostContext, "prod")
-	covSvcKey(m, "D")
+	covSvcKey(m, "u")
 	if !m.confirmOpen || !strings.Contains(cardText(m), "docker context use prod") {
 		t.Fatalf("default card = %s", cardText(m))
 	}
@@ -301,7 +301,7 @@ func TestCovSvcContextKeys(t *testing.T) {
 	f.Set(t, "all.err", "context not found")
 	m.services.contextRows = []containers.Context{{Name: "default", Current: true}, {Name: "prod"}}
 	covSvcHostItem(t, m, hostContext, "prod")
-	covSvcKey(m, "D")
+	covSvcKey(m, "u")
 	pumpHost(t, m, covSvcConfirm(t, m, "use"))
 	if !strings.Contains(regToast(m), "Could not change the default context") {
 		t.Errorf("use error toast = %q", regToast(m))
