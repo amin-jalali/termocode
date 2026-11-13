@@ -763,6 +763,9 @@ func (m *Model) extShowLog() tea.Cmd {
 			ver := ""
 			if x.Version != "" {
 				ver = " v" + x.Version
+				if x.Version == "built-in" {
+					ver = " (built in)"
+				}
 			}
 			fmt.Fprintf(&b, "  %s%s  %s\n", x.Name, ver, state)
 		}
