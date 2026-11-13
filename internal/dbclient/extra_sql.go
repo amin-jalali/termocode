@@ -312,7 +312,7 @@ func openExtraSQLDB(conn Conn, password string) (*sql.DB, func(), error) {
 
 // dsnConnector is the connector of a registered driver for dsn.
 func dsnConnector(name, dsn string) (driver.Connector, error) {
-	db, err := sql.Open(name, "")
+	db, err := sql.Open(name, dsn)
 	if err != nil {
 		return nil, err
 	}
