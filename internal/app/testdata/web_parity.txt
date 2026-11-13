@@ -395,6 +395,7 @@ web	workspace-remove-folder	cmd:removeFolder
 web	worktree-new	op:worktrees.new_task
 web	zen-mode	cmd:zen
 excluded	acp-agents-edit	laptop only: the list names programs the laptop starts
+excluded	agent-swap-account	security: it replaces the sign-in file of an agent CLI in the laptop home; the owner turns it on there
 excluded	ai-agent-env	security: trust decisions are made on the laptop
 excluded	ai-agent-hooks	laptop only: installs hooks into outside agents on the laptop
 excluded	ai-agent-packs	laptop only: installs files into outside agents on the laptop

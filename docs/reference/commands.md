@@ -146,6 +146,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: State Hooks… (exact working / waiting / done) | `ai-agent-hooks` |   |   |
 | Agent: Stop Check Loop | `agent-goal-stop` |   | `end the running check loop` |
 | Agent: Switch Account… | `agent-account-switch` |   | `go on as another account after a limit` |
+| Agent: Switch Account… | `agent-swap-account` |   | `agent_account_swap` |
 | Agent: Toggle Auto-Accept | `agent-auto-accept-toggle` |   | `answer its permission prompts: yes, once` |
 | Agent: Toggle Auto-Continue | `agent-auto-continue-toggle` |   | `type continue when the limit resets` |
 | Agent: Usage Plans | `agent-usage-plans` |   | `plan share, reset, last limit` |

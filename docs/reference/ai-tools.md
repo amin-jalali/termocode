@@ -2991,6 +2991,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `agent-start-codex` | Agent: Start Codex | confirm (run) |   |
 | `agent-start-gemini` | Agent: Start Gemini CLI | confirm (run) |   |
 | `agent-start-opencode` | Agent: Start OpenCode | confirm (run) |   |
+| `agent-swap-account` | Agent: Switch Account… | never | AI provider, credentials and approvals stay with the user; it replaces the credential file of an outside agent |
 | `agent-usage-plans` | Agent: Usage Plans | never | a read-only screen for the user; the AI reads the numbers through usage_summary |
 | `ai-add` | AI: Add AI… | never | a card for the user; keys and connected AIs stay with the user (the AI shows them with ai_view_open) |
 | `ai-agent-env` | AI: Agent Environment… (setup, secrets, network rule for workflow agents) | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -3857,6 +3858,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 
 | Key | Gate | Reason |
 | --- | --- | --- |
+| `agent_account_swap` | never | AI provider, credentials and approvals stay with the user; it lets termocode replace the credential file of an outside agent |
 | `agent_accounts` | never | AI provider, credentials and approvals stay with the user; the labels of the outside agents' account folders |
 | `agent_auto_continue` | never | AI provider, credentials and approvals stay with the user; it lets termocode type continue into an outside agent's tab after its usage limit resets |
 | `agent_goal_max_tokens` | never | AI provider, credentials and approvals stay with the user; it caps the user's own check loop |
