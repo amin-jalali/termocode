@@ -260,7 +260,7 @@ func TestDBImportCancelRollsBack(t *testing.T) {
 func TestDBImportWithoutCSVFilesAsksForAPath(t *testing.T) {
 	d := importDriver(t, newEditSession(0), "", nil)
 	d.Key("i")
-	if !d.WaitForText("CSV or JSON file (in the workspace", 3*time.Second) {
+	if !d.WaitForText("CSV, JSON or Excel file (in the workspace", 3*time.Second) {
 		t.Fatalf("no path prompt:\n%s", frameText(d))
 	}
 	d.Type("missing.csv")
