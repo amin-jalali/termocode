@@ -195,3 +195,64 @@ func TestViewGitColoursAndMarkersPerIconMode(t *testing.T) {
 		}
 	}
 }
+
+func TestSelectionHelpersOnEmptyAndStaleCursor(t *testing.T) {
+	m := Model{}
+	m.selected = map[string]struct{}{"x": {}}
+	m.applyShiftRange(nil)
+	if m.selected != nil {
+		t.Fatal("empty list keeps a selection")
+	}
+	m.selectAllVisible(nil)
+	if m.selected != nil {
+		t.Fatal("select all on nothing")
+	}
+	vis := []VisibleEntry{{Node: &Node{Path: "/a"}}}
+	m.cursor = 5
+	m.applyShiftRange(vis)
+	if m.selected != nil {
+		t.Fatal("a stale cursor selected something")
+	}
+}
+
+func TestScrollIntoViewTinyAndAnimatedDraw(t *testing.T) {
+	dir := t.TempDir()
+	mkTree(t, dir, "a", "b", "c")
+	m := newModelAt(t, dir)
+	m.SetSize(10, 1)
+	m.cursor = 2
+	m.scrollIntoView()
+	if m.top < 0 {
+		t.Fatal("negative top")
+	}
+	m.h = 0
+	m.scrollIntoView()
+	if m.drawTop(1, 3) != 1 {
+		t.Fatal("drawTop without animation")
+	}
+}
+
+// A listing that runs is not asked twice; asked paths stay queued.
+func TestScheduleLoadsSkipsRunningListings(t *testing.T) {
+	h, _, _ := fakeContainer(t, false)
+	m := NewFS(h.FS(), "/app")
+	l := m.root.ld
+	if !l.busy() {
+		t.Fatal("a new container root is not waiting for its listing")
+	}
+	cmd := m.ScheduleLoads()
+	if cmd == nil {
+		t.Fatal("nothing scheduled")
+	}
+	l.want["/app"] = true // asked again while the first listing runs
+	if again := m.ScheduleLoads(); again != nil {
+		for _, msg := range runCmds(again) {
+			if _, ok := msg.(DirLoadedMsg); ok {
+				t.Fatal("a running listing was asked twice")
+			}
+		}
+	}
+	for _, msg := range runCmds(cmd) {
+		m.ApplyDirLoaded(msg.(DirLoadedMsg))
+	}
+}

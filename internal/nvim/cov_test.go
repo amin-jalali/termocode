@@ -379,3 +379,16 @@ func TestCloseKillsAnNvimThatStays(t *testing.T) {
 		t.Fatal("Close never returned")
 	}
 }
+
+// A buffer list without the active buffer id gives nothing, not a crash.
+func TestBuffersWithoutActiveBuffer(t *testing.T) {
+	c := isolatedClient(t)
+	if err := c.ExecLua(`_G.orig_cur = vim.api.nvim_get_current_buf; vim.api.nvim_get_current_buf = function() return nil end`); err != nil {
+		t.Fatal(err)
+	}
+	bufs, active, err := c.Buffers()
+	_ = c.ExecLua(`vim.api.nvim_get_current_buf = _G.orig_cur`)
+	if err != nil || len(bufs) != 0 || active != 0 {
+		t.Fatalf("%v %d %v", bufs, active, err)
+	}
+}
