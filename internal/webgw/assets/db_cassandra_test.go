@@ -31,8 +31,9 @@ func TestDBCassandraPage(t *testing.T) {
 		}
 	}
 	must("state/more.ts", state, "cursor: str(d.cursor)", "view: x.view === true, group: str(x.group)")
-	must("the desktop table tab", tabs, `"db.rows", { conn, table, from, cursor`, "r.cursor")
+	must("the desktop table tab", tabs, `"db.rows", { conn, table, ...pages[`, "r.cursor")
 	must("the desktop query tab", tabs, `"db.query", { conn, sql`, "cursor")
 	must("the desktop tree", tree, "x.group", `c.driver === "cassandra"`)
+	must("the phone table list (a heading per keyspace)", phone, "x.group !== ", `class="db-group"`)
 	must("the phone table page", phone, `"db.rows", { conn, table, from, cursor`, "data.cursor")
 }
