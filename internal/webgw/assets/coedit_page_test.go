@@ -10,28 +10,28 @@ import (
 // the same text, like the hub moves a page edit over the laptop's
 // (internal/coedit). Only a real overlap is still a conflict.
 
-// liveStubs stand in for the session, the edit helpers and the
-// workbench, so lib/live.ts runs in node.
-var liveStubs = map[string]string{
-	"../session": `
-export const sent: any[] = [];
-export const replies: any[] = [];
-export const link = { request(op: string, args: any) { sent.push({ op, args }); const r = replies.shift(); return r instanceof Error ? Promise.reject(r) : Promise.resolve(r); } };
+// liveSession stands in for the session (lib/edit.ts imports it).
+var liveSession = map[string]string{"../session": `
+export const link = { request() { return Promise.resolve(null); } };
 export const live = { peek: () => true, value: true };
-`,
-	"./edit": `
-export const own = { tick: 0 };
-export function save(_buf: number) { return Promise.resolve(true); }
-`,
-	"./workbench": `
-import { signal } from "@preact/signals";
-export const focusSlot = signal("g0");
-`,
-}
+`}
 
 const liveHarnessHead = `
-import { LiveSync } from "./live";
-import { sent, replies } from "../session";
+import { signal } from "@preact/signals";
+import { LiveSync } from "../coedit/sync";
+import { setHost } from "../coedit/host";
+const sent: any[] = [];
+const replies: any[] = [];
+class Conflict extends Error {}
+setHost({
+  signal,
+  request(op: string, args: any) { sent.push({ op, args }); const r = replies.shift(); return r instanceof Error ? Promise.reject(r) : Promise.resolve(r); },
+  live: () => true,
+  ownTick() {},
+  save: () => Promise.resolve(true),
+  isConflict: (e: unknown) => e instanceof Conflict,
+  isOffline: () => false,
+});
 function eq(a: unknown, b: unknown, what: string) {
   const x = JSON.stringify(a), y = JSON.stringify(b);
   if (x !== y) throw new Error(what + ": got " + x + ", want " + y);
@@ -49,7 +49,7 @@ function snap(tick: number, text: string) { return { buf: 3, path: "f.txt", tick
 // laptop's first; an overlap gives null.
 func TestPageMerge3(t *testing.T) {
 	out := runJS(t, `
-import { merge3 } from "./textdiff";
+import { merge3 } from "../coedit/merge";
 function eq(a: unknown, b: unknown, what: string) {
   if (a !== b) throw new Error(what + ": got " + JSON.stringify(a) + ", want " + JSON.stringify(b));
 }
@@ -86,7 +86,7 @@ eq(sent.length, 1, "one send");
 eq(sent[0].args, { buf: 3, tick: 2, start: { row: 0, col: 1 }, end: { row: 0, col: 1 }, lines: ["X"] }, "the send");
 s.dispose();
 console.log("ok");
-`, liveStubs)
+`, nil)
 	if !strings.Contains(out, "ok") {
 		t.Fatalf("harness: %s", out)
 	}
@@ -107,7 +107,7 @@ await s.flush();
 eq(sent.length, 0, "nothing sent in a conflict");
 s.dispose();
 console.log("ok");
-`, liveStubs)
+`, nil)
 	if !strings.Contains(out, "ok") {
 		t.Fatalf("harness: %s", out)
 	}
@@ -135,7 +135,7 @@ eq(sent.length, 2, "then one more send");
 eq(sent[1].args, { buf: 3, tick: 5, start: { row: 1, col: 2 }, end: { row: 1, col: 2 }, lines: ["Z"] }, "the second send");
 s.dispose();
 console.log("ok");
-`, liveStubs)
+`, nil)
 	if !strings.Contains(out, "ok") {
 		t.Fatalf("harness: %s", out)
 	}
@@ -158,7 +158,7 @@ await s.flush();
 eq(sent.length, 0, "nothing sent");
 s.dispose();
 console.log("ok");
-`, liveStubs)
+`, nil)
 	if !strings.Contains(out, "ok") {
 		t.Fatalf("harness: %s", out)
 	}
@@ -194,7 +194,7 @@ func TestFrameRebasesRemoteOverNewerTyping(t *testing.T) {
 func TestPageKeepsTheLaptopCursor(t *testing.T) {
 	out := runJS(t, `
 import { reduceBuf } from "../state/files";
-import { colUtf16 } from "./textdiff";
+import { colUtf16 } from "../coedit/merge";
 function eq(a: unknown, b: unknown, what: string) {
   const x = JSON.stringify(a), y = JSON.stringify(b);
   if (x !== y) throw new Error(what + ": got " + x + ", want " + y);
@@ -232,7 +232,7 @@ func TestDeskEditorShowsAndSendsCursors(t *testing.T) {
 		{css, ".peer-caret", "monaco/frame.css"},
 		{desk, `peers(items)`, "lib/deskeditor.ts"},
 		{desk, "host.onCaret?.(m.line, m.col)", "lib/deskeditor.ts"},
-		{live, `"buf.cursor"`, "views/LiveEditor.tsx"},
+		{raceSrc(t, "coedit/peers.ts"), `"buf.cursor"`, "coedit/peers.ts"},
 		{live, "snap?.laptop", "views/LiveEditor.tsx"},
 	} {
 		if !strings.Contains(c.src, c.want) {
@@ -255,7 +255,7 @@ try { checkServerMsg(meta("owner")); } catch { bad = true; }
 if (!bad) throw new Error("an unknown role passed");
 if (!mayEdit("editor") || !mayEdit("controller") || mayEdit("viewer") || mayEdit(undefined)) throw new Error("mayEdit");
 console.log("ok");
-`, map[string]string{"../session": liveStubs["../session"]})
+`, liveSession)
 	if !strings.Contains(out, "ok") {
 		t.Fatalf("harness: %s", out)
 	}
