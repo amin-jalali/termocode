@@ -73,6 +73,9 @@ type Scene struct {
 	// file names and commit messages, such as wide glyphs (SCN-11).
 	Files   map[string]string
 	Commits []string
+	// Extensions are Lua extensions (name -> init.lua) written into the
+	// private config's extensions folder before the app starts (SCN-29).
+	Extensions map[string]string
 }
 
 // demoAges are how long ago the seeded recents / workspaces were opened.
@@ -233,6 +236,15 @@ func Run(sc Scene, w, h int, opt Options) (string, error) {
 	_ = os.WriteFile(filepath.Join(cfg, "termocode", "config.json"), []byte(conf), 0o644)
 	writeOpened(filepath.Join(cfg, "termocode", "recents.json"), sc.Recents)
 	writeOpened(filepath.Join(cfg, "termocode", "workspaces.json"), sc.Workspaces)
+	for name, lua := range sc.Extensions {
+		dir := filepath.Join(cfg, "termocode", "extensions", name)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return "", err
+		}
+		if err := os.WriteFile(filepath.Join(dir, "init.lua"), []byte(lua), 0o644); err != nil {
+			return "", err
+		}
+	}
 	os.Setenv("XDG_CONFIG_HOME", cfg)
 	// The secret store must not touch the real OS keyring for a demo.
 	os.Setenv("DBUS_SESSION_BUS_ADDRESS", "")

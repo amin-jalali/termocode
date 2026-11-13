@@ -400,6 +400,10 @@ const taskSpawnLua = `
 		return 0
 	end
 	vim.b[buf].termocode_task = label
+	-- A terminal window follows new output only while its cursor is on the
+	-- last line; this one is not in terminal mode (focus stays in the
+	-- editor), so put the cursor there, or the log stays at its first rows.
+	pcall(vim.api.nvim_win_set_cursor, termWin, { vim.api.nvim_buf_line_count(buf), 0 })
 	pcall(function() vim.wo[termWin].number = false end)
 	pcall(function() vim.wo[termWin].relativenumber = false end)
 	pcall(function() vim.wo[termWin].signcolumn = 'no' end)

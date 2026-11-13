@@ -20,7 +20,7 @@ func mcpServeDBSetOf(root string) mcpServeDBSet {
 		switch c.Driver {
 		case "redis":
 			d.redis = true
-		case "exasol", "db2": // the AI tools refuse them (no read-only transaction)
+		case "exasol", "db2", "hive": // the AI tools refuse them (no read-only transaction)
 		default:
 			d.sql = d.sql || dbAISQLDriver(c.Driver)
 		}
