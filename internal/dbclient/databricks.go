@@ -33,6 +33,7 @@ func init() {
 			return NewDatabricksSession(c, password)
 		},
 		QueryParams: true,
+		URLExample:  "databricks://dbc-xxxx.cloud.databricks.com/CATALOG/SCHEMA?warehouse=WAREHOUSE_ID",
 		FixURL: func(c *Conn) {
 			c.TLS, c.Port = true, 443
 			if cat, schema, ok := strings.Cut(c.Database, "/"); ok {

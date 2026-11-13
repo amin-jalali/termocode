@@ -37,6 +37,7 @@ func init() {
 			return NewSnowflakeSession(c, password)
 		},
 		QueryParams: true,
+		URLExample:  "snowflake://user@account.snowflakecomputing.com/DATABASE/SCHEMA?warehouse=WH&role=ROLE",
 		FixURL: func(c *Conn) {
 			// snowflake://user@account.snowflakecomputing.com/DB/SCHEMA
 			c.TLS, c.Port = true, 443

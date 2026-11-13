@@ -57,6 +57,7 @@ func init() {
 			return NewBigQuerySession(c, password)
 		},
 		QueryParams: true,
+		URLExample:  "bigquery://PROJECT_ID?location=EU",
 		FixURL: func(c *Conn) {
 			// bigquery://PROJECT?location=EU
 			if c.Database == "" {

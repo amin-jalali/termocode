@@ -32,6 +32,7 @@ func init() {
 			return NewAthenaSession(c, password)
 		},
 		QueryParams: true,
+		URLExample:  "athena://ACCESS_KEY_ID@athena.eu-west-1.amazonaws.com/DATABASE?workgroup=primary&output=s3://bucket/results/",
 		FixURL: func(c *Conn) {
 			c.TLS, c.Port = true, 443
 			if c.Params["region"] == "" {
