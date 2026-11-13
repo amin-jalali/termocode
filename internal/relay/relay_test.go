@@ -388,3 +388,14 @@ func TestRelayCloseEndsEveryConnection(t *testing.T) {
 		}
 	}
 }
+
+func TestRelayForgetsAWaitingGatewayThatWentAway(t *testing.T) {
+	r := newRig(t, Config{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	room := testRoom(t)
+	gw := r.mustDial(ctx, room, SideGateway)
+	waitWaiting(t, r.srv, room, 1)
+	_ = gw.CloseNow()
+	waitWaiting(t, r.srv, room, 0)
+}
