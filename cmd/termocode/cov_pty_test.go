@@ -218,7 +218,7 @@ func TestWatchRepaintHandlesTheSignal(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv(session.EnvCapsFile, capsFile)
-	ptyStdio(t)
+
 	p := tea.NewProgram(plain{}, tea.WithInput(nil), tea.WithOutput(io.Discard))
 	watchRepaint(p)
 	time.Sleep(100 * time.Millisecond)
