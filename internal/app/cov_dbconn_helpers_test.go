@@ -131,31 +131,65 @@ func cdbConfirm(t *testing.T, m *Model, id string) {
 	cdbRun(cmd)
 }
 
-// cdbMsgs runs a command (batches flattened) and returns the messages it
-// answered within 400 ms; a command that waits longer is dropped.
+// cdbMsgs runs a command (batches in parallel) and returns the messages
+// that came within 250 ms; a command that waits longer (a toast timer)
+// is dropped.
 func cdbMsgs(cmd tea.Cmd) []tea.Msg {
 	if cmd == nil {
 		return nil
 	}
-	ch := make(chan tea.Msg, 1)
-	go func() { ch <- cmd() }()
-	var msg tea.Msg
-	select {
-	case msg = <-ch:
-	case <-time.After(400 * time.Millisecond):
-		return nil
-	}
-	if b, ok := msg.(tea.BatchMsg); ok {
-		var out []tea.Msg
-		for _, c := range b {
-			out = append(out, cdbMsgs(c)...)
+	var (
+		mu  sync.Mutex
+		wg  sync.WaitGroup
+		out []tea.Msg
+		run func(c tea.Cmd)
+	)
+	run = func(c tea.Cmd) {
+		defer wg.Done()
+		msg := c()
+		if b, ok := msg.(tea.BatchMsg); ok {
+			for _, x := range b {
+				if x != nil {
+					wg.Add(1)
+					go run(x)
+				}
+			}
+			return
 		}
-		return out
+		if msg != nil {
+			mu.Lock()
+			out = append(out, msg)
+			mu.Unlock()
+		}
 	}
-	if msg == nil {
-		return nil
+	wg.Add(1)
+	go run(cmd)
+	done := make(chan struct{})
+	go func() { wg.Wait(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(250 * time.Millisecond):
 	}
-	return []tea.Msg{msg}
+	mu.Lock()
+	defer mu.Unlock()
+	return append([]tea.Msg(nil), out...)
+}
+
+// cdbPump feeds the answers of cmd through Update, and the commands those
+// return, like the program loop would (a bounded number of rounds).
+func cdbPump(m *Model, cmd tea.Cmd) {
+	queue := []tea.Cmd{cmd}
+	for i := 0; i < 60 && len(queue) > 0; i++ {
+		c := queue[0]
+		queue = queue[1:]
+		for _, msg := range cdbMsgs(c) {
+			nm, next := m.Update(msg)
+			*m = nm.(Model)
+			if next != nil {
+				queue = append(queue, next)
+			}
+		}
+	}
 }
 
 // cdbRun drops a command: its toast timers are of no interest here.
@@ -206,3 +240,49 @@ func (s *cdbSession) ran() string {
 func (s *cdbSession) Begin(context.Context) error    { return s.beginErr }
 func (s *cdbSession) Commit(context.Context) error   { return s.commitErr }
 func (s *cdbSession) Rollback(context.Context) error { return nil }
+
+// The P variants feed the command a router returns through Update too.
+
+func cdbSubmitP(t *testing.T, m *Model, v string) {
+	t.Helper()
+	if !m.promptOpen {
+		t.Fatalf("no prompt open to submit %q", v)
+	}
+	m.promptOpen = false
+	cmd, ok := m.handleHTTPPromptSubmit(v)
+	if !ok {
+		t.Fatalf("submit %q not routed (kind %v)", v, m.promptKind)
+	}
+	cdbPump(m, cmd)
+}
+
+func cdbConfirmP(t *testing.T, m *Model, id string) {
+	t.Helper()
+	if !m.confirmOpen {
+		t.Fatalf("no card open to answer %q", id)
+	}
+	m.confirmOpen = false
+	cmd, ok := m.handleDBConfirm(id)
+	if !ok {
+		t.Fatalf("answer %q not routed (kind %v)", id, m.confirmKind)
+	}
+	cdbPump(m, cmd)
+}
+
+func cdbPickP(t *testing.T, m *Model, id string) {
+	t.Helper()
+	if !m.pickerOpen {
+		t.Fatalf("no picker open to pick %q", id)
+	}
+	m.pickerOpen = false
+	cmd, ok := m.databaseConsolePicker(id)
+	if !ok {
+		t.Fatalf("pick %q not routed (kind %v)", id, m.pickerKind)
+	}
+	cdbPump(m, cmd)
+}
+
+// cdbToast is the toast text on one line, without the box.
+func cdbToast(m *Model) string {
+	return strings.Join(strings.Fields(strings.NewReplacer("│", " ", "╭", " ", "╰", " ", "─", " ", "╮", " ", "╯", " ").Replace(covToastText(m))), " ")
+}

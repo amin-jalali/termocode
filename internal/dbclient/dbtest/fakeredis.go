@@ -797,6 +797,60 @@ func (f *FakeRedis) exec(st *fakeConn, args []string) any {
 			}
 		}
 		return n
+	case "RENAME", "RENAMENX":
+		v := f.live(st, a[0])
+		if v == nil {
+			return redisErr("ERR no such key")
+		}
+		if cmd == "RENAMENX" && f.live(st, a[1]) != nil {
+			return 0
+		}
+		delete(f.db(st.db), a[0])
+		f.db(st.db)[a[1]] = v
+		if cmd == "RENAME" {
+			return status("OK")
+		}
+		return 1
+	case "COPY":
+		v := f.live(st, a[0])
+		if v == nil {
+			return 0
+		}
+		replace := false
+		for _, o := range a[2:] {
+			replace = replace || strings.EqualFold(o, "REPLACE")
+		}
+		if f.live(st, a[1]) != nil && !replace {
+			return 0
+		}
+		c := *v
+		c.str = append([]byte(nil), v.str...)
+		c.hash = map[string][]byte{}
+		for k, x := range v.hash {
+			c.hash[k] = append([]byte(nil), x...)
+		}
+		c.list = append([][]byte(nil), v.list...)
+		c.set = map[string]bool{}
+		for k := range v.set {
+			c.set[k] = true
+		}
+		c.zset = map[string]float64{}
+		for k, x := range v.zset {
+			c.zset[k] = x
+		}
+		c.stream = append([]redisEntry(nil), v.stream...)
+		f.db(st.db)[a[1]] = &c
+		return 1
+	case "JSON.GET":
+		v := f.live(st, a[0])
+		if v == nil {
+			return nil
+		}
+		return string(v.str)
+	case "MODULE":
+		return []any{}
+	case "PUBSUB":
+		return []any{"news", "alerts"}
 	case "EXPIRE":
 		v := f.live(st, a[0])
 		if v == nil {
