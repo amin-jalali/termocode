@@ -832,3 +832,11 @@ attach a debugger to it. For a Node.js server, add
 A Python server can wait for a debugger with `debugpy --listen 5678
 --wait-for-client`. **Stop** in the servers list and the next tool call
 start it again with your changes.
+
+## Channels: a server pushes a message
+
+Some servers send a message by themselves (a build failed, a chat reply arrived). By default
+termocode ignores these. Add the server's name to `mcp_channels` in `config.json`
+(`"mcp_channels": ["ci"]`) and its messages show in the chat as a note and a toast. They are for
+you to read: they are never sent to the AI on their own, so a server cannot steer the AI through
+a channel. Keys and tokens in a message are hidden.

@@ -3964,6 +3964,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `mcp_auto_update` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_call_timeout` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_catalog_url` | never | AI provider, credentials and approvals stay with the user |
+| `mcp_channels` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_disabled_tools` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_enabled` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_github_client_id` | never | AI provider, credentials and approvals stay with the user |
