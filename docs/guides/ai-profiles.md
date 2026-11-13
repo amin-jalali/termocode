@@ -1425,3 +1425,9 @@ All files: [Config files](../reference/config-files.md). All settings:
 **A planned run stopped with `Budget … reached`**
 :   The profile's `budget_usd` was reached. Press **Continue** to run the
     rest, or **Stop**. See [Budget pause](#budget-pause).
+
+## Limit the MCP tools of a profile
+
+Add `"mcp_profile": "web"` next to `steps` to make the chat of this profile use only the servers
+and tools of the MCP profile `web` (from `mcp-profiles.json`, see the MCP guide). A choice you
+make in **AI: MCP: Switch Profile…** wins over it. Without the key, every server and tool stays on.
