@@ -67,13 +67,22 @@ func TestRunMCPWorkspaceFlagRelaysToTheContainerUI(t *testing.T) {
 // message names the workspace ID.
 func TestRunMCPWorkspaceFlagNoUIIsStatic(t *testing.T) {
 	sessionEnv(t)
-	var out, errb bytes.Buffer
-	in := strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"open_file","arguments":{}}}` + "\n")
-	if c := runMCPIn([]string{"--workspace=container:default/api-1:/app"}, in, &out, &errb, ""); c != 0 {
-		t.Fatalf("exit %d, stderr %q", c, errb.String())
+	id := "container:default/api-1:/app"
+	inR, inW := io.Pipe()
+	outR, outW := io.Pipe()
+	var errb syncBuf
+	done := make(chan int, 1)
+	go func() { done <- runMCPIn([]string{"--workspace=" + id}, inR, outW, &errb, ""); _ = outW.Close() }()
+	go io.WriteString(inW, `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`+"\n")
+	if line := readLine(t, bufio.NewReader(outR)); !strings.Contains(line, `"tools"`) {
+		t.Fatalf("got %s", line)
 	}
-	if !strings.Contains(out.String(), "api-1") {
-		t.Fatalf("the answer must name the workspace: %q", out.String())
+	_ = inW.Close()
+	if c := <-done; c != 0 {
+		t.Fatalf("exit %d", c)
+	}
+	if !strings.Contains(errb.String(), "not open in "+id) {
+		t.Fatalf("stderr %q", errb.String())
 	}
 }
 

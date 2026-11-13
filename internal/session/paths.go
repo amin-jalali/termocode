@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/amin-jalali/termocode/internal/workspace"
 )
 
 // maxSocketPath is a safe length for a unix socket path (sun_path is 104
@@ -120,10 +122,36 @@ func PathsFor(workspace string) (Paths, error) {
 	if err != nil {
 		return Paths{}, err
 	}
-	k := Key(abs)
+	return pathsAt(dir, Key(abs), filepath.Clean(abs)), nil
+}
+
+// PathsForID returns the session files of a workspace ID (RC-5): a
+// local ID is PathsFor its folder; a container ID is keyed on the whole
+// ID, so its socket never meets a local folder's or another container's
+// with the same path. Paths.Workspace is then the ID.
+func PathsForID(id string) (Paths, error) {
+	kind, rest := workspace.ParseID(id)
+	switch kind {
+	case workspace.KindLocal:
+		return PathsFor(rest)
+	case workspace.KindContainer:
+		if rest == "" {
+			break
+		}
+		dir, err := Dir()
+		if err != nil {
+			return Paths{}, err
+		}
+		return pathsAt(dir, KeyForID(id), id), nil
+	}
+	return Paths{}, fmt.Errorf("not a workspace ID: %q (want local:/folder or container:<context>/<name>:/folder)", id)
+}
+
+// pathsAt is the session files of key k in dir.
+func pathsAt(dir, k, ws string) Paths {
 	base := filepath.Join(dir, k)
 	return Paths{
-		Workspace:   filepath.Clean(abs),
+		Workspace:   ws,
 		Key:         k,
 		Socket:      base + ".sock",
 		Lock:        base + ".lock",
@@ -139,5 +167,5 @@ func PathsFor(workspace string) (Paths, error) {
 		WebLock:       base + ".web.lock",
 		WebResume:     base + ".web-resume.json",
 		WebOpen:       base + ".web-open.html",
-	}, nil
+	}
 }

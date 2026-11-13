@@ -171,7 +171,7 @@ func writeRPCError(w io.Writer, id json.RawMessage, code int, message string) er
 }
 
 // mcpUsage is the help text of `termocode mcp`.
-const mcpUsage = `Usage: termocode mcp [--dir <workspace>] [--socket <path>]
+const mcpUsage = `Usage: termocode mcp [--dir <workspace> | --workspace <id>] [--socket <path>]
 
 Run termocode as a stdio MCP server for an agent CLI (Claude Code, Codex,
 Gemini CLI, OpenCode). It relays the agent to the termocode that is open
@@ -179,6 +179,9 @@ in the workspace, so the agent can use the editor's tools.
 
   --dir <workspace>   the folder termocode is open in (default: the current
                       folder, or the nearest parent folder with termocode open)
+  --workspace <id>    the workspace by its ID: container:<context>/<name>:/folder
+                      for a folder opened inside a container (termocode
+                      --container), or local:/folder
   --socket <path>     relay to this socket only: termocode passes it to the
                       CLI of an AI step (the step's own tools)
 

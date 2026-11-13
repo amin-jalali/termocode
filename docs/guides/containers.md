@@ -277,6 +277,10 @@ The AI agent works on the container's files as well. `read_file`,
 `run_command` all run in the container, with the same approval cards as
 for a local folder. A file with unsaved edits in the editor is never
 overwritten. MCP clients served by this window get the same tools.
+An agent outside termocode reaches this window with
+`termocode mcp --workspace container:<context>/<name>:/app` (the context
+is `default` when none was given), for example
+`termocode mcp --workspace container:default/api-1:/app`.
 
 **File: Download** and **File: Upload** work in a container workspace
 too. A download first copies the file or folder out of the container
