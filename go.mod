@@ -120,3 +120,5 @@ require (
 replace github.com/charmbracelet/bubbletea => ./third_party/bubbletea
 
 replace github.com/alecthomas/chroma/v2 => ./third_party/chroma
+
+replace github.com/exasol/exasol-driver-go => ./third_party/exasol-driver-go
