@@ -17,13 +17,13 @@ func TestDBTypePickerListsExtraEngines(t *testing.T) {
 			ids = append(ids, it.ID)
 		}
 		got := strings.Join(ids, ",")
-		for _, want := range []string{"engine:firebird", "engine:vertica", "engine:exasol", "engine:hana"} {
+		for _, want := range []string{"engine:firebird", "engine:vertica", "engine:exasol", "engine:hana", "engine:hive"} {
 			if !strings.Contains(got, want) {
 				t.Errorf("remote=%v picker lacks %s: %s", remote, want, got)
 			}
 		}
-		if strings.Contains(got, "db2") {
-			t.Errorf("Db2 (cgo) listed: %s", got)
+		if !strings.Contains(got, "engine:db2") {
+			t.Errorf("Db2 not listed: %s", got)
 		}
 	}
 }
@@ -52,6 +52,22 @@ func TestDBAddExtraEngineFlow(t *testing.T) {
 		t.Fatalf("after database: %+v prompt=%v", c, m.promptKind)
 	}
 
+	// Db2 asks for the database name.
+	m.databaseStartAdd("engine:db2")
+	if c := s.pendingConn; c.Driver != "db2" || c.Port != 50000 || c.User == "" || !strings.Contains(m.prompt.Note(), "-tags db2") {
+		t.Fatalf("db2 pending = %+v note=%q", c, m.prompt.Note())
+	}
+
+	// Spark SQL / Hive: the database is optional.
+	m.databaseStartAdd("engine:hive")
+	m.onDBPrompt(promptKindDBHost, "hs2.example")
+	m.onDBPrompt(promptKindDBPort, "10000")
+	m.onDBPrompt(promptKindDBUser, "hive")
+	m.onDBPrompt(promptKindDBName, "")
+	if c := s.pendingConn; c.Driver != "hive" || c.Database != "" || c.ID == "" || m.promptKind != promptKindDBPassword {
+		t.Fatalf("hive empty database: %+v prompt=%v", c, m.promptKind)
+	}
+
 	// Exasol and SAP HANA take an empty schema.
 	m.databaseStartAdd("engine:hana")
 	m.onDBPrompt(promptKindDBHost, "hana.example")
@@ -61,7 +77,7 @@ func TestDBAddExtraEngineFlow(t *testing.T) {
 	if c := s.pendingConn; c.Driver != "hana" || c.Database != "" || c.ID == "" || m.promptKind != promptKindDBPassword {
 		t.Fatalf("hana empty schema: %+v prompt=%v", c, m.promptKind)
 	}
-	if m.databaseStartAdd("engine:db2") != nil || s.pendingConn.Driver == "db2" {
+	if m.databaseStartAdd("engine:informix") != nil || s.pendingConn.Driver == "informix" {
 		t.Fatal("an unknown engine started an add")
 	}
 }
@@ -74,6 +90,8 @@ func TestDBAIToolsTakeExtraEnginesButNotExasol(t *testing.T) {
 		`{"id":"fb","driver":"firebird","host":"db","database":"employee"},` +
 		`{"id":"vt","driver":"vertica","host":"db","database":"vmart"},` +
 		`{"id":"hn","driver":"hana","host":"db"},` +
+		`{"id":"d2","driver":"db2","host":"db","database":"SAMPLE"},` +
+		`{"id":"hv","driver":"hive","host":"db"},` +
 		`{"id":"ex","driver":"exasol","host":"db"}]}`
 	if err := os.WriteFile(filepath.Join(root, ".termocode", "databases.json"), []byte(conns), 0o644); err != nil {
 		t.Fatal(err)
@@ -86,13 +104,19 @@ func TestDBAIToolsTakeExtraEnginesButNotExasol(t *testing.T) {
 	if _, err := dbAIConn(root, "ex"); err == nil || !strings.Contains(err.Error(), "read-only transaction") {
 		t.Fatalf("exasol: %v", err)
 	}
+	if _, err := dbAIConn(root, "d2"); err == nil || !strings.Contains(err.Error(), "read-only transaction") {
+		t.Fatalf("db2: %v", err)
+	}
+	if _, err := dbAIConn(root, "hv"); err == nil || !strings.Contains(err.Error(), "read-only transaction") {
+		t.Fatalf("hive: %v", err)
+	}
 	if got := dbAIDialect("vertica").Explain("SELECT 1", false); got != "EXPLAIN SELECT 1" {
 		t.Errorf("vertica AI explain = %q", got)
 	}
 	if got := dbAIDialect("firebird").Explain("SELECT 1", false); got != "" {
 		t.Errorf("firebird AI explain = %q", got)
 	}
-	if dbDriverTitle("hana") != "SAP HANA" {
+	if dbDriverTitle("db2") != "IBM Db2" || dbDriverTitle("hana") != "SAP HANA" {
 		t.Errorf("title = %q", dbDriverTitle("hana"))
 	}
 }

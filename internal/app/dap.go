@@ -54,6 +54,11 @@ func (m *Model) dapSetSpecialBreakpoint(cond, log string) tea.Cmd {
 //     auto-detected); without one, nvim-dap's configurations for the
 //     current filetype (a picker when several match).
 func (m *Model) dapStart() tea.Cmd {
+	// RC-8: a container workspace debugs through its tools sidecar
+	// (container_sidecar.go); without one, offer to start it.
+	if m.inContainerWorkspace() && m.sidecar == nil && !m.dapSessionActive {
+		return m.openSidecarStartCard()
+	}
 	if m.nvim == nil {
 		return nil
 	}

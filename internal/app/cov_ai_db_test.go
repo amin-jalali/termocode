@@ -71,7 +71,7 @@ const covDBConns = `{"connections":[` +
 	`{"id":"my","driver":"mysql","host":"localhost","port":3306,"database":"shop","name":"My Shop"},` +
 	`{"id":"ro","driver":"postgres","host":"ro.example","database":"app","readOnly":true},` +
 	`{"id":"cache","driver":"redis","host":"localhost","port":6379},` +
-	`{"id":"bad","driver":"db2","host":"x"},` +
+	`{"id":"bad","driver":"informix","host":"x"},` +
 	`{"id":"envpw","driver":"postgres","host":"localhost","database":"app","password":"${env:COV_DB_PW}"},` +
 	`{"id":"tunnel","driver":"postgres","host":"10.0.0.5","database":"app","ssh":{"host":"bastion.example","user":"me"}}]}`
 
@@ -135,7 +135,7 @@ func TestCovAIDBConnections(t *testing.T) {
 	}
 	covAIMustContain(t, "connections", out, "pg · postgres localhost:5432/app · environment development · connecting", "url · postgres db.example:6543/shop",
 		"my · name My Shop · mysql localhost:3306/shop · environment development · error: refused",
-		"ro · postgres ro.example:5432/app · environment development · read-only", "bad · db2 x · environment development · problem: ")
+		"ro · postgres ro.example:5432/app · environment development · read-only", "bad · informix x · environment development · problem: ")
 	if got := dbAITarget(dbclient.Conn{Driver: "sqlite", Path: "/w/app.db"}); got != "sqlite /w/app.db" {
 		t.Errorf("sqlite target = %q", got)
 	}

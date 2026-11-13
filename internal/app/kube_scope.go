@@ -13,7 +13,7 @@ import (
 // ── Kubernetes view: context and namespace pickers ───────────────────────
 //
 // c picks a context, n a namespace. The choice is this session's only: it
-// goes to kubectl as --context / --namespace; kubeconfig is not written.
+// goes to kubectl as --context / --namespace; picking them never writes the kubeconfig (only Add Cluster does, kube_kubeconfig.go).
 
 type kubePickMsg struct {
 	kind    string // "ctx" or "ns"

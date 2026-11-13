@@ -42,7 +42,7 @@ func webDBSQL(driver string) bool {
 	switch driver {
 	case "postgres", "mysql", "sqlite", "sqlserver", "oracle":
 		return true
-	case "exasol": // no read-only transaction (the AI tools refuse it too)
+	case "exasol", "db2", "hive": // no read-only transaction (the AI tools refuse them too)
 		return false
 	}
 	return dbclient.IsExtraSQL(driver) // DBX-71

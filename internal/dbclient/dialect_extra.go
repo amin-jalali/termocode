@@ -1,6 +1,9 @@
 package dbclient
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // Dialects of the DBX-71 engines. Every catalog query binds its
 // arguments in the order Introspect passes them: the schema for a list,
@@ -179,3 +182,70 @@ func (HANADialect) Explain(string, bool) string { return "" }
 func errNoExplain(engine string) error {
 	return fmt.Errorf("%s has no EXPLAIN statement that termocode can run", engine)
 }
+
+// Db2Dialect is IBM Db2 for LUW (SYSCAT catalog views).
+type Db2Dialect struct{}
+
+func (Db2Dialect) QuoteIdent(s string) string { return PostgresDialect{}.QuoteIdent(s) }
+func (Db2Dialect) Placeholder(int) string     { return "?" }
+func (Db2Dialect) Limit(limit, offset int) string {
+	if limit <= 0 {
+		return ""
+	}
+	return fmt.Sprintf(" OFFSET %d ROWS FETCH NEXT %d ROWS ONLY", offset, limit)
+}
+
+// ReadOnlyBegin is "": Db2 has no read-only transaction, so a read-only
+// session relies on the statement check alone (the AI tools refuse Db2).
+func (Db2Dialect) ReadOnlyBegin() string { return "" }
+func (Db2Dialect) CurrentSchemaQuery() string {
+	return `SELECT RTRIM(CURRENT SCHEMA) FROM SYSIBM.SYSDUMMY1`
+}
+func (Db2Dialect) CatalogQueries() map[string]string {
+	return map[string]string{
+		"databases":    `SELECT RTRIM(CURRENT SERVER) FROM SYSIBM.SYSDUMMY1`,
+		"schemas":      `SELECT RTRIM(SCHEMANAME) FROM SYSCAT.SCHEMATA WHERE SCHEMANAME NOT LIKE 'SYS%' AND SCHEMANAME NOT IN ('NULLID', 'SQLJ') ORDER BY 1`,
+		"objects":      `SELECT TABNAME, CASE TYPE WHEN 'V' THEN 'VIEW' ELSE 'BASE TABLE' END FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TYPE IN ('T', 'V') ORDER BY 1`,
+		"columns":      `SELECT COLNAME, TYPENAME || CASE WHEN TYPENAME IN ('VARCHAR', 'CHARACTER') THEN '(' || RTRIM(CHAR(LENGTH)) || ')' ELSE '' END FROM SYSCAT.COLUMNS WHERE TABSCHEMA = ? AND TABNAME = ? ORDER BY COLNO`,
+		"keys":         `SELECT k.COLNAME FROM SYSCAT.KEYCOLUSE k JOIN SYSCAT.TABCONST t ON t.CONSTNAME = k.CONSTNAME AND t.TABSCHEMA = k.TABSCHEMA AND t.TABNAME = k.TABNAME WHERE t.TYPE = 'P' AND k.TABSCHEMA = ? AND k.TABNAME = ? ORDER BY k.COLSEQ`,
+		"indexes":      `SELECT i.INDNAME, LISTAGG(c.COLNAME, ',') WITHIN GROUP (ORDER BY c.COLSEQ), CASE WHEN i.UNIQUERULE IN ('U', 'P') THEN 1 ELSE 0 END FROM SYSCAT.INDEXES i JOIN SYSCAT.INDEXCOLUSE c ON c.INDSCHEMA = i.INDSCHEMA AND c.INDNAME = i.INDNAME WHERE i.TABSCHEMA = ? AND i.TABNAME = ? GROUP BY i.INDNAME, i.UNIQUERULE ORDER BY 1`,
+		"foreign_keys": `SELECT r.CONSTNAME, k.COLNAME, r.REFTABNAME, p.COLNAME FROM SYSCAT.REFERENCES r JOIN SYSCAT.KEYCOLUSE k ON k.CONSTNAME = r.CONSTNAME AND k.TABSCHEMA = r.TABSCHEMA AND k.TABNAME = r.TABNAME JOIN SYSCAT.KEYCOLUSE p ON p.CONSTNAME = r.REFKEYNAME AND p.TABSCHEMA = r.REFTABSCHEMA AND p.TABNAME = r.REFTABNAME AND p.COLSEQ = k.COLSEQ WHERE r.TABSCHEMA = ? AND r.TABNAME = ? ORDER BY r.CONSTNAME, k.COLSEQ`,
+		"routines":     `SELECT ROUTINENAME FROM SYSCAT.ROUTINES WHERE ROUTINESCHEMA = ? ORDER BY 1`,
+		"sequences":    `SELECT SEQNAME FROM SYSCAT.SEQUENCES WHERE SEQSCHEMA = ? AND SEQTYPE = 'S' ORDER BY 1`,
+		"triggers":     `SELECT TRIGNAME FROM SYSCAT.TRIGGERS WHERE TRIGSCHEMA = ? ORDER BY 1`,
+		"roles":        `SELECT ROLENAME FROM SYSCAT.ROLES ORDER BY 1`,
+	}
+}
+
+// DDL builds a CREATE TABLE from the column catalog of the current schema.
+func (Db2Dialect) DDL(table string) (string, []any) {
+	return `SELECT 'CREATE TABLE "' || RTRIM(TABSCHEMA) || '"."' || TABNAME || '" (' || LISTAGG('"' || COLNAME || '" ' || TYPENAME || CASE WHEN NULLS = 'N' THEN ' NOT NULL' ELSE '' END, ', ') WITHIN GROUP (ORDER BY COLNO) || ')' FROM SYSCAT.COLUMNS WHERE TABSCHEMA = CURRENT SCHEMA AND TABNAME = ? GROUP BY TABSCHEMA, TABNAME`, []any{table}
+}
+
+// Explain is "": EXPLAIN fills plan tables that need setup, not a result.
+func (Db2Dialect) Explain(string, bool) string { return "" }
+
+// HiveDialect is HiveQL / Spark SQL. The tree is read with SHOW and
+// DESCRIBE (SQLSession.hiveIntrospect), so there are no catalog queries.
+type HiveDialect struct{}
+
+func (HiveDialect) QuoteIdent(s string) string { return "`" + strings.ReplaceAll(s, "`", "``") + "`" }
+func (HiveDialect) Placeholder(int) string     { return "?" }
+func (HiveDialect) Limit(limit, offset int) string {
+	switch {
+	case limit <= 0:
+		return ""
+	case offset > 0:
+		return fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)
+	}
+	return fmt.Sprintf(" LIMIT %d", limit)
+}
+
+// ReadOnlyBegin is "": Hive has no read-only transaction, so a read-only
+// session relies on the statement check alone (the AI tools refuse it).
+func (HiveDialect) ReadOnlyBegin() string             { return "" }
+func (HiveDialect) CatalogQueries() map[string]string { return map[string]string{} }
+func (d HiveDialect) DDL(table string) (string, []any) {
+	return "SHOW CREATE TABLE " + d.QuoteIdent(table), nil
+}
+func (HiveDialect) Explain(sql string, _ bool) string { return "EXPLAIN " + sql }

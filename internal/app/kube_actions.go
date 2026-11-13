@@ -27,6 +27,7 @@ func kubePaletteItems() []picker.Item {
 		{ID: "kubernetes-kustomize", Title: "Kubernetes: Kustomize Preview"},
 		{ID: "kubernetes-helm-repo-add", Title: "Kubernetes: Add Helm Repo…"},
 		{ID: "kubernetes-helm-install", Title: "Kubernetes: Install Helm Chart…"},
+		{ID: "kubernetes-add-cluster", Title: "Kubernetes: Add Cluster to Kubeconfig…"},
 	}
 }
 

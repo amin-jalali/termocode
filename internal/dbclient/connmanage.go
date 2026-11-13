@@ -235,6 +235,10 @@ func ServerVersionQuery(driver string) string {
 		return "SELECT PARAM_VALUE FROM SYS.EXA_METADATA WHERE PARAM_NAME = 'databaseProductVersion'"
 	case "hana":
 		return "SELECT VERSION FROM SYS.M_DATABASE"
+	case "hive":
+		return "SELECT version()"
+	case "db2":
+		return "SELECT SERVICE_LEVEL FROM TABLE(SYSPROC.ENV_GET_INST_INFO())"
 	}
 	return ""
 }

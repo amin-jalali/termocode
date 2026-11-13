@@ -815,6 +815,13 @@ func (m *Model) openAIPanel(focus bool) tea.Cmd {
 		m.actionsPinned = true
 		m.persistActionsState()
 		m.applyLayout()
+		if !m.actionsPanelVisible() && m.showExp {
+			// A small window (60x20): the explorer leaves no room for the
+			// chat, so the explorer steps aside instead of the chat
+			// silently not showing.
+			m.showExp = false
+			m.applyLayout()
+		}
 	}
 	if focus {
 		s.focused = true

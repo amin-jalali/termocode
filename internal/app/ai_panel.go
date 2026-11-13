@@ -702,7 +702,7 @@ func aiRightChip(label string, width int) aiLine {
 		label = runewidth.Truncate(label, max, "…")
 	}
 	chip := lipgloss.NewStyle().Background(theme.Mix(theme.BgPanel, theme.TextPrimary, 0.08)).
-		Foreground(theme.LG(theme.TextMuted)).Render(" " + label + " ")
+		Foreground(theme.LG(theme.TextSecondary)).Render(" " + label + " ")
 	x := width - 1 - runewidth.StringWidth(label) - 2
 	if x < 0 {
 		x = 0
@@ -1045,7 +1045,7 @@ func (m Model) renderAIInput(width, rows int) []string {
 			w = 1
 		}
 		ph = runewidth.Truncate(ph, tw-w, "…")
-		c += lipgloss.NewStyle().Background(boxBg).Foreground(theme.LG(theme.TextDim)).Italic(true).Render(ph)
+		c += lipgloss.NewStyle().Background(boxBg).Foreground(lightReadable(theme.TextDim, boxBg)).Italic(true).Render(ph)
 		out = append(out, line(c, w+runewidth.StringWidth(ph)))
 		for len(out) < rows+1 {
 			out = append(out, line("", 0))

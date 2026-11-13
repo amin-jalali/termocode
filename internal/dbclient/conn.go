@@ -200,6 +200,10 @@ func normDriver(d string) string {
 		return "hana"
 	case "exa":
 		return "exasol"
+	case "spark", "sparksql", "hiveserver2":
+		return "hive"
+	case "ibmdb2", "ibm_db":
+		return "db2"
 	}
 	return d
 }
