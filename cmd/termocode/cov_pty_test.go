@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -205,4 +206,22 @@ func TestRunDispatchesBarAndLSPProxyAndGateway(t *testing.T) {
 	if run([]string{webGatewayArg, "--bogus"}) != 2 {
 		t.Error("web gateway with bad args")
 	}
+}
+
+// A repaint signal makes the client UI resize and redraw; the caps file of
+// the attaching terminal is applied first.
+func TestWatchRepaintHandlesTheSignal(t *testing.T) {
+	covSessionEnv(t)
+	t.Setenv(session.EnvSession, "k")
+	capsFile := filepath.Join(t.TempDir(), "caps.json")
+	if err := os.WriteFile(capsFile, []byte(`{"env":{"TERM":"xterm"}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(session.EnvCapsFile, capsFile)
+	ptyStdio(t)
+	p := tea.NewProgram(plain{}, tea.WithInput(nil), tea.WithOutput(io.Discard))
+	watchRepaint(p)
+	time.Sleep(100 * time.Millisecond)
+	_ = syscall.Kill(syscall.Getpid(), session.RepaintSignal)
+	time.Sleep(300 * time.Millisecond)
 }

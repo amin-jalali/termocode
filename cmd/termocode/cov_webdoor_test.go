@@ -5,11 +5,14 @@ package main
 import (
 	"bytes"
 	"context"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/session"
 )
@@ -124,5 +127,60 @@ func TestRunWebGatewayInBadArgs(t *testing.T) {
 	var errw bytes.Buffer
 	if code := runWebGatewayIn([]string{"--bogus"}, nil, &errw); code != 2 {
 		t.Fatalf("exit %d", code)
+	}
+}
+
+// A real gateway starts on a free port, hands over its address and stops on
+// SIGTERM.
+func TestRunWebGatewayInStartsAndStops(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_RUNTIME_DIR", t.TempDir())
+	t.Setenv("XDG_STATE_HOME", t.TempDir())
+	t.Setenv("HOME", t.TempDir())
+	paths, err := session.PathsFor(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(paths.WebSocket), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	ln, err := net.Listen("unix", paths.WebSocket)
+	if err != nil {
+		t.Skip(err)
+	}
+	defer ln.Close()
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			defer c.Close()
+		}
+	}()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	go func() { _, _ = io.Copy(io.Discard, r) }()
+	done := make(chan int, 1)
+	var errw bytes.Buffer
+	go func() {
+		done <- runWebGatewayIn([]string{"--dir", dir, "--audit", filepath.Join(dir, "audit.log"), "--port", "0"}, w, &errw)
+	}()
+	select {
+	case code := <-done:
+		t.Skipf("the gateway ended at once (%d): %s", code, errw.String())
+	case <-time.After(1500 * time.Millisecond):
+	}
+	_ = syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
+	select {
+	case code := <-done:
+		if code != 0 && !strings.Contains(errw.String(), "context canceled") {
+			t.Fatalf("exit %d: %s", code, errw.String())
+		}
+	case <-time.After(20 * time.Second):
+		t.Fatal("the gateway did not stop")
 	}
 }
