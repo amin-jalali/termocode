@@ -223,8 +223,8 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
   // and the other pages' carets in this file.
   const laptopAt = snap?.laptop;
   useEffect(() => {
-    const h = ed.current as DeskHandle | null;
-    if (!desk || diff || !ready || !h) return;
+    const h = ed.current;
+    if (diff || !ready || !h) return;
     h.peers(coedit.peek()?.peersOf(snap, t("live.laptop_caret")) ?? []);
   }, [ready, laptopAt, snap?.peers]);
   // Git change marks (desktop): the file's unstaged diff on disk, asked

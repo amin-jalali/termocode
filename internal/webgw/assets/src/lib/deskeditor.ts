@@ -111,8 +111,6 @@ export interface DeskHandle extends EditorHandle {
   /** reveal shows a 1-based line (and column) with the cursor there. */
   reveal(line: number, col?: number): void;
   markers(items: FrameMarker[]): void;
-  /** peers draws the other people's carets (G-COL). */
-  peers(items: FramePeer[]): void;
   /** original sets a diff editor's older text. */
   original(text: string): void;
   diffView(o: { inline?: boolean; collapse?: boolean }): void;
