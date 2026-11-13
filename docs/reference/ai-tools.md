@@ -3329,6 +3329,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-switch-connection` | Databases: Switch File Connection… | never | AI provider, credentials and approvals stay with the user |
 | `db-test-connection` | Databases: Test Connection | auto |   |
 | `db-transaction-mode` | Databases: Transaction Mode… | never | use db_session op tx_mode (it asks) |
+| `db-tsqlt-run` | Databases: Run tSQLt Tests… | never | it runs the user's test procedures after a card only the user answers (db_query) |
 | `db-virtual-objects` | Databases: Edit Virtual Objects… | never | opens the user's virtual objects file for the user to edit |
 | `debug-add-watch` | Debug: Add Watch Expression... | never | opens a picker or prompt that only the user can answer; use a typed tool (debug_evaluate; debug_state shows the watches) |
 | `debug-clear-bps` | Debug: Remove All Breakpoints | confirm (ide) |   |

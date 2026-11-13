@@ -740,6 +740,9 @@ func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 	if cmd, ok := m.databaseRedisPrompt(m.promptKind, value); ok {
 		return cmd, true
 	}
+	if cmd, ok := m.databaseTSQLtPrompt(m.promptKind, value); ok {
+		return cmd, true
+	}
 	if cmd, ok := m.databasePgTAPPrompt(m.promptKind, value); ok {
 		return cmd, true
 	}

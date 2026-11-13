@@ -164,6 +164,9 @@ func (m *Model) runTestRow(r testRow) tea.Cmd {
 	if cmd, ok := m.testsPgTAPRow(r, true); ok {
 		return cmd
 	}
+	if cmd, ok := m.testsTSQLtRow(r, true); ok {
+		return cmd
+	}
 	switch r.kind {
 	case testRowPackage, testRowPkgError:
 		return m.runTestsRequest(testsRunRequest{pkgDir: r.pkg.Dir})
@@ -179,6 +182,9 @@ func (m *Model) runTestRow(r testRow) tea.Cmd {
 // tests and their message rows, the declaration otherwise.
 func (m *Model) openTestRow(r testRow) {
 	if _, ok := m.testsPgTAPRow(r, false); ok {
+		return
+	}
+	if _, ok := m.testsTSQLtRow(r, false); ok {
 		return
 	}
 	switch r.kind {
