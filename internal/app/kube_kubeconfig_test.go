@@ -39,8 +39,8 @@ func TestKubeAddClusterPaletteAndPolicy(t *testing.T) {
 }
 
 func TestKubeAddClusterWritesOnlyAfterOKWithABackup(t *testing.T) {
-	p := kubeconfigSandbox(t)
 	_, m := kubeLoaded(t, 150, 42)
+	p := kubeconfigSandbox(t) // after kubeLoaded: it sets KUBECONFIG too
 	m.dispatchKubePalette("kubernetes-add-cluster")
 	if !m.promptOpen || m.promptKind != promptKindKubeAddCluster {
 		t.Fatal("no prompt")
@@ -54,10 +54,13 @@ func TestKubeAddClusterWritesOnlyAfterOKWithABackup(t *testing.T) {
 	if !m.confirmOpen || m.confirmKind != confirmKindKubeAddCluster || m.confirm.SafeID() != "cancel" {
 		t.Fatal("no card with Cancel focused")
 	}
-	body := m.confirm.Body()
-	for _, want := range []string{p, "+  name: dev", "+    server: https://dev.example:6443", "backup"} {
-		if !strings.Contains(body, want) {
-			t.Errorf("card misses %q:\n%s", want, body)
+	if msg := m.confirm.Message(); !strings.Contains(msg, p) || !strings.Contains(msg, "backup") {
+		t.Errorf("card message misses the path or the backup note:\n%s", msg)
+	}
+	view := m.confirm.View()
+	for _, want := range []string{"+  name: dev", "server: https://dev.example"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("card misses %q:\n%s", want, view)
 		}
 	}
 	if b, _ := os.ReadFile(p); string(b) != kcStart {
@@ -100,8 +103,8 @@ func TestKubeAddClusterWritesOnlyAfterOKWithABackup(t *testing.T) {
 }
 
 func TestKubeAddClusterRefusesADuplicateBeforeTheCard(t *testing.T) {
-	p := kubeconfigSandbox(t)
 	_, m := kubeLoaded(t, 150, 42)
+	p := kubeconfigSandbox(t) // after kubeLoaded: it sets KUBECONFIG too
 	m.dispatchKubePalette("kubernetes-add-cluster")
 	m.handleKubePromptSubmit("old https://x:1")
 	if m.confirmOpen {

@@ -789,6 +789,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Kubernetes: Add Cluster to Kubeconfig… | `kubernetes-add-cluster` |   |   |
 | Kubernetes: Add Helm Repo… | `kubernetes-helm-repo-add` |   |   |
 | Kubernetes: Apply Current File… | `kubernetes-apply-file` |   |   |
 | Kubernetes: Autoscalers (HPA) | `kubernetes-hpa` |   |   |

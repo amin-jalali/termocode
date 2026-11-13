@@ -5,7 +5,7 @@
 //     services.Exec (internal/spawn underneath) with a timeout and
 //     `-o json`; the answer is parsed here.
 //   - The session's context and namespace are passed as flags
-//     (--context, --namespace). kubeconfig is only read, never written:
+//     (--context, --namespace). kubeconfig is only read here (the one writer is kubeconfig.go, after a card):
 //     no `config use-context`, no `config set-context`. KUBECONFIG is
 //     respected because kubectl reads it from the environment.
 //   - Errors are one quiet line (ErrorLine): no kubectl, no cluster,

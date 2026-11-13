@@ -472,6 +472,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"kubernetes-kustomize":              aiNever("use the typed tool kube_manage op kustomize"),
 	"kubernetes-helm-repo-add":          aiNever("use the typed tool kube_manage op helm_repo_add"),
 	"kubernetes-helm-install":           aiNever("use the typed tool kube_manage op helm_install"),
+	"kubernetes-add-cluster":            aiNever("the AI never edits the kubeconfig; only the person does, after a card with the diff"),
 	"kubernetes-report":                 aiAuto(),
 	"kubernetes-rbac":                   aiAuto(),
 	"kubernetes-hpa":                    aiAuto(),

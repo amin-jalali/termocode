@@ -177,9 +177,12 @@ func insertEntry(text, key string, entry []string) (string, error) {
 	return strings.Join(out, "\n") + "\n", nil
 }
 
-// DiffText is a unified-style diff of two texts with 3 lines of context
-// ("" when they are the same).
-func DiffText(oldText, newText string) string {
+// DiffText is DiffContext with 3 lines of context.
+func DiffText(oldText, newText string) string { return DiffContext(oldText, newText, 3) }
+
+// DiffContext is a unified-style diff of two texts with ctxN lines of
+// context around each change ("" when they are the same).
+func DiffContext(oldText, newText string, ctxN int) string {
 	a, b := splitLines(oldText), splitLines(newText)
 	type op struct {
 		tag  byte
@@ -238,7 +241,6 @@ func DiffText(oldText, newText string) string {
 			}
 		}
 	}
-	const ctxN = 3
 	show := make([]bool, len(ops))
 	changed := false
 	for i, o := range ops {

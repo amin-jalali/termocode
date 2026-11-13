@@ -92,6 +92,8 @@ func (m *Model) dispatchKubeInstallPalette(id string) (tea.Cmd, bool) {
 		}
 		m.askKubeLine(promptKindKubeInstall, " Install Helm Chart ", kubeInstallLabel, "", "Into "+m.kube.context+" / "+m.kube.namespace+". A card asks first.", "")
 		return nil, true
+	case "kubernetes-add-cluster":
+		return m.askKubeAddCluster("", ""), true
 	case "kubernetes-kustomize":
 		dir := ""
 		if m.nvim != nil {
