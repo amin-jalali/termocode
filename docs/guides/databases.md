@@ -457,6 +457,7 @@ CSV and TSV protect spreadsheets from formula injection: a cell that starts with
 
 - **Introduce alias** for the table at the cursor (`orders` gets `o`, and `orders.id` becomes `o.id`).
 - **Qualify column names**: a column that only one table of the `FROM` has gets that table's alias.
+- **Unqualify column names**: the reverse: `u.name` becomes `name` where only one table of that `SELECT` can have the column. A name that is also a select alias, `u.*` and names of an outer query keep their qualifier.
 - **Expand `*`** (or `o.*`) into the column list.
 - **Wrap a table in a subquery**: `orders o` becomes `(SELECT * FROM orders) o`.
 - **Extract subquery as CTE**: a subquery in `FROM` moves to a `WITH` entry named after its alias.
@@ -464,7 +465,7 @@ CSV and TSV protect spreadsheets from formula injection: a cell that starts with
 - **Replace a literal with a parameter**: `status = 'open'` becomes `status = :status` (the same string everywhere in the statement); the run asks for the value.
 - **DISTINCT ↔ GROUP BY**, when the select list has no aggregate and no `*`.
 
-Qualify and Expand `*` use the columns the editor already knows for completion; connect the file's connection first. A rewrite is only offered when the statement is read clearly; nothing is sent to the server.
+Qualify, Unqualify (with more than one table) and Expand `*` use the columns the editor already knows for completion; connect the file's connection first. A rewrite is only offered when the statement is read clearly; nothing is sent to the server.
 
 ## EXPLAIN and ANALYZE
 

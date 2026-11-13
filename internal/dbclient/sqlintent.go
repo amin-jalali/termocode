@@ -24,6 +24,7 @@ type SQLIntention struct {
 const (
 	IntentAlias         = "alias"
 	IntentQualify       = "qualify"
+	IntentUnqualify     = "unqualify"
 	IntentExpandStar    = "expand-star"
 	IntentSubquery      = "subquery"
 	IntentExtractCTE    = "extract-cte"
@@ -611,6 +612,7 @@ func (c *intentCtx) plans() []intentPlan {
 	return []intentPlan{
 		{IntentAlias, c.introduceAlias},
 		{IntentQualify, c.qualify},
+		{IntentUnqualify, c.unqualify},
 		{IntentExpandStar, c.expandStar},
 		{IntentSubquery, c.wrapSubquery},
 		{IntentExtractCTE, c.extractCTE},
@@ -789,6 +791,99 @@ func (c *intentCtx) qualify() (string, []sqlEdit, bool) {
 		return "Qualify 1 column name", eds, true
 	}
 	return fmt.Sprintf("Qualify %d column names", len(eds)), eds, true
+}
+
+// unqualify drops "q." in front of the columns of the block at the
+// cursor where only one of its tables can have the column: always with
+// one table, else only when the columns of every table are known. A
+// name that is also a select alias keeps its qualifier.
+func (c *intentCtx) unqualify() (string, []sqlEdit, bool) {
+	b := c.curBlock()
+	if b == nil || len(b.from) == 0 {
+		return "", nil, false
+	}
+	colSets := make([]map[string]bool, len(b.from))
+	if len(b.from) > 1 {
+		for k, it := range b.from {
+			cols, ok := c.colsOf(it)
+			if !ok {
+				return "", nil, false
+			}
+			colSets[k] = map[string]bool{}
+			for _, n := range cols {
+				colSets[k][strings.ToLower(n)] = true
+			}
+		}
+	}
+	aliases := map[string]bool{}
+	for _, s := range b.items {
+		if s.alias >= 0 {
+			aliases[strings.ToLower(unquoteIdent(c.toks[s.alias].text))] = true
+		}
+	}
+	// qualifier is the from item the tokens at j name, and their count.
+	qualifier := func(j int) (int, int) {
+		for k, it := range b.from {
+			if it.sub && it.alias < 0 || it.fn && it.alias < 0 {
+				continue
+			}
+			if it.alias >= 0 {
+				if c.sameName(c.toks[j], c.toks[it.alias]) {
+					return k, 1
+				}
+				continue
+			}
+			if c.sameToks(j, it.a, it.b) {
+				return k, it.b - it.a
+			}
+		}
+		return -1, 0
+	}
+	skip := map[int]bool{}
+	for _, it := range b.from {
+		for j := it.a; j < it.end; j++ {
+			skip[j] = true
+		}
+	}
+	var eds []sqlEdit
+	for j := b.sel + 1; j < b.end; j++ {
+		t := c.toks[j]
+		if c.owner[j] != b.idx || skip[j] || !c.isName(t) || isIPunct(c.toks[j-1], ".") {
+			continue
+		}
+		k, n := qualifier(j)
+		col := j + n + 1
+		if k < 0 || col >= b.end || !isIPunct(c.toks[j+n], ".") || !c.isName(c.toks[col]) {
+			continue
+		}
+		if col+1 < len(c.toks) && (isIPunct(c.toks[col+1], ".") || isIPunct(c.toks[col+1], "(")) {
+			continue
+		}
+		w := strings.ToLower(unquoteIdent(c.toks[col].text))
+		if aliases[w] {
+			continue
+		}
+		if len(b.from) > 1 {
+			hits := 0
+			for _, cs := range colSets {
+				if cs[w] {
+					hits++
+				}
+			}
+			if hits != 1 || !colSets[k][w] {
+				continue
+			}
+		}
+		eds = append(eds, sqlEdit{t.pos, c.toks[col].pos, ""})
+		j = col
+	}
+	if len(eds) == 0 {
+		return "", nil, false
+	}
+	if len(eds) == 1 {
+		return "Unqualify 1 column name", eds, true
+	}
+	return fmt.Sprintf("Unqualify %d column names", len(eds)), eds, true
 }
 
 // starItem: the select item is * or q.*.
