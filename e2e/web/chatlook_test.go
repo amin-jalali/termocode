@@ -77,6 +77,21 @@ func TestDeskChatOneStepReplyIsAChatAnswer(t *testing.T) {
 	chatShot(t, p, "single", ai+`.querySelector(".tool-row.is-open")`)
 }
 
+// checkThinkingSecs checks a "Thinking… Ns" line of an answer that
+// started 12 s before t0: N is 12 plus at most the time the page took to
+// open it since t0 (seconds on a slow runner).
+func checkThinkingSecs(t *testing.T, got string, t0 time.Time) {
+	t.Helper()
+	most := 13 + int(time.Since(t0)/time.Second)
+	n := -1
+	if m := regexp.MustCompile(`(\d+)s`).FindStringSubmatch(got); m != nil {
+		n, _ = strconv.Atoi(m[1])
+	}
+	if !strings.Contains(got, "Thinking…") || n < 12 || n > most {
+		t.Errorf("the answer being written says %q, want Thinking… 12s to %ds", got, most)
+	}
+}
+
 func TestDeskChatAnswerBeingWrittenSaysThinking(t *testing.T) {
 	t0 := time.Now()
 	writing := map[string]any{"i": 1, "role": "assistant", "streaming": true, "text": "Let me look", "model": "gpt-6-sol",
@@ -85,17 +100,7 @@ func TestDeskChatAnswerBeingWrittenSaysThinking(t *testing.T) {
 	const ai = deskChat + `.querySelector('.msg-ai[data-i="1"]')`
 	p.WaitJS(ai + `?.querySelector(".msg-think")`)
 	got := Eval[string](p, ai+`.querySelector(".msg-think").textContent`)
-	// 12 s when the answer was sent, plus the time the page took to open
-	// it (seconds on a slow runner).
-	most := 13 + int(time.Since(t0)/time.Second)
-	secs := regexp.MustCompile(`(\d+)s`).FindStringSubmatch(got)
-	n := -1
-	if secs != nil {
-		n, _ = strconv.Atoi(secs[1])
-	}
-	if !strings.Contains(got, "Thinking…") || n < 12 || n > most {
-		t.Errorf("the answer being written says %q, want Thinking… 12s to %ds", got, most)
-	}
+	checkThinkingSecs(t, got, t0)
 	p.TapJS(ai + `.querySelector(".msg-think button")`)
 	expectReq(t, c, "chat.stop")
 }
