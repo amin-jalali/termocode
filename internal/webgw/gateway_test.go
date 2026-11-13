@@ -197,40 +197,27 @@ func TestGatewayStopsWhenSessionEnds(t *testing.T) {
 	}
 }
 
-// Spec (3.5): no use for Idle stops the gateway (4006); use keeps it on.
-func TestGatewayIdleStops(t *testing.T) {
-	r := startedGateway(t, func(c *RunConfig) { c.Idle = 400 * time.Millisecond })
-	c, p := r.browser()
-	for i := 1; i <= 4; i++ { // use for longer than Idle
-		<-time.After(150 * time.Millisecond)
-		writeText(t, c, `{"t":"ping","n":"`+itoa(i)+`","here":true}`)
-		p.line(t)
-	}
+// Spec (owner, 2026-11-09): the panel closed itself after 15 minutes
+// with no page ("idle_stop") while the owner's phone was locked, and with
+// no laptop at hand nothing could open it again: "the user doesn't work
+// for 10 minutes and we close the connection?!". The gateway stays up
+// while termocode runs, used or not, and however long it runs; only Stop,
+// the kill switch or termocode's end stop it.
+func TestGatewayStaysUpUnused(t *testing.T) {
+	r := startedGateway(t, func(c *RunConfig) {
+		c.Idle = 200 * time.Millisecond
+		c.Max = 300 * time.Millisecond
+	})
 	select {
-	case <-r.done:
-		t.Fatal("stopped while in use")
-	default:
+	case code := <-r.done:
+		t.Fatalf("stopped by itself with %v", code)
+	case <-time.After(time.Second): // longer than Idle and Max, no use
 	}
-	if got := closeCode(t, c); got != websocket.StatusCode(webproto.CloseIdle) {
-		t.Fatalf("browser closed with %d, want 4006", got)
-	}
-	if code := r.wait(); code != webproto.CloseIdle {
-		t.Fatalf("stopped with %d", code)
-	}
-	if !strings.Contains(auditText(t, r.cfg.AuditPath), `"ev":"idle_stop"`) {
-		t.Fatal("no idle_stop in the audit log")
-	}
-}
-
-// Spec (3.5): Max after the start the gateway stops (4007), in use or not.
-func TestGatewayMaxStops(t *testing.T) {
-	r := startedGateway(t, func(c *RunConfig) { c.Max = 300 * time.Millisecond })
-	c, _ := r.browser()
-	if got := closeCode(t, c); got != websocket.StatusCode(webproto.CloseMaxLifetime) {
-		t.Fatalf("browser closed with %d, want 4007", got)
-	}
-	if code := r.wait(); code != webproto.CloseMaxLifetime {
-		t.Fatalf("stopped with %d", code)
+	c, p := r.browser()
+	writeText(t, c, `{"t":"ping","n":"1","here":true}`)
+	p.line(t)
+	if a := auditText(t, r.cfg.AuditPath); strings.Contains(a, `"ev":"idle_stop"`) || strings.Contains(a, `"ev":"max_stop"`) {
+		t.Fatalf("stopped itself: %s", a)
 	}
 }
 
