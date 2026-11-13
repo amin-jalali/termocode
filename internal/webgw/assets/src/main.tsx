@@ -32,6 +32,7 @@ import { App } from "./app";
 import { loadPersian } from "./lib/lazy";
 import { prefs } from "./lib/prefs";
 import { setOnOpen, unseen } from "./lib/notify";
+import { watchOpen } from "./lib/push";
 import { soloBuf } from "./lib/popout";
 import { goTab, route } from "./lib/router";
 import { watchViewport } from "./lib/viewport";
@@ -189,6 +190,18 @@ if (location.protocol === "https:") {
 
 watchViewport();
 setOnOpen((kind) => (kind === "card" ? openCards() : goTab("more")));
+// A tap on a push (lib/push.ts) opens the cards once one is here (15 s at most).
+const wantCards = signal(false);
+watchOpen(() => {
+  wantCards.value = true;
+  setTimeout(() => (wantCards.value = false), 15000);
+});
+effect(() => {
+  if (wantCards.value && waiting.value.count > 0) {
+    wantCards.value = false;
+    openCards();
+  }
+});
 
 // A popped-out terminal tab (WEBP-13) came with this session's token;
 // it keeps no handle on the tab that opened it.

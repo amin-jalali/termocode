@@ -117,6 +117,7 @@ export const SP = {
   "ph.alerts_body": "Short fixed texts only (“A card is waiting”), never code or chat.",
   "ph.alerts_blocked": "Blocked in this browser's settings.",
   "ph.alerts_none": "This browser cannot show notifications.",
+  "ph.alerts_nopush": "Alerts with this page closed need the https tailnet address.",
   "ph.quiet": "Quiet hours",
   "ph.quiet_body": "No notifications between these times.",
   "ph.quiet_from": "From",

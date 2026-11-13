@@ -21,6 +21,7 @@ import { signal } from "@preact/signals";
 import { useEffect, useRef } from "preact/hooks";
 import type { PhoneInfo, PhonePrefsArgs } from "../../../../../webproto/proto";
 import { notifyState, perm, turnOff, turnOn } from "../../lib/notify";
+import { canPush } from "../../lib/push";
 import { prefs, setPref } from "../../lib/prefs";
 import { ReqError } from "../../net/link";
 import { forgetToken } from "../../net/auth";
@@ -246,6 +247,7 @@ function Body({ d }: { d: PhoneInfo }) {
         ) : (
           <div class="field">
             <p class="group-text">{nst === "blocked" ? tp("ph.alerts_blocked") : tp("ph.alerts_body")}</p>
+            {nst !== "blocked" && !canPush() && <p class="group-text">{tp("ph.alerts_nopush")}</p>}
             <Segmented<"off" | "on">
               label={tp("ph.alerts")}
               value={nst === "on" ? "on" : "off"}
