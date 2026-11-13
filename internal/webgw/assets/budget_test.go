@@ -12,9 +12,7 @@ import (
 // Bundle budgets of the page (web design 4.1), gzipped: a phone on a weak
 // link loads the whole UI in one short burst.
 const (
-	// budgetJS is 121 KiB: 1 KiB more for the tap on a push that opens the
-	// cards (CMP-47, lib/push.ts watchOpen + main.tsx).
-	budgetJS    = 121 << 10
+	budgetJS    = 120 << 10
 	budgetCSS   = 20 << 10
 	budgetHTML  = 4 << 10
 	budgetTotal = 150 << 10

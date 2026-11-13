@@ -27,17 +27,6 @@ export function canPush(): boolean {
   return container() !== undefined;
 }
 
-/** watchOpen calls open when a tap on a push reaches this page: the
- * worker tells an open page (a message), or opens a closed one with
- * ?open=cards (read and removed here). */
-export function watchOpen(open: () => void): void {
-  navigator.serviceWorker?.addEventListener("message", (e: MessageEvent) => e.data?.open === "cards" && open());
-  if (location.search.includes("open=cards")) {
-    history.replaceState(null, "", location.pathname + location.hash);
-    open();
-  }
-}
-
 /** bytes decodes base64url (the laptop's public key). */
 function bytes(b64: string): Uint8Array<ArrayBuffer> {
   const s = atob(b64.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((b64.length + 3) % 4));

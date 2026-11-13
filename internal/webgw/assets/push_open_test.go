@@ -18,12 +18,12 @@ func TestPushOpenAndUnavailableNote(t *testing.T) {
 		return string(b)
 	}
 	push, mainTsx, phone := read("src/lib/push.ts"), read("src/main.tsx"), read("src/views/phone/ThisPhone.tsx")
-	for _, want := range []string{"export function watchOpen", `"message"`, "open=cards"} {
+	for _, want := range []string{"export async function pushOn"} {
 		if !strings.Contains(push, want) {
 			t.Errorf("lib/push.ts lacks %s", want)
 		}
 	}
-	for _, want := range []string{"watchOpen(", "openCards()"} {
+	for _, want := range []string{`"message"`, "open=cards", "openCards()"} {
 		if !strings.Contains(mainTsx, want) {
 			t.Errorf("main.tsx lacks %s", want)
 		}
