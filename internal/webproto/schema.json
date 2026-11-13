@@ -8803,6 +8803,9 @@
             "redis",
             "sqlserver",
             "oracle",
+            "firebird",
+            "vertica",
+            "hana",
             "other"
           ]
         },

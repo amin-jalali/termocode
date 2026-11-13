@@ -643,6 +643,7 @@ These four engines use the SQL console, result pages, tree, history and exports 
 - **SSH tunnels** work for all four. For Firebird, Vertica and Exasol, termocode opens a local port on `127.0.0.1` that only forwards to the tunnel. With Exasol's server check on, use `params.certificatefingerprint` over a tunnel, because the host name is `127.0.0.1`.
 - **Options.** `options.schema` sets the search path (Vertica), `OPEN SCHEMA` (Exasol) or `SET SCHEMA` (SAP HANA); `options.timeZone` works on Vertica, Exasol and Firebird 4+; `options.isolation` works on Vertica. The init SQL runs on every new connection.
 - **Read-only.** A read-only session opens a read-only transaction on Firebird, Vertica and SAP HANA. Exasol has none, so its read-only session only checks each statement before it runs, and the AI tools do not work on Exasol connections.
+- **Web page and outside agents.** The web page lists and pages the tables of Firebird, Vertica (the `public` schema) and SAP HANA (the default schema, else the user's), and outside agents get the `db_*` tools for them through the MCP server. Exasol is not offered there, for the same reason.
 
 ## AI tools and their rules
 
