@@ -18,7 +18,7 @@ tc.register_panel({
 `
 
 // extBrokenLua fails while it loads (SCN-29).
-const extBrokenLua = `error('boom: this extension is broken')
+const extBrokenLua = `error('boom: this extension is broken', 0)
 `
 
 // extCases are the extension screens (SCN-29): an extension that adds a
