@@ -99,7 +99,7 @@ func TestUpdateCardInstallAndRollback(t *testing.T) {
 	tm.Send(KeyEnter)
 	tm.WaitText("Install termocode", 30*time.Second)
 	tm.settle()
-	tm.Send(KeyEnter)
+	tm.ClickText("Install") // Cancel has the focus
 	waitUntil(t, "the new binary in place", 30*time.Second, func() bool {
 		b, _ := os.ReadFile(exe)
 		return string(b) == updNewBinary
@@ -108,6 +108,10 @@ func TestUpdateCardInstallAndRollback(t *testing.T) {
 		t.Fatalf("termocode.old is not the old binary (%d bytes)", len(b))
 	}
 
+	tm.WaitText("termocode v0.2.0 is installed", uiTimeout)
+	tm.settle()
+	tm.ClickText("Later")
+	tm.WaitGone("is installed", uiTimeout)
 	tm.settle()
 	tm.Palette("termocode: Roll Back Update")
 	tm.WaitText("Roll back", uiTimeout)
