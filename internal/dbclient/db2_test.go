@@ -161,7 +161,7 @@ func TestDb2SessionRunsThroughTheSQLSession(t *testing.T) {
 		t.Fatalf("dsn = %q", gotDSN)
 	}
 	res := s.Run(context.Background(), "SELECT 1 FROM SYSIBM.SYSDUMMY1", RunOptions{MaxRows: 10})
-	if res.Err != "" || len(res.Rows) != 1 || len(res.Columns) != 1 {
+	if res.Err != nil || len(res.Rows) != 1 || len(res.Columns) != 1 {
 		t.Fatalf("result = %+v", res)
 	}
 }
