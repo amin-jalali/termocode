@@ -16,7 +16,8 @@ import (
 
 // SQLIntentOpts are the facts beyond the cursor.
 type SQLIntentOpts struct {
-	SelStart, SelEnd int // the selected bytes of the statement; SelEnd <= SelStart = no selection
+	SelStart, SelEnd int                          // the selected bytes of the statement; SelEnd <= SelStart = no selection
+	Types            map[string]map[string]string // lower-case table → lower-case column → type (table functions)
 }
 
 // The selection intention ids.
@@ -24,6 +25,7 @@ const (
 	IntentExtractExprSub = "extract-expr-subquery"
 	IntentExtractExprCTE = "extract-expr-cte"
 	IntentExtractSelCTE  = "extract-selection-cte"
+	IntentTableFunc      = "table-function"
 )
 
 var intentAggWords = map[string]bool{
@@ -307,7 +309,28 @@ func (c *intentCtx) extractSelCTE() (string, []sqlEdit, bool) {
 			return "", nil, false
 		}
 	}
-	// The names the subquery defines; any other qualifier is an outer one.
+	for _, b := range c.blocks { // a FROM ( … ) is Extract subquery as CTE
+		for _, it := range b.from {
+			if it.a == open {
+				return "", nil, false
+			}
+		}
+	}
+	if c.outerRefs(open, cl) {
+		return "", nil, false
+	}
+	name := freeName("sub", c.takenNames())
+	body := c.src[c.toks[open+1].pos:c.toks[cl-1].end]
+	eds := []sqlEdit{
+		{c.toks[open].pos, c.toks[cl].end, "(SELECT * FROM " + name + ")"},
+		c.cteDefEdit(open, name+" AS ("+body+")"),
+	}
+	return "Extract the selected subquery as CTE " + name, eds, true
+}
+
+// outerRefs: the subquery between the ( at open and the ) at cl uses a
+// qualifier it does not define itself (a name of an outer query).
+func (c *intentCtx) outerRefs(open, cl int) bool {
 	defined := map[string]bool{}
 	inFrom := map[int]bool{}
 	for _, b := range c.blocks {
@@ -315,9 +338,6 @@ func (c *intentCtx) extractSelCTE() (string, []sqlEdit, bool) {
 			continue
 		}
 		for _, it := range b.from {
-			if it.a == open {
-				return "", nil, false
-			}
 			if !it.sub && !it.fn {
 				defined[strings.ToLower(unquoteIdent(c.toks[it.b-1].text))] = true
 			}
@@ -329,27 +349,14 @@ func (c *intentCtx) extractSelCTE() (string, []sqlEdit, bool) {
 			}
 		}
 	}
-	for _, b := range c.blocks { // a FROM ( … ) is Extract subquery as CTE
-		for _, it := range b.from {
-			if it.a == open {
-				return "", nil, false
-			}
-		}
-	}
 	for j := open + 1; j < cl; j++ {
 		t := c.toks[j]
 		if inFrom[j] || !c.isName(t) || isIPunct(c.toks[j-1], ".") || !isIPunct(c.toks[j+1], ".") {
 			continue
 		}
 		if !defined[strings.ToLower(unquoteIdent(t.text))] {
-			return "", nil, false
+			return true
 		}
 	}
-	name := freeName("sub", c.takenNames())
-	body := c.src[c.toks[open+1].pos:c.toks[cl-1].end]
-	eds := []sqlEdit{
-		{c.toks[open].pos, c.toks[cl].end, "(SELECT * FROM " + name + ")"},
-		c.cteDefEdit(open, name+" AS ("+body+")"),
-	}
-	return "Extract the selected subquery as CTE " + name, eds, true
+	return false
 }
