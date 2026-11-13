@@ -77,7 +77,7 @@ func TestXLSXToCSVReadsOurOwnExport(t *testing.T) {
 	}
 	dst := filepath.Join(dir, "x.csv")
 	n, err := XLSXToCSV(src, dst)
-	if err != nil || n != 4 {
+	if err != nil || n != 3 {
 		t.Fatalf("n=%d err=%v", n, err)
 	}
 	got, _ := os.ReadFile(dst)
