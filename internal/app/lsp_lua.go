@@ -107,9 +107,15 @@ function _G._termocode_lsp_start(buf)
         local ok, v = pcall(vim.json.decode, srv.cfg.settings)
         if ok then settings = v end
       end
+      local cmd_env = nil
+      if type(ctab) == 'table' then
+        local plan = ctab.servers and ctab.servers[srv.name]
+        if plan and type(plan.env) == 'table' and next(plan.env) then cmd_env = plan.env end
+      end
       vim.lsp.start({
         name = srv.name,
         cmd = cmd,
+        cmd_env = cmd_env,
         root_dir = root,
         settings = settings,
         handlers = handlers,

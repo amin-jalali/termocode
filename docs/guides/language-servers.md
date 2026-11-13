@@ -95,6 +95,10 @@ project.
 The status bar chip says where each server runs: `{} gopls · in api-1` or
 `{} ts_ls · local`.
 
+A local `gopls` on another system or CPU than the container gets
+`GOOS=linux` and the container's `GOARCH`, so it reads the same build
+tags and platform files as the container's build.
+
 A local server cannot see packages that exist only in the container, so
 its errors are often wrong there. That is why a local server shows **no
 diagnostics** in a container workspace. Completion, hover and go to

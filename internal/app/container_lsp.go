@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -147,6 +148,9 @@ type lspServerPlan struct {
 	Cmd   []string `json:"cmd"`
 	// Mute drops the server's diagnostics (a local server, Q5).
 	Mute bool `json:"mute,omitempty"`
+	// Env is added to the server's environment (cmd_env): GOOS/GOARCH
+	// of the container for a local gopls on another platform.
+	Env map[string]string `json:"env,omitempty"`
 }
 
 // containerLSPPlan is what the Lua side starts servers from
@@ -176,6 +180,18 @@ type containerLSPInput struct {
 	ImageArgv func(argv []string) []string
 	// Proxy is the termocode executable (`termocode lsp-proxy`).
 	Proxy string
+	// Arch is the container's CPU in Go's spelling ("" = unknown); the
+	// container's OS is always linux.
+	Arch string
+}
+
+// goPlatformHint is the env a local gopls needs to see the container's
+// build (nil when this machine is the same platform or Arch is unknown).
+func goPlatformHint(arch string) map[string]string {
+	if arch == "" || (runtime.GOOS == "linux" && runtime.GOARCH == arch) {
+		return nil
+	}
+	return map[string]string{"GOOS": "linux", "GOARCH": arch}
 }
 
 // planContainerLSP decides, per server, where it runs.
@@ -202,11 +218,15 @@ func planContainerLSP(in containerLSPInput, specs []lspServerSpec) containerLSPP
 			continue
 		}
 		argv := []string{in.Proxy, "lsp-proxy", "--map", in.Root + "=" + in.LocalDir, "--", local}
-		p.Servers[s.Name] = lspServerPlan{
+		sp := lspServerPlan{
 			Place: lspLocal,
 			Cmd:   append(argv, args...),
 			Mute:  !in.Settings.showLocalDiagnostics(),
 		}
+		if bin == "gopls" {
+			sp.Env = goPlatformHint(in.Arch)
+		}
+		p.Servers[s.Name] = sp
 	}
 	return p
 }
@@ -393,6 +413,7 @@ func (m Model) containerLSPInputNow() (containerLSPInput, bool) {
 		InImage:   st.inImage,
 		LocalCmd:  localLSPCmd,
 		ImageArgv: h.LSPArgv,
+		Arch:      h.Caps().Arch,
 	}
 	if exe, err := spawn.Executable(); err == nil {
 		in.Proxy = exe
