@@ -634,6 +634,7 @@ func (c *intentCtx) plans() []intentPlan {
 		{IntentExtractExprSub, c.extractExprSub},
 		{IntentExtractExprCTE, c.extractExprCTE},
 		{IntentExtractSelCTE, c.extractSelCTE},
+		{IntentTableFunc, c.tableFunction},
 	}
 }
 

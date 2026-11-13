@@ -153,6 +153,28 @@ func (s *dbState) knownColumns(conn string) map[string][]string {
 	return out
 }
 
+// knownColumnTypes are the column types the background schema has:
+// lower-case table → lower-case column → type (columns without a type
+// are left out).
+func (s *dbState) knownColumnTypes(conn string) map[string]map[string]string {
+	out := map[string]map[string]string{}
+	if f := s.full[conn]; f != nil {
+		for table, cols := range f.Cols {
+			for _, c := range cols {
+				if c.Type == "" {
+					continue
+				}
+				t := strings.ToLower(table)
+				if out[t] == nil {
+					out[t] = map[string]string{}
+				}
+				out[t][strings.ToLower(c.Name)] = c.Type
+			}
+		}
+	}
+	return out
+}
+
 func (m *Model) databaseSQLIntentions() tea.Cmd {
 	if m.nvim == nil {
 		return nil
@@ -184,9 +206,10 @@ func (m *Model) databaseSQLIntentions() tea.Cmd {
 	}
 	t := &dbIntentTarget{start: start, end: end, orig: lines[start:end], cur: cur, dialect: dialect, cols: m.databases.knownColumns(connID)}
 	t.stmt = strings.Join(t.orig, "\n")
+	t.opts.Types = m.databases.knownColumnTypes(connID) // Extract as table function
 	if len(pos.Sel) == 4 {
 		if s, e, ok := dbIntentSelRange(lines, start, end, [2]int{pos.Sel[0], pos.Sel[1]}, [2]int{pos.Sel[2], pos.Sel[3]}, pos.Mode == "V"); ok {
-			t.opts = dbclient.SQLIntentOpts{SelStart: s, SelEnd: e}
+			t.opts.SelStart, t.opts.SelEnd = s, e
 		}
 	}
 	items := dbSQLIntentItemsWith(t.stmt, dialect, cur, t.cols, t.opts)

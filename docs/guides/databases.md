@@ -454,6 +454,7 @@ CSV and TSV protect spreadsheets from formula injection: a cell that starts with
 - **Inline CTE**: a CTE used once goes back into the `FROM` as a subquery (not for `WITH RECURSIVE`).
 - **Replace a literal with a parameter**: `status = 'open'` becomes `status = :status` (the same string everywhere in the statement); the run asks for the value.
 - **DISTINCT ↔ GROUP BY**, when the select list has no aggregate and no `*`.
+- **Extract subquery as table function** (PostgreSQL): the subquery in `FROM` at the cursor becomes `CREATE FUNCTION get_x(p_total integer) RETURNS SETOF orders LANGUAGE sql STABLE AS $$ … $$;` above the statement, and the `FROM` reads `get_x(100) x`. Whole numbers become parameters; strings stay as they are, since their column may be an enum or a date. The rows are `SETOF` the table for `SELECT *` over one table, else `TABLE (…)` with the types completion knows; without them it is not offered. Run the `CREATE FUNCTION` first.
 
 Select part of the statement first (or leave visual mode with the cursor at an end of the selection) for these:
 
