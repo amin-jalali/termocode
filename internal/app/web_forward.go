@@ -150,24 +150,52 @@ func (m *Model) onWebForwardPort(value string) tea.Cmd {
 	if why := m.webForwardReady(); why != "" {
 		return m.webToast(toast.Warn, why)
 	}
+	if have, why := m.webForwardCheck(port); have != nil {
+		return m.webToast(toast.Info, "Port "+strconv.Itoa(port)+" is forwarded already. See Web: Forwarded Ports….")
+	} else if why != "" {
+		return m.webToast(toast.Warn, why)
+	}
+	title, body := m.webForwardCard(port)
+	m.webAccess().fwdPort = port
+	m.confirm = confirm.Risky(title, body,
+		confirm.Button{ID: "not-now", Title: "Not now"},
+		confirm.Button{ID: "open", Title: "Open port", Style: confirm.StyleDestructive})
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen = true
+	m.confirmKind = confirmKindWebForward
+	return nil
+}
+
+// webForwardCheck says why port can not be forwarded now ("" when it
+// can); have is its open forward when it is forwarded already.
+func (m *Model) webForwardCheck(port int) (have *webFwd, why string) {
 	st := m.webPanel
 	if port == st.port {
-		return m.webToast(toast.Warn, "That is the web panel's own port.")
+		return nil, "That is the web panel's own port."
+	}
+	if st.sshPort == 0 && st.fp != "" {
+		return nil, webForwardLANText
 	}
 	acc := m.webAccess()
 	for _, f := range acc.fwds {
 		if f.port == port {
-			return m.webToast(toast.Info, "Port "+strconv.Itoa(port)+" is forwarded already. See Web: Forwarded Ports….")
+			return f, ""
 		}
 	}
 	if len(acc.fwds) >= maxWebForwards {
-		return m.webToast(toast.Warn, "Too many forwards. Stop one in Web: Forwarded Ports….")
+		return nil, "Too many forwards. Stop one in Web: Forwarded Ports…."
 	}
+	return nil, ""
+}
+
+// webForwardCard is the Risky card's text for port, in the panel's mode.
+func (m *Model) webForwardCard(port int) (title, body string) {
+	st := m.webPanel
 	host, _ := os.Hostname()
 	if host == "" {
 		host = "this computer"
 	}
-	body := "The app on port " + strconv.Itoa(port) + " can see what you type into it.\n" +
+	body = "The app on port " + strconv.Itoa(port) + " can see what you type into it.\n" +
 		"It opens on its own address, not the web panel's, and only while the panel runs.\n"
 	switch {
 	case st.sshPort != 0:
@@ -178,14 +206,7 @@ func (m *Model) onWebForwardPort(value string) tea.Cmd {
 		body += "The panel runs on this computer: the browser opens 127.0.0.1:" + strconv.Itoa(port) + ".\n"
 	}
 	body += "Stop it any time in Web: Forwarded Ports…"
-	acc.fwdPort = port
-	m.confirm = confirm.Risky("Open port "+strconv.Itoa(port)+" of "+host+" in your browser?", body,
-		confirm.Button{ID: "not-now", Title: "Not now"},
-		confirm.Button{ID: "open", Title: "Open port", Style: confirm.StyleDestructive})
-	m.confirm.SetSize(m.w, m.h)
-	m.confirmOpen = true
-	m.confirmKind = confirmKindWebForward
-	return nil
+	return "Open port " + strconv.Itoa(port) + " of " + host + " in your browser?", body
 }
 
 // answerWebForward opens the forward on "open"; anything else (Esc
@@ -197,48 +218,73 @@ func (m *Model) answerWebForward(id string) tea.Cmd {
 	if id != "open" || port == 0 {
 		return nil
 	}
+	f, why := m.webForwardStart(port, "confirmed_laptop")
+	if why != "" {
+		return m.webToast(toast.Warn, why)
+	}
+	ps := strconv.Itoa(port)
+	switch f.mode {
+	case "ssh":
+		return m.webToast(toast.Info, "Port "+ps+" opens in the browser on your computer.")
+	case "tailnet":
+		var c tea.Cmd
+		m.toast, c = m.toast.PushDetail(toast.Info, "Port "+ps+" is on your tailnet", f.url)
+		return c
+	}
+	// Local mode: nothing to forward, the browser is here.
+	if err := webForwardOpenURL(f.url); err != nil {
+		return m.webToast(toast.Warn, "Could not open a browser. Open "+f.url+" by hand.")
+	}
+	return nil
+}
+
+// webForwardStart opens the forward of port in the panel's mode, after
+// the yes (why goes to the audit). ssh: termocode ssh is asked (it opens
+// the tab there; url ""); tailnet: tailscale serve on an https port of
+// its own (url: that address); local: nothing is forwarded (url:
+// http://127.0.0.1:<port>/, not listed). A failure is a sentence (why).
+func (m *Model) webForwardStart(port int, why string) (*webFwd, string) {
 	st := m.webPanel
 	if st == nil || !st.up || m.web == nil {
-		return m.webToast(toast.Warn, "The web panel stopped before you answered.")
+		return nil, "The web panel stopped before you answered."
 	}
+	acc := m.webAccess()
 	ps := strconv.Itoa(port)
 	switch {
 	case st.sshPort != 0:
 		f := &webFwd{id: randomID(), port: port, mode: "ssh", since: time.Now()}
 		apc := session.PortForwardAPC(session.PortForward{Open: true, Port: port, ID: f.id})
 		if apc == "" || webForwardWrite(apc) != nil {
-			return m.webToast(toast.Errr, "Could not ask termocode ssh for the forward.")
+			return nil, "Could not ask termocode ssh for the forward."
 		}
 		acc.fwds = append(acc.fwds, f)
-		m.webAuditForward("fwd_open", "confirmed_laptop", f)
-		return m.webToast(toast.Info, "Port "+ps+" opens in the browser on your computer.")
+		m.webAuditForward("fwd_open", why, f)
+		return f, ""
+	case st.fp != "":
+		return nil, webForwardLANText
 	case st.url != "":
 		if webForwardServe == nil {
-			return m.webToast(toast.Warn, "Tailscale serve can not run here.")
+			return nil, "Tailscale serve can not run here."
 		}
 		https := m.webForwardFreeHTTPS()
 		if https == 0 {
-			return m.webToast(toast.Warn, "Too many forwards. Stop one in Web: Forwarded Ports….")
+			return nil, "Too many forwards. Stop one in Web: Forwarded Ports…."
 		}
 		sv, err := webForwardServe(https, "http://127.0.0.1:"+ps)
 		if err != nil {
-			return m.webToast(toast.Errr, "No forward: "+err.Error())
+			return nil, "No forward: " + err.Error()
 		}
 		f := &webFwd{id: randomID(), port: port, mode: "tailnet", since: time.Now(), serve: sv,
 			url: webForwardTailnetURL(st.url, https)}
 		acc.fwds = append(acc.fwds, f)
-		m.webAuditForward("fwd_open", "confirmed_laptop", f)
-		var c tea.Cmd
-		m.toast, c = m.toast.PushDetail(toast.Info, "Port "+ps+" is on your tailnet", f.url)
-		return c
+		m.webAuditForward("fwd_open", why, f)
+		return f, ""
 	}
-	// Local mode: nothing to forward, the browser is here.
-	u := "http://127.0.0.1:" + ps + "/"
-	if err := webForwardOpenURL(u); err != nil {
-		return m.webToast(toast.Warn, "Could not open a browser. Open "+u+" by hand.")
-	}
-	return nil
+	return &webFwd{port: port, mode: "local", url: "http://127.0.0.1:" + ps + "/"}, ""
 }
+
+// webForwardLANText says why LAN mode has no port preview.
+const webForwardLANText = "Port preview does not work in LAN mode. Use the tailnet or termocode ssh --web."
 
 // webForwardFreeHTTPS is a tailnet https port no forward uses (0: none).
 func (m *Model) webForwardFreeHTTPS() int {
