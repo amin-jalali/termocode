@@ -28,15 +28,21 @@ const sessionsSupported = true
 
 // runServer is the background session server: it owns the PTY the UI
 // runs in until the UI exits.
+// serverUICommand is the UI process a session server runs (tests replace it).
+// serverExe is the path of this program (tests replace it).
+var serverExe = spawn.Executable
+
+var serverUICommand = func(exe string) *exec.Cmd { return spawn.Command(exe, "--no-session") }
+
 func runServer(dir string) int {
-	exe, err := spawn.Executable()
+	exe, err := serverExe()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "termocode:", err)
 		return 1
 	}
 	key := session.Key(dir)
 	return session.Serve(dir, func() *exec.Cmd {
-		c := spawn.Command(exe, "--no-session")
+		c := serverUICommand(exe)
 		c.Dir = dir
 		c.Env = append(os.Environ(), session.EnvSession+"="+key)
 		return c
@@ -46,7 +52,7 @@ func runServer(dir string) int {
 // spawnServer starts the session server for p in the background, in its
 // own session so the terminal's hangup never reaches it.
 func spawnServer(p session.Paths) error {
-	exe, err := spawn.Executable()
+	exe, err := serverExe()
 	if err != nil {
 		return err
 	}
@@ -317,15 +323,21 @@ func projectStartHeadless(dir string, idle int) error {
 		return err
 	}
 	since := time.Now()
-	started, err := session.StartHeadless(p, idle, func() error { return spawnServer(p) })
+	started, err := sessionStartHeadless(p, idle, func() error { return spawnServer(p) })
 	if err != nil {
 		return err
 	}
 	if !started {
 		since = time.Time{}
 	}
-	return session.WaitWebHub(p, since, projectHubWait)
+	return sessionWaitWebHub(p, since, projectHubWait)
 }
+
+// The session calls projectStartHeadless makes (tests replace them).
+var (
+	sessionStartHeadless = session.StartHeadless
+	sessionWaitWebHub    = session.WaitWebHub
+)
 
 // projectHubWait bounds the wait for a started project's web hub.
 const projectHubWait = 45 * time.Second
