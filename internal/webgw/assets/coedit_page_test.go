@@ -186,3 +186,57 @@ func TestFrameRebasesRemoteOverNewerTyping(t *testing.T) {
 		}
 	}
 }
+
+// Spec (G-COL): the laptop's cursor comes as a cursor delta of the buf
+// topic: the page's store keeps it (laptop), and a delta without one
+// says the laptop left the file. Columns come in bytes (nvim) and the
+// editor counts UTF-16 units: colUtf16 turns one into the other.
+func TestPageKeepsTheLaptopCursor(t *testing.T) {
+	out := runJS(t, `
+import { reduceBuf } from "../state/files";
+import { colUtf16 } from "./textdiff";
+function eq(a: unknown, b: unknown, what: string) {
+  const x = JSON.stringify(a), y = JSON.stringify(b);
+  if (x !== y) throw new Error(what + ": got " + x + ", want " + y);
+}
+const s0 = { buf: 3, path: "f", tick: 2, lines: ["a"], dirty: false, ft: "", readonly: false };
+const s1 = reduceBuf(s0, { kind: "cursor", at: { row: 0, col: 1 } }) as any;
+eq(s1.laptop, { row: 0, col: 1 }, "laptop cursor");
+eq(s1.tick, 2, "tick kept");
+const s2 = reduceBuf(s1, { kind: "cursor" }) as any;
+eq("laptop" in s2, false, "left the file");
+eq(colUtf16("héllo", 3), 2, "after é (2 bytes)");
+eq(colUtf16("a😀b", 5), 3, "after the emoji (4 bytes, 2 units)");
+eq(colUtf16("ab", 9), 2, "past the end");
+console.log("ok");
+`, nil)
+	if !strings.Contains(out, "ok") {
+		t.Fatalf("harness: %s", out)
+	}
+}
+
+// Spec (G-COL): the desktop editor shows the laptop's cursor (and its
+// selection) as a coloured caret named Laptop, and sends the page's own
+// caret to the laptop (buf.cursor, a few times a second at most).
+func TestDeskEditorShowsAndSendsCursors(t *testing.T) {
+	frame := raceSrc(t, "monaco/frame.ts")
+	css := raceSrc(t, "monaco/frame.css")
+	desk := raceSrc(t, "lib/deskeditor.ts")
+	proto := raceSrc(t, "monaco/protocol.ts")
+	live := raceSrc(t, "views/LiveEditor.tsx")
+	for _, c := range []struct{ src, want, where string }{
+		{proto, `t: "peers"`, "monaco/protocol.ts"},
+		{frame, `case "peers"`, "monaco/frame.ts"},
+		{frame, `beforeContentClassName: "peer-caret"`, "monaco/frame.ts"},
+		{frame, `className: "peer-sel"`, "monaco/frame.ts"},
+		{css, ".peer-caret", "monaco/frame.css"},
+		{desk, `peers(items)`, "lib/deskeditor.ts"},
+		{desk, "host.onCaret?.(m.line, m.col)", "lib/deskeditor.ts"},
+		{live, `"buf.cursor"`, "views/LiveEditor.tsx"},
+		{live, "snap?.laptop", "views/LiveEditor.tsx"},
+	} {
+		if !strings.Contains(c.src, c.want) {
+			t.Errorf("%s has no %s", c.where, c.want)
+		}
+	}
+}
