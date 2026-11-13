@@ -359,6 +359,7 @@ func (m *Model) webDBQuery(call *webCall) tea.Cmd {
 				w.fail(call, err)
 				return nil
 			}
+			out.Truncated = out.Cursor != "" // the rest is read with the cursor
 			out.Ms = time.Since(start).Milliseconds()
 			call.reply(out)
 			return nil

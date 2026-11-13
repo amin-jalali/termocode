@@ -66,6 +66,8 @@
 .db-list { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
 .db-conn, .db-table { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s2); min-height: var(--tap); padding: var(--s2) var(--s3); text-align: start; }
 .db-conn + .db-conn, .db-table + .db-table { border-top: 1px solid var(--border); }
+.db-group { margin: 0; padding: var(--s2) var(--s3); font-size: var(--fs-sm, 0.85em); font-weight: 600; background: var(--bg-hover); border-top: 1px solid var(--border); }
+.db-group:first-child { border-top: 0; }
 .db-conn:hover, .db-table:hover { background: var(--bg-hover); }
 .db-conn:disabled { cursor: default; color: var(--muted); }
 .db-name { font-weight: 600; overflow-wrap: anywhere; }

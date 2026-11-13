@@ -218,11 +218,18 @@ function Tables({ conn }: { conn: string }) {
             <p class="empty">{t("db.no_tables")}</p>
           ) : (
             <div class="db-list">
-              {data.tables.map((x) => (
-                <button type="button" class="db-table" key={x.name} data-table={x.name} dir="ltr" onClick={() => to("db/" + conn + "/" + x.name)}>
-                  <span class="db-name">{x.name}</span>
-                  {x.view && <span class="db-chip">{t("db.view")}</span>}
-                </button>
+              {data.tables.map((x, i) => (
+                <Fragment key={x.name}>
+                  {x.group && x.group !== data.tables[i - 1]?.group && (
+                    <h3 class="db-group" dir="ltr">
+                      {x.group}
+                    </h3>
+                  )}
+                  <button type="button" class="db-table" data-table={x.name} dir="ltr" onClick={() => to("db/" + conn + "/" + x.name)}>
+                    <span class="db-name">{x.name}</span>
+                    {x.view && <span class="db-chip">{t("db.view")}</span>}
+                  </button>
+                </Fragment>
               ))}
             </div>
           )}
@@ -256,7 +263,7 @@ function Rows({ conn, table }: { conn: string; table: string }) {
             {t("db.next_rows")}
           </Button>
         )}
-        {data.cursor !== "" && (
+        {data.cursor && (
           <Button small needsLink onClick={() => setCursors([...cursors, data.cursor])}>
             {t("db.next_rows")}
           </Button>
