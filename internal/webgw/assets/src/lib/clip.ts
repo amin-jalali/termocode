@@ -4,11 +4,23 @@ import { status } from "../session";
 import { t } from "../strings";
 import { toast } from "./toasts";
 
+type ClipBridge = { write(o: { text: string }): Promise<void> };
+
+/** writeText puts text on this device's clipboard: inside the termocode
+ * Android app through its TermocodeClipboard bridge (MOB-26), else (or
+ * when the bridge fails) the browser's. */
+export function writeText(text: string): Promise<void> {
+  const app = (globalThis as { Capacitor?: { Plugins?: { TermocodeClipboard?: ClipBridge } } }).Capacitor;
+  const bridge = app?.Plugins?.TermocodeClipboard;
+  if (bridge) return bridge.write({ text }).catch(() => navigator.clipboard.writeText(text));
+  return navigator.clipboard.writeText(text);
+}
+
 /** copyText puts text on the clipboard (it must run in a click). */
 export function copyText(text: string): void {
   const fail = () => toast("warn", t("copy.failed"));
   try {
-    navigator.clipboard.writeText(text).then(() => toast("ok", t("copied")), fail);
+    writeText(text).then(() => toast("ok", t("copied")), fail);
   } catch {
     fail();
   }

@@ -12,6 +12,7 @@ import { askLink } from "../lib/links";
 import { toast } from "../lib/toasts";
 import { safeHref } from "../state/chat";
 import { t } from "../strings";
+import { writeText } from "../lib/clip";
 
 /** MAX_DEPTH stops runaway nesting; deeper nodes show their text only. */
 const MAX_DEPTH = 40;
@@ -39,7 +40,7 @@ export function CodeBlock({ text, lang, diagram }: { text: string; lang?: string
     const done = () => toast("ok", t("copied"));
     const fail = () => toast("warn", t("copy.failed"));
     try {
-      navigator.clipboard.writeText(text).then(done, fail);
+      writeText(text).then(done, fail);
     } catch {
       fail();
     }
