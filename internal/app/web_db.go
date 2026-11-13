@@ -40,7 +40,7 @@ func init() {
 // webDBSQL reports a driver the web can browse.
 func webDBSQL(driver string) bool {
 	switch driver {
-	case "postgres", "mysql", "sqlite", "sqlserver":
+	case "postgres", "mysql", "sqlite", "sqlserver", "oracle":
 		return true
 	}
 	return false
@@ -50,7 +50,7 @@ func webDBSQL(driver string) bool {
 // "other".
 func webDBDriver(driver string) string {
 	switch driver {
-	case "postgres", "mysql", "sqlite", "redis", "sqlserver":
+	case "postgres", "mysql", "sqlite", "redis", "sqlserver", "oracle":
 		return driver
 	}
 	return "other"
@@ -188,6 +188,8 @@ func webDBSchema(c dbclient.Conn) string {
 		return "main"
 	case "sqlserver":
 		return "dbo"
+	case "oracle":
+		return strings.ToUpper(c.User) // the user's own schema
 	}
 	return "public"
 }
@@ -309,7 +311,7 @@ func webDBRowsSQL(c dbclient.Conn, table string, from int) string {
 // webDBQualified: the drivers whose table names the page writes with
 // their schema.
 func webDBQualified(driver string) bool {
-	return driver == "postgres" || driver == "sqlserver"
+	return driver == "postgres" || driver == "sqlserver" || driver == "oracle"
 }
 
 // webDBStatement is the one statement of sql and its kind.
