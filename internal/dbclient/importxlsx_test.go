@@ -37,10 +37,10 @@ func TestXLSXToCSVReadsTheFirstSheet(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "in.xlsx")
 	writeZip(t, src, map[string]string{
-		"xl/workbook.xml": xlsxHead + `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Data" sheetId="1" r:id="rId7"/><sheet name="Other" sheetId="2" r:id="rId8"/></sheets></workbook>`,
+		"xl/workbook.xml":            xlsxHead + `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Data" sheetId="1" r:id="rId7"/><sheet name="Other" sheetId="2" r:id="rId8"/></sheets></workbook>`,
 		"xl/_rels/workbook.xml.rels": xlsxHead + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId7" Type="x/worksheet" Target="worksheets/data.xml"/><Relationship Id="rId8" Type="x/worksheet" Target="/xl/worksheets/other.xml"/></Relationships>`,
-		"xl/sharedStrings.xml": xlsxHead + `<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><si><t>id</t></si><si><t>name</t></si><si><t>born</t></si><si><t>ok</t></si><si><r><t>Ann</t></r><r><t xml:space="preserve"> "A", Lee</t></r></si></sst>`,
-		"xl/styles.xml": xlsxHead + `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="yyyy\-mm\-dd"/></numFmts><cellXfs count="3"><xf numFmtId="0"/><xf numFmtId="14"/><xf numFmtId="164"/></cellXfs></styleSheet>`,
+		"xl/sharedStrings.xml":       xlsxHead + `<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><si><t>id</t></si><si><t>name</t></si><si><t>born</t></si><si><t>ok</t></si><si><r><t>Ann</t></r><r><t xml:space="preserve"> "A", Lee</t></r></si></sst>`,
+		"xl/styles.xml":              xlsxHead + `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="yyyy\-mm\-dd"/></numFmts><cellXfs count="3"><xf numFmtId="0"/><xf numFmtId="14"/><xf numFmtId="164"/></cellXfs></styleSheet>`,
 		"xl/worksheets/data.xml": xlsxHead + `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>
 <row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c><c r="C1" t="s"><v>2</v></c><c r="D1" t="s"><v>3</v></c></row>
 <row r="2"><c r="A2"><v>1</v></c><c r="B2" t="s"><v>4</v></c><c r="C2" s="1"><v>45000</v></c><c r="D2" t="b"><v>1</v></c></row>
