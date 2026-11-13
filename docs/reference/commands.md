@@ -386,6 +386,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Run Smallest Statement (Subquery) at Caret | `db-run-smallest` |   |   |
 | Databases: Run Statement or Selection | `db-run` |   |   |
 | Databases: Run pgTAP Tests… | `db-pgtap-run` |   |   |
+| Databases: Run tSQLt Tests… | `db-tsqlt-run` |   |   |
 | Databases: Run… (Choose Statement or Subquery) | `db-run-ask` |   |   |
 | Databases: SQL Intentions… | `db-sql-intentions` |   |   |
 | Databases: SSL Settings… | `db-ssl` |   |   |

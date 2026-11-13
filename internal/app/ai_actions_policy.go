@@ -606,6 +606,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-manage-connection":              aiNever("use db_connection op edit or delete (they ask)"),
 	"db-paste-connection":               aiNever("adds a connection from the clipboard; only the user does that"),
 	"db-new-from-template":              aiNever("use db_connection op add (it asks)"),
+	"db-tsqlt-run":                      aiNever("it runs the user's test procedures after a card only the user answers (db_query)"),
 	"db-pgtap-run":                      aiNever("it runs the user's test functions after a card only the user answers (db_query)"),
 	"redis-rename-key":                  aiNever(aiNoPicker + " (redis_command)"),
 	"redis-copy-key":                    aiNever(aiNoPicker + " (redis_command)"),

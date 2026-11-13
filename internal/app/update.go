@@ -404,6 +404,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBRedisExportDone(msg)
 	case dbPgTAPDoneMsg:
 		return m, m.onDBPgTAPDone(msg)
+	case dbTSQLtDoneMsg:
+		return m, m.onDBTSQLtDone(msg)
 	case dbIntrospectMsg:
 		return m, m.onDBIntrospect(msg)
 	case dbTestMsg:

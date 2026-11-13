@@ -70,7 +70,3 @@ func TestDBTSQLtNotInstalledSaysHowToInstall(t *testing.T) {
 		t.Fatalf("toast %q", got)
 	}
 }
-
-type errString string
-
-func (e errString) Error() string { return string(e) }

@@ -152,6 +152,8 @@ type dbConsoleState struct {
 	redisMore  *dbRedisMore // a new-key / export / listen flow in progress (DBX-51)
 	pgtapConn  string       // the connection a pgTAP pattern prompt is for (DBX-52)
 	pgtapRun   *dbPgTAPRun  // the pgTAP run waiting for its card
+	tsqltConn  string       // the connection a tSQLt class prompt is for (DBX-52)
+	tsqltRun   *dbTSQLtRun  // the tSQLt run waiting for its card
 	// query parameters (db_params.go)
 	paramAsk *dbParamAsk
 	params   map[string]map[string]string // console file → name → last value

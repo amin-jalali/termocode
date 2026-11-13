@@ -141,6 +141,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-alter-table", Title: "Databases: Alter Table…"},
 		{ID: "db-guide", Title: "Databases: Open Guide"},
 		{ID: "db-pgtap-run", Title: "Databases: Run pgTAP Tests…"},
+		{ID: dbTSQLtPaletteID, Title: "Databases: Run tSQLt Tests…"},
 		{ID: "redis-set-ttl", Title: "Databases: Set Redis Key TTL…"},
 		{ID: "redis-delete-key", Title: "Databases: Delete Redis Key…"},
 		{ID: "redis-rename-key", Title: "Databases: Rename Redis Key…"},
@@ -295,6 +296,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseTemplateStart(), true
 	case "db-pgtap-run":
 		return m.databasePgTAPStart(""), true
+	case dbTSQLtPaletteID:
+		return m.databaseTSQLtStart(""), true
 	case "db-find-object":
 		return m.databaseFindObjectStart(), true
 	case "db-dependencies":
@@ -539,6 +542,9 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		}
 	case "U":
 		if have && row.kind == dbNodeConnection {
+			if c, ok := m.databases.connection(row.conn); ok && c.Driver == "sqlserver" {
+				return m, m.databaseTSQLtStart(row.conn)
+			}
 			return m, m.databasePgTAPStart(row.conn)
 		}
 	case "R":
@@ -628,6 +634,9 @@ func (m *Model) handleDBConfirm(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseRedisConfirm(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseTSQLtConfirm(id); ok {
 		return cmd, true
 	}
 	if cmd, ok := m.databasePgTAPConfirm(id); ok {
@@ -1356,7 +1365,7 @@ func dbTreeKeyRows() []confirm.KeyRow {
 		[]string{"e / F", "edit connection files / schema as files: dump, compare"},
 		[]string{"T", "test the connection"},
 		[]string{"S", "start a stopped service"},
-		[]string{"U", "run pgTAP tests (PostgreSQL)"},
+		[]string{"U", "run pgTAP tests (PostgreSQL) or tSQLt tests (SQL Server)"},
 		[]string{"t", "transaction mode"},
 		[]string{"p", "set the password"},
 		[]string{"n / $", "new SQL console / psql, mysql… in a terminal"},
