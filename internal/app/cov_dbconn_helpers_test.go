@@ -132,7 +132,7 @@ func cdbConfirm(t *testing.T, m *Model, id string) {
 }
 
 // cdbMsgs runs a command (batches flattened) and returns the messages it
-// answered within a second; a command that waits longer is dropped.
+// answered within 400 ms; a command that waits longer is dropped.
 func cdbMsgs(cmd tea.Cmd) []tea.Msg {
 	if cmd == nil {
 		return nil
@@ -142,7 +142,7 @@ func cdbMsgs(cmd tea.Cmd) []tea.Msg {
 	var msg tea.Msg
 	select {
 	case msg = <-ch:
-	case <-time.After(time.Second):
+	case <-time.After(400 * time.Millisecond):
 		return nil
 	}
 	if b, ok := msg.(tea.BatchMsg); ok {
