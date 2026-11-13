@@ -1,14 +1,21 @@
 package app
 
 import (
+	"bytes"
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/ecdh"
+	"crypto/hkdf"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -16,6 +23,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/secrets"
 	"github.com/amin-jalali/termocode/internal/secrets/secretstest"
 	"github.com/amin-jalali/termocode/internal/webdevices"
+	"github.com/amin-jalali/termocode/internal/webproto"
 	"github.com/amin-jalali/termocode/internal/webpush"
 )
 
@@ -25,7 +33,9 @@ type webPushRig struct {
 	store    secrets.Store
 	devs     []webdevices.Device
 	mu       sync.Mutex
-	hits     map[string]int // path → pushes
+	hits     map[string]int    // path → pushes
+	bodies   map[string][]byte // path → the last body
+	keys     map[string]*ecdh.PrivateKey
 	code     int
 	endpoint string
 }
@@ -34,8 +44,10 @@ func newWebPushRig(t *testing.T) *webPushRig {
 	t.Helper()
 	r := &webPushRig{store: secrets.NewStore(secretstest.NewMemory(), secrets.Options{Dir: t.TempDir()}), hits: map[string]int{}, code: http.StatusCreated}
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		body, _ := io.ReadAll(req.Body)
 		r.mu.Lock()
 		r.hits[req.URL.Path]++
+		r.bodies[req.URL.Path] = body
 		code := r.code
 		r.mu.Unlock()
 		w.WriteHeader(code)
@@ -57,6 +69,7 @@ func (r *webPushRig) subscribe(t *testing.T, dev string) {
 	t.Helper()
 	k, _ := ecdh.P256().GenerateKey(rand.Reader)
 	b64 := base64.RawURLEncoding
+	r.keys[dev] = k
 	sub := webpush.Sub{Endpoint: r.endpoint + "/" + dev, P256dh: b64.EncodeToString(k.PublicKey().Bytes()), Auth: b64.EncodeToString(make([]byte, 16))}
 	b, _ := json.Marshal(sub)
 	if err := r.store.Set(webPushSubPrefix+dev, string(b)); err != nil {
@@ -191,5 +204,115 @@ func TestWebPushAfterUpdate(t *testing.T) {
 	}
 	if cmd := m.webPushAfterUpdate(webPushTickMsg{}); m.web.push.tick && cmd == nil {
 		t.Fatal("the tick was not taken")
+	}
+}
+
+// payload decrypts the last push to dev as the phone would (RFC 8291,
+// auth secret all zero in this rig).
+func (r *webPushRig) payload(t *testing.T, dev string) string {
+	t.Helper()
+	r.mu.Lock()
+	body, k := r.bodies["/"+dev], r.keys[dev]
+	r.mu.Unlock()
+	if len(body) < 21+65+16 || k == nil {
+		t.Fatalf("no push body for %s (%d bytes)", dev, len(body))
+	}
+	salt, idlen := body[:16], int(body[20])
+	asPub, err := ecdh.P256().NewPublicKey(body[21 : 21+idlen])
+	if err != nil {
+		t.Fatal(err)
+	}
+	shared, err := k.ECDH(asPub)
+	if err != nil {
+		t.Fatal(err)
+	}
+	info := append(append([]byte("WebPush: info\x00"), k.PublicKey().Bytes()...), asPub.Bytes()...)
+	ikm, _ := hkdf.Key(sha256.New, shared, make([]byte, 16), string(info), 32)
+	cek, _ := hkdf.Key(sha256.New, ikm, salt, "Content-Encoding: aes128gcm\x00", 16)
+	nonce, _ := hkdf.Key(sha256.New, ikm, salt, "Content-Encoding: nonce\x00", 12)
+	blk, _ := aes.NewCipher(cek)
+	gcm, _ := cipher.NewGCM(blk)
+	plain, err := gcm.Open(nil, nonce, body[21+idlen:], nil)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	plain = bytes.TrimRight(plain, "\x00")
+	return string(plain[:len(plain)-1])
+}
+
+// Spec (CMP-47): when an AI run ends or fails and the phone has no page
+// open, it gets one push that says so (the phone decrypts it); the
+// session name is in it only with web_push_detail title.
+func TestWebPushWhenARunEnds(t *testing.T) {
+	withConfigDir(t)
+	r := newWebPushRig(t)
+	webPushKey(true)
+	r.devs = []webdevices.Device{{ID: "dev-0000000a"}}
+	r.subscribe(t, "dev-0000000a")
+	m := aiTestModel(t)
+	webTestHub(t, &m)
+	m.web.push.any = true
+	m.web.attention(webproto.AttentionRunDone, "run-1")
+	cmd := m.webPushAfterUpdate(nil)
+	if cmd == nil {
+		t.Fatal("a finished run sends no push")
+	}
+	cmd()
+	if got := r.payload(t, "dev-0000000a"); got != `{"n":0,"k":"done"}` {
+		t.Errorf("count: %s", got)
+	}
+	// A second end inside the cooldown is held, then sent; title names the session.
+	writeUserConfig(t, `{"web_push_detail":"title"}`)
+	m.web.push.sent = time.Time{}
+	m.web.push.checked = time.Time{}
+	m.web.attention(webproto.AttentionRunFailed, "run-2")
+	cmd = m.webPushAfterUpdate(nil)
+	if cmd == nil {
+		t.Fatal("a failed run sends no push")
+	}
+	cmd()
+	got := r.payload(t, "dev-0000000a")
+	if !strings.HasPrefix(got, `{"n":0,"k":"failed","s":"`) {
+		t.Errorf("title: %s", got)
+	}
+	// One end, one push: nothing more goes without a new end.
+	m.web.push.sent, m.web.push.checked = time.Time{}, time.Time{}
+	if cmd := m.webPushAfterUpdate(nil); cmd != nil {
+		t.Error("a push went with no new end")
+	}
+}
+
+// Spec (CMP-47): web_push "off" sends nothing, for cards and for ends;
+// an end seen while it was off is not sent when it is turned on again.
+func TestWebPushSettingOff(t *testing.T) {
+	withConfigDir(t)
+	c := webSettings()
+	if !c.Push {
+		t.Fatal("web_push is not on by default")
+	}
+	writeUserConfig(t, `{"web_push":"off"}`)
+	if webSettings().Push {
+		t.Fatal("web_push off is on")
+	}
+	writeUserConfig(t, `{"web_push":"maybe"}`)
+	if c := webSettings(); !c.Push || len(c.Problems) != 1 {
+		t.Fatalf("bad value: %+v", c)
+	}
+	writeUserConfig(t, `{"web_push":"off"}`)
+	r := newWebPushRig(t)
+	webPushKey(true)
+	r.devs = []webdevices.Device{{ID: "dev-0000000a"}}
+	r.subscribe(t, "dev-0000000a")
+	m := aiTestModel(t)
+	webTestHub(t, &m)
+	m.web.push.any = true
+	m.web.attention(webproto.AttentionRunDone, "run-1")
+	if cmd := m.webPushAfterUpdate(nil); cmd != nil {
+		t.Fatal("web_push off sent a push")
+	}
+	writeUserConfig(t, `{}`)
+	m.web.push.checked = time.Time{}
+	if cmd := m.webPushAfterUpdate(nil); cmd != nil {
+		t.Error("an end from while it was off is sent now")
 	}
 }
