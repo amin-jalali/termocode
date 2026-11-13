@@ -308,6 +308,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Cancel Query | `db-cancel` |   |   |
 | Databases: Cancel Session Query… | `db-cancel-session` |   |   |
 | Databases: Chart Result… | `db-chart` |   |   |
+| Databases: Check SQL in Strings | `db-embedded-check` |   |   |
 | Databases: Choose Execution Mode… | `db-exec-mode` |   |   |
 | Databases: Clear Inline Results | `db-inline-clear` |   |   |
 | Databases: Commit | `db-commit` |   |   |
