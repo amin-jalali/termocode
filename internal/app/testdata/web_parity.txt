@@ -807,6 +807,7 @@ missing	services-compose-watch	Containers|S
 missing	services-deploy-git	Containers|S
 missing	services-env-file	Containers|S
 missing	session-recap	Session|S
+missing	mcp-service-browse	AI|S
 missing	tracker-add	Workspace|S
 missing	tracker-show	Workspace|S
 missing	web-forward-port	Web|M

@@ -178,6 +178,7 @@ var aiAgentsNotForAI = map[string]string{
 	"ai-mcp-bundle":              "installing a server bundle runs new programs: the user's choice",
 	"ai-mcp-config":              "AI provider, credentials and approvals stay with the user",
 	"ai-mcp-connect":             "AI provider, credentials and approvals stay with the user (signing in to services is the user's)",
+	"mcp-service-browse":         "the AI calls the service's tools itself; this list is for you to browse and mark favorites",
 	"ai-mcp-profile":             "which MCP servers and tools the AI gets is the user's choice",
 	"ai-mcp-reset-cache":         "AI provider, credentials and approvals stay with the user",
 	"ai-mcp-updates":             "AI provider, credentials and approvals stay with the user",
