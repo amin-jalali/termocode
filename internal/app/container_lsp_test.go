@@ -14,6 +14,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/services"
 	"github.com/amin-jalali/termocode/internal/workspace"
 )
 
@@ -208,6 +209,10 @@ type fakeLSPHost struct {
 }
 
 func (h *fakeLSPHost) Label() string { return "api-1" }
+
+// Exec and FS: the mirror poll's tests swap the poll itself.
+func (h *fakeLSPHost) Exec() services.Exec { return nil }
+func (h *fakeLSPHost) FS() workspace.FS    { return nil }
 func (h *fakeLSPHost) Caps() workspace.Caps {
 	return workspace.Caps{HasShell: true, MountOf: h.mountOf}
 }

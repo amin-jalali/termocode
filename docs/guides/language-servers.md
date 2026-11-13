@@ -87,8 +87,17 @@ server like this:
    (the *mirror*, in `~/.cache/termocode/mirror/`, private to you).
 3. **None** when neither has it.
 
+Each server starts on the root of the file's own project: the nearest
+folder up to the workspace root with one of its markers (`go.mod`,
+`package.json`, `Cargo.toml`, …), so a monorepo gets one server per
+project.
+
 The status bar chip says where each server runs: `{} gopls · in api-1` or
 `{} ts_ls · local`.
+
+A local `gopls` on another system or CPU than the container gets
+`GOOS=linux` and the container's `GOARCH`, so it reads the same build
+tags and platform files as the container's build.
 
 A local server cannot see packages that exist only in the container, so
 its errors are often wrong there. That is why a local server shows **no
@@ -105,8 +114,12 @@ Local Diagnostics in Container Workspace**.
 
 The mirror leaves out `node_modules`, `.venv`, `vendor`, `target`,
 `__pycache__` and `.git/objects`, holds at most 512 MB per folder and
-2 GB in all (the oldest go first). Your saves from termocode update it at
-once. In `config.json` the settings are `container_lsp`
+2 GB in all (the oldest go first). Your saves, renames, moves and
+deletes from termocode update it at once. Every 5 seconds it also takes
+the files changed in the container in the last minute by anything else (a
+checkout or a build in the container's terminal), with one `find` in the
+container; an image without `find` skips this, and **LSP: Refresh
+Container Mirror** copies everything again. In `config.json` the settings are `container_lsp`
 (`auto`, `image`, `local`, `off`) and `container_local_lsp_diagnostics`
 (`on`, `off`).
 

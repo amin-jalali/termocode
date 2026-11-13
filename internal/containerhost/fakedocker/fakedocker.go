@@ -89,7 +89,7 @@ type Mount struct {
 // baseTools are the commands every fake image has (besides sh, unless
 // NoShell): real local programs, run with the container's paths mapped
 // to Root.
-var baseTools = []string{"mkdir", "mv", "rm", "id", "uname", "ls", "cat", "echo", "pwd", "sleep"}
+var baseTools = []string{"mkdir", "mv", "rm", "id", "uname", "ls", "cat", "echo", "pwd", "sleep", "find"}
 
 // New is a fake docker with no containers.
 func New() *Docker {

@@ -265,6 +265,29 @@ func (m *Mirror) Remove(remote string) error {
 	return os.RemoveAll(dst)
 }
 
+// Rename follows a rename or move from termocode: the copy moves to the
+// new name, or goes when the new name is left out (or outside the root).
+func (m *Mirror) Rename(from, to string) error {
+	src, ok := m.Local(from)
+	if !ok || src == m.Dir {
+		return nil
+	}
+	if _, err := os.Lstat(src); err != nil {
+		return nil
+	}
+	dst, ok := m.Local(to)
+	if !ok || dst == m.Dir {
+		return os.RemoveAll(src)
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err := os.MkdirAll(filepath.Dir(dst), 0o700); err != nil {
+		return err
+	}
+	_ = os.RemoveAll(dst)
+	return os.Rename(src, dst)
+}
+
 // Clear deletes the copy (a missing one is fine).
 func (m *Mirror) Clear() error {
 	if m.Dir == "" || m.Dir == "/" {

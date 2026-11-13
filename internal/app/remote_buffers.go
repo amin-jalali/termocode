@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"io/fs"
+	"path"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/containerhost"
 	"github.com/amin-jalali/termocode/internal/nvim"
@@ -28,6 +30,8 @@ type remoteFiles struct {
 	// owner is the uid new files get (nil = unknown).
 	owner      func() (uid, gid int, ok bool)
 	rootWarned atomic.Bool
+	// roots caches root answers (folder, top, markers → root).
+	roots sync.Map
 }
 
 // remoteFilesByID shares one remoteFiles per workspace between the nvim
@@ -97,6 +101,47 @@ func (r *remoteFiles) writeFile(p string, data []byte) (warn string, err error) 
 	return warn, nil
 }
 
+// root is the project root of a file in start (RC-6): the nearest folder
+// from start up to top (the workspace root) that holds one of markers,
+// looked up through the container FS; top when none does or start is
+// not under top. Answers are cached per folder and markers (a server
+// starts on every buffer of its file type).
+func (r *remoteFiles) root(start string, markers []string, top string) string {
+	start, top = path.Clean(start), path.Clean(top)
+	pre := strings.TrimSuffix(top, "/") + "/"
+	if start != top && !strings.HasPrefix(start, pre) {
+		return top
+	}
+	key := start + "\x00" + top + "\x00" + strings.Join(markers, "\x00")
+	if v, ok := r.roots.Load(key); ok {
+		return v.(string)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), remoteRootTimeout)
+	defer cancel()
+	found := top
+	for d := start; ; d = path.Dir(d) {
+		hit := false
+		for _, mk := range markers {
+			if _, err := r.fs.Stat(ctx, path.Join(d, mk)); err == nil {
+				hit = true
+				break
+			}
+		}
+		if hit {
+			found = d
+			break
+		}
+		if d == top || d == "/" || ctx.Err() != nil {
+			break
+		}
+	}
+	r.roots.Store(key, found)
+	return found
+}
+
+// remoteRootTimeout bounds one root lookup (each marker is an engine call).
+var remoteRootTimeout = 5 * time.Second
+
 // remoteErrText is one short sentence for a failed file call on the
 // host label.
 func remoteErrText(label string, err error) string {
@@ -135,6 +180,25 @@ func startRemoteBuffers(n *nvim.Client, ws workspace.Workspace) error {
 	}
 	if err := n.RegisterRequest("termocode_fs_read", func(a []any) (any, error) {
 		return r.read(arg(a, 0)), nil
+	}); err != nil {
+		return err
+	}
+	if err := n.RegisterRequest("termocode_fs_root", func(a []any) (any, error) {
+		var markers []string
+		if len(a) > 1 {
+			if l, ok := a[1].([]any); ok {
+				for _, x := range l {
+					if s, ok := x.(string); ok {
+						markers = append(markers, s)
+					}
+				}
+			}
+		}
+		top := arg(a, 2)
+		if top == "" {
+			top = ws.Root
+		}
+		return r.root(arg(a, 0), markers, top), nil
 	}); err != nil {
 		return err
 	}

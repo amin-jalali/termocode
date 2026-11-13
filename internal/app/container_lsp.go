@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -147,6 +148,9 @@ type lspServerPlan struct {
 	Cmd   []string `json:"cmd"`
 	// Mute drops the server's diagnostics (a local server, Q5).
 	Mute bool `json:"mute,omitempty"`
+	// Env is added to the server's environment (cmd_env): GOOS/GOARCH
+	// of the container for a local gopls on another platform.
+	Env map[string]string `json:"env,omitempty"`
 }
 
 // containerLSPPlan is what the Lua side starts servers from
@@ -176,6 +180,18 @@ type containerLSPInput struct {
 	ImageArgv func(argv []string) []string
 	// Proxy is the termocode executable (`termocode lsp-proxy`).
 	Proxy string
+	// Arch is the container's CPU in Go's spelling ("" = unknown); the
+	// container's OS is always linux.
+	Arch string
+}
+
+// goPlatformHint is the env a local gopls needs to see the container's
+// build (nil when this machine is the same platform or Arch is unknown).
+func goPlatformHint(arch string) map[string]string {
+	if arch == "" || (runtime.GOOS == "linux" && runtime.GOARCH == arch) {
+		return nil
+	}
+	return map[string]string{"GOOS": "linux", "GOARCH": arch}
 }
 
 // planContainerLSP decides, per server, where it runs.
@@ -202,11 +218,15 @@ func planContainerLSP(in containerLSPInput, specs []lspServerSpec) containerLSPP
 			continue
 		}
 		argv := []string{in.Proxy, "lsp-proxy", "--map", in.Root + "=" + in.LocalDir, "--", local}
-		p.Servers[s.Name] = lspServerPlan{
+		sp := lspServerPlan{
 			Place: lspLocal,
 			Cmd:   append(argv, args...),
 			Mute:  !in.Settings.showLocalDiagnostics(),
 		}
+		if bin == "gopls" {
+			sp.Env = goPlatformHint(in.Arch)
+		}
+		p.Servers[s.Name] = sp
 	}
 	return p
 }
@@ -281,7 +301,11 @@ type containerLSPState struct {
 	// mirrored: the mirror holds a fill (LocalDir may use it).
 	mirrored bool
 	filling  bool
-	plan     containerLSPPlan
+	// polling: a mirror poll runs; pollOff: a poll failed, no more
+	// (container_mirror_poll.go).
+	// pollTicking: a chain of polls is scheduled.
+	polling, pollOff, pollTicking bool
+	plan                          containerLSPPlan
 }
 
 // containerMirrorBase is the folder of all mirrors (tests point it to
@@ -389,6 +413,7 @@ func (m Model) containerLSPInputNow() (containerLSPInput, bool) {
 		InImage:   st.inImage,
 		LocalCmd:  localLSPCmd,
 		ImageArgv: h.LSPArgv,
+		Arch:      h.Caps().Arch,
 	}
 	if exe, err := spawn.Executable(); err == nil {
 		in.Proxy = exe
@@ -453,6 +478,9 @@ func (m *Model) fillContainerMirrorCmd() tea.Cmd {
 
 // handleContainerLSPMsg routes the phase-5 messages. ok=false: not ours.
 func (m *Model) handleContainerLSPMsg(msg tea.Msg) (tea.Cmd, bool) {
+	if cmd, ok := m.handleMirrorPollMsg(msg); ok { // container_mirror_poll.go
+		return cmd, true
+	}
 	st := m.containerLSP
 	switch msg := msg.(type) {
 	case containerLSPProbedMsg:
@@ -476,13 +504,13 @@ func (m *Model) handleContainerLSPMsg(msg tea.Msg) (tea.Cmd, bool) {
 		case msg.err == nil:
 			st.mirrored = true
 			activeLSPMirror.Store(st.mirror)
-			cmd := m.applyContainerLSP(false)
+			cmd := tea.Batch(m.applyContainerLSP(false), m.startMirrorPoll())
 			return tea.Batch(cmd, m.pushToastDetail(toast.Info, "Local language server ready",
 				"Copied "+strconv.Itoa(msg.stats.Files)+" files of "+label+" into a read-only local mirror.")), true
 		case errors.Is(msg.err, lspmirror.ErrCap):
 			st.mirrored = true
 			activeLSPMirror.Store(st.mirror)
-			cmd := m.applyContainerLSP(false)
+			cmd := tea.Batch(m.applyContainerLSP(false), m.startMirrorPoll())
 			return tea.Batch(cmd, m.pushToastDetail(toast.Warn, "Mirror is only partial",
 				"The code of "+label+" is larger than 512 MB; the local language server sees part of it.")), true
 		}
@@ -511,6 +539,20 @@ func (m Model) lspChipClients() []string {
 func noteMirrorWrite(p string, data []byte) {
 	if mr := activeLSPMirror.Load(); mr != nil {
 		_ = mr.Put(p, data)
+	}
+}
+
+// noteMirrorRename and noteMirrorRemove follow the explorer's renames,
+// moves and deletes in the container (remote_file_ops.go).
+func noteMirrorRename(from, to string) {
+	if mr := activeLSPMirror.Load(); mr != nil {
+		_ = mr.Rename(from, to)
+	}
+}
+
+func noteMirrorRemove(p string) {
+	if mr := activeLSPMirror.Load(); mr != nil {
+		_ = mr.Remove(p)
 	}
 }
 
