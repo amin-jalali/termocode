@@ -397,3 +397,21 @@ func TestSendCarriesTheSessionName(t *testing.T) {
 		t.Errorf("%+v %v", got, err)
 	}
 }
+
+// Spec (CMP-47): a done or failed push says so with detail count too
+// (nothing waits, so "Something needs you" would be wrong); it names no
+// session then; none still sends nothing.
+func TestPayloadForDoneAtCount(t *testing.T) {
+	if got := string(PayloadFor(DetailCount, 0, "done", "shop")); got != `{"n":0,"k":"done"}` {
+		t.Errorf("count/done: %s", got)
+	}
+	if got := string(PayloadFor(DetailCount, 0, "failed", "")); got != `{"n":0,"k":"failed"}` {
+		t.Errorf("count/failed: %s", got)
+	}
+	if got := string(PayloadFor(DetailCount, 2, "plan", "")); got != `{"n":2}` {
+		t.Errorf("count/plan: %s", got)
+	}
+	if p := PayloadFor(DetailNone, 0, "done", ""); p != nil {
+		t.Errorf("none/done: %q", p)
+	}
+}
