@@ -31,13 +31,14 @@ var sourceRules = []rule{
 	{name: "javascript: URL", re: regexp.MustCompile(`(?i)javascript:`)},
 	{name: "external URL", re: regexp.MustCompile(`(?i)\b(https?|wss?)://`)},
 	// The page's dynamic imports (lib/lazy.ts) load the editor file
-	// (WEB-39), the desktop workbench, the Persian strings and the phone's
-	// Home (MOB-4); the desktop
+	// (WEB-39), the desktop workbench, the Persian strings, the phone's
+	// Home (MOB-4) and a link's sheet (link.js,
+	// lib/links.ts, WEB-54); the desktop
 	// editor's frame loads its Vim mode (monaco-vim.js, WEBP-1); the workbench
 	// loads Add to AI Chat (aictx.js, lib/aictx.ts) and This device, Pair
 	// a Device… and Devices… (device.js, lib/device.tsx). Each is a
 	// fixed path.
-	{name: "dynamic import", re: regexp.MustCompile(`\bimport\s*\(`), allow: map[string]bool{"lib/lazy.ts": true, "monaco/frame.ts": true, "lib/device.tsx": true, "lib/aictx.ts": true}},
+	{name: "dynamic import", re: regexp.MustCompile(`\bimport\s*\(`), allow: map[string]bool{"lib/lazy.ts": true, "monaco/frame.ts": true, "lib/device.tsx": true, "lib/aictx.ts": true, "lib/links.ts": true}},
 	{name: "remote script/style", re: regexp.MustCompile(`(?i)@import|url\(\s*["']?(https?:)?//`)},
 	// Only the prefs module touches localStorage, and it never holds a
 	// secret; and the bookmark key of a remembered browser (WEBP-12), the
@@ -195,12 +196,16 @@ func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
 			// load anything. The other rules hold for it too.
 			text = regexp.MustCompile(`(?i)(https?|wss?):\/\/|\bimport\s*\(`).ReplaceAllString(text, "")
 		}
-		if pageFile(e.Path) { // the page's four dynamic imports (lib/lazy.ts), fixed paths
+		if pageFile(e.Path) { // the page's dynamic imports (lib/lazy.ts, lib/links.ts), fixed paths
 			text = strings.Replace(text, `import("/assets/editor.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/workbench.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/strings-fa.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/home.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/picker.js")`, "", 1) // the session picker (WEB-55)
+			text = strings.Replace(text, `import("/assets/link.js")`, "", 1)   // a link's sheet (WEB-54)
+		}
+		if e.Path == "kit.js" { // the kit's chat links load the link sheet as the page does (lib/links.ts)
+			text = strings.Replace(text, `import("/assets/link.js")`, "", 1)
 		}
 		if pageFile(e.Path) { // lib/push.ts: the push-only worker (MOB-30)
 			text = strings.ReplaceAll(text, "navigator.serviceWorker", "")

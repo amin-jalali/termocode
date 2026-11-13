@@ -507,6 +507,7 @@ var aiRestNotForAI = map[string]string{
 	"web-stop":                      "the web panel gives shell access from a browser; only the user changes it, in config.json",
 	"web-totp":                      "the web panel gives shell access from a browser; only the user changes it, in config.json (a second factor of the web sign-in)",
 	"web.device_remove":             "pairing, sign-in and the web panel's security stay with the user",
+	"web.forward":                   "the web panel gives shell access from a browser; only the user opens a port of this computer to the browser (a localhost link clicked in the page)",
 	"web.grant_ask":                 "pairing, sign-in and the web panel's security stay with the user",
 	"web.open":                      "pairing, sign-in and the web panel's security stay with the user",
 	"web.pair_answer":               "pairing, sign-in and the web panel's security stay with the user",

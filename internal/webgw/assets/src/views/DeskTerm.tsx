@@ -14,6 +14,7 @@ import { signal } from "@preact/signals";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { TermItem, TermNewRes } from "../../../../webproto/proto";
 import { rang } from "../lib/attention";
+import { linkItems } from "../lib/links";
 import { isMac } from "../lib/platform";
 import { route } from "../lib/router";
 import { popOut } from "../lib/popout";
@@ -170,7 +171,7 @@ function menuItems(m: { row: string; sel: string }, all: string, canPaste: boole
   if (m.sel) items.push({ label: t("dterm.copy_sel"), pick: () => copy(m.sel) });
   items.push({ label: t("term.copy_row"), pick: () => copy(m.row) }, { label: t("term.copy_all"), pick: () => copy(all) });
   if (canPaste) items.push({ label: t("term.paste"), pick: () => (pasting.value = true) });
-  return items;
+  return [...items, ...linkItems(m.row)];
 }
 
 /** Pane is one shell: its rows, the cursor, and the hidden input that

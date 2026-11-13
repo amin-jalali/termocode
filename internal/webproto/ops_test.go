@@ -159,7 +159,7 @@ func TestLaptopCardOps(t *testing.T) {
 		OpContainersExec: true, OpContainersImage: true, OpContainersPrune: true, OpContainersStorageRemove: true, OpContainersComposeAsk: true, OpContainersContextDefault: true, OpContainersRegistry: true, OpContainersOpenDB: true, OpContainersHostTerminal: true, OpServicesStopAll: true,
 		OpChatDelete: true, OpChatClear: true, OpAIUseMCPProfile: true, OpAISetAutoApprove: true,
 		OpWorkspaceAddFolder: true, OpWorkspaceRemoveFolder: true, OpWorkspaceOpen: true, OpSearchReplace: true,
-		OpLSPServerAsk: true, OpLayoutDelete: true, OpWorkflowsRun: true, OpWorkflowsSave: true,
+		OpLSPServerAsk: true, OpLayoutDelete: true, OpWebForward: true, OpWorkflowsRun: true, OpWorkflowsSave: true,
 		OpAIRunStart: true, OpAIRaceModels: true, OpAILaneStart: true, OpAIRaceStart: true, OpProjectOpen: true,
 		"web.device_remove": true}
 	for _, p := range Ops() {
