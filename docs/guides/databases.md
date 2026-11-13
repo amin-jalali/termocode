@@ -426,6 +426,8 @@ CSV and TSV protect spreadsheets from formula injection: a cell that starts with
 
 **CSV settings** (in `settings.json`): `db_csv_separator` (one character, `\t` for a tab; default `,`), `db_csv_header` (`false`: no row of column names) and `db_csv_null` (the text of a NULL cell; default empty).
 
+**Your own format (Lua).** Put a script in `.termocode/extractors/NAME.lua` and it shows up as **Lua: NAME** in the export picker and in **Copy Result As…**. The script can define `extension = ".txt"`, `function header(cols)`, `function row(r, i)` and `function footer(n)`; each function returns the text to write. In `row`, a value is `r.name` or `r[1]`, and NULL is `nil`. Example: `function row(r, i) return r.id .. ";" .. (r.name or "") .. "\n" end`. Scripts run in a sandbox: no files, no programs, and one call stops after 2 seconds. `db_export_mask` still applies.
+
 **Masking.** `db_export_mask` is a list of column names (any case; `*` and `?` match), for example `["*password*", "email"]`. Exports, **Copy Result As…** and **Export Tables to Folder…** write `••••` for their values; NULL stays NULL. The grid still shows the real values.
 
 **Copy as.** `A` on a result page (or **Databases: Copy Result As…**) copies the loaded rows in any of the export formats.
