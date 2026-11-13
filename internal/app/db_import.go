@@ -69,6 +69,13 @@ func dbImportIsJSON(name string) bool {
 	return false
 }
 
+// dbImportIsXLSX: an Excel workbook (DBX-37); its first sheet is turned into
+// a CSV first.
+func dbImportIsXLSX(name string) bool { return strings.EqualFold(filepath.Ext(name), ".xlsx") }
+
+// dbImportNeedsConvert: the file is turned into a private CSV first.
+func dbImportNeedsConvert(name string) bool { return dbImportIsJSON(name) || dbImportIsXLSX(name) }
+
 // dbImportDropTmp removes the converted CSV of a JSON import.
 func dbImportDropTmp(imp *dbImport) {
 	imp.dropTemp()
@@ -135,7 +142,7 @@ func dbFindCSV(root string) []string {
 			}
 			return nil
 		}
-		if strings.EqualFold(filepath.Ext(d.Name()), ".csv") || dbImportIsJSON(d.Name()) {
+		if strings.EqualFold(filepath.Ext(d.Name()), ".csv") || dbImportNeedsConvert(d.Name()) {
 			out = append(out, rel)
 		}
 		return nil
@@ -152,7 +159,7 @@ func (m *Model) onDBImportFiles(msg dbImportFilesMsg) tea.Cmd {
 	imp := msg.imp
 	imp.files = msg.files
 	if len(msg.files) == 0 {
-		return m.openHTTPPrompt(promptKindDBImportPath, "Import CSV into "+imp.t.label(), "CSV or JSON file (in the workspace, or a full path):", "")
+		return m.openHTTPPrompt(promptKindDBImportPath, "Import CSV into "+imp.t.label(), "CSV, JSON or Excel file (in the workspace, or a full path):", "")
 	}
 	var items []picker.Item
 	for _, f := range msg.files {
@@ -215,7 +222,7 @@ func (m *Model) databaseImportRead(imp *dbImport, sess dbclient.Session, header 
 	}
 	return tea.Batch(m.pushToast(toast.Info, reading), func() tea.Msg {
 		msg := dbImportPreviewMsg{imp: imp, reload: !needCols}
-		if !copied && dbImportIsJSON(paths[0]) {
+		if !copied && dbImportNeedsConvert(paths[0]) {
 			f, err := os.CreateTemp("", "termocode-import-*.csv")
 			if err != nil {
 				msg.err = err
@@ -223,7 +230,11 @@ func (m *Model) databaseImportRead(imp *dbImport, sess dbclient.Session, header 
 			}
 			f.Close()
 			msg.csvPath = f.Name()
-			if _, err := dbclient.JSONToCSV(paths[0], msg.csvPath); err != nil {
+			convert := dbclient.JSONToCSV
+			if dbImportIsXLSX(paths[0]) {
+				convert = dbclient.XLSXToCSV
+			}
+			if _, err := convert(paths[0], msg.csvPath); err != nil {
 				_ = os.Remove(msg.csvPath)
 				msg.csvPath, msg.err = "", err
 				return msg
@@ -498,7 +509,7 @@ func (m *Model) databaseImportPicker(id string) tea.Cmd {
 	switch m.pickerKind {
 	case pickerKindDBImportFile:
 		if id == dbImportTypePath {
-			return m.openHTTPPrompt(promptKindDBImportPath, "Import CSV into "+imp.t.label(), "CSV or JSON file (in the workspace, or a full path):", "")
+			return m.openHTTPPrompt(promptKindDBImportPath, "Import CSV into "+imp.t.label(), "CSV, JSON or Excel file (in the workspace, or a full path):", "")
 		}
 		if id == dbImportTypeGlob {
 			return m.openHTTPPrompt(promptKindDBImportGlob, "Import CSV files into "+imp.t.label(), "Files (a pattern like data/*.csv; * and ? match):", "")
