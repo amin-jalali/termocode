@@ -87,3 +87,41 @@ func TestAIHTTPGRPCDialGuard(t *testing.T) {
 		}
 	}
 }
+
+// API-19: an AI gRPC call is on the HTTP page like any AI send ("by AI",
+// the call page as the body, the status 200 OK) and in the HTTP history;
+// a call that cannot start is there too, with its error.
+func TestAIHTTPSendGRPCShowsThePageAndWritesHistory(t *testing.T) {
+	e := covHTTPSetup(t)
+	addr := startGRPCLoopback(t)
+	url := "grpc://" + addr + "/grpc.reflection.v1.ServerReflection/ServerReflectionInfo"
+	out, err := e.tools["http_send"].Run(context.Background(), map[string]any{"method": "GRPC", "url": url, "body": `{"listServices": "*"}`})
+	if err != nil {
+		t.Fatal(err)
+	}
+	covAIMustContain(t, "grpc send", out, "← reply 1", "status OK")
+	last := e.m.httpS().last
+	if last == nil || last.by != "ai" || last.id == 0 || last.resp == nil || last.resp.Method != "GRPC" || last.resp.Status != 200 || !strings.Contains(string(last.resp.Body), "← reply 1") {
+		t.Fatalf("the page has no AI run of the call: %+v", last)
+	}
+	list, err := httpHistoryStore().List()
+	if err != nil || len(list) != 1 {
+		t.Fatalf("history = %d entries, %v", len(list), err)
+	}
+	if h := list[0]; h.By != "ai" || h.Method != "GRPC" || h.URL != url || h.Status != 200 || !strings.Contains(h.Body, "← reply 1") {
+		t.Errorf("history entry = %+v", h)
+	}
+	// A call that cannot start: still a run and a history line, with the error.
+	bad := "grpc://" + addr + "/grpc.reflection.v1.ServerReflection/Nope"
+	out, err = e.tools["http_send"].Run(context.Background(), map[string]any{"method": "GRPC", "url": bad})
+	if err != nil || !strings.Contains(out, "gRPC call failed: ") {
+		t.Fatalf("unknown method: %q %v", out, err)
+	}
+	list, _ = httpHistoryStore().List()
+	if len(list) != 2 || list[0].Err == "" && list[1].Err == "" {
+		t.Errorf("the failed call is not in history: %+v", list)
+	}
+	if l := e.m.httpS().last; l == nil || l.resp == nil || l.resp.Err == "" {
+		t.Errorf("the page does not show the failure: %+v", l)
+	}
+}
