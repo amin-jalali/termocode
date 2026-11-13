@@ -175,6 +175,10 @@ func (o ConnOptions) StartSQL(driver string) []string {
 		if o.TimeZone != "" {
 			out = append(out, "ALTER SESSION SET TIME_ZONE = '"+o.TimeZone+"'")
 		}
+	case "hive":
+		if list := schemaList(o.Schema); len(list) > 0 {
+			out = append(out, "USE "+d.QuoteIdent(list[0]))
+		}
 	case "db2":
 		if list := schemaList(o.Schema); len(list) > 0 {
 			out = append(out, "SET SCHEMA "+d.QuoteIdent(list[0]))

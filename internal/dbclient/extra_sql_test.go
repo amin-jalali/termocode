@@ -15,8 +15,8 @@ import (
 // DBX-71: Firebird, Vertica, Exasol and SAP HANA on the SQL session.
 
 func TestExtraSQLEnginesKnownEverywhere(t *testing.T) {
-	ports := map[string]int{"firebird": 3050, "vertica": 5433, "exasol": 8563, "hana": 39017, "db2": 50000}
-	titles := map[string]string{"firebird": "Firebird", "vertica": "Vertica", "exasol": "Exasol", "hana": "SAP HANA", "db2": "IBM Db2"}
+	ports := map[string]int{"firebird": 3050, "vertica": 5433, "exasol": 8563, "hana": 39017, "db2": 50000, "hive": 10000}
+	titles := map[string]string{"firebird": "Firebird", "vertica": "Vertica", "exasol": "Exasol", "hana": "SAP HANA", "db2": "IBM Db2", "hive": "Spark SQL / Hive"}
 	if got := len(ExtraSQLEngines()); got != len(ports) {
 		t.Fatalf("engines = %d", got)
 	}
