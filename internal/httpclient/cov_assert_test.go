@@ -59,7 +59,7 @@ func TestAssertTimeAndNumberOperators(t *testing.T) {
 	}
 	for line, why := range map[string]string{
 		"time > 1s":              "time was",
-		"time contains 1s":        "time does not support",
+		"time contains 1s":       "time does not support",
 		"body $.list contains 9": "has no item",
 		"body $.s > 1":           "not both numbers",
 		"body $.n exists":        "",

@@ -225,7 +225,9 @@ func (im *importer) items(items []pmItem, prefix string, auth *pmAuth, depth int
 func pmToRequest(raw json.RawMessage, inherited *pmAuth) (Request, error) {
 	var s string
 	if json.Unmarshal(raw, &s) == nil { // a bare URL
-		return Request{Method: "GET", URL: s}, nil
+		r := Request{Method: "GET", URL: s}
+		addPMAuth(&r, inherited)
+		return r, nil
 	}
 	var pr pmRequest
 	if err := json.Unmarshal(raw, &pr); err != nil {
@@ -274,20 +276,7 @@ func pmToRequest(raw json.RawMessage, inherited *pmAuth) (Request, error) {
 	if pr.Auth != nil {
 		a = pr.Auth
 	}
-	if a != nil && !r.HasHeader("Authorization") {
-		switch a.Type {
-		case "bearer":
-			r.Headers = append(r.Headers, Header{Name: "Authorization", Value: "Bearer " + kvGet(a.Bearer, "token")})
-		case "basic":
-			r.Headers = append(r.Headers, Header{Name: "Authorization", Value: "Basic " + kvGet(a.Basic, "username") + " " + kvGet(a.Basic, "password")})
-		case "apikey":
-			if kvGet(a.APIKey, "in") != "query" {
-				if k := kvGet(a.APIKey, "key"); k != "" {
-					r.Headers = append(r.Headers, Header{Name: k, Value: kvGet(a.APIKey, "value")})
-				}
-			}
-		}
-	}
+	addPMAuth(&r, a)
 	return r, nil
 }
 
@@ -667,4 +656,23 @@ func scalarOK(raw json.RawMessage) (string, bool) {
 		return strconv.FormatBool(x), true
 	}
 	return "", false
+}
+
+// addPMAuth adds the Authorization (or API key) header of a collection
+// auth to r, unless r has one.
+func addPMAuth(r *Request, a *pmAuth) {
+	if a != nil && !r.HasHeader("Authorization") {
+		switch a.Type {
+		case "bearer":
+			r.Headers = append(r.Headers, Header{Name: "Authorization", Value: "Bearer " + kvGet(a.Bearer, "token")})
+		case "basic":
+			r.Headers = append(r.Headers, Header{Name: "Authorization", Value: "Basic " + kvGet(a.Basic, "username") + " " + kvGet(a.Basic, "password")})
+		case "apikey":
+			if kvGet(a.APIKey, "in") != "query" {
+				if k := kvGet(a.APIKey, "key"); k != "" {
+					r.Headers = append(r.Headers, Header{Name: k, Value: kvGet(a.APIKey, "value")})
+				}
+			}
+		}
+	}
 }

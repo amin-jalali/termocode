@@ -207,6 +207,9 @@ func parseColumnSpec(s string) (CanonColumn, bool, error) {
 			break
 		}
 	}
+	if strings.HasSuffix(low, " default") {
+		return CanonColumn{}, false, fmt.Errorf("column %s: default has no value", name)
+	}
 	if i := strings.Index(low, " default "); i >= 0 {
 		c.Default = strings.TrimSpace(rest[i+len(" default "):])
 		rest, low = strings.TrimSpace(rest[:i]), strings.TrimSpace(low[:i])
