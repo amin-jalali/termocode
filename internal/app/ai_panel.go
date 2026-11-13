@@ -1045,7 +1045,7 @@ func (m Model) renderAIInput(width, rows int) []string {
 			w = 1
 		}
 		ph = runewidth.Truncate(ph, tw-w, "…")
-		c += lipgloss.NewStyle().Background(boxBg).Foreground(theme.LG(theme.TextDim)).Italic(true).Render(ph)
+		c += lipgloss.NewStyle().Background(boxBg).Foreground(lightReadable(theme.TextDim, boxBg)).Italic(true).Render(ph)
 		out = append(out, line(c, w+runewidth.StringWidth(ph)))
 		for len(out) < rows+1 {
 			out = append(out, line("", 0))
