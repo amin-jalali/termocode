@@ -70,7 +70,8 @@ type Host struct {
 	mu     sync.Mutex
 	online bool
 	image  string
-	cuser  string // Config.User of the container
+	cuser  string   // Config.User of the container
+	env    []string // Config.Env of the container ("KEY=value")
 	mounts []mount
 
 	mux muxState
@@ -284,6 +285,7 @@ func (h *Host) inspect(ctx context.Context) error {
 		Config struct {
 			User  string
 			Image string
+			Env   []string
 		}
 		Image  string
 		Mounts []mount
@@ -299,6 +301,7 @@ func (h *Host) inspect(ctx context.Context) error {
 		h.image = it.Config.Image
 	}
 	h.cuser = it.Config.User
+	h.env = it.Config.Env
 	h.mounts = it.Mounts
 	h.mu.Unlock()
 	return nil
