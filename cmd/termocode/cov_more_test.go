@@ -76,3 +76,37 @@ func TestMCPAdminListStatusesAndGetEnv(t *testing.T) {
 }
 
 func tea_key(s string) tea.Msg { return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)} }
+
+func TestMCPAdminAddJSONWithTokenAndDuplicates(t *testing.T) {
+	cwd := adminEnv(t)
+	block := `{"mcpServers":{"gh":{"command":"srv","env":{"TOKEN":"ghp_` + "abcdefghijklmnopqrstuvwxyz0123456789" + `"}}}}`
+	code, out, errs := runAdmin(t, cwd, "", "add", block)
+	if code != 0 || !strings.Contains(out, "Tokens moved to the secret store") || strings.Contains(out+errs, "ghp_abcdef") {
+		t.Fatalf("add json: %d %q %q", code, out, errs)
+	}
+	// The same block again: nothing new is added.
+	if code, _, errs := runAdmin(t, cwd, "", "add", block); code == 0 || !strings.Contains(errs, "already has a server") {
+		t.Errorf("duplicate: %d %q", code, errs)
+	}
+	// Piped on stdin.
+	if code, _, errs := runAdmin(t, cwd, `{"mcpServers":{"other":{"command":"srv2"}}}`, "add", "-"); code != 0 {
+		t.Errorf("stdin json: %d %q", code, errs)
+	}
+	// A name goes only with a URL.
+	if code, _, errs := runAdmin(t, cwd, "", "add", "name", `{"mcpServers":{"x":{"command":"y"}}}`); code == 0 || !strings.Contains(errs, "only with a URL") {
+		t.Errorf("name with block: %d %q", code, errs)
+	}
+	if code, _, errs := runAdmin(t, cwd, "", "add", "not even json"); code == 0 {
+		t.Errorf("garbage: %d %q", code, errs)
+	}
+}
+
+func TestMCPAdminSecretFromStdinNeedsALine(t *testing.T) {
+	cwd := adminEnv(t)
+	if code, _, errs := runAdmin(t, cwd, "", "add", "--secret", "API_KEY", "s", "--", "srv"); code == 0 || !strings.Contains(errs, "no value for API_KEY") {
+		t.Errorf("no line: %d %q", code, errs)
+	}
+	if code, _, errs := runAdmin(t, cwd, "has space in it\n", "add", "--secret", "API_KEY", "s2", "--", "srv"); code != 0 && !strings.Contains(errs, "API_KEY") {
+		t.Errorf("odd value: %d %q", code, errs)
+	}
+}
