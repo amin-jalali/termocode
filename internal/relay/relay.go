@@ -355,28 +355,67 @@ func (s *Server) serveGateway(id string, c *websocket.Conn) {
 	r.wake = make(chan struct{})
 	s.mu.Unlock()
 
+	// One reader for the gateway's whole life: while it waits, it notices
+	// a gateway that went away (or one that sends early); paired, it
+	// feeds the pipe.
+	done := make(chan struct{})
+	defer close(done)
+	msgs := readAll(c, done)
 	t := time.NewTimer(s.cfg.GatewayWait)
 	defer t.Stop()
+	code := CloseIdle
 	select {
 	case p := <-wt.took:
-		s.pipe(id, c, p)
+		s.pipe(id, c, msgs, p)
 		return
+	case m := <-msgs:
+		code = websocket.StatusPolicyViolation // a message before a page came
+		if m.err != nil {
+			code = 0 // it went away
+		}
 	case <-t.C:
 	case <-s.ctx.Done():
+		code = CloseGone
 	}
 	s.mu.Lock()
 	taken := !removeWaiter(r, wt)
 	s.dropIfEmptyLocked(id, r)
 	s.mu.Unlock()
 	if taken { // a page took it in the same moment
-		s.pipe(id, c, <-wt.took)
+		s.pipe(id, c, msgs, <-wt.took)
 		return
 	}
-	code := CloseIdle
-	if s.ctx.Err() != nil {
-		code = CloseGone
+	if code == 0 {
+		_ = c.CloseNow()
+		return
 	}
 	_ = c.Close(code, "")
+}
+
+// msg is one read of a connection.
+type msg struct {
+	typ websocket.MessageType
+	b   []byte
+	err error
+}
+
+// readAll reads c until an error, which is the last message, or done.
+func readAll(c *websocket.Conn, done <-chan struct{}) <-chan msg {
+	ch := make(chan msg)
+	go func() {
+		for {
+			typ, b, err := c.Read(context.Background())
+			select {
+			case ch <- msg{typ, b, err}:
+			case <-done:
+				return
+			}
+			if err != nil {
+				return
+			}
+		}
+	}()
+	return ch
 }
 
 func removeWaiter(r *room, wt *waiter) bool {
@@ -450,7 +489,7 @@ func (s *Server) servePage(id string, c *websocket.Conn) {
 
 // pipe copies messages between a gateway and a page until one ends, a
 // limit is hit or the relay stops. It runs on the gateway's handler.
-func (s *Server) pipe(id string, gw *websocket.Conn, p pairing) {
+func (s *Server) pipe(id string, gw *websocket.Conn, gwMsgs <-chan msg, p pairing) {
 	if p.page == nil {
 		_ = gw.CloseNow()
 		return
@@ -479,9 +518,19 @@ func (s *Server) pipe(id string, gw *websocket.Conn, p pairing) {
 	var up, down atomic.Int64
 	// Reads and writes never take ctx: coder/websocket drops a connection
 	// whose context ends, and an end here is a close with a code.
-	copyOne := func(src, dst *websocket.Conn, n *atomic.Int64) {
+	pageDone := make(chan struct{})
+	defer close(pageDone)
+	pageMsgs := readAll(page, pageDone)
+	copyOne := func(src <-chan msg, dst *websocket.Conn, n *atomic.Int64) {
 		for {
-			typ, b, err := src.Read(context.Background())
+			var m msg
+			select {
+			case m = <-src:
+			case <-ctx.Done(): // the pipe ended: its readers stop too
+				res <- result{}
+				return
+			}
+			typ, b, err := m.typ, m.b, m.err
 			if err != nil {
 				switch {
 				case ctx.Err() != nil:
@@ -512,8 +561,8 @@ func (s *Server) pipe(id string, gw *websocket.Conn, p pairing) {
 			n.Add(int64(len(b)))
 		}
 	}
-	go copyOne(page, gw, &up)
-	go copyOne(gw, page, &down)
+	go copyOne(pageMsgs, gw, &up)
+	go copyOne(gwMsgs, page, &down)
 	go func() { // the idle watch, the lifetime and the relay's stop
 		t := time.NewTicker(maxDur(s.cfg.Idle/4, 10*time.Millisecond))
 		defer t.Stop()
