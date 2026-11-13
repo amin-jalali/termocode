@@ -903,6 +903,11 @@ export interface DBSecretArgs {
   value: string;
 }
 
+export interface DBExportArgs {
+  columns: string[];
+  rows: string[][];
+}
+
 export interface WebForwardArgs {
   port: number;
 }
@@ -3428,6 +3433,11 @@ export interface RedisKey {
   ttl: number;
 }
 
+export interface DBExported {
+  data: string;
+  size: number;
+}
+
 export interface CIFixPrompt {
   prompt: string;
 }
@@ -4274,6 +4284,7 @@ export interface OpArgs {
   "db.tx": DBTxArgs;
   "db.trust_host": DBTrustArgs;
   "db.secret": DBSecretArgs;
+  "db.export_parquet": DBExportArgs;
   "web.forward": WebForwardArgs;
   "ci.fix_prompt": EmptyArgs;
   "git.stage_lines": GitLinesArgs;
@@ -4610,6 +4621,7 @@ export interface OpResult {
   "db.tx": AskRef;
   "db.trust_host": DBDone;
   "db.secret": DBDone;
+  "db.export_parquet": DBExported;
   "web.forward": AskRef;
   "ci.fix_prompt": CIFixPrompt;
   "git.discard_lines": AskRef;

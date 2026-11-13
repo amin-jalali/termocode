@@ -4,6 +4,7 @@ package app
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -460,5 +461,32 @@ func TestDBMoreConnectionsNeedLaptopCard(t *testing.T) {
 	webTestLaptopSelect(t, m, "confirm")
 	if m.databases.sessions["local"] != nil {
 		t.Error("still connected after the yes")
+	}
+}
+
+// db.export_parquet writes the rows the page sends as a Parquet file: the
+// magic at both ends, the column names and the values in it, NULL kept
+// apart from an empty string.
+func TestWebDBExportParquet(t *testing.T) {
+	m, c, _, _ := webTestDBMore(t, func(string) dbclient.Result { return dbclient.Result{} })
+	var out webproto.DBExported
+	webTestData(t, webTestCallBg(t, m, c, webproto.OpDBExportParquet,
+		`{"columns":["id","email"],"rows":[["1","ada@example.com"],["2",null],["3",""]]}`), &out)
+	raw, err := base64.StdEncoding.DecodeString(out.Data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.Size != len(raw) || !strings.HasPrefix(string(raw), "PAR1") || !strings.HasSuffix(string(raw), "PAR1") {
+		t.Fatalf("size %d of %d, ends %q … %q", out.Size, len(raw), raw[:4], raw[len(raw)-4:])
+	}
+	for _, want := range []string{"id", "email", "ada@example.com"} {
+		if !strings.Contains(string(raw), want) {
+			t.Errorf("the file lacks %q", want)
+		}
+	}
+	var none webproto.DBExported
+	webTestData(t, webTestCallBg(t, m, c, webproto.OpDBExportParquet, `{"columns":["a"],"rows":[]}`), &none)
+	if none.Size == 0 {
+		t.Error("no rows: still a file with a footer")
 	}
 }
