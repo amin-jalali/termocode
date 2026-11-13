@@ -84,8 +84,8 @@ func dbAIConn(root, id string) (dbclient.Conn, error) {
 				return c, fmt.Errorf("connection %s has a problem: %s", id, dbRedact(dbFriendlyProblem(c.Problem)))
 			case c.Driver == "redis":
 				return c, fmt.Errorf("connection %s is Redis: use redis_keys, redis_get or redis_command", id)
-			case c.Driver == "exasol" || c.Driver == "db2":
-				// DBX-71: Exasol and Db2 have no read-only transaction, so the
+			case c.Driver == "exasol" || c.Driver == "db2" || c.Driver == "hive":
+				// DBX-71: Exasol, Db2 and Hive have no read-only transaction, so the
 				// AI's read-only guarantee would rest on the parser alone.
 				title := dbclient.ExtraSQLEngineTitle(c.Driver)
 				return c, fmt.Errorf("connection %s is %s: AI tools need a read-only transaction, which %s does not have", id, title, title)

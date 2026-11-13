@@ -53,7 +53,7 @@ func ParseURL(raw string) (Conn, error) {
 		u.Scheme = "sqlite"
 		raw = "sqlite" + strings.TrimPrefix(raw, "sqlcipher")
 		c.URL = ""
-	case "firebird", "firebirdsql", "vertica", "hdb", "hana", "saphana", "exasol", "exa", "db2", "ibmdb2":
+	case "firebird", "firebirdsql", "vertica", "hdb", "hana", "saphana", "exasol", "exa", "db2", "ibmdb2", "hive", "spark", "sparksql", "hiveserver2":
 		// DBX-71: c.Driver is the engine id (normDriver); the database is
 		// the path (Firebird: a server path or alias; Exasol: the schema).
 	case "libsql":

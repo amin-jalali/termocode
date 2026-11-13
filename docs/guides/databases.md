@@ -108,7 +108,7 @@ With no connections yet, the view lists the suggestions and offers **a add** and
 
 ## Add a connection
 
-Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, SQL Server / Azure SQL, Oracle Database, Trino, Presto, DuckDB, Cassandra / ScyllaDB, ClickHouse, libSQL / Turso, MongoDB, Firebird, Vertica, Exasol, SAP HANA, IBM Db2, or **From a URL**.
+Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, SQL Server / Azure SQL, Oracle Database, Trino, Presto, DuckDB, Cassandra / ScyllaDB, ClickHouse, libSQL / Turso, MongoDB, Firebird, Vertica, Exasol, SAP HANA, IBM Db2, Spark SQL / Hive, or **From a URL**.
 
 The MySQL family has presets on the MySQL driver: MariaDB, TiDB (port 4000), PlanetScale / Vitess and Amazon Aurora (MySQL) (both with TLS), and SingleStore. A preset fills the port, user and SSL mode, shows a short note on what differs from MySQL, and is saved as `"preset"` in the connection; the tree shows its name next to the host.
 
@@ -626,7 +626,7 @@ Reads run at once. A write, an index change or an `aggregate` with `$out` or `$m
 
 Documents show as rows: `_id` first, then every top-level field in the order first seen; nested objects and arrays as compact JSON, an ObjectId as `ObjectId("…")` so you can paste it into a filter. One batch is read (up to `db_max_rows` documents, or your `limit`); when the server has more, the page says so and the cursor is closed. `bulkWrite` and `renameCollection` are not supported in the console. There are no SQL transactions: each command commits on its own.
 
-## Firebird, Vertica, Exasol, SAP HANA and IBM Db2
+## Firebird, Vertica, Exasol, SAP HANA, IBM Db2 and Spark SQL / Hive
 
 These engines use the SQL console, result pages, tree, history and exports like PostgreSQL. Their drivers are built in (pure Go). IBM Db2 is a fifth engine, but its driver needs C libraries: see **Build with IBM Db2** below.
 
@@ -635,6 +635,7 @@ These engines use the SQL console, result pages, tree, history and exports like 
 | Firebird 3+ | `firebird` | 3050 | a path on the server (`/var/lib/firebird/data/app.fdb`) or an alias (`employee`) | `firebird://SYSDBA@host/employee` |
 | Vertica | `vertica` | 5433 | the database | `vertica://dbadmin@host:5433/vmart` |
 | Exasol | `exasol` | 8563 | the schema to open (optional) | `exasol://sys@host:8563/RETAIL` |
+| Spark SQL / Hive | `hive` (`spark`) | 10000 | the Hive database to open (optional) | `hive://hive@host:10000/sales` |
 | IBM Db2 (LUW) | `db2` | 50000 | the database name | `db2://db2inst1@host:50000/SAMPLE` |
 | SAP HANA | `hana` | 39017 | the default schema (optional); the tenant is `params.databaseName` | `hdb://SYSTEM@host:39017?databaseName=HXE` |
 
@@ -643,7 +644,7 @@ These engines use the SQL console, result pages, tree, history and exports like 
 - **TLS.** Vertica and SAP HANA use the `ssl` block like PostgreSQL. Exasol encrypts by default; `ssl.mode` `disable` turns it off, `require` does not check the server, and a pinned certificate goes in `params.certificatefingerprint` (a CA file is not supported). Firebird has no TLS: its `wire_crypt` (on by default since Firebird 3) encrypts the link, and an `ssl` block is refused.
 - **SSH tunnels** work for all four. For Firebird, Vertica and Exasol, termocode opens a local port on `127.0.0.1` that only forwards to the tunnel. With Exasol's server check on, use `params.certificatefingerprint` over a tunnel, because the host name is `127.0.0.1`.
 - **Options.** `options.schema` sets the search path (Vertica), `OPEN SCHEMA` (Exasol) or `SET SCHEMA` (SAP HANA); `options.timeZone` works on Vertica, Exasol and Firebird 4+; `options.isolation` works on Vertica. The init SQL runs on every new connection.
-- **Read-only.** A read-only session opens a read-only transaction on Firebird, Vertica and SAP HANA. Exasol and Db2 have none, so their read-only session only checks each statement before it runs, and the AI tools do not work on Exasol or Db2 connections.
+- **Read-only.** A read-only session opens a read-only transaction on Firebird, Vertica and SAP HANA. Exasol, Db2 and Hive have none, so their read-only session only checks each statement before it runs, and the AI tools do not work on Exasol, Db2 or Hive connections.
 
 ### Build with IBM Db2
 
@@ -658,6 +659,18 @@ To build with it:
 `go test -tags db2 ./internal/dbclient -run Db2` skips when `IBM_DB_HOME` is missing; set `TC_DB2_TEST_DSN` (`HOSTNAME=…;DATABASE=…;PORT=…;UID=…;PWD=…`) to open a real server.
 
 The ssl block sets `SECURITY=SSL` (and `ssl.ca` becomes `SSLServerCertificate`); `params` are added to the connection string as they are (`CurrentSchema`, `ConnectTimeout`, …). `options.schema` runs `SET SCHEMA`. There is no EXPLAIN statement: Db2 writes plans to tables you create first.
+
+### Build with Spark SQL / Hive
+
+Spark SQL and Hive are reached through HiveServer2 (Thrift); the Spark Thrift Server speaks the same protocol. The client (`github.com/beltran/gohive`) uses cgo for Kerberos, so the normal build leaves it out and a Hive connection says `built without Hive: rebuild with -tags hive`.
+
+To build with it, install a C compiler and the Kerberos headers (`libkrb5-dev` on Debian/Ubuntu, `krb5-devel` on Fedora; macOS has them), then run `CGO_ENABLED=1 go build -tags hive ./cmd/termocode`. `go test -tags hive ./internal/dbclient -run Hive` runs a live check when `TC_HIVE_TEST_ADDR=host:port` is set.
+
+- **Login.** No password: no authentication (`NONE`). With a password: LDAP. `params.auth` can be `none`, `nosasl`, `ldap`, `kerberos` or `custom`; for Kerberos set `params.service` (usually `hive`) and have a ticket (`kinit`). `params.transportMode` is `binary` (default) or `http` (with `params.httpPath`, default `cliservice`).
+- **Tree.** Databases, tables and views (`SHOW TABLES`, `SHOW VIEWS`), columns with partition columns (`DESCRIBE`) and the CREATE statement (`SHOW CREATE TABLE`). There are no keys or indexes.
+- **Transactions.** None: each statement commits on its own, and Begin says so. A placeholder `?` is filled in as a literal (the server has no bind API).
+- **EXPLAIN.** Plain `EXPLAIN`; ANALYZE is the same.
+- **TLS and SSH tunnels** work: the `ssl` block sets the Thrift TLS, and the tunnel dials the server directly.
 
 ## AI tools and their rules
 

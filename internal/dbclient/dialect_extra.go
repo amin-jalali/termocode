@@ -1,6 +1,9 @@
 package dbclient
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // Dialects of the DBX-71 engines. Every catalog query binds its
 // arguments in the order Introspect passes them: the schema for a list,
@@ -221,3 +224,28 @@ func (Db2Dialect) DDL(table string) (string, []any) {
 
 // Explain is "": EXPLAIN fills plan tables that need setup, not a result.
 func (Db2Dialect) Explain(string, bool) string { return "" }
+
+// HiveDialect is HiveQL / Spark SQL. The tree is read with SHOW and
+// DESCRIBE (SQLSession.hiveIntrospect), so there are no catalog queries.
+type HiveDialect struct{}
+
+func (HiveDialect) QuoteIdent(s string) string { return "`" + strings.ReplaceAll(s, "`", "``") + "`" }
+func (HiveDialect) Placeholder(int) string     { return "?" }
+func (HiveDialect) Limit(limit, offset int) string {
+	switch {
+	case limit <= 0:
+		return ""
+	case offset > 0:
+		return fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)
+	}
+	return fmt.Sprintf(" LIMIT %d", limit)
+}
+
+// ReadOnlyBegin is "": Hive has no read-only transaction, so a read-only
+// session relies on the statement check alone (the AI tools refuse it).
+func (HiveDialect) ReadOnlyBegin() string             { return "" }
+func (HiveDialect) CatalogQueries() map[string]string { return map[string]string{} }
+func (d HiveDialect) DDL(table string) (string, []any) {
+	return "SHOW CREATE TABLE " + d.QuoteIdent(table), nil
+}
+func (HiveDialect) Explain(sql string, _ bool) string { return "EXPLAIN " + sql }

@@ -806,6 +806,9 @@ func (s *SQLSession) Close() error {
 }
 
 func (s *SQLSession) Introspect(ctx context.Context, req IntrospectionRequest) (IntrospectionResult, error) {
+	if s.name == "hive" {
+		return s.hiveIntrospect(ctx, req) // SHOW / DESCRIBE, no information_schema
+	}
 	queries := s.dialect.CatalogQueries()
 	preset, isPreset := s.conn.PGPreset()
 	if isPreset {
