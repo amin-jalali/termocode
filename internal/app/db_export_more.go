@@ -41,6 +41,37 @@ func dbExportFormatList() []dbclient.ExportFormatInfo {
 	return append(append([]dbclient.ExportFormatInfo(nil), dbclient.ExportFormats...), dbclient.MoreExportFormats...)
 }
 
+// dbExtractorDir is the folder of a project's Lua extractors (DBX-36).
+func dbExtractorDir(root string) string { return filepath.Join(root, ".termocode", "extractors") }
+
+// dbExportFormatListFor is the picker's list plus the project's Lua extractors.
+func dbExportFormatListFor(root string) []dbclient.ExportFormatInfo {
+	list := dbExportFormatList()
+	if root == "" {
+		return list
+	}
+	return append(list, dbclient.FindLuaExtractors(dbExtractorDir(root))...)
+}
+
+// dbExportFormatFor resolves a picked format id; a Lua extractor's script is
+// read from the project's folder (the name is a plain file name) into o.
+func dbExportFormatFor(root, id string, o dbclient.ExportOptions) (dbclient.ExportFormatInfo, dbclient.ExportOptions, bool) {
+	name, isLua := strings.CutPrefix(id, dbclient.FormatLuaPrefix)
+	if !isLua {
+		info, ok := dbExportFormatInfo(id)
+		return info, o, ok
+	}
+	if root == "" || name == "" || name != filepath.Base(name) || strings.HasPrefix(name, ".") {
+		return dbclient.ExportFormatInfo{}, o, false
+	}
+	src, err := os.ReadFile(filepath.Join(dbExtractorDir(root), name+".lua"))
+	if err != nil {
+		return dbclient.ExportFormatInfo{}, o, false
+	}
+	o.Lua = string(src)
+	return dbclient.ExportFormatInfo{Format: dbclient.ExportFormat(id), Title: "Lua: " + name, Ext: dbclient.LuaExtension(o.Lua)}, o, true
+}
+
 func dbExportFormatInfo(id string) (dbclient.ExportFormatInfo, bool) {
 	for _, f := range dbExportFormatList() {
 		if string(f.Format) == id {
@@ -215,7 +246,7 @@ func (m *Model) databaseCopyAsStart() tea.Cmd {
 		return m.pushToastDetail(toast.Info, "Nothing to copy", "Run a query that returns rows first.")
 	}
 	var items []picker.Item
-	for _, f := range dbExportFormatList() {
+	for _, f := range dbExportFormatListFor(m.databaseWorkspaceRoot()) {
 		items = append(items, picker.Item{ID: string(f.Format), Title: f.Title, Hint: "copy " + dbPlural(len(s.displayedResult().Rows), "row")})
 	}
 	m.picker = picker.NewItems("Copy rows as…", items)
@@ -227,8 +258,11 @@ func (m *Model) databaseCopyAsStart() tea.Cmd {
 
 func (m *Model) databaseCopyAsPicked(id string) tea.Cmd {
 	s := m.dbConsole()
-	info, ok := dbExportFormatInfo(id)
-	if !ok || s.shown == nil {
+	if s.shown == nil {
+		return nil
+	}
+	info, _, ok := dbExportFormatFor(m.databaseWorkspaceRoot(), id, dbclient.ExportOptions{})
+	if !ok {
 		return nil
 	}
 	driver := ""
@@ -237,6 +271,7 @@ func (m *Model) databaseCopyAsPicked(id string) tea.Cmd {
 	}
 	schema, table := m.dbExportTable(s.shown)
 	o := m.dbExportPrepare(dbclient.ExportOptions{Driver: driver, Schema: schema, Table: table})
+	_, o, _ = dbExportFormatFor(m.databaseWorkspaceRoot(), id, o)
 	res := dbMaskResult(s.displayedResult(), loadDBConsoleSettings().exportMask())
 	text, err := dbCopyAsText(res, info.Format, o)
 	if err != nil {
