@@ -214,7 +214,7 @@ func (s *DynamoDBSession) run(ctx context.Context, stmt string, opts RunOptions)
 			break
 		}
 	}
-	res := DocsResult(items, opts.MaxRows)
+	res := TypedDocsResult(items, opts.MaxRows)
 	res.Truncated = res.Truncated || truncated
 	if k != KindRead {
 		res.Affected = 1 // a PartiQL write changes one item

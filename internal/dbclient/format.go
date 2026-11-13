@@ -33,7 +33,14 @@ func toDelimited(r Result, delim rune) string {
 	w.Flush()
 	return b.String()
 }
-func ToJSON(r Result) string {
+func ToJSON(r Result) string { return resultJSON(r, false) }
+
+// ToDocsJSON is ToJSON for document engines: a cell that holds a JSON
+// value (Kind "json", valid JSON) is written as that value, nested, not as
+// a string. Anything else is as in ToJSON.
+func ToDocsJSON(r Result) string { return resultJSON(r, true) }
+
+func resultJSON(r Result, docs bool) string {
 	var b bytes.Buffer
 	b.WriteByte('[')
 	for ri, row := range r.Rows {
@@ -55,7 +62,11 @@ func ToJSON(r Result) string {
 			if i < len(row) {
 				cell = row[i]
 			}
-			b.Write(jsonCell(cell))
+			if docs && cell.Kind == "json" && !cell.Null && json.Valid([]byte(cell.Text)) {
+				b.WriteString(cell.Text)
+			} else {
+				b.Write(jsonCell(cell))
+			}
 		}
 		b.WriteByte('}')
 	}

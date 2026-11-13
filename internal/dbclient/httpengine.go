@@ -390,6 +390,17 @@ func (e *httpEngine) clone() *httpEngine {
 // document that is not an object is one "value" column. MaxRows (> 0)
 // stops early and marks the result truncated.
 func DocsResult(docs []json.RawMessage, maxRows int) Result {
+	return docsResult(docs, maxRows, false)
+}
+
+// TypedDocsResult is DocsResult with numbers and booleans as typed cells
+// (Kind "number", "bool"), so a document view can write them back as JSON
+// numbers and booleans, apart from strings that look like them.
+func TypedDocsResult(docs []json.RawMessage, maxRows int) Result {
+	return docsResult(docs, maxRows, true)
+}
+
+func docsResult(docs []json.RawMessage, maxRows int, typed bool) Result {
 	var res Result
 	index := map[string]int{}
 	var rows []map[string]json.RawMessage
@@ -425,6 +436,9 @@ func DocsResult(docs []json.RawMessage, maxRows int) Result {
 				continue
 			}
 			row[i] = JSONCell(v)
+			if typed {
+				row[i] = typedJSONCell(v)
+			}
 		}
 		res.Rows = append(res.Rows, row)
 	}
@@ -451,6 +465,21 @@ func JSONCell(v json.RawMessage) Cell {
 		}
 	}
 	return Cell{Text: string(t)}
+}
+
+// typedJSONCell is JSONCell with numbers and booleans typed.
+func typedJSONCell(v json.RawMessage) Cell {
+	c := JSONCell(v)
+	if c.Null || c.Kind != "" {
+		return c
+	}
+	switch t := strings.TrimSpace(string(v)); {
+	case t == "true" || t == "false":
+		c.Kind = "bool"
+	case len(t) > 0 && t[0] != '"' && json.Valid([]byte(t)):
+		c.Kind = "number"
+	}
+	return c
 }
 
 // orderedKeys lists the top-level keys of a JSON object in the order
