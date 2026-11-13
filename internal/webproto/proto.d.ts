@@ -895,6 +895,11 @@ export interface DBSecretArgs {
   value: string;
 }
 
+export interface DBExportArgs {
+  columns: string[];
+  rows: string[][];
+}
+
 export interface GitLinesArgs {
   path: string;
   from: number;
@@ -3370,6 +3375,11 @@ export interface RedisKey {
   ttl: number;
 }
 
+export interface DBExported {
+  data: string;
+  size: number;
+}
+
 export interface CIFixPrompt {
   prompt: string;
 }
@@ -4202,6 +4212,7 @@ export interface OpArgs {
   "db.tx": DBTxArgs;
   "db.trust_host": DBTrustArgs;
   "db.secret": DBSecretArgs;
+  "db.export_parquet": DBExportArgs;
   "ci.fix_prompt": EmptyArgs;
   "git.stage_lines": GitLinesArgs;
   "git.unstage_lines": GitLinesArgs;
@@ -4533,6 +4544,7 @@ export interface OpResult {
   "db.tx": AskRef;
   "db.trust_host": DBDone;
   "db.secret": DBDone;
+  "db.export_parquet": DBExported;
   "ci.fix_prompt": CIFixPrompt;
   "git.discard_lines": AskRef;
   "git.discard_hunk": AskRef;

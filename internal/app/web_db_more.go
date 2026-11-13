@@ -1,7 +1,9 @@
 package app
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"os"
 	"path/filepath"
@@ -40,6 +42,7 @@ func init() {
 	webOps[webproto.OpDBCompare] = (*Model).webDBCompare
 	webOps[webproto.OpDBHistory] = (*Model).webDBHistory
 	webOps[webproto.OpDBCSVFiles] = (*Model).webDBCSVFiles
+	webOps[webproto.OpDBExportParquet] = (*Model).webDBExportParquet
 	webOps[webproto.OpDBCancel] = (*Model).webDBCancel
 	webOps[webproto.OpDBConnect] = (*Model).webDBConnect
 	webOps[webproto.OpDBConfig] = (*Model).webDBConfig
@@ -384,6 +387,45 @@ func (m *Model) webDBCSVFiles(call *webCall) tea.Cmd {
 		call.reply(out)
 		return nil
 	}
+}
+
+// webDBExportParquet writes the rows of the page's grid (masked values
+// already masked) as a Parquet file, the laptop's own writer (the one of
+// the Export… action). Nothing is read from a database.
+func (m *Model) webDBExportParquet(call *webCall) tea.Cmd {
+	a := call.args.(*webproto.DBExportArgs)
+	var buf bytes.Buffer
+	w, err := dbclient.NewRowWriter(dbclient.FormatParquet, &buf, dbclient.ExportOptions{})
+	if err == nil {
+		cols := make([]dbclient.Column, len(a.Columns))
+		for i, n := range a.Columns {
+			cols[i].Name = n
+		}
+		err = w.Columns(cols)
+		for _, r := range a.Rows {
+			if err != nil {
+				break
+			}
+			row := make([]dbclient.Cell, len(r))
+			for i, v := range r {
+				if v == nil {
+					row[i] = dbclient.Cell{Null: true}
+				} else {
+					row[i] = dbclient.Cell{Text: *v}
+				}
+			}
+			err = w.Row(row)
+		}
+		if err == nil {
+			err = w.End()
+		}
+	}
+	if err != nil {
+		call.fail(webproto.CodeInternal, "Could not write the Parquet file.")
+		return nil
+	}
+	call.reply(webproto.DBExported{Data: base64.StdEncoding.EncodeToString(buf.Bytes()), Size: buf.Len()})
+	return nil
 }
 
 func (m *Model) webDBCancel(call *webCall) tea.Cmd {
