@@ -88,7 +88,7 @@ func dbAIConn(root, id string) (dbclient.Conn, error) {
 				// DBX-71: Exasol has no read-only transaction, so the AI's
 				// read-only guarantee would rest on the parser alone.
 				return c, fmt.Errorf("connection %s is Exasol: AI tools need a read-only transaction, which Exasol does not have", id)
-			case c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && !dbclient.IsExtraSQL(c.Driver):
+			case c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "cassandra" && !dbclient.IsExtraSQL(c.Driver):
 				return c, fmt.Errorf("connection %s (%s) does not use SQL", id, c.Driver)
 			}
 			return c, nil
@@ -841,6 +841,9 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 			defer cancel()
 			defer sess.Close()
 			req := dbclient.IntrospectionRequest{Schema: schemaName, Object: table}
+			if c.Driver == "cassandra" && schemaName == "" {
+				req.Schema = database // a keyspace (the connection's own when none is given)
+			}
 			if c.Driver == "mysql" {
 				if database == "" && table != "" {
 					database = c.Database
