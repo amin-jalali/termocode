@@ -18,10 +18,10 @@ if [ "$1" = "-version" ]; then echo "3.45.0 2024-01-01 abcdef"; exit 0; fi
 while IFS= read -r line; do
   case "$line" in
     .print*) echo "${line#.print }" ;;
-    *many*) printf '[{"a":1},\n{"a":2},\n{"a":3},\n{"a":4}]\n' ;;
-    *oneerr*) echo 'Parse error near line 1: near "x": syntax error' ;;
-    *die*) exit 1 ;;
-    *hang*) sleep 30 ;;
+    *zzmany*) printf '[{"a":1},\n{"a":2},\n{"a":3},\n{"a":4}]\n' ;;
+    *zzerr*) echo 'Parse error near line 1: near "x": syntax error' ;;
+    *zzdie*) exit 1 ;;
+    *zzhang*) exec sleep 5 ;;
     *insert*) echo 'changes:  3   total_changes: 3' ;;
   esac
 done
@@ -50,15 +50,15 @@ func fakeSQLiteSession(t *testing.T) *SQLiteSession {
 func TestSQLiteSessionOverTheLineProtocol(t *testing.T) {
 	s := fakeSQLiteSession(t)
 	ctx := context.Background()
-	r := s.Run(ctx, "SELECT many", RunOptions{})
+	r := s.Run(ctx, "SELECT zzmany", RunOptions{})
 	if r.Err != nil || len(r.Rows) != 4 {
 		t.Fatalf("all rows = %+v", r)
 	}
-	cut := s.Run(ctx, "SELECT many", RunOptions{MaxRows: 2})
+	cut := s.Run(ctx, "SELECT zzmany", RunOptions{MaxRows: 2})
 	if cut.Err != nil || len(cut.Rows) != 2 || !cut.Truncated {
 		t.Errorf("a cut result = %+v", cut)
 	}
-	if r := s.Run(ctx, "SELECT oneerr", RunOptions{}); r.Err == nil || !strings.Contains(r.Err.Error(), "syntax error") || strings.Contains(r.Err.Error(), "near line") {
+	if r := s.Run(ctx, "SELECT zzerr", RunOptions{}); r.Err == nil || !strings.Contains(r.Err.Error(), "syntax error") || strings.Contains(r.Err.Error(), "near line") {
 		t.Errorf("sqlite's error is shown without its line = %v", r.Err)
 	}
 	ins := s.Run(ctx, "INSERT into insert_t values (1)", RunOptions{})
@@ -67,22 +67,22 @@ func TestSQLiteSessionOverTheLineProtocol(t *testing.T) {
 	}
 	// The process dies in the middle of a query: the error says so and the
 	// next statement runs on a new process.
-	dead := s.Run(ctx, "SELECT die", RunOptions{})
+	dead := s.Run(ctx, "SELECT zzdie", RunOptions{})
 	if dead.Err == nil || !strings.Contains(dead.Err.Error(), "restarted") {
 		t.Errorf("a dying process = %+v", dead)
 	}
-	if r := s.Run(ctx, "SELECT many", RunOptions{}); r.Err != nil || len(r.Rows) != 4 {
+	if r := s.Run(ctx, "SELECT zzmany", RunOptions{}); r.Err != nil || len(r.Rows) != 4 {
 		t.Errorf("after the restart = %+v", r)
 	}
 	// A cancel while the statement runs ends the wait and restarts.
 	cctx, cancel := context.WithTimeout(ctx, 300*time.Millisecond)
 	defer cancel()
 	start := time.Now()
-	hung := s.Run(cctx, "SELECT hang", RunOptions{})
+	hung := s.Run(cctx, "SELECT zzhang", RunOptions{})
 	if hung.Err == nil || time.Since(start) > 10*time.Second {
 		t.Errorf("a hanging statement = %+v after %v", hung.Err, time.Since(start))
 	}
-	if r := s.Run(ctx, "SELECT many", RunOptions{MaxRows: 1}); r.Err != nil || len(r.Rows) != 1 {
+	if r := s.Run(ctx, "SELECT zzmany", RunOptions{MaxRows: 1}); r.Err != nil || len(r.Rows) != 1 {
 		t.Errorf("after the cancel = %+v", r)
 	}
 	if r := s.Run(ctx, "SELECT 1; SELECT 2", RunOptions{}); r.Err == nil || !strings.Contains(r.Err.Error(), "one SQL statement") {
@@ -96,11 +96,11 @@ func TestSQLiteSessionOverTheLineProtocol(t *testing.T) {
 	}
 	done, doneCancel := context.WithCancel(ctx)
 	doneCancel()
-	if r := s.Run(done, "SELECT many", RunOptions{}); r.Err == nil {
+	if r := s.Run(done, "SELECT zzmany", RunOptions{}); r.Err == nil {
 		t.Error("a cancelled context: want error")
 	}
 	_ = s.Close()
-	if r := s.Run(ctx, "SELECT many", RunOptions{}); r.Err == nil {
+	if r := s.Run(ctx, "SELECT zzmany", RunOptions{}); r.Err == nil {
 		t.Error("a closed session: want error")
 	}
 }
