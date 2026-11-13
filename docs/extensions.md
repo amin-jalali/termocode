@@ -251,3 +251,10 @@ The shell commands you keep in `~/.config/termocode/commands.json` are listed in
 palette as `User: <title>` and in **Tasks: Run Task…**. They are read from the file every
 time, so an edit shows at once: no **Extensions: Reload** and no wait for the extensions
 to load.
+
+## Bundle MCP servers with an extension
+
+An extension folder may hold an `mcp.json` (the same format as the user's `mcp.json`). Its
+servers appear in the MCP list as soon as the extension is installed. They run a command, so
+they count as project servers: each one asks for your trust before it starts, and a server of
+the same name in your own `mcp.json` or in the project wins over it.
