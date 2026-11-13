@@ -285,6 +285,7 @@ func goldenCases() []goldenCase {
 	for _, sc := range WideScenes() {
 		out = append(out, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
+	out = append(out, smallCases()...) // golden_small_test.go
 	out = append(out, keyHintCases()...)
 	out = append(out, kubeCases()...)          // golden_kube_test.go
 	out = append(out, webCases()...)           // golden_web_test.go
