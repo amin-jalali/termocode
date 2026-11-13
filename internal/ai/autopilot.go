@@ -4,6 +4,7 @@ import (
 	"context"
 	"path"
 	"strings"
+	"unicode/utf8"
 )
 
 // Safe auto-approve (CMP-61). On top of the per-class "Always allow" set
@@ -318,7 +319,11 @@ func ParseGuardian(text string) (ok bool, reason string) {
 	if strings.HasPrefix(up, "ASK") {
 		r := strings.TrimSpace(strings.TrimLeft(line[3:], ":- "))
 		if len(r) > 160 {
-			r = r[:160] + "…"
+			cut := 160
+			for cut > 0 && !utf8.RuneStart(r[cut]) {
+				cut-- // never cut inside a character
+			}
+			r = r[:cut] + "…"
 		}
 		return false, r
 	}
