@@ -50,7 +50,8 @@ func TestSessionPickerStepAfterSignIn(t *testing.T) {
 		`<SignInScreen onDone={startPick} />`,
 		`signInWithBookmark(startPick)`,
 		`<PairScreen secret={pairSecret ?? ""} onDone={startShell} />`,
-		`<SessionPicker onPick={pickSession} />`,
+		`<m.SessionPicker onPick={pickSession} />`,
+		`loadPicker()`,
 	} {
 		if !strings.Contains(main, want) {
 			t.Errorf("main.tsx lost %q", want)

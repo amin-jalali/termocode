@@ -12,9 +12,7 @@ import (
 // Bundle budgets of the page (web design 4.1), gzipped: a phone on a weak
 // link loads the whole UI in one short burst.
 const (
-	// budgetJS was 120 KiB; 124 KiB since the session picker (WEB-55) and
-	// the page's own project view for a picked session on a desktop.
-	budgetJS    = 124 << 10
+	budgetJS    = 120 << 10
 	budgetCSS   = 20 << 10
 	budgetHTML  = 4 << 10
 	budgetTotal = 150 << 10
