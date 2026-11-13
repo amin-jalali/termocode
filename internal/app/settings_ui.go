@@ -114,6 +114,8 @@ type settingsConfig struct {
 	WebMaxHours    *int   `json:"web_max_hours,omitempty"`
 	WebOpenBrowser *bool  `json:"web_open_browser,omitempty"`
 	WebMaxViewers  *int   `json:"web_max_viewers,omitempty"`
+	// WebPush: "off" sends no push to a phone (CMP-47, web_push.go).
+	WebPush string `json:"web_push,omitempty"`
 	// WebPushDetail: what a phone push says (MOB-30, web_push.go).
 	WebPushDetail string `json:"web_push_detail,omitempty"`
 	WebPhone      string `json:"web_phone,omitempty"` // MOB-31

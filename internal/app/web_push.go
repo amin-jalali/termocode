@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -60,6 +61,7 @@ type webPushState struct {
 	sent    time.Time // the last push
 	tick    bool      // a webPushTickMsg is on its way
 	sending bool      // a push is being sent
+	end     string    // an AI run or task ended: "done" or "failed" (CMP-47); "" when none waits to be told
 }
 
 // webPushTickMsg brings a check that was too early back.
@@ -248,6 +250,23 @@ func (m *Model) webPushUnsubscribe(call *webCall) tea.Cmd {
 	}
 }
 
+// decideEnd is decide that also counts an end (a run or task that
+// finished or failed) as a reason to push: it goes after the same
+// cooldown, one push for all ends and new cards of that moment.
+func (p *webPushState) decideEnd(n int, now time.Time) (send bool, wait time.Duration) {
+	if p.end == "" {
+		return p.decide(n, now)
+	}
+	if p.sending {
+		return false, webPushEvery
+	}
+	if left := webPushCooldown - now.Sub(p.sent); !p.sent.IsZero() && left > 0 {
+		return false, left
+	}
+	p.lastN, p.sent, p.sending = n, now, true
+	return true, 0
+}
+
 // decide says whether n waiting things make a push now: more wait than
 // at the last check, nothing is being sent and the cooldown is over.
 // wait > 0: look again then (the push is only held back).
@@ -300,7 +319,7 @@ func (m *Model) webPushAfterUpdate(msg tea.Msg) tea.Cmd {
 		p.tick = false
 	}
 	if !p.any {
-		p.lastN = 0
+		p.lastN, p.end = 0, ""
 		return nil
 	}
 	now := time.Now()
@@ -309,14 +328,24 @@ func (m *Model) webPushAfterUpdate(msg tea.Msg) tea.Cmd {
 	}
 	p.checked = now
 	n, kind := m.webPushWaiting()
-	send, wait := p.decide(n, now)
+	if !webSettings().Push { // web_push off: nothing goes, and nothing old goes later
+		p.lastN, p.end = n, ""
+		return nil
+	}
+	if n <= p.lastN && p.end != "" { // no new card: the end is what the push says
+		kind = p.end
+	}
+	send, wait := p.decideEnd(n, now)
+	if send {
+		p.end = ""
+	}
 	if !send {
 		if wait > 0 {
 			return p.arm(wait)
 		}
 		return nil
 	}
-	payload := webpush.Payload(webSettings().PushDetail, n, kind)
+	payload := webpush.PayloadFor(webSettings().PushDetail, n, kind, filepath.Base(aiWorkspaceRoot()))
 	live := m.webLiveDevices()
 	return func() tea.Msg {
 		left := webPushSendAll(context.Background(), payload, live)

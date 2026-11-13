@@ -42,7 +42,7 @@ type webPushRig struct {
 
 func newWebPushRig(t *testing.T) *webPushRig {
 	t.Helper()
-	r := &webPushRig{store: secrets.NewStore(secretstest.NewMemory(), secrets.Options{Dir: t.TempDir()}), hits: map[string]int{}, code: http.StatusCreated}
+	r := &webPushRig{store: secrets.NewStore(secretstest.NewMemory(), secrets.Options{Dir: t.TempDir()}), hits: map[string]int{}, bodies: map[string][]byte{}, keys: map[string]*ecdh.PrivateKey{}, code: http.StatusCreated}
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		body, _ := io.ReadAll(req.Body)
 		r.mu.Lock()
@@ -263,8 +263,7 @@ func TestWebPushWhenARunEnds(t *testing.T) {
 	}
 	// A second end inside the cooldown is held, then sent; title names the session.
 	writeUserConfig(t, `{"web_push_detail":"title"}`)
-	m.web.push.sent = time.Time{}
-	m.web.push.checked = time.Time{}
+	m.web.push.sent, m.web.push.checked, m.web.push.sending = time.Time{}, time.Time{}, false
 	m.web.attention(webproto.AttentionRunFailed, "run-2")
 	cmd = m.webPushAfterUpdate(nil)
 	if cmd == nil {
@@ -298,13 +297,13 @@ func TestWebPushSettingOff(t *testing.T) {
 	if c := webSettings(); !c.Push || len(c.Problems) != 1 {
 		t.Fatalf("bad value: %+v", c)
 	}
-	writeUserConfig(t, `{"web_push":"off"}`)
 	r := newWebPushRig(t)
 	webPushKey(true)
 	r.devs = []webdevices.Device{{ID: "dev-0000000a"}}
 	r.subscribe(t, "dev-0000000a")
 	m := aiTestModel(t)
 	webTestHub(t, &m)
+	writeUserConfig(t, `{"web_push":"off"}`) // after the model: it sets its own config dir
 	m.web.push.any = true
 	m.web.attention(webproto.AttentionRunDone, "run-1")
 	if cmd := m.webPushAfterUpdate(nil); cmd != nil {
