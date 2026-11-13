@@ -100,3 +100,33 @@ func TestDBEmbeddedSQLItems(t *testing.T) {
 		t.Fatal("db_sql_syntax_off has no AI policy")
 	}
 }
+
+// Check SQL in Strings: the issues become diagnostics at their line and
+// column in the code file; db_sql_syntax_off drops the syntax ones.
+func TestDBEmbeddedDiagnostics(t *testing.T) {
+	sc := dbclient.InspectSchema{Tables: map[string]map[string]bool{"": {"users": true}}, Complete: true, Columns: map[string][]string{"users": {"id", "name"}}}
+	src := "package x\n\nvar u = \"SELECT u.nme FROM users u WHERE (1\"\n"
+	got := dbEmbeddedDiagnostics(src, "go", sc, false)
+	if len(got) != 2 {
+		t.Fatalf("diags = %v", got)
+	}
+	if got[0]["lnum"] != 2 || got[0]["col"] != 18 || got[0]["severity"] != dbDiagWarn {
+		t.Fatalf("column diag = %v", got[0])
+	}
+	if fix, _ := got[0]["user_data"].(map[string]any); fix["fix"] != "name" {
+		t.Fatalf("fix = %v", got[0]["user_data"])
+	}
+	if got[1]["severity"] != dbDiagError {
+		t.Fatalf("syntax diag = %v", got[1])
+	}
+	if got := dbEmbeddedDiagnostics(src, "go", sc, true); len(got) != 1 || got[0]["severity"] != dbDiagWarn {
+		t.Fatalf("syntax off = %v", got)
+	}
+	found := false
+	for _, it := range databasesPaletteItems() {
+		found = found || it.ID == "db-embedded-check"
+	}
+	if !found {
+		t.Fatal("db-embedded-check not in the palette")
+	}
+}

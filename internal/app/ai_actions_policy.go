@@ -600,6 +600,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-sql-folder-dialect":             aiNever(aiNoPicker),
 	"db-highlight-usages":               aiAuto(),
 	"db-embedded-sql":                   aiNever("moves the user's cursor; the AI reads files with its own tools"),
+	"db-embedded-check":                 aiAuto(),
 	"db-savepoint":                      aiNever("use db_session op savepoint"),
 	"db-rollback-savepoint":             aiNever("use db_session op rollback_savepoint (it asks)"),
 	"db-open-csv":                       aiNever("the user picks the file; the AI reads files with its own tools"),
