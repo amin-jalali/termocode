@@ -476,6 +476,29 @@ once, with one role, and the phone sees all your projects through it.
   laptop as always.
 - The phone names a project by its id from the list, never by a path.
 
+#### Pick a session after you sign in
+
+When a paired device signs in with its passkey (or the remembered
+bookmark), the page first shows **Your sessions**: the termocode
+sessions that run on this computer for your user. Each row shows the
+folder name, the folder, the branch, how many agents wait or work, and
+when the folder was last opened. Tap one to open it, or **Open this
+session** to stay with the session that started the panel. With only one
+session running, the page opens it at once.
+
+- Only **running** sessions are listed. A project that does not run is
+  not shown here; the phone can pick a session, never start one.
+- Picking a session is the same door as above: it joins that session's
+  private socket, the passkey login of the device stays, and the role
+  stays the same in every session. A viewer stays a viewer.
+- A card that asks for a risky action is still answered on the laptop
+  as always.
+- Each pick is written to `web-audit.jsonl` as a `switch` line with the
+  device and the session key.
+- On a desktop screen the workbench shows the session that started the
+  panel; a session you pick there opens as its own project page, with
+  **Back to this session**.
+
 ### Without Tailscale
 
 The panel can also be reached through an SSH app on the phone that
