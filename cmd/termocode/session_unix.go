@@ -29,10 +29,13 @@ const sessionsSupported = true
 // runServer is the background session server: it owns the PTY the UI
 // runs in until the UI exits.
 // serverUICommand is the UI process a session server runs (tests replace it).
+// serverExe is the path of this program (tests replace it).
+var serverExe = spawn.Executable
+
 var serverUICommand = func(exe string) *exec.Cmd { return spawn.Command(exe, "--no-session") }
 
 func runServer(dir string) int {
-	exe, err := spawn.Executable()
+	exe, err := serverExe()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "termocode:", err)
 		return 1
@@ -49,7 +52,7 @@ func runServer(dir string) int {
 // spawnServer starts the session server for p in the background, in its
 // own session so the terminal's hangup never reaches it.
 func spawnServer(p session.Paths) error {
-	exe, err := spawn.Executable()
+	exe, err := serverExe()
 	if err != nil {
 		return err
 	}

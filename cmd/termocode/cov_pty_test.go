@@ -225,3 +225,27 @@ func TestWatchRepaintHandlesTheSignal(t *testing.T) {
 	_ = syscall.Kill(syscall.Getpid(), session.RepaintSignal)
 	time.Sleep(300 * time.Millisecond)
 }
+
+func TestServerStartFailures(t *testing.T) {
+	dir := covSessionEnv(t)
+	p, err := session.PathsFor(dir)
+	if err != nil {
+		t.Skip(err)
+	}
+	old := serverExe
+	t.Cleanup(func() { serverExe = old })
+	serverExe = func() (string, error) { return "", errors.New("no executable") }
+	if runServer(dir) != 1 {
+		t.Error("runServer without an executable")
+	}
+	if spawnServer(p) == nil {
+		t.Error("spawnServer without an executable")
+	}
+	serverExe = func() (string, error) { return "/definitely/not/a/program", nil }
+	if spawnServer(p) == nil {
+		t.Error("spawnServer of a missing program")
+	}
+	// With a program that exits, a client that may create the session gives up.
+	serverExe = func() (string, error) { return "/bin/true", nil }
+	_ = spawnServer(p)
+}
