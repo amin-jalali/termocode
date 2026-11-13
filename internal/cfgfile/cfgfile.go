@@ -20,6 +20,9 @@ import (
 // rename is os.Rename; tests replace it to simulate a failing write.
 var rename = os.Rename
 
+// createTemp is os.CreateTemp; tests replace it to make the temp file fail.
+var createTemp = os.CreateTemp
+
 // Update reads path (a missing or empty file is an empty object), calls
 // fn on its keys and writes the result back. Every key fn leaves alone is
 // kept. A file that is not a valid JSON object is left untouched and
@@ -92,7 +95,7 @@ func writeFile(path string, data []byte) error {
 			return &os.PathError{Op: "write", Path: path, Err: os.ErrPermission}
 		}
 	}
-	tmp, err := os.CreateTemp(dir, "."+filepath.Base(path)+"-*.tmp")
+	tmp, err := createTemp(dir, "."+filepath.Base(path)+"-*.tmp")
 	if err != nil {
 		return err
 	}
