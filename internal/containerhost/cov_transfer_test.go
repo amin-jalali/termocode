@@ -2,6 +2,8 @@ package containerhost
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -76,5 +78,49 @@ func readOnlyRoot(t *testing.T) {
 	t.Helper()
 	if os.Geteuid() == 0 {
 		t.Skip("root ignores file modes")
+	}
+}
+
+// startAnswers makes `docker start` answer without starting anything.
+type startAnswers struct {
+	services.Exec
+	code   int
+	stderr string
+}
+
+func (s startAnswers) Capture(ctx context.Context, dir string, argv ...string) (string, string, int, error) {
+	if len(argv) > 1 && argv[len(argv)-2] == "start" {
+		return "", s.stderr, s.code, nil
+	}
+	return s.Exec.Capture(ctx, dir, argv...)
+}
+
+func TestStartSaysWhyItFailed(t *testing.T) {
+	h, _, c := newHost(t, func(cfg *Config) { cfg.X = startAnswers{Exec: cfg.X, code: 1, stderr: "port is already allocated"} })
+	c.Stop()
+	err := h.Start(t.Context())
+	if err == nil || errors.Is(err, ErrNotRunning) || !strings.Contains(err.Error(), "port is already allocated") {
+		t.Errorf("a refused start = %v", err)
+	}
+	h2, _, c2 := newHost(t, func(cfg *Config) { cfg.X = startAnswers{Exec: cfg.X} })
+	c2.Stop()
+	if err := h2.Start(t.Context()); !errors.Is(err, ErrNotRunning) {
+		t.Errorf("a start that leaves it stopped = %v", err)
+	}
+}
+
+func TestBrowseDownloadGivesUpOnTooManyCopies(t *testing.T) {
+	fsys, _ := browseFS(t)
+	dest := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dest, "hosts"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for i := 1; i < 1000; i++ {
+		if err := os.WriteFile(filepath.Join(dest, fmt.Sprintf("hosts (%d)", i)), nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := BrowseDownload(t.Context(), fsys, "/etc/hosts", dest); err == nil || !strings.Contains(err.Error(), "too many") {
+		t.Errorf("1000 copies later = %v", err)
 	}
 }
