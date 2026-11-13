@@ -214,6 +214,15 @@ func renderKeys() string {
 	}
 	b.WriteString("\n")
 
+	b.WriteString("## Panel keys\n\n")
+	b.WriteString("Databases and Containers share their letter keys. A key has one role; " +
+		"`D` always removes and always asks first. The `?` card of each panel shows the same keys.\n\n")
+	pt := newTable(&b, "Key", "Role", "Databases", "Containers")
+	for _, k := range app.PanelKeyCatalog() {
+		pt.row(code(k.Key), cell(k.Role), cell(k.Databases), cell(k.Containers))
+	}
+	b.WriteString("\n")
+
 	b.WriteString("## Change a key\n\n")
 	b.WriteString("Use **Preferences: Customize Keybindings** in the palette, or edit " +
 		"`~/.config/termocode/keymap.json` (or `$XDG_CONFIG_HOME/termocode/keymap.json`). " +
