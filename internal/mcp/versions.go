@@ -131,7 +131,7 @@ func compareVersions(a, b string) int {
 	pa := strings.Split(strings.TrimPrefix(a, "v"), ".")
 	pb := strings.Split(strings.TrimPrefix(b, "v"), ".")
 	for i := 0; i < len(pa) || i < len(pb); i++ {
-		var x, y string
+		x, y := "0", "0" // a missing part is 0: 1.2 is 1.2.0
 		if i < len(pa) {
 			x = pa[i]
 		}
