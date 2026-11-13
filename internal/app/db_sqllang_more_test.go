@@ -130,3 +130,22 @@ func TestDBEmbeddedDiagnostics(t *testing.T) {
 		t.Fatal("db-embedded-check not in the palette")
 	}
 }
+
+// The SQL string ranges pushed for completion: 0-based rows, byte
+// columns of the text (quotes left out), and the quote a name must escape.
+func TestDBEmbedRanges(t *testing.T) {
+	src := "package x\nvar q = \"SELECT 1 FROM t\"\nvar r = `\nSELECT a\nFROM t`\n"
+	got := dbEmbedRanges(src, "go")
+	if len(got) != 2 {
+		t.Fatalf("ranges = %+v", got)
+	}
+	if r := got[0]; r.SR != 1 || r.SC != 9 || r.ER != 1 || r.EC != 24 || r.Q != `"` {
+		t.Fatalf("first = %+v", r)
+	}
+	if r := got[1]; r.SR != 2 || r.SC != 9 || r.ER != 4 || r.EC != 6 || r.Q != "" {
+		t.Fatalf("raw = %+v", r)
+	}
+	if !dbSQLAttachable("a/b.py") || !dbSQLAttachable("x.sql") || dbSQLAttachable("x.txt") {
+		t.Fatal("attachable files")
+	}
+}

@@ -199,7 +199,7 @@ func (m *Model) databaseBackgroundSchema(buf int) tea.Cmd {
 		return nil
 	}
 	file, lines, ok := m.httpBufText(buf)
-	if !ok || !strings.EqualFold(lastExt(file), ".sql") {
+	if !ok || !dbSQLAttachable(file) {
 		return nil
 	}
 	id := m.dbConsole().consoleConn(file, lines)
@@ -344,6 +344,7 @@ func (m *Model) onDBCols(msg dbColsMsg) tea.Cmd {
 		return nil
 	}
 	m.databaseBufferLens(msg.buf)
+	m.databaseEmbedBuffer(msg.buf) // a code file with SQL strings (DBX-41)
 	_ = m.nvim.ExecLuaArgs(`_G._termocode_sql.retrigger(...)`, msg.buf, strings.ToLower(msg.table))
 	return m.fetchStateCmd()
 }
