@@ -91,7 +91,7 @@ func TestDBExportParquetOp(t *testing.T) {
 		[]string{`{}`, `{"columns":[],"rows":[]}`, `{"columns":["a"],"rows":[["x","y"]]}`, `{"columns":["a\u0007"],"rows":[]}`, `{"columns":["a"]}`},
 		[]string{`{"columns":["a","b"],"rows":[["1",null],["x","y"]]}`, `{"columns":["a"],"rows":[]}`})
 	checkRow(t, OpDBExportParquet, RoleViewer, false, AuditNo)
-	if p, _ := Lookup(OpDBExportParquet); p.MaxBytes < 2*mib {
-		t.Errorf("max bytes %d: one answer's rows (%d B of text) must fit", p.MaxBytes, MaxDBBytes)
+	if p, _ := Lookup(OpDBExportParquet); p.MaxBytes != 1*mib {
+		t.Errorf("max bytes %d, want 1 MiB, the most a frame takes with its envelope (one answer's rows are up to %d B of text)", p.MaxBytes, MaxDBBytes)
 	}
 }
