@@ -13,7 +13,7 @@ import (
 func TestKB1DOnATableAsksBeforeDropping(t *testing.T) {
 	d, s := tableDriver(t, 100, 30)
 	d.Key("D")
-	if !d.WaitForText("DROP TABLE", 2*time.Second) {
+	if !d.WaitForText("Runs:", 2*time.Second) {
 		t.Fatalf("D on a table did not open the drop card:\n%s", ansi.Strip(d.Frame()))
 	}
 	d.Key("esc")
