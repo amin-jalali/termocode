@@ -22,10 +22,11 @@ import (
 
 // aiMCPXState is the chat's MCP prompt state.
 type aiMCPXState struct {
-	prompts map[string][]mcp.Prompt // server → prompts (Tab, the picker)
-	loading bool
-	elicit  *aiMCPElicitPending // the open server question (ai_mcp_elicit.go)
-	bg      *mcp.Background     // the turn's MCP calls that may move away (ai_mcp_background.go)
+	prompts     map[string][]mcp.Prompt // server → prompts (Tab, the picker)
+	loading     bool
+	elicit      *aiMCPElicitPending // the open server question (ai_mcp_elicit.go)
+	toolPending *aiMCPToolCmd       // a "/tool" write waiting for the owner's yes (ai_mcp_tool_cmd.go)
+	bg          *mcp.Background     // the turn's MCP calls that may move away (ai_mcp_background.go)
 }
 
 // aiMCPPromptTimeout caps one prompt request.

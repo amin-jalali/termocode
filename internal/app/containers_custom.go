@@ -45,7 +45,7 @@ const customCommandsTemplate = `{
 // customTakenKeys are the keys each view already uses: a custom command
 // may not take them.
 var customTakenKeys = map[string]string{
-	"docker": "k j l s x r t a A R m e o y p z S i D u P n d h b g G v V T F E L I K N w W O c C ! ? / enter space esc tab shift+tab",
+	"docker": "k j l s x r t a A R m e o y p z S i D u P n d h b g G v V T F E L I K N w W O c C $ U f ! ? / enter space esc tab shift+tab",
 	"kube":   "k j l i v E e r s d f y R [ ] w c n g G L o I t H : A N x a O P S F U D ! ? / enter space esc tab shift+tab",
 }
 

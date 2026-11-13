@@ -457,7 +457,7 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	}
 	if have && row.kind == dbNodeVirtualView {
 		switch k.String() {
-		case "right", "l", "enter", " ", "o", "s":
+		case "right", "l", "enter", " ", "o", "s", "Q":
 			return m, m.databaseOpenVirtualView(row)
 		}
 	}
@@ -553,7 +553,7 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if have && row.kind == dbNodeConnection {
 			return m, m.databaseStartService(row.conn)
 		}
-	case "t":
+	case "M": // KB-2: t is a terminal (Containers), M is the mode
 		if have && row.conn != "" {
 			return m, m.databaseTxModePicker(row.conn)
 		}
@@ -576,9 +576,11 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.databaseOpenTable()
 	case "d":
 		return m, m.databaseTableMeta(false)
-	case "D":
+	case "v": // KB-1: D means remove everywhere; Show DDL is v
 		return m, m.databaseShowDDLKey()
-	case "s":
+	case "D":
+		return m, m.databaseDropKey()
+	case "Q": // KB-2: s means start
 		return m, m.databaseSelectInConsole()
 	case "c":
 		return m, m.databaseCodeGenStart()
@@ -1155,6 +1157,7 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 	}
 	s.pendingConn = dbclient.Conn{Source: dbclient.SourceUser}
 	s.pendingPassword = ""
+	s.addEngine = ""
 	if id, ok := strings.CutPrefix(kind, "engine:"); ok {
 		if e, known := dbclient.ExtraSQLEngineByID(id); known {
 			// Firebird, Vertica, Exasol, SAP HANA (DBX-71).
@@ -1168,6 +1171,15 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 		e, found := dbclient.HTTPEngineByID(id)
 		if !found {
 			return nil
+		}
+		if e.URLExample != "" {
+			// A cloud warehouse (DBX-66): its account, warehouse, project
+			// or region go in the URL; the token or key is asked next.
+			s.addFromURL, s.addLibSQL, s.addEngine = true, false, e.ID
+			s.remoteAdd, s.remoteNext = false, false
+			cmd := m.databaseAddPrompt(promptKindDBAdd, e.Title+": connection URL", "Edit the URL:", e.URLExample, false)
+			m.prompt.SetNote(e.Hint)
+			return cmd
 		}
 		s.addFromURL = false
 		s.remoteAdd, s.remoteNext = s.remoteNext, false
@@ -1357,15 +1369,16 @@ func dbTreeKeyRows() []confirm.KeyRow {
 		[]string{"T", "test the connection"},
 		[]string{"S", "start a stopped service"},
 		[]string{"U", "run pgTAP tests (PostgreSQL)"},
-		[]string{"t", "transaction mode"},
+		[]string{"M", "transaction mode"},
 		[]string{"p", "set the password"},
 		[]string{"n / $", "new SQL console / psql, mysql… in a terminal"},
 		[]string{"H", "SQL history"},
 		[]string{"x", "disconnect"},
 		[]string{"On a table or view"},
 		[]string{"o", "open the data"},
-		[]string{"d / D", "describe / show the DDL"},
-		[]string{"s", "select 100 rows in the console"},
+		[]string{"d / v", "describe / show the DDL"},
+		[]string{"D", "drop it (shows what depends on it, asks first)"},
+		[]string{"Q", "select 100 rows in the console"},
 		[]string{"c", "generate code: SQL, types; routines: call with args; → inserts"},
 		[]string{"#", "count the rows"},
 		[]string{"i", "import a CSV file"},
@@ -1842,6 +1855,9 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 		c, err := dbclient.ParseURL(value)
 		if err != nil {
 			return m.pushToastDetail(toast.Errr, "That connection URL could not be read", sanitizeDBText(err.Error()))
+		}
+		if e, ok := dbclient.HTTPEngineByID(s.addEngine); ok && c.Driver != e.ID {
+			return m.pushToastDetail(toast.Warn, "That is not a "+e.Title+" URL", "Enter a URL like "+e.URLExample)
 		}
 		if s.addLibSQL && c.Driver != "libsql" {
 			return m.pushToastDetail(toast.Warn, "That is not a libSQL URL", "Enter a libsql://host URL (for Turso: libsql://<db>-<org>.turso.io).")

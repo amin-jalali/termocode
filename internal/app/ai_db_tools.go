@@ -111,7 +111,7 @@ func dbAISQLDriver(driver string) bool {
 	case "postgres", "mysql", "sqlite", "sqlserver", "oracle":
 		return true
 	}
-	return dbclient.IsExtraSQL(driver)
+	return dbAIEngine(driver) || dbclient.IsExtraSQL(driver) // DBX-65, DBX-71
 }
 
 // dbAIDefaultConn is the connection a db_* call without conn uses: the
@@ -454,6 +454,9 @@ type dbReadKeeper interface {
 // connection the reads use, and connections stay open between them.
 func dbAIOpenAs(ctx context.Context, root string, c dbclient.Conn, snap *dbAISnapshot, readOnly, keep bool) (dbclient.Session, error) {
 	keep = keep && readOnly
+	if c.Driver == "duckdb" && !filepath.IsAbs(c.Path) {
+		c.Path = filepath.Join(root, c.Path) // a local file, like sqlite
+	}
 	if c.Driver == "sqlite" {
 		if !filepath.IsAbs(c.Path) {
 			c.Path = filepath.Join(root, c.Path)
@@ -557,19 +560,23 @@ func dbAITargetDatabase(c dbclient.Conn, name string) dbclient.Conn {
 	return c
 }
 
-func dbAIDialect(driver string) dbclient.Dialect {
+// dbAIEngine: an SQL engine outside database/sql that the AI reads
+// through its own session (DBX-65): ClickHouse (readonly=2), DuckDB
+// (-readonly), Trino/Presto (a READ ONLY transaction) and remote libSQL
+// (PRAGMA query_only). Each one's read-only twin is enforced by the
+// server or the client, not by the classifier alone.
+func dbAIEngine(driver string) bool {
 	switch driver {
-	case "mysql":
-		return dbclient.MySQLDialect{}
-	case "sqlite", "libsql":
-		return dbclient.SQLiteDialect{}
-	case "sqlserver":
-		return dbclient.SQLServerDialect{}
-	case "oracle":
-		return dbclient.OracleDialect{}
+	case "clickhouse", "duckdb", "trino", "presto", "libsql":
+		return true
 	}
-	if dbclient.IsExtraSQL(driver) {
-		return dbclient.DialectFor(driver) // DBX-71
+	return false
+}
+
+// dbAIDialect is the driver's dialect (PostgreSQL when it has none).
+func dbAIDialect(driver string) dbclient.Dialect {
+	if d := dbclient.DialectFor(driver); d != nil {
+		return d
 	}
 	return dbclient.PostgresDialect{}
 }

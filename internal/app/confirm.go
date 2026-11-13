@@ -217,6 +217,8 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		return cmd
 	}
 	switch m.confirmKind {
+	case confirmKindAIMCPTool: // ai_mcp_tool_cmd.go
+		return m.runAIMCPToolConfirm(id)
 	case confirmKindExplorerMove: // explorer_drag.go
 		return m.answerExplorerMove(id)
 	case confirmKindBulkRename:

@@ -341,3 +341,15 @@ func TestSettingsParallel(t *testing.T) {
 		t.Errorf("SaveSettings must keep ai_models / ai_parallel_max: %+v", s)
 	}
 }
+
+// AI-11: a profile can name the MCP profile its chat uses.
+func TestParseProfilesKeepsMCPProfile(t *testing.T) {
+	ps, err := ParseProfiles([]byte(`{"profiles":{"docs":{"mcp_profile":"web","steps":[{"id":"a","slot":"main"}]}}}`),
+		"profiles.json", ProfileSourceUser, testSlots, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ps) != 1 || ps[0].MCPProfile != "web" {
+		t.Fatalf("mcp_profile lost: %+v", ps)
+	}
+}

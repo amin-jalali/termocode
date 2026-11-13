@@ -163,7 +163,7 @@ func (m *Model) databaseOpenRemote(t dbRuntimeTarget, c dbclient.Conn, selectPat
 		c.ID = base + "-" + strconv.Itoa(c.Port)
 	}
 	c.Name = c.ID
-	s.pendingConn, s.pendingPassword, s.addFromURL, s.addLibSQL = c, "", false, false
+	s.pendingConn, s.pendingPassword, s.addFromURL, s.addLibSQL, s.addEngine = c, "", false, false, ""
 	if selectPath != "" {
 		s.databaseSelectPath(selectPath)
 	}

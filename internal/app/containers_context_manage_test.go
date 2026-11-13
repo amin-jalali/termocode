@@ -17,7 +17,7 @@ func contextTestModel(t *testing.T) *Model {
 func TestContextRemoveKeyOpensCancelFirstCard(t *testing.T) {
 	m := contextTestModel(t)
 	selectContext(t, m.services, "prod")
-	next, _ := m.handleServicesSidebarKey(keyMsg("x"))
+	next, _ := m.handleServicesSidebarKey(keyMsg("D"))
 	*m = next
 	if !m.confirmOpen || m.confirmKind != confirmKindContextManage {
 		t.Fatal("no remove card")
@@ -36,7 +36,7 @@ func TestContextRemoveKeyOpensCancelFirstCard(t *testing.T) {
 func TestContextRemoveRefusesTheCurrentOne(t *testing.T) {
 	m := contextTestModel(t)
 	selectContext(t, m.services, "default")
-	next, _ := m.handleServicesSidebarKey(keyMsg("x"))
+	next, _ := m.handleServicesSidebarKey(keyMsg("D"))
 	*m = next
 	if m.confirmOpen {
 		t.Fatal("card for the default context")
@@ -100,7 +100,7 @@ func TestContextInspectKeysCardAndPalette(t *testing.T) {
 		all = append(all, r.Key+" "+r.What)
 	}
 	text := strings.Join(all, "\n")
-	for _, want := range []string{"i inspect", "n create", "x remove"} {
+	for _, want := range []string{"i inspect", "n create", "D remove"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("key card lacks %q: %s", want, text)
 		}

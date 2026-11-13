@@ -319,7 +319,12 @@ func dbAIAskPassword(ctx context.Context, call aiIDECaller, c dbclient.Conn, nam
 // are bounded by their caller.
 func dbAILogin(ctx context.Context, c dbclient.Conn, snap *dbAISnapshot, pw string) (dbclient.Session, error) {
 	open := dbSQLSessionFactory
-	if c.Driver == "cassandra" {
+	if dbAIEngine(c.Driver) {
+		// The engine's own session (DBX-65); paths are already absolute.
+		open = func(ctx context.Context, c dbclient.Conn, pw string) (dbclient.Session, error) {
+			return dbOpenDriverSession(ctx, c, "", pw)
+		}
+	} else if c.Driver == "cassandra" {
 		open = dbCassandraSessionFactory // CQL, not the SQL driver (DBX-67)
 	}
 	if snap.call == nil {
