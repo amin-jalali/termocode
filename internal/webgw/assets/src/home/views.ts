@@ -177,7 +177,9 @@ export function cleanSpec(def: ViewDef, s: ViewSpec): ViewSpec {
   return out;
 }
 
-/** specFromRoute reads the deep link #/home/view/<id>?ws=…&<arg>=…. */
+/** specFromRoute reads the deep link #/home/view/<id>?ws=…&arg.<name>=…
+ * (&saved=<id>), as viewHash writes it; a bare <name>=… is an arg too.
+ * saved names the saved view the link came from: it is not an arg. */
 export function specFromRoute(rest: string, query: Readonly<Record<string, string>>): ViewSpec | null {
   if (!rest.startsWith("view/")) return null;
   const id = rest.slice(5);
@@ -185,8 +187,10 @@ export function specFromRoute(rest: string, query: Readonly<Record<string, strin
   const spec: ViewSpec = { view: id };
   const args = dict<string>();
   for (const k of Object.keys(query)) {
+    const name = k.startsWith("arg.") ? k.slice(4) : k;
     if (k === "ws") spec.ws = query[k];
-    else if (/^[a-z_]{1,32}$/.test(k)) args[k] = query[k];
+    else if (k === "saved") continue;
+    else if (/^[a-z_]{1,32}$/.test(name)) args[name] = query[k];
   }
   if (Object.keys(args).length) spec.args = args;
   return spec;

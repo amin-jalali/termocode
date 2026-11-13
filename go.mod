@@ -1,6 +1,6 @@
 module github.com/amin-jalali/termocode
 
-go 1.26.10
+go 1.26.11
 
 require (
 	filippo.io/age v1.3.1
@@ -120,3 +120,5 @@ require (
 replace github.com/charmbracelet/bubbletea => ./third_party/bubbletea
 
 replace github.com/alecthomas/chroma/v2 => ./third_party/chroma
+
+replace github.com/exasol/exasol-driver-go => ./third_party/exasol-driver-go
