@@ -205,6 +205,9 @@ func (m *Model) webDBDDL(call *webCall) tea.Cmd {
 		return nil
 	}
 	t := webDBTableOf(w.c, a.Table, view)
+	if w.c.Driver == "cassandra" {
+		return m.webDBCQLDDL(call, w, a.Table)
+	}
 	return m.webDBReadOnce(call, w, func(ctx context.Context, s dbclient.Session) (any, error) {
 		meta, err := dbLoadTableMeta(ctx, s, t, t.request())
 		if err != nil {
@@ -218,6 +221,10 @@ func (m *Model) webDBExplain(call *webCall) tea.Cmd {
 	a := call.args.(*webproto.DBExplainArgs)
 	w, ok := m.webDBFind(call, a.Conn)
 	if !ok {
+		return nil
+	}
+	if w.c.Driver == "cassandra" {
+		call.fail(webproto.CodeBadRequest, "Cassandra has no query plan here.")
 		return nil
 	}
 	sql, kind, err := webDBStatement(w.c, a.SQL)

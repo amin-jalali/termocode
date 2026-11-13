@@ -116,3 +116,15 @@ func (m *Model) webDBCQLRows(call *webCall, w webDBConn, a *webproto.DBRowsArgs)
 		return nil
 	}
 }
+
+// webDBCQLDDL answers a listed table's CREATE TABLE (keyspace.table).
+func (m *Model) webDBCQLDDL(call *webCall, w webDBConn, name string) tea.Cmd {
+	ks, table, _ := strings.Cut(name, ".")
+	return m.webDBReadOnce(call, w, func(ctx context.Context, s dbclient.Session) (any, error) {
+		res, err := s.Introspect(ctx, dbclient.IntrospectionRequest{Schema: ks, Object: table})
+		if err != nil {
+			return nil, err
+		}
+		return webproto.DBText{Text: dbAIClean(res.DDL, w.snap.password)}, nil
+	})
+}
