@@ -74,3 +74,32 @@ func mcpWireTools(tools []ai.Tool) []ai.Tool {
 	}
 	return out
 }
+
+// AI-11: the agent profile of the chat narrows the MCP tools through its
+// mcp_profile; a pick in the MCP profile picker still wins.
+func TestAgentProfileNamesItsMCPProfile(t *testing.T) {
+	root := t.TempDir()
+	t.Chdir(root)
+	m := covMCPModel(t)
+	if err := os.MkdirAll(filepath.Dir(mcp.ProjectProfilesPath(aiWorkspaceRoot())), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(mcp.ProjectProfilesPath(aiWorkspaceRoot()),
+		[]byte(`{"profiles":{"small":{"description":"one tool","tools":["fake.echo"]},"other":{}}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m.ai.profFake = []ai.Profile{{Name: "docs", Source: ai.ProfileSourceUser, MCPProfile: "small", Steps: []ai.ProfileStep{{ID: "a", Slot: ai.SlotMain}}}}
+	m.ai.reloadProfiles()
+	if p := m.mcpActiveProfile(); p != nil {
+		t.Fatalf("default agent profile filters: %+v", p)
+	}
+	m.ai.profile = "docs"
+	p := m.mcpActiveProfile()
+	if p == nil || p.Name != "small" {
+		t.Fatalf("the agent profile's mcp_profile is not used: %+v", p)
+	}
+	m.aiS().mcpProfile = "other"
+	if p := m.mcpActiveProfile(); p == nil || p.Name != "other" {
+		t.Fatalf("the picker choice must win: %+v", p)
+	}
+}
