@@ -3620,6 +3620,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `mcp-import-other` | AI: MCP: Import from Other Apps… | never | AI provider, credentials and approvals stay with the user (importing servers is the user's) |
 | `mcp-serve-copy-config` | MCP: Copy termocode Server Config | never | AI provider, credentials and approvals stay with the user (the config is for the user to paste into an agent) |
 | `mcp-serve-status` | MCP: Server Status… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `mcp-service-browse` | AI: MCP: Browse a Service… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `next-buffer` | View: Next Editor | auto |   |
 | `next-diagnostic` | Go to Next Problem | auto |   |
 | `next-hunk` | Git: Go to Next Change | auto |   |

@@ -840,3 +840,12 @@ A value is read as JSON when it is valid JSON (`n=3`, `on=true`), else it is tex
 control give one JSON object: `/tool notes.write_note {"title":"Plan","body":"…"}`.
 A read-only tool runs at once. Any other tool shows a card with the exact call, **Cancel**
 first. The result appears as a note in the chat. It is shown to you and not sent to the model.
+
+## Browse a connected service yourself
+
+**AI: MCP: Browse a Service…** lets you work with a service without the AI. It lists your
+connected servers, then the tools of the chosen one that only read and need no argument (for
+example "my open issues"). Pick a tool to **Run** it or to add it to your **Favorites**
+(shown first, with a star; kept in `mcp-favorites.json` next to `config.json`). The result is a
+list of lines. Pick a line to attach it to the chat, then say what to do with it. Tools that
+change things never run from this list: use `/tool server.tool …` (it asks first) or the AI.
