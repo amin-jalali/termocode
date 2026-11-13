@@ -21,7 +21,7 @@ home.js sha384-API2oPnV4c3NCECnnviQf8Uchs8Gdo986ErSP3qUwDiX2ioaCWNm9uP1QYlE1WQ9 
 icon-maskable.svg sha384-jsUQFC456bVobLxEI3ZKbp9mW6SjO1Joa3U86iXD66qm+YF+smRbvNGYVLvYMqOf 201
 icon.svg sha384-1i6/INXc16ryIXQB25IUE2qoPWGgij99HXLf1+5KcACYRgURj9eQzm/tcozbgZjh 210
 icons/codicon.ttf sha384-ydwWqX1+Wu2d6/YNWz288+ntV4SOp+lwtNI+XWqY3797m8eIMAmbNR5P9SCqdB5N 125828
-index.html sha384-I9equ8/nez57tEC/f2u2AHgFEZjpEqDUYnu5Wv27knEtjt53zOReoShRI6kktZCk 1274
+index.html sha384-IYRl2TPIdAToOacyhTl3aXromv2Y/xKQqQbK6rc8hpdavuW7NzHo6qXQcOLI32lM 1274
 kit.css sha384-H5/ZEo7RKG/T61bQTqxTMx7EHK3ZZtAnW4Dt/h8IchjomJjr+lmwuRx9970mw1H6 104291
 kit.html sha384-hT8ArWBEo4kuTtvmDsj4on6RwO+OLKUKnQJ3Z35gHACTrc9mdy80C0WSezSxH5QZ 719
 kit.js sha384-NcAxoXLPzKp2DeM57/ffr1HMl8ddjbHZVkETjUoCv4N0T9QHIyU4yXBT8h9S1TMQ 219377
@@ -37,8 +37,9 @@ monaco/editor-contrib.js sha384-zovZc9/8c8IF6IlccJXAp+iG87TnOpWjJGqruAwc0mBMA0kL
 monaco/editor-host.js sha384-rIPG+WRVloxnbIjzdw7y2Okz9CDO0u8Vi8Gp09YBtnrkMwRn5dEhgAkE5greTXHf 361750
 monaco/editor.css sha384-h3Pml8012xDelgjWIfvjv8T/9ptDUnH1yJrSjj78OtB8P1yT/3pmrp6Y7S2cNUV4 390829
 monaco/editor.js sha384-n5VxbIFjdhl1sERXQHN52h87EGviSdsndgKg9eRxZVuVsFtoxtLJDuY2UxnnGx/r 2472349
+parquet.js sha384-pV/P0aOmc1JcLh1AJcIyqJjQw2BZVV7l9XbBJL3ddZfiU4LN8ZwrRj4xxRdYo0Pu 605
 picker.js sha384-H0yCC7n/lblkucx1AVMosl+BB4U5AAq9zqFXBZFO+jbdJVfTM2Ewb/YbxVX7zdlN 2896
-relay.html sha384-i4y1TagCKxiZl8Xb00vrVfqHokE3Yg6+CoXyIglzjaIdsYnC02jHVwvC8jUx16sj 1519
+relay.html sha384-7hxRdSFXR9YLb/79pA59dlWO0vzagMRrApRRt+YAhWbmhrCALd6tatzFjJGakG1/ 1519
 relay.js sha384-z++Ri0SOvXeuZ/N0GdwPNY/TtPPD5GHxajhJY/+GLTyEtfZV6QbRrz8DktlMhu4q 16077
 strings-fa.js sha384-nOB4b469My2GiMheNYNstaNuhgraDZB8N1EsGv2Illqwm/HQU/ROGKzx/HohEyAq 104869
-workbench.js sha384-IlBofgyMxbfVrJPoE4SMrwdk0V3ieH3uHEQk78eFarJGwrjSoRvt703b1aHQo4Ys 269165
+workbench.js sha384-Ga0jUSxj02GJf43MjCujhQXZyrF6Y37OxJLaxYmpTRrN87UTtlSvsH+5AEuUQTOU 269371

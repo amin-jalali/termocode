@@ -48,6 +48,8 @@ const (
 	OpDBTx         = "db.tx"
 	OpDBTrustHost  = "db.trust_host"
 	OpDBSecret     = "db.secret"
+	// OpDBExportParquet turns the rows the page shows into a Parquet file.
+	OpDBExportParquet = "db.export_parquet"
 )
 
 var opDBRows = []Policy{
@@ -71,6 +73,8 @@ var opDBRows = []Policy{
 	{Op: OpDBTx, New: newOf[DBTxArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpDBTrustHost, New: newOf[DBTrustArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpDBSecret, New: newOf[DBSecretArgs](), Role: RoleController, Rate: slow, MaxBytes: 2 * kib, Audit: AuditYes, Phase: PhaseV2},
+	// The rows come from the page (at most MaxDBBytes of text); nothing is read from a database.
+	{Op: OpDBExportParquet, New: newOf[DBExportArgs](), Role: RoleViewer, Rate: perSec(1), MaxBytes: 1 * mib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
 }
 
 var _ = func() bool { opTable = append(opTable, opDBRows...); return true }()
@@ -88,6 +92,7 @@ func init() {
 	registerResult(OpRedisKeys, RedisKeys{})
 	registerResult(OpDBTrustHost, DBDone{})
 	registerResult(OpDBSecret, DBDone{})
+	registerResult(OpDBExportParquet, DBExported{})
 	for _, op := range []string{OpDBEdit, OpDBImport, OpRedisKey, OpDBAdd, OpDBSSH, OpDBSSL, OpDBDisconnect, OpDBTx} {
 		registerResult(op, AskRef{})
 	}
@@ -123,6 +128,19 @@ const (
 type DBTableArgs struct {
 	Conn  string `json:"conn"`
 	Table string `json:"table"`
+}
+
+// DBExportArgs are the rows of a grid to write as Parquet: the column
+// names and, per row, one cell per column (null is NULL).
+type DBExportArgs struct {
+	Columns []string    `json:"columns"`
+	Rows    [][]*string `json:"rows"`
+}
+
+// DBExported answers db.export_parquet: the file, base64.
+type DBExported struct {
+	Data string `json:"data"`
+	Size int    `json:"size"` // bytes of the file
 }
 
 // DBExplainArgs asks for the plan of one statement; Analyze runs it (a
@@ -259,6 +277,26 @@ type DBTxArgs struct {
 func (a *DBTableArgs) validate(int) error {
 	if !validName(a.Conn, MaxID) || !validName(a.Table, MaxDBTable) {
 		return invalid("bad connection or table")
+	}
+	return nil
+}
+
+func (a *DBExportArgs) validate(int) error {
+	if len(a.Columns) == 0 || len(a.Columns) > MaxDBColumns || a.Rows == nil {
+		return invalid("bad columns or rows")
+	}
+	for _, c := range a.Columns {
+		if len(c) > MaxDBTable || hasControl(c) {
+			return invalid("bad column name")
+		}
+	}
+	if len(a.Rows) > MaxDBRows {
+		return invalid("%d rows", len(a.Rows))
+	}
+	for _, r := range a.Rows {
+		if len(r) != len(a.Columns) {
+			return invalid("a row has %d cells for %d columns", len(r), len(a.Columns))
+		}
 	}
 	return nil
 }

@@ -34,6 +34,7 @@
       "/assets/device.js": ["./src/device.tsx"],
       "/assets/coedit.js": ["./src/coedit/main.ts"],
       "/assets/aictx.js": ["./src/aictx/main.tsx"],
+      "/assets/parquet.js": ["./src/parquet.ts"],
       "/assets/monaco-vim.js": ["./src/monaco/vim.ts"]
     }
   },

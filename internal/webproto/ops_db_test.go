@@ -81,3 +81,17 @@ func TestDBMoreLaptopOps(t *testing.T) {
 		}
 	}
 }
+
+// Spec (web DB export): db.export_parquet turns the rows the page shows
+// into a Parquet file on the laptop; it reads nothing from a database, so
+// it is a viewer's read with no card. Every row has as many cells as there
+// are columns (null is NULL).
+func TestDBExportParquetOp(t *testing.T) {
+	checkArgs(t, OpDBExportParquet,
+		[]string{`{}`, `{"columns":[],"rows":[]}`, `{"columns":["a"],"rows":[["x","y"]]}`, `{"columns":["a\u0007"],"rows":[]}`, `{"columns":["a"]}`},
+		[]string{`{"columns":["a","b"],"rows":[["1",null],["x","y"]]}`, `{"columns":["a"],"rows":[]}`})
+	checkRow(t, OpDBExportParquet, RoleViewer, false, AuditNo)
+	if p, _ := Lookup(OpDBExportParquet); p.MaxBytes != 1*mib {
+		t.Errorf("max bytes %d, want 1 MiB, the most a frame takes with its envelope (one answer's rows are up to %d B of text)", p.MaxBytes, MaxDBBytes)
+	}
+}

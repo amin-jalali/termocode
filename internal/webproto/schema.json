@@ -3800,6 +3800,21 @@
       "phase": "v2"
     },
     {
+      "op": "db.export_parquet",
+      "args": "DBExportArgs",
+      "result": "DBExported",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1048576,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "web.forward",
       "args": "WebForwardArgs",
       "result": "AskRef",
@@ -9098,6 +9113,47 @@
         "sql"
       ],
       "additionalProperties": false
+    },
+    "DBExportArgs": {
+      "type": "object",
+      "properties": {
+        "columns": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "rows": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "columns",
+        "rows"
+      ],
+      "additionalProperties": false
+    },
+    "DBExported": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "data",
+        "size"
+      ],
+      "additionalProperties": true
     },
     "DBFiles": {
       "type": "object",
