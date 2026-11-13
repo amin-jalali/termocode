@@ -570,6 +570,16 @@ func dbAIDialect(driver string) dbclient.Dialect {
 	return dbclient.PostgresDialect{}
 }
 
+// dbAIExplainSQL is the plan statement of sql: the dialect's EXPLAIN, or
+// for SQL Server (no EXPLAIN prefix) the SHOWPLAN XML plan form that the
+// session turns into its batches; "" when the engine has none.
+func dbAIExplainSQL(driver, sql string, analyze bool) string {
+	if driver == "sqlserver" {
+		return dbclient.SQLServerPlanForm(strings.TrimRight(strings.TrimSpace(sql), ";"), analyze)
+	}
+	return dbAIDialect(driver).Explain(sql, analyze)
+}
+
 // dbAIMaxBytes is db_ai_max_kb (default 32 KB) in bytes.
 func (s dbConsoleSettings) aiMaxBytes() int {
 	n := intOr(s.AIMaxKB, 32)
@@ -1010,7 +1020,7 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 			if err == nil && ai.ArgBool(a, "analyze") && r.kind != dbclient.KindRead {
 				err = errors.New("analyze runs the statement: only a read; db_query runs the others (it asks)")
 			}
-			if err == nil && dbAIDialect(r.conn.Driver).Explain(r.sql, false) == "" {
+			if err == nil && dbAIExplainSQL(r.conn.Driver, r.sql, false) == "" {
 				err = fmt.Errorf("%s has no EXPLAIN statement", r.conn.EngineLabel()) // DBX-71
 			}
 			return err
@@ -1024,7 +1034,7 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 			if analyze && r.kind != dbclient.KindRead {
 				return "", errors.New("analyze runs the statement: only a read")
 			}
-			sql := dbAIDialect(r.conn.Driver).Explain(r.sql, analyze)
+			sql := dbAIExplainSQL(r.conn.Driver, r.sql, analyze)
 			snap := dbAITake(ctx, call, root, r.conn)
 			sess, err := dbAIOpen(ctx, root, r.conn, &snap, true) // a question to the user on the way is not counted in the timeout
 			if err != nil {
