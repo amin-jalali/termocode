@@ -121,8 +121,10 @@ func (l *Login) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch r.URL.Path {
+	case "/login/relay":
+		l.relay(w, r)
 	case "/login/start", "/login/finish":
-		if l.cfg.Passkeys == nil {
+		if l.cfg.Passkeys == nil || viaRelay(r) { // a passkey is bound to the laptop's origin
 			writeJSON(w, http.StatusNotFound, errorReply("no_passkeys"))
 			return
 		}
@@ -315,4 +317,45 @@ func (l *Login) issueWith(w http.ResponseWriter, r *http.Request, d webdevices.D
 	}
 	writeJSON(w, http.StatusOK, reply)
 	return true
+}
+
+// relay signs in the paired phone whose relay key proved itself in this
+// request's relay session (ADR 0022): tunnel requests only, a non-guest
+// device bound to that key, the one-time code still asked with
+// web_require_totp. The body is {}.
+func (l *Login) relay(w http.ResponseWriter, r *http.Request) {
+	peer, ok := relayPeer(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusNotFound, errorReply("not_found"))
+		return
+	}
+	if !decodeStrict(r.Body, &struct{}{}) {
+		writeJSON(w, http.StatusBadRequest, errorReply("bad_request"))
+		return
+	}
+	d, ok := relayDevice(l.store(), peer)
+	if !ok {
+		_ = l.cfg.Audit.Log(Event{Kind: EvLoginFail, Code: http.StatusUnauthorized, Why: "removed", Summary: "relay key"})
+		writeJSON(w, http.StatusUnauthorized, errorReply("removed"))
+		return
+	}
+	if d.NeedsRepair {
+		_ = l.cfg.Audit.Log(Event{Kind: EvLoginFail, Code: http.StatusUnauthorized, Device: d.ID, Why: "clone_suspected", Summary: "relay key"})
+		writeJSON(w, http.StatusUnauthorized, errorReply("clone_suspected"))
+		return
+	}
+	now := l.cfg.Now()
+	if st := l.store(); st != nil {
+		_, _ = st.Change(d.ID, func(dd *webdevices.Device) { dd.LastSeen = now.UTC() })
+	}
+	if l.totpOn.Load() {
+		tk, err := l.newTicket(d, false, "")
+		if err != nil {
+			writeJSON(w, http.StatusServiceUnavailable, errorReply("busy"))
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"totp": true, "ticket": tk})
+		return
+	}
+	l.issueWith(w, r, d, "", "relay key")
 }

@@ -66,6 +66,10 @@ type Device struct {
 	Bookmark *Bookmark `json:"bookmark,omitempty"`
 	// AppKey is the Android app's keystore key (MOB-27), public half only.
 	AppKey *AppKey `json:"app_key,omitempty"`
+	// RelayKey is the phone's relay key (ADR 0022): the X25519 public key
+	// it proved in the relay's Noise handshake, as 43 base64url
+	// characters. It signs the device in over the relay.
+	RelayKey string `json:"relay_key,omitempty"`
 	// Phone is what the device chose on its This phone screen (MOBUX-20).
 	Phone *Phone `json:"phone,omitempty"`
 }

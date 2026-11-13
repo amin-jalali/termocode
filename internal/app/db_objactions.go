@@ -233,6 +233,39 @@ func (m *Model) databaseObjectActions() tea.Cmd {
 	return nil
 }
 
+// databaseDropKey is D on a tree row (KB-1: D means remove): the drop of
+// the object under the cursor, through the same card as Object Actions
+// (it reads what depends on a table first, Cancel is first). Rows with
+// nothing to drop say so.
+func (m *Model) databaseDropKey() tea.Cmd {
+	s := m.databases
+	r, ok := m.databaseCurrentRow()
+	if s == nil || !ok || r.conn == "" {
+		return m.pushToastDetail(toast.Info, "Select an object first", "Put the cursor on a table, view, schema or database.")
+	}
+	t, ok := s.dbObjTargetOf(r)
+	if !ok {
+		return m.pushToastDetail(toast.Info, "Nothing to remove here", "Drop needs a SQL database object.")
+	}
+	canDrop := false
+	for _, it := range dbObjectActionItems(r.kind, dbDriverFamily(t.driver)) {
+		if it.ID == "drop" {
+			canDrop = true
+		}
+	}
+	if !canDrop {
+		return m.pushToastDetail(toast.Info, "Nothing to remove here", "D drops a table, view, schema or database. Use A for other actions.")
+	}
+	if s.sessions[t.sessKey] == nil {
+		return m.pushToastDetail(toast.Info, "Not connected", "Press Enter on the connection in the Databases view first.")
+	}
+	if c, _ := s.connection(t.conn); c.ReadOnly {
+		return m.pushToastDetail(toast.Warn, "Read-only connection", "Dropping changes the database.")
+	}
+	s.objAction = &dbObjPending{t: t, id: "drop"}
+	return m.databaseObjActionPrepare("")
+}
+
 // databaseObjActionPicker takes the chosen action: a name prompt or the
 // card.
 func (m *Model) databaseObjActionPicker(id string) (tea.Cmd, bool) {

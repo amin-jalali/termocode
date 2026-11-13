@@ -225,6 +225,10 @@ type Profile struct {
 	// BudgetUSD (0: none) pauses a run of this profile before its next
 	// step once the steps with a known price have cost this much.
 	BudgetUSD float64 `json:"budget_usd,omitempty"`
+	// MCPProfile names an MCP profile (mcp-profiles.json) whose servers and
+	// tools this profile's chat may use (AI-11). A pick in the MCP profile
+	// picker wins; "" keeps every server and tool.
+	MCPProfile string `json:"mcp_profile,omitempty"`
 	// BudgetSet: the profile file names budget_usd (0 then means no
 	// budget); a loop profile without it takes ai_until_done_budget_usd.
 	BudgetSet bool `json:"-"`

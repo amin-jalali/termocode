@@ -3620,6 +3620,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `mcp-import-other` | AI: MCP: Import from Other Apps… | never | AI provider, credentials and approvals stay with the user (importing servers is the user's) |
 | `mcp-serve-copy-config` | MCP: Copy termocode Server Config | never | AI provider, credentials and approvals stay with the user (the config is for the user to paste into an agent) |
 | `mcp-serve-status` | MCP: Server Status… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `mcp-service-browse` | AI: MCP: Browse a Service… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `next-buffer` | View: Next Editor | auto |   |
 | `next-diagnostic` | Go to Next Problem | auto |   |
 | `next-hunk` | Git: Go to Next Change | auto |   |
@@ -4014,6 +4015,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `web_projects_max` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web_push` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web_push_detail` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
+| `web_relay` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web_require_totp` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `word_wrap` | confirm (settings) |   |
 | `workflows_agent_sandbox` | never | where outside agents may write; only the user changes it |

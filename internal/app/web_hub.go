@@ -67,22 +67,25 @@ type webHub struct {
 	// confirm waits for the laptop's card; false, the asking page confirms
 	// it (web_ask.go). Set once when the hub is made; read-only after.
 	approveOnLaptop bool
-	search          webSearches      // the running searches by connection (web_search.go; own lock)
-	tasks           webTasksPub      // Update only: what the tasks topic sent (web_tasks.go)
-	runs            webRunsPub       // Update only: what the runs topic sent (web_runs.go)
-	wfx             webWorkflowsPub  // Update only: what the workflows topic sent (web_workflows.go)
-	run             webRunPub        // Update only: the Test, Debug and Services topics (web_tests.go)
-	wt              webWTPub         // Update only: what the worktrees topic sent (web_worktrees.go)
-	inbox           webInboxPub      // Update only: what the inbox topic sent (web_inbox.go)
-	projects        webProjectsPub   // Update only: what the projects topic sent (web_projects.go)
-	more            webMorePub       // Update only: the v2 More views (web_more.go)
-	ai              webAICalls       // Update only: the page's AI calls (web_ai.go)
-	views           webViewsState    // Update only: the live views (web_views.go)
-	ups             webUploads       // staged uploads (web_transfer.go; own lock)
-	dbNet           webDBNet         // the page's SSH tunnels and asked host keys (web_db_net.go; own lock)
-	push            webPushState     // Update only: pushes to paired phones (web_push.go)
-	wake            webPushWakeState // Update only: phones' UnifiedPush wakes (web_push_wake.go, MOB-32)
-	races           webRacesPub      // Update only: what the races topic sent (web_races.go)
+	// relayKey is the relay_key event's data (web_relay.go), sent to each
+	// control connection; nil without web_relay. Under mu.
+	relayKey []byte
+	search   webSearches      // the running searches by connection (web_search.go; own lock)
+	tasks    webTasksPub      // Update only: what the tasks topic sent (web_tasks.go)
+	runs     webRunsPub       // Update only: what the runs topic sent (web_runs.go)
+	wfx      webWorkflowsPub  // Update only: what the workflows topic sent (web_workflows.go)
+	run      webRunPub        // Update only: the Test, Debug and Services topics (web_tests.go)
+	wt       webWTPub         // Update only: what the worktrees topic sent (web_worktrees.go)
+	inbox    webInboxPub      // Update only: what the inbox topic sent (web_inbox.go)
+	projects webProjectsPub   // Update only: what the projects topic sent (web_projects.go)
+	more     webMorePub       // Update only: the v2 More views (web_more.go)
+	ai       webAICalls       // Update only: the page's AI calls (web_ai.go)
+	views    webViewsState    // Update only: the live views (web_views.go)
+	ups      webUploads       // staged uploads (web_transfer.go; own lock)
+	dbNet    webDBNet         // the page's SSH tunnels and asked host keys (web_db_net.go; own lock)
+	push     webPushState     // Update only: pushes to paired phones (web_push.go)
+	wake     webPushWakeState // Update only: phones' UnifiedPush wakes (web_push_wake.go, MOB-32)
+	races    webRacesPub      // Update only: what the races topic sent (web_races.go)
 	// settled: Update only; the publishers ran once since the hub went
 	// idle (web_after.go).
 	settled bool
@@ -290,6 +293,9 @@ func (h *webHub) admit(nc net.Conn, first webproto.Msg) (*webConn, error) {
 		c.id = fmt.Sprintf("ctl-%d", h.ctlSeq)
 		if d, ok := h.linkForLocked(); ok {
 			defer c.sendLink(d)
+		}
+		if k := h.relayKey; k != nil {
+			defer c.sendRelayKey(k)
 		}
 	} else {
 		if _, dup := h.byID[c.id]; dup {

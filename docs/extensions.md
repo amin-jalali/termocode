@@ -243,3 +243,11 @@ Any of these may also be sent as a request; termocode answers `null`.
   extensions you trust.
 - **AI:** the AI can run extension commands only after you confirm (class
   *run*), the same as Lua extension commands.
+
+## Your own commands (`commands.json`)
+
+The shell commands you keep in `~/.config/termocode/commands.json` are listed in
+**Extensions: Show Log** as the built-in extension `user-commands`. They appear in the
+palette as `User: <title>` and in **Tasks: Run Task…**. They are read from the file every
+time, so an edit shows at once: no **Extensions: Reload** and no wait for the extensions
+to load.

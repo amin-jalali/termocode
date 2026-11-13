@@ -746,6 +746,9 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, m.servicesToggleFold(r)
 		}
 	case "s":
+		if have && r.kind == svcRowSection && r.section == svcSecCompose { // KB-2: start all
+			return m, m.servicesAllKey("start-all")
+		}
 		if _, _, ok := m.selectedProjectGroup(); ok {
 			return m, m.projectGroupAction("up")
 		}
@@ -757,8 +760,11 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, m.servicesNoteCmd(note, cmd)
 		}
 	case "x":
-		if name, ok := m.selectedContext(); ok {
-			return m, m.askContextRemove(name)
+		if have && r.kind == svcRowSection && r.section == svcSecCompose { // KB-2: stop all
+			return m, m.servicesAllKey("stop-all")
+		}
+		if _, ok := m.selectedContext(); ok {
+			return m, nil // KB-1: x is stop; D removes a context
 		}
 		if _, _, ok := m.selectedProjectGroup(); ok {
 			return m, m.projectGroupAction("stop")
@@ -795,20 +801,6 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if c, ok := m.selectedContainer(); ok {
 			return m, m.openContainerTerminal(c, "attach")
 		}
-	case "a":
-		if st.composeBlocked() {
-			return m, m.servicesToast(toast.Info, "Docker is off", "Start it, then press R to retry")
-		}
-		if !st.det.Empty() {
-			return m, m.servicesAction("start-all")
-		}
-	case "A":
-		if st.composeBlocked() {
-			return m, m.servicesToast(toast.Info, "Docker is off", "Start it, then press R to retry")
-		}
-		if !st.det.Empty() {
-			return m, m.servicesAction("stop-all")
-		}
 	case "R":
 		return m, tea.Batch(m.servicesAction("refresh"), m.containersReloadAll())
 	case "m":
@@ -818,7 +810,7 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if c, ok := m.selectedContainer(); ok { // container_workspace.go
 			return m, m.askOpenFolderInContainer(c)
 		}
-	case "e":
+	case "$": // KB-2: a shell in a terminal is $ here and in Databases
 		if c, ok := m.selectedContainer(); ok {
 			return m, m.openContainerTerminal(c, "shell")
 		}
@@ -936,7 +928,7 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		}
 	case "D":
 		if name, ok := m.selectedContext(); ok {
-			return m, m.askContextDefault(name)
+			return m, m.askContextRemove(name)
 		}
 		if im, ref, ok := m.selectedImage(); ok {
 			return m, m.askImageRemoveRef(im, ref)
@@ -952,6 +944,9 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, m.askProjectDown()
 		}
 	case "u":
+		if name, ok := m.selectedContext(); ok { // KB-1: D is remove; u makes it the default
+			return m, m.askContextDefault(name)
+		}
 		if _, ref, ok := m.selectedImage(); ok {
 			m.askImagePull(ref)
 			return m, nil
@@ -977,7 +972,7 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			m.storageCreatePrompt(strings.TrimPrefix(r.section, "host/"))
 			return m, nil
 		}
-	case "d":
+	case "U": // KB-2: usage (d describes in Databases)
 		if have && r.kind == svcRowSection && r.section == hostSection("volumes") {
 			return m, m.containerDiskUsage()
 		}
@@ -1007,6 +1002,19 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		m.focus = FocusEditor
 	}
 	return m, nil
+}
+
+// servicesAllKey is s / x on the SERVICES header: start or stop every
+// service (KB-2: a means add, as in Databases).
+func (m *Model) servicesAllKey(action string) tea.Cmd {
+	st := m.services
+	if st.composeBlocked() {
+		return m.servicesToast(toast.Info, "Docker is off", "Start it, then press R to retry")
+	}
+	if st.det.Empty() {
+		return nil
+	}
+	return m.servicesAction(action)
 }
 
 // servicesJumpSection moves the cursor to the next (dir 1) or previous
@@ -1045,7 +1053,7 @@ func hostKeysHelp(r svcRow) (string, []confirm.KeyRow) {
 		return with("Container keys",
 			[]string{"s / x / r", "start / stop / restart"},
 			[]string{"p", "pause or unpause"},
-			[]string{"e", "shell in the container"},
+			[]string{"$", "shell in the container"},
 			[]string{"E", "exec with options: shell or command, user, folder"},
 			[]string{"W", "open a folder of it as the workspace"},
 			[]string{"t", "attach"},
@@ -1104,11 +1112,11 @@ func hostKeysHelp(r svcRow) (string, []confirm.KeyRow) {
 			[]string{"Space", "open: its projects and containers"},
 			[]string{"r", "read its containers again"},
 			[]string{"t", "open a terminal: ssh to it, or a shell here"},
-			[]string{"D", "make it the default"},
+			[]string{"u", "make it the default (asks first)"},
 			[]string{"y", "copy the endpoint"},
 			[]string{"i", "inspect"},
 			[]string{"n", "create a new one (asks first)"},
-			[]string{"x", "remove (asks first)"})
+			[]string{"D", "remove (asks first)"})
 	case r.kind == svcRowHostItem && r.host == hostServerContainer:
 		return with("Keys of a container on another host",
 			[]string{"Enter", "open a database container in Databases"},
@@ -1119,7 +1127,7 @@ func hostKeysHelp(r svcRow) (string, []confirm.KeyRow) {
 		return with("Registry keys",
 			[]string{"Enter", "open"},
 			[]string{"n", "connect a registry"},
-			[]string{"s", "search Docker Hub"},
+			[]string{"f", "search Docker Hub"},
 			[]string{"b", "browse the tags"},
 			[]string{"D", "sign out (asks first)"},
 			[]string{"u", "pull"})
@@ -1130,15 +1138,17 @@ func hostKeysHelp(r svcRow) (string, []confirm.KeyRow) {
 			[]string{"z", "prune (asks first)"},
 			[]string{"u", "pull (images)"},
 			[]string{"n", "create (networks, volumes)"},
-			[]string{"d", "disk usage (volumes)"})
+			[]string{"U", "disk usage (volumes)"})
 	case r.kind == svcRowService:
 		return with("Service keys",
 			[]string{"s / x / r", "start / stop / restart"},
 			[]string{"Enter", "logs"},
-			[]string{"e", "shell"},
+			[]string{"$", "shell"},
 			[]string{"o", "open the source"},
-			[]string{"y", "copy the address"},
-			[]string{"a / A", "start all / stop all"})
+			[]string{"y", "copy the address"})
+	}
+	if r.kind == svcRowSection && r.section == svcSecCompose {
+		return with("Containers keys", []string{"s / x", "start all / stop all of the project's services"})
 	}
 	return with("Containers keys")
 }
@@ -1422,7 +1432,7 @@ func (m *Model) openServicesMenu(r svcRow, x, y int) {
 		{ID: "logs", Title: "Logs", Hint: "enter", Icon: "≡"},
 	}
 	if r.section == svcSecCompose {
-		items = append(items, menu.Item{ID: "shell", Title: "Shell in container", Hint: "e", Icon: "$"})
+		items = append(items, menu.Item{ID: "shell", Title: "Shell in container", Hint: "$", Icon: "$"})
 	}
 	src := "Open " + services.ConfigPath
 	if r.section == svcSecCompose && len(st.det.ComposeFiles) > 0 {

@@ -18,7 +18,7 @@ import (
 // n on CONTEXTS asks for a name, then the host (ssh://, tcp:// or
 // unix://); a tcp host also asks for the TLS files (CA, cert, key paths;
 // podman over ssh: the identity file). A card shows the exact command,
-// Cancel first. i opens `context inspect` as read-only JSON. x removes a
+// Cancel first. i opens `context inspect` as read-only JSON. D removes a
 // context after a card; the default and the one in use cannot go. Only
 // file paths are passed: no key material is read or stored.
 
@@ -152,7 +152,7 @@ func (m *Model) askContextRemove(name string) tea.Cmd {
 	}
 	for _, c := range st.contextRows {
 		if c.Name == name && c.Current {
-			return m.servicesToast(toast.Info, "This "+word+" is the default", "Make another one the default first (D)")
+			return m.servicesToast(toast.Info, "This "+word+" is the default", "Make another one the default first (u)")
 		}
 	}
 	if st.sessionContext == name {

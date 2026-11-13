@@ -176,21 +176,21 @@ func (m *Model) contextForPalette() (string, tea.Cmd) {
 			break
 		}
 	}
-	return "", m.servicesToast(toast.Info, "Pick a "+st.contextWord(), "Enter uses it here · D makes it the default")
+	return "", m.servicesToast(toast.Info, "Pick a "+st.contextWord(), "Enter uses it here · u makes it the default")
 }
 
 func (m *Model) openContextMenu(r svcRow, x, y int) {
 	m.services.menuRow = r
 	items := []menu.Item{
 		{ID: "use", Title: "Use in this session", Hint: "enter"},
-		{ID: "default", Title: "Make default…", Hint: "D"},
+		{ID: "default", Title: "Make default…", Hint: "u"},
 		{ID: "terminal", Title: "Open Terminal", Hint: "t"},
 		{Sep: true},
 		{ID: "copy", Title: "Copy endpoint", Hint: "y"},
 		{ID: "inspect", Title: "Inspect", Hint: "i"},
 		{Sep: true},
 		{ID: "create", Title: "Create context…", Hint: "n"},
-		{ID: "remove", Title: "Remove…", Hint: "x"},
+		{ID: "remove", Title: "Remove…", Hint: "D"},
 	}
 	m.menu = menu.New(items, x, y)
 	m.menu.SetScreenSize(m.w, m.h)

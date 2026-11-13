@@ -460,6 +460,9 @@ func (m *Model) extRebuild() {
 		l := ext.Loaded{Name: n, Version: r.version, OK: r.state != "failed", Error: r.err}
 		reg.Extensions = append(reg.Extensions, l)
 	}
+	if len(loadUserCommands()) > 0 { // I + C: commands.json is the built-in extension user-commands
+		reg.Extensions = append(reg.Extensions, ext.Loaded{Name: "user-commands", Version: "built-in", OK: true})
+	}
 	s.reg = reg
 	items := make([]activity.ExtraItem, 0, len(reg.Panels))
 	for _, p := range reg.Panels {
