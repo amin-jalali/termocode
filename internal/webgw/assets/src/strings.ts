@@ -144,10 +144,6 @@ export const S = {
   "link.title": "Open this link?",
   "link.body": "It opens in a new tab, outside termocode.",
   "link.open": "Open",
-  "fwd.title": "Port {port} of the computer",
-  "fwd.body": "This link is on the computer termocode runs on, not on this device.",
-  "fwd.forward": "Forward port",
-  "fwd.ssh": "Port {port} opens on your computer.",
 
   // Cards
   "card.tool.title": "Run a command?",

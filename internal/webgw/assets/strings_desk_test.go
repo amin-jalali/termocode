@@ -114,6 +114,9 @@ func TestDesktopOnlyStringsLiveInTheWorkbench(t *testing.T) {
 	for f := range reachable(files, "src/home.tsx") { // the phone views (home.js: MOB-14 review and the rest)
 		phone[f] = true
 	}
+	for f := range reachable(files, "src/link.ts") { // a link's sheet (link.js, loaded by the page on a tap)
+		phone[f] = true
+	}
 	desk := reachable(files, "src/workbench.tsx")
 	if !desk["src/strings.desk.ts"] {
 		t.Fatal("the workbench does not import strings.desk.ts")

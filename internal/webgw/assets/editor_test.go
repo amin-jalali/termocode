@@ -58,8 +58,8 @@ func TestTheOnlyDynamicImportsAreTheEditorAndTheWorkbench(t *testing.T) {
 		t.Fatal(err)
 	}
 	sort.Strings(found)
-	if len(found) != 7 || found[0] != `src/lib/aictx.ts "/assets/aictx.js"` || found[1] != `src/lib/device.tsx "/assets/device.js"` || found[2] != `src/lib/lazy.ts "/assets/editor.js"` || found[3] != `src/lib/lazy.ts "/assets/home.js"` || found[4] != `src/lib/lazy.ts "/assets/strings-fa.js"` || found[5] != `src/lib/lazy.ts "/assets/workbench.js"` || found[6] != `src/monaco/frame.ts "/assets/monaco-vim.js"` {
-		t.Errorf("dynamic imports %q, want only lib/lazy.ts loading /assets/editor.js, /assets/home.js, /assets/strings-fa.js and /assets/workbench.js, lib/aictx.ts loading /assets/aictx.js, lib/device.tsx loading /assets/device.js, and monaco/frame.ts loading /assets/monaco-vim.js", found)
+	if len(found) != 8 || found[0] != `src/lib/aictx.ts "/assets/aictx.js"` || found[1] != `src/lib/device.tsx "/assets/device.js"` || found[2] != `src/lib/lazy.ts "/assets/editor.js"` || found[3] != `src/lib/lazy.ts "/assets/home.js"` || found[4] != `src/lib/lazy.ts "/assets/strings-fa.js"` || found[5] != `src/lib/lazy.ts "/assets/workbench.js"` || found[6] != `src/lib/links.ts "/assets/link.js"` || found[7] != `src/monaco/frame.ts "/assets/monaco-vim.js"` {
+		t.Errorf("dynamic imports %q, want only lib/lazy.ts loading /assets/editor.js, /assets/home.js, /assets/strings-fa.js and /assets/workbench.js, lib/aictx.ts loading /assets/aictx.js, lib/device.tsx loading /assets/device.js, lib/links.ts loading /assets/link.js, and monaco/frame.ts loading /assets/monaco-vim.js", found)
 	}
 }
 

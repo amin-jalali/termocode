@@ -30,7 +30,7 @@ import { dbCommands } from "../views/desk/dbcommands";
 import { ctrFilter, ctrSearch, ctrSel, openPort } from "../views/desk/DeskContainers";
 import { configureServices, openCompose } from "../views/run/ServicesView";
 import { activeFile, alternateFile, clips, closeGroup, closeTab, cursorAt, focusedGroup, focusGroup, groups, panes, previewTabs, quick, reopenClosed, setPanes, showFile, splitEditor, tabsIn, togglePin, wordWrap, zen } from "./workbench";
-import { askLink } from "./links";
+import { askLink, rowLinks } from "./links";
 import { expandTo, hideDots } from "./tree";
 import { sideView } from "../ui/ActivityBar";
 import { renameFile } from "../views/Files";
@@ -597,16 +597,13 @@ function togglePreviewTabs(): void {
   toast("info", t(previewTabs.peek() ? "cmd.preview_on" : "cmd.preview_off"));
 }
 
-/** URL_RE finds web addresses in a row. */
-const URL_RE = /https?:\/\/[^\s<>"'`]+/g;
-
 /** openRowURL asks to open the URL on the caret's row (the one under the
  * caret, else the first); a row with none says so. */
 function openRowURL(): void {
   const at = cursorAt.peek();
   const text = activeDesk.peek()?.text() ?? "";
   const row = text.split("\n")[(at?.line ?? 1) - 1] ?? "";
-  const found = [...row.matchAll(URL_RE)].map((m) => ({ url: m[0].replace(/[.,;:!?)\]}>]+$/, ""), from: m.index ?? 0 }));
+  const found = rowLinks(row);
   const col = (at?.col ?? 1) - 1;
   const hit = found.find((f) => col >= f.from && col <= f.from + f.url.length) ?? found[0];
   if (!hit) {

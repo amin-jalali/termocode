@@ -140,10 +140,6 @@ export const FA: Record<TranslatedKey, string> = {
   "link.title": "این پیوند باز شود؟",
   "link.body": "در یک زبانه‌ی تازه، بیرون از termocode باز می‌شود.",
   "link.open": "باز کن",
-  "fwd.title": "درگاه {port} رایانه",
-  "fwd.body": "این پیوند روی رایانه‌ای است که termocode روی آن اجرا می‌شود، نه روی این دستگاه.",
-  "fwd.forward": "رساندن درگاه",
-  "fwd.ssh": "درگاه {port} روی رایانه‌ی شما باز می‌شود.",
 
   // Cards
   "card.tool.title": "یک فرمان اجرا شود؟",
