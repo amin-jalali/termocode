@@ -8,7 +8,14 @@
 import { signal } from "@preact/signals";
 import { t, type StringKey } from "../strings";
 import { prefs, setPref } from "./prefs";
-import { pushOff, pushOn } from "./push";
+import { layout } from "./layout";
+import { loadHome } from "./lazy";
+
+/** push runs lib/push.ts (in home.js, so the page itself stays small) on
+ * a phone or tablet; a desktop browser gets no push. */
+function push(f: "pushOn" | "pushOff"): void {
+  if (layout.peek() !== "desktop") loadHome().then((m) => m[f](), () => undefined);
+}
 
 /** NotifyKind is the closed list of things worth a notification. */
 export type NotifyKind = "card" | "run_done" | "run_failed";
@@ -48,7 +55,7 @@ export function turnOn(): void {
   if (!N) return;
   if (N.permission === "granted") {
     setPref("notify", true);
-    void pushOn();
+    push("pushOn");
     return;
   }
   N.requestPermission().then(
@@ -56,7 +63,7 @@ export function turnOn(): void {
       perm.value = p;
       if (p === "granted") {
         setPref("notify", true);
-        void pushOn();
+        push("pushOn");
       }
     },
     () => undefined,
@@ -65,7 +72,7 @@ export function turnOn(): void {
 
 export function turnOff(): void {
   setPref("notify", false);
-  void pushOff();
+  push("pushOff");
 }
 
 const last = new Map<NotifyKind, number>();

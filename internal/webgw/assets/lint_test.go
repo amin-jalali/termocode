@@ -61,7 +61,7 @@ var sourceRules = []rule{
 	// The one exception is lib/push.ts (MOB-30): it registers the
 	// gateway's push-only /sw.js, which serves nothing and keeps nothing
 	// (webgw/sw.js, TestServiceWorkerIsPushOnly).
-	{name: "service worker", re: regexp.MustCompile(`\bserviceWorker\b|\bServiceWorker\b|\bPushManager\b`), allow: map[string]bool{"lib/push.ts": true}},
+	{name: "service worker", re: regexp.MustCompile(`\bserviceWorker\b|\bServiceWorker\b|\bPushManager\b`), allow: map[string]bool{"lib/push.ts": true, "lib/pushtap.ts": true}},
 	// Messages only between the page and the desktop editor's frame, both
 	// sides checking the other's origin and window (monaco/protocol.ts).
 	// lib/popout.ts opens this page's own terminal route in a new window
@@ -207,7 +207,7 @@ func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
 		if e.Path == "kit.js" { // the kit's chat links load the link sheet as the page does (lib/links.ts)
 			text = strings.Replace(text, `import("/assets/link.js")`, "", 1)
 		}
-		if pageFile(e.Path) { // lib/push.ts: the push-only worker (MOB-30)
+		if pageFile(e.Path) || e.Path == "home.js" { // lib/push.ts (in home.js), lib/pushtap.ts: the push-only worker (MOB-30)
 			text = strings.ReplaceAll(text, "navigator.serviceWorker", "")
 		}
 		if e.Path == "workbench.js" { // the workbench's one dynamic import: This device, Pair a Device… and Devices… (lib/device.tsx), a fixed path

@@ -76,6 +76,12 @@ func webHasTaskTab(tabs []terminalTab) bool {
 
 // attention sends one attention event to every browser (Update only).
 func (h *webHub) attention(kind, id string) {
+	switch kind { // a phone with no page open hears of an end (web_push.go)
+	case webproto.AttentionRunDone, webproto.AttentionTaskDone:
+		h.push.end = "done"
+	case webproto.AttentionRunFailed:
+		h.push.end = "failed"
+	}
 	if len(h.live) == 0 {
 		return
 	}

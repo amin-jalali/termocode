@@ -4,6 +4,7 @@
 // through app-chunk.js. This phone (MOBUX-20) and the Home (MOB-4, which
 // gets its host through init) and All tools (MOBUX-5).
 export { ThisPhone } from "./views/phone/ThisPhone";
+export { pushOn, pushOff } from "./lib/push";
 export { Home, init } from "./home/main";
 export { AllToolsView } from "./home/AllToolsView";
 // Review in chat (MOB-14, once its own phone.js); its English-only

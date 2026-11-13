@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -33,6 +34,8 @@ func init() {
 	webOps[webproto.OpPushKey] = (*Model).webPushKeyOp
 	webOps[webproto.OpPushSubscribe] = (*Model).webPushSubscribe
 	webOps[webproto.OpPushUnsubscribe] = (*Model).webPushUnsubscribe
+	webOps[webproto.OpPushList] = (*Model).webPushListOp
+	webOps[webproto.OpPushRemove] = (*Model).webPushRemoveOp
 }
 
 const (
@@ -60,6 +63,7 @@ type webPushState struct {
 	sent    time.Time // the last push
 	tick    bool      // a webPushTickMsg is on its way
 	sending bool      // a push is being sent
+	end     string    // an AI run or task ended: "done" or "failed" (CMP-47); "" when none waits to be told
 }
 
 // webPushTickMsg brings a check that was too early back.
@@ -195,7 +199,7 @@ func (m *Model) webPushSubscribe(call *webCall) tea.Cmd {
 		call.fail(webproto.CodeBadRequest, "This push kind is kept by the gateway.")
 		return nil
 	}
-	sub := webpush.Sub{Endpoint: a.Endpoint, P256dh: a.P256dh, Auth: a.Auth}
+	sub := webpush.Sub{Endpoint: a.Endpoint, P256dh: a.P256dh, Auth: a.Auth, Added: time.Now().UnixMilli()}
 	dev := call.conn.device
 	call.later()
 	return func() tea.Msg {
@@ -246,6 +250,23 @@ func (m *Model) webPushUnsubscribe(call *webCall) tea.Cmd {
 		call.reply(webproto.PushState{State: webPushReady})
 		return webPushSetAny(webPushAny(s))
 	}
+}
+
+// decideEnd is decide that also counts an end (a run or task that
+// finished or failed) as a reason to push: it goes after the same
+// cooldown, one push for all ends and new cards of that moment.
+func (p *webPushState) decideEnd(n int, now time.Time) (send bool, wait time.Duration) {
+	if p.end == "" {
+		return p.decide(n, now)
+	}
+	if p.sending {
+		return false, webPushEvery
+	}
+	if left := webPushCooldown - now.Sub(p.sent); !p.sent.IsZero() && left > 0 {
+		return false, left
+	}
+	p.lastN, p.sent, p.sending = n, now, true
+	return true, 0
 }
 
 // decide says whether n waiting things make a push now: more wait than
@@ -300,7 +321,7 @@ func (m *Model) webPushAfterUpdate(msg tea.Msg) tea.Cmd {
 		p.tick = false
 	}
 	if !p.any {
-		p.lastN = 0
+		p.lastN, p.end = 0, ""
 		return nil
 	}
 	now := time.Now()
@@ -309,14 +330,24 @@ func (m *Model) webPushAfterUpdate(msg tea.Msg) tea.Cmd {
 	}
 	p.checked = now
 	n, kind := m.webPushWaiting()
-	send, wait := p.decide(n, now)
+	if !webSettings().Push { // web_push off: nothing goes, and nothing old goes later
+		p.lastN, p.end = n, ""
+		return nil
+	}
+	if n <= p.lastN && p.end != "" { // no new card: the end is what the push says
+		kind = p.end
+	}
+	send, wait := p.decideEnd(n, now)
+	if send {
+		p.end = ""
+	}
 	if !send {
 		if wait > 0 {
 			return p.arm(wait)
 		}
 		return nil
 	}
-	payload := webpush.Payload(webSettings().PushDetail, n, kind)
+	payload := webpush.PayloadFor(webSettings().PushDetail, n, kind, filepath.Base(aiWorkspaceRoot()))
 	live := m.webLiveDevices()
 	return func() tea.Msg {
 		left := webPushSendAll(context.Background(), payload, live)
@@ -395,4 +426,66 @@ func webPushSendAll(ctx context.Context, payload []byte, live map[string]bool) b
 		left = true
 	}
 	return left
+}
+
+// webPushItems lists the paired devices that have a subscription, in the
+// order of the device list; this marks the asking device. Only names and
+// dates: never an address or a key.
+func webPushItems(s webSecretStore, this string) []webproto.PushItem {
+	ds, err := webPushDevices()
+	items := []webproto.PushItem{}
+	if err != nil {
+		return items
+	}
+	for _, d := range ds {
+		if d.Guest || !webPushHasSub(s, d.ID) {
+			continue
+		}
+		it := webproto.PushItem{Device: d.ID, Name: d.Name, This: d.ID == this}
+		if v, ok, err := s.Get(webPushSubPrefix + d.ID); err == nil && ok {
+			var sub webpush.Sub
+			if json.Unmarshal([]byte(v), &sub) == nil {
+				it.Added = sub.Added
+			}
+		}
+		items = append(items, it)
+	}
+	return items
+}
+
+func (m *Model) webPushListOp(call *webCall) tea.Cmd {
+	dev := call.conn.device
+	call.later()
+	return func() tea.Msg {
+		s, err := webPushStore()
+		if err != nil || s == nil || s.Locked() {
+			call.reply(webproto.PushList{Items: []webproto.PushItem{}})
+			return nil
+		}
+		call.reply(webproto.PushList{Items: webPushItems(s, dev)})
+		return nil
+	}
+}
+
+func (m *Model) webPushRemoveOp(call *webCall) tea.Cmd {
+	target := call.args.(*webproto.PushRemoveArgs).Device
+	dev := call.conn.device
+	call.later()
+	return func() tea.Msg {
+		s, err := webPushStore()
+		if err != nil || s == nil || s.Locked() {
+			call.fail(webproto.CodeInternal, "The laptop's secret store is not open.")
+			return nil
+		}
+		if !webPushValidName(webPushSubPrefix+target) || !webPushHasSub(s, target) {
+			call.fail(webproto.CodeNotFound, "That device has no alerts on.")
+			return nil
+		}
+		if err := s.Delete(webPushSubPrefix + target); err != nil {
+			call.fail(webproto.CodeInternal, "Could not change it on the laptop.")
+			return nil
+		}
+		call.reply(webproto.PushList{Items: webPushItems(s, dev)})
+		return webPushSetAny(webPushAny(s))
+	}
 }
