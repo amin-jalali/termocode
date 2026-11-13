@@ -133,6 +133,18 @@ now** is the first button.
 - When the panel runs on this computer, there is nothing to forward: the
   browser opens `http://127.0.0.1:<port>/`.
 
+In the web panel, tap a `localhost` link (for example
+`http://localhost:3000` in the chat, or **Open http://localhost:3000/**
+in a terminal row's menu: long press, or right click on a desktop).
+The link is on the computer termocode runs on, not on your device, so
+the page never opens it as it is. Tap **Forward port**: the same card
+asks first (in the page, or on the laptop when
+`web_approve_on_laptop` is on). After **Open port**, the page offers the
+new address with the link's path. In `termocode ssh --web` mode the tab
+opens on your computer by itself. With the panel on this computer there
+is no card: the page offers `http://127.0.0.1:<port>/` at once. A
+viewer cannot forward a port. LAN mode has no port preview.
+
 **Web: Forwarded Ports…** lists the open forwards. Press Enter on one to
 stop it.
 
