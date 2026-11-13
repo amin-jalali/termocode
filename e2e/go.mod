@@ -1,6 +1,6 @@
 module github.com/amin-jalali/termocode/e2e
 
-go 1.26.10
+go 1.26.11
 
 require (
 	github.com/charmbracelet/x/ansi v0.11.7
@@ -63,3 +63,5 @@ replace github.com/amin-jalali/termocode => ../
 replace github.com/charmbracelet/bubbletea => ../third_party/bubbletea
 
 replace github.com/alecthomas/chroma/v2 => ../third_party/chroma
+
+replace github.com/exasol/exasol-driver-go => ../third_party/exasol-driver-go

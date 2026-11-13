@@ -89,11 +89,14 @@ func newAITunEnv(t *testing.T, srv *dbtest.SSHServer, c dbclient.Conn, trusted b
 	return e
 }
 
-// dbNoSSHForTest makes SSH tunnels read ~/.ssh from a temp home and
-// refuses every dial to an SSH server: a db_* tool that opens a tunnel
-// on its own never reaches a real host from a test.
+// dbNoSSHForTest makes SSH tunnels read ~/.ssh from a temp home, serves
+// a test ssh-agent with one key (the same on a laptop with an agent and
+// on CI without one) and refuses every dial to an SSH server: a db_*
+// tool that opens a tunnel on its own never reaches a real host from a
+// test, and it fails at the dial, not at the agent.
 func dbNoSSHForTest(t *testing.T) {
 	t.Helper()
+	webTestAgent(t)
 	home := t.TempDir()
 	oldHome, oldDial := dbSSHHome, dbTunnelDial
 	dbSSHHome = func() string { return home }

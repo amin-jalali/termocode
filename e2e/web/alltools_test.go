@@ -3,6 +3,7 @@
 package web
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -48,6 +49,27 @@ func openTools(t *testing.T) (*Page, *HubConn, *webproto.Req) {
 	p.WaitJS(`location.hash === "#/more/tools"`)
 	r := expectOp(t, c, opViewCatalog, "")
 	return p, c, r
+}
+
+// homeOp is the page's next request op, past the ones the Home asks on
+// its own when it opens (its saved views list, its blocks).
+func homeOp(t *testing.T, c *HubConn, op string) *webproto.Req {
+	t.Helper()
+	for {
+		switch v := c.Next(t).(type) {
+		case *webproto.Sub, *webproto.Unsub:
+		case *webproto.Req:
+			switch {
+			case v.Op == op:
+				return v
+			case v.Op == "view.list", v.Op == "view.run", paintOps[v.Op]:
+			default:
+				t.Fatalf("page asked %s %s; want %s", v.Op, v.Args, op)
+			}
+		default:
+			t.Fatalf("page sent %s; want a %s request", show(v), op)
+		}
+	}
 }
 
 // toolIDs lists the rows of group g (features, mcp, saved) in order.
@@ -159,16 +181,27 @@ func TestAllToolsRowsOpenTheirView(t *testing.T) {
 	p.TapJS(`document.querySelector(".tools-back")`)
 	p.WaitJS(`document.querySelector('[data-tool="saved:s1"]')`)
 
+	// The row's link is #/home/view/pr.list?ws=shop&arg.state=open&saved=s1;
+	// the Home runs it and drops it from the address at once, so the run
+	// it asks the laptop for is what is checked.
 	p.TapJS(`document.querySelector('[data-tool="saved:s1"]')`)
-	p.WaitJS(`location.hash.startsWith("#/home/view/")`)
-	if got := Eval[string](p, "location.hash"); got != "#/home/view/pr.list?ws=shop&arg.state=open&saved=s1" {
-		t.Errorf("saved view opens %q", got)
+	run := homeOp(t, c, "view.run")
+	var got struct {
+		Spec struct {
+			View string            `json:"view"`
+			WS   string            `json:"ws"`
+			Args map[string]string `json:"args"`
+		} `json:"spec"`
 	}
+	if err := json.Unmarshal(run.Args, &got); err != nil || got.Spec.View != "pr.list" || got.Spec.WS != "shop" || got.Spec.Args["state"] != "open" {
+		t.Errorf("saved view runs %s (%v), want pr.list on shop with state=open", run.Args, err)
+	}
+	p.WaitJS(`location.hash === "#/home"`)
 
 	// The Home has no tab bar: back to More by its address.
 	Eval[bool](p, `(location.hash = "#/more", true)`)
 	p.TapJS(`document.querySelector('.more-link[data-sub="tools"]')`)
-	r = expectOp(t, c, opViewCatalog, "")
+	r = homeOp(t, c, opViewCatalog)
 	reply(t, c, r, toolsCatalog)
 	p.WaitJS(`document.querySelector('[data-tool="runs"]')`)
 	p.TapJS(`document.querySelector('[data-tool="runs"]')`)
