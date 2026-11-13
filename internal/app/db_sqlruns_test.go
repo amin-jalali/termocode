@@ -140,3 +140,56 @@ func TestSQLRunIsNeverAnAIAction(t *testing.T) {
 		t.Fatalf("db-saved-runs must be aiNever: %+v %v", p, ok)
 	}
 }
+
+// DBX-45: pause output. "Databases: Pause / Resume SQL Run Output" sends
+// Ctrl-S (stop) and then Ctrl-Q (go on) to the terminal tab of the run.
+func TestSQLRunPauseTogglesOutputOfTheRunTab(t *testing.T) {
+	var sent []string
+	old := dbRunChansend
+	dbRunChansend = func(_ *Model, buf int, text string) {
+		sent = append(sent, strings.Join([]string{string(rune('0' + buf)), text}, ":"))
+	}
+	defer func() { dbRunChansend = old }()
+
+	m := sqlRunsTestModel(t, "")
+	m.terminalTabs = []terminalTab{
+		{BufID: 1, Name: "SQL run · old", Running: false},
+		{BufID: 2, Name: "SQL run · nightly", Running: true},
+		{BufID: 3, Name: "zsh", Running: true},
+	}
+	m.terminalActiveTab = 2 // a plain shell is in front; the run is still found
+	m.databasePauseRun()
+	m.databasePauseRun()
+	want := []string{"2:\x13", "2:\x11"}
+	if strings.Join(sent, "|") != strings.Join(want, "|") {
+		t.Fatalf("sent %q, want %q", sent, want)
+	}
+	if got := toastText(*m); !strings.Contains(got, "Resumed") {
+		t.Fatalf("toast %q", got)
+	}
+}
+
+func TestSQLRunPauseWithoutARunSaysSo(t *testing.T) {
+	old := dbRunChansend
+	dbRunChansend = func(*Model, int, string) { t.Error("sent to a tab that is no run") }
+	defer func() { dbRunChansend = old }()
+	m := sqlRunsTestModel(t, "")
+	m.terminalTabs = []terminalTab{{BufID: 1, Name: "SQL run · done", Running: false}, {BufID: 3, Name: "zsh", Running: true}}
+	m.databasePauseRun()
+	if got := toastText(*m); !strings.Contains(got, "No SQL run is going") {
+		t.Fatalf("toast %q", got)
+	}
+}
+
+func TestSQLRunPauseIsInThePaletteAndNeverAnAIAction(t *testing.T) {
+	found := false
+	for _, it := range databasesPaletteItems() {
+		found = found || it.ID == dbSQLRunPauseID
+	}
+	if !found {
+		t.Fatal("no palette item for pause")
+	}
+	if p, ok := aiActionPolicies[dbSQLRunPauseID]; !ok || p.Gate != aiGateNever {
+		t.Fatalf("must be aiNever: %+v %v", p, ok)
+	}
+}

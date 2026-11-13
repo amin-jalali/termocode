@@ -375,6 +375,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-new-console":                    aiNever(aiNoPicker),
 	"db-run":                            aiNever("SQL runs require the database query tool and its guard"),
 	"db-run-file":                       aiNever("SQL runs require the database query tool and its guard"),
+	"db-pause-run":                      aiNever("it stops the output of a run the user started; only the user decides"),
 	"db-saved-runs":                     aiNever("a saved run plays SQL and shell steps from a project file; only the user starts it"),
 	"db-run-from-caret":                 aiNever("SQL runs require the database query tool and its guard"),
 	"db-run-smallest":                   aiNever("SQL runs require the database query tool and its guard"),
@@ -960,6 +961,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"mcp_strict":            aiNever(aiNoAIConfig),
 	"mcp_trusted":           aiNever(aiNoAIConfig),
 	"mcp_disabled_tools":    aiNever(aiNoAIConfig),
+	"mcp_channels":          aiNever(aiNoAIConfig),
 	"mcp_log_level":         aiNever(aiNoAIConfig),
 	// The secret store's backend and auto-lock (secrets_ui.go).
 	"secret_store":        aiNever(aiNoAIConfig),

@@ -2991,6 +2991,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `agent-start-codex` | Agent: Start Codex | confirm (run) |   |
 | `agent-start-gemini` | Agent: Start Gemini CLI | confirm (run) |   |
 | `agent-start-opencode` | Agent: Start OpenCode | confirm (run) |   |
+| `agent-swap-account` | Agent: Switch Account… | never | AI provider, credentials and approvals stay with the user; it replaces the credential file of an outside agent |
 | `agent-usage-plans` | Agent: Usage Plans | never | a read-only screen for the user; the AI reads the numbers through usage_summary |
 | `ai-add` | AI: Add AI… | never | a card for the user; keys and connected AIs stay with the user (the AI shows them with ai_view_open) |
 | `ai-agent-env` | AI: Agent Environment… (setup, secrets, network rule for workflow agents) | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -3276,6 +3277,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-open-sessions` | Databases: Sessions… | never | the user's sessions and transactions |
 | `db-param-info` | Databases: Show Parameter Info | auto |   |
 | `db-paste-connection` | Databases: Paste Connection from Clipboard | never | adds a connection from the clipboard; only the user does that |
+| `db-pause-run` | Databases: Pause / Resume SQL Run Output | never | it stops the output of a run the user started; only the user decides |
 | `db-pending-sources` | Databases: Pending Source Changes… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-pgtap-run` | Databases: Run pgTAP Tests… | never | it runs the user's test functions after a card only the user answers (db_query) |
 | `db-query-log` | Databases: Show Query Log | never | the log holds the literal values of every statement; only the user opens it |
@@ -3857,6 +3859,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 
 | Key | Gate | Reason |
 | --- | --- | --- |
+| `agent_account_swap` | never | AI provider, credentials and approvals stay with the user; it lets termocode replace the credential file of an outside agent |
 | `agent_accounts` | never | AI provider, credentials and approvals stay with the user; the labels of the outside agents' account folders |
 | `agent_auto_continue` | never | AI provider, credentials and approvals stay with the user; it lets termocode type continue into an outside agent's tab after its usage limit resets |
 | `agent_goal_max_tokens` | never | AI provider, credentials and approvals stay with the user; it caps the user's own check loop |
@@ -3968,6 +3971,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `mcp_auto_update` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_call_timeout` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_catalog_url` | never | AI provider, credentials and approvals stay with the user |
+| `mcp_channels` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_disabled_tools` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_enabled` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_github_client_id` | never | AI provider, credentials and approvals stay with the user |

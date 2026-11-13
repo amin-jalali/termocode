@@ -101,6 +101,7 @@ type dbState struct {
 	menuRow             dbTreeRow
 	pendingDisconnectID string
 	sqlRunPending       string                  // DBX-45: the saved run the card asks about
+	sqlRunPaused        map[int]bool            // DBX-45: run tabs (buffer ids) whose output is paused
 	closeSessionKey     string                  // the session Databases: Sessions… asks to close
 	savepointKey        string                  // the session Set / Roll Back to Savepoint acts on
 	savepointName       string                  // the savepoint the rollback card is for

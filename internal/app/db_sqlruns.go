@@ -2,8 +2,10 @@ package app
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -26,6 +28,8 @@ const (
 	dbSQLRunEditID                       = "\x00edit"
 	dbSQLRunPaletteID                    = "db-saved-runs"
 	dbSQLRunPaletteTitle                 = "Databases: Saved SQL Runs…"
+	dbSQLRunPauseID                      = "db-pause-run"
+	dbSQLRunTabPrefix                    = "SQL run · "
 )
 
 // databaseSavedRuns opens the picker of saved runs.
@@ -215,5 +219,51 @@ func dbSQLRunJob(r dbclient.SQLRun, targets []dbclient.SQLRunTarget, root string
 	for k, v := range env {
 		e[k] = v
 	}
-	return terminalJob{Label: "SQL run · " + r.Name, Cmdline: line, Dir: root, Env: e}, nil
+	return terminalJob{Label: dbSQLRunTabPrefix + r.Name, Cmdline: line, Dir: root, Env: e}, nil
+}
+
+// dbRunChansend sends text to the terminal job of buffer buf (a variable so
+// a test can watch it).
+var dbRunChansend = func(m *Model, buf int, text string) {
+	if m.nvim == nil {
+		return
+	}
+	_ = m.nvim.ExecLua(fmt.Sprintf(`
+		local b = %d
+		if vim.api.nvim_buf_is_loaded(b) and vim.bo[b].buftype == 'terminal' then
+			local ok, chan = pcall(function() return vim.bo[b].channel end)
+			if ok and chan and chan > 0 then pcall(vim.fn.chansend, chan, %q) end
+		end
+	`, buf, text))
+}
+
+// databasePauseRun stops the output of the running saved SQL run, or lets
+// it go on. It sends Ctrl-S / Ctrl-Q to the run's tab, which the terminal
+// treats as flow control: the client waits until the output is resumed.
+func (m *Model) databasePauseRun() tea.Cmd {
+	var tab *terminalTab
+	if t := m.activeTerminalTab(); t != nil && t.Running && strings.HasPrefix(t.Name, dbSQLRunTabPrefix) {
+		tab = t
+	}
+	for i := len(m.terminalTabs) - 1; i >= 0 && tab == nil; i-- {
+		if t := &m.terminalTabs[i]; t.Running && strings.HasPrefix(t.Name, dbSQLRunTabPrefix) {
+			tab = t
+		}
+	}
+	if tab == nil {
+		return m.pushToastDetail(toast.Info, "No SQL run is going", "Start one with Databases: Saved SQL Runs…")
+	}
+	s := m.databases
+	if s.sqlRunPaused == nil {
+		s.sqlRunPaused = map[int]bool{}
+	}
+	name := sanitizeDBText(strings.TrimPrefix(tab.Name, dbSQLRunTabPrefix))
+	if s.sqlRunPaused[tab.BufID] {
+		delete(s.sqlRunPaused, tab.BufID)
+		dbRunChansend(m, tab.BufID, "\x11")
+		return m.pushToastDetail(toast.Info, "Resumed "+name, "The output goes on.")
+	}
+	s.sqlRunPaused[tab.BufID] = true
+	dbRunChansend(m, tab.BufID, "\x13")
+	return m.pushToastDetail(toast.Info, "Paused "+name, "Run this command again to go on.")
 }
