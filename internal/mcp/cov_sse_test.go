@@ -202,7 +202,20 @@ func TestCovLegacySSECallFailures(t *testing.T) {
 	s.postErr, s.respond = 0, false
 	s.mu.Unlock()
 	ctx, cancel := context.WithCancel(context.Background())
-	go func() { time.Sleep(100 * time.Millisecond); cancel() }()
+	go func() {
+		for end := time.Now().Add(5 * time.Second); time.Now().Before(end); time.Sleep(5 * time.Millisecond) {
+			s.mu.Lock()
+			seen := false
+			for _, p := range s.posts {
+				seen = seen || p["method"] == "slow"
+			}
+			s.mu.Unlock()
+			if seen {
+				break
+			}
+		}
+		cancel()
+	}()
 	if _, err := conn.Call(ctx, "slow", nil); !errors.Is(err, context.Canceled) {
 		t.Errorf("cancel: %v", err)
 	}
@@ -231,7 +244,17 @@ func TestCovLegacySSECallFailures(t *testing.T) {
 	// closing the connection ends a waiting call and later calls fail
 	waiting := make(chan error, 1)
 	go func() { _, err := conn.Call(context.Background(), "wait", nil); waiting <- err }()
-	time.Sleep(100 * time.Millisecond)
+	for end := time.Now().Add(5 * time.Second); time.Now().Before(end); time.Sleep(5 * time.Millisecond) {
+		s.mu.Lock()
+		seen := false
+		for _, p := range s.posts {
+			seen = seen || p["method"] == "wait"
+		}
+		s.mu.Unlock()
+		if seen {
+			break
+		}
+	}
 	conn.Close()
 	select {
 	case err := <-waiting:
