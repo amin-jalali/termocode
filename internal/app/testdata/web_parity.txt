@@ -760,6 +760,7 @@ missing	http-mock-stop	HTTP|S
 missing	http-proxy-set	HTTP|S
 missing	http-ws-close	HTTP|S
 missing	http-ws-send	HTTP|S
+missing	kubernetes-add-cluster	Kubernetes|S
 missing	kubernetes-apply-file	Kubernetes|M
 missing	kubernetes-helm	Kubernetes|M
 missing	kubernetes-helm-install	Kubernetes|S

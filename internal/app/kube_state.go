@@ -497,6 +497,8 @@ func (m *Model) handleKubeMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onKubeCopy(msg), true
 	case kubeHelmMsg:
 		return m.onKubeHelm(msg), true
+	case kubeAddClusterMsg:
+		return m.onKubeAddCluster(msg), true
 	case kubeKustomizeMsg:
 		return m.onKubeKustomize(msg), true
 	}

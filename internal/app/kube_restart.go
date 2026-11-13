@@ -59,6 +59,9 @@ func (m *Model) handleKubeConfirm(id string) (tea.Cmd, bool) {
 	if cmd, ok := m.handleKubeInstallConfirm(id); ok { // kube_install.go
 		return cmd, true
 	}
+	if cmd, ok := m.handleKubeAddClusterConfirm(id); ok { // kube_kubeconfig.go
+		return cmd, true
+	}
 	if m.kube != nil {
 		if cmd, ok := m.handleKubeFileConfirm(id); ok { // kube_podfiles.go
 			return cmd, true

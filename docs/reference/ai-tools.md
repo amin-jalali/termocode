@@ -3587,6 +3587,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `itermoc-profiles` | Itermoc: Profiles | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
 | `itermoc-services` | Itermoc: Services | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
 | `join-lines` | Edit: Join Lines | confirm (fileWrite) |   |
+| `kubernetes-add-cluster` | Kubernetes: Add Cluster to Kubeconfig… | never | the AI never edits the kubeconfig; only the person does, after a card with the diff |
 | `kubernetes-apply-file` | Kubernetes: Apply Current File… | never | use the typed tool kube_manage op apply |
 | `kubernetes-context` | Kubernetes: Switch Context… | never | use the typed tool kube_manage op use_context |
 | `kubernetes-helm` | Kubernetes: Helm Releases… | never | use the typed tool kube_manage op helm_list / helm_status / helm_history / helm_rollback / helm_uninstall |

@@ -60,8 +60,23 @@ view says so in one line and waits longer before it tries again.
 - `n` picks another namespace.
 
 The choice is for this termocode window only. termocode passes it to
-`kubectl` as `--context` and `--namespace`. It never changes your
-kubeconfig, so other terminals keep their context.
+`kubectl` as `--context` and `--namespace`. Picking a context or a
+namespace never changes your kubeconfig, so other terminals keep their
+context. The one thing that writes the kubeconfig is **Kubernetes: Add
+Cluster to Kubeconfig…** (command palette), and only after your OK, with
+a backup. See below.
+
+### Add a cluster to the kubeconfig
+
+Type a name, the server URL and, if you have one, the CA file (for
+example `dev https://10.0.0.1:6443 /etc/ca.pem`). A card shows the exact
+change as a diff. **Cancel** is first and has the focus. Only when you
+choose **Add**, termocode copies your file to `config.bak-YYYYMMDD-HHMMSS`
+next to it, then writes the new one. It only adds lines: your comments,
+order and the current context stay. It adds a cluster and a context with
+the same name; add credentials with your cluster's own tools. It refuses
+a name that is already used. The file is the first entry of `KUBECONFIG`,
+or `~/.kube/config`. The AI never runs this command.
 
 ## Keys
 
