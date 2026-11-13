@@ -40,10 +40,16 @@ const (
 // Qualify Names are only offered when the columns of every table are
 // known.
 func SQLIntentions(stmt, driver string, cur int, cols map[string][]string) []SQLIntention {
+	return SQLIntentionsWith(stmt, driver, cur, cols, SQLIntentOpts{})
+}
+
+// SQLIntentionsWith is SQLIntentions with a selection (sqlintent_sel.go).
+func SQLIntentionsWith(stmt, driver string, cur int, cols map[string][]string, o SQLIntentOpts) []SQLIntention {
 	c, err := newIntentCtx(stmt, driver, cur, cols)
 	if err != nil {
 		return nil
 	}
+	c.opts = o
 	var out []SQLIntention
 	for _, p := range c.plans() {
 		if title, _, ok := p.fn(); ok {
@@ -55,10 +61,16 @@ func SQLIntentions(stmt, driver string, cur int, cols map[string][]string) []SQL
 
 // ApplySQLIntention returns stmt rewritten by the intention id.
 func ApplySQLIntention(stmt, driver, id string, cur int, cols map[string][]string) (string, error) {
+	return ApplySQLIntentionWith(stmt, driver, id, cur, cols, SQLIntentOpts{})
+}
+
+// ApplySQLIntentionWith is ApplySQLIntention with a selection.
+func ApplySQLIntentionWith(stmt, driver, id string, cur int, cols map[string][]string, o SQLIntentOpts) (string, error) {
 	c, err := newIntentCtx(stmt, driver, cur, cols)
 	if err != nil {
 		return "", err
 	}
+	c.opts = o
 	for _, p := range c.plans() {
 		if p.id != id {
 			continue
@@ -138,6 +150,7 @@ type intentCtx struct {
 	recursive bool
 	cur       int
 	cols      map[string][]string
+	opts      SQLIntentOpts
 }
 
 func newIntentCtx(src, driver string, cur int, cols map[string][]string) (*intentCtx, error) {
@@ -620,6 +633,9 @@ func (c *intentCtx) plans() []intentPlan {
 		{IntentParam, c.extractParam},
 		{IntentDistinctGroup, c.distinctToGroup},
 		{IntentGroupDistinct, c.groupToDistinct},
+		{IntentExtractExprSub, c.extractExprSub},
+		{IntentExtractExprCTE, c.extractExprCTE},
+		{IntentExtractSelCTE, c.extractSelCTE},
 	}
 }
 
@@ -978,7 +994,7 @@ func (c *intentCtx) wrapSubquery() (string, []sqlEdit, bool) {
 }
 
 func (c *intentCtx) extractCTE() (string, []sqlEdit, bool) {
-	if isIWord(c.toks[0], "with") && len(c.ctes) == 0 || !isIWord(c.toks[0], "with", "select") {
+	if !c.cteOK() {
 		return "", nil, false
 	}
 	k := c.tokAt()
@@ -1032,27 +1048,31 @@ func (c *intentCtx) extractCTE() (string, []sqlEdit, bool) {
 	} else {
 		eds = append(eds, sqlEdit{c.toks[best.a].pos, c.toks[cl].end, name})
 	}
-	def := name + " AS (" + body + ")"
+	eds = append(eds, c.cteDefEdit(best.a, name+" AS ("+body+")"))
+	return "Extract subquery as CTE " + name, eds, true
+}
+
+// cteOK: a CTE can be added (the statement is a SELECT or has a WITH
+// list we read).
+func (c *intentCtx) cteOK() bool {
+	return !(isIWord(c.toks[0], "with") && len(c.ctes) == 0) && isIWord(c.toks[0], "with", "select")
+}
+
+// cteDefEdit adds def to the WITH list: before the CTE whose body holds
+// token j, else at the end of the list (a new WITH when there is none).
+func (c *intentCtx) cteDefEdit(j int, def string) sqlEdit {
 	if len(c.ctes) == 0 {
-		eds = append(eds, sqlEdit{c.toks[0].pos, c.toks[0].pos, "WITH " + def + "\n"})
-	} else {
-		at := -1
-		for _, d := range c.ctes {
-			if best.a > d.open && best.a < d.close {
-				at = d.name
-				break
-			}
-		}
-		if at >= 0 {
-			p := c.toks[at].pos
+		return sqlEdit{c.toks[0].pos, c.toks[0].pos, "WITH " + def + "\n"}
+	}
+	for _, d := range c.ctes {
+		if j > d.open && j < d.close {
+			p := c.toks[d.name].pos
 			ind, _ := c.lineIndent(p)
-			eds = append(eds, sqlEdit{p, p, def + ",\n" + ind})
-		} else {
-			p := c.toks[c.ctes[len(c.ctes)-1].close].end
-			eds = append(eds, sqlEdit{p, p, ",\n" + def})
+			return sqlEdit{p, p, def + ",\n" + ind}
 		}
 	}
-	return "Extract subquery as CTE " + name, eds, true
+	p := c.toks[c.ctes[len(c.ctes)-1].close].end
+	return sqlEdit{p, p, ",\n" + def}
 }
 
 func (c *intentCtx) inlineCTE() (string, []sqlEdit, bool) {
