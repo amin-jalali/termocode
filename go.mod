@@ -30,6 +30,7 @@ require (
 	github.com/sijms/go-ora/v2 v2.9.0
 	github.com/vertica/vertica-sql-go v1.3.9
 	github.com/yuin/goldmark v1.7.17
+	github.com/yuin/gopher-lua v1.1.2
 	github.com/zalando/go-keyring v0.2.6
 	go.mongodb.org/mongo-driver/v2 v2.9.3
 	go.yaml.in/yaml/v3 v3.0.5
