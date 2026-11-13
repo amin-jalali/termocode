@@ -95,7 +95,9 @@ func TestCmpSnowflake(t *testing.T) {
 
 type failSend struct{ fakeConn }
 
-func (f *failSend) Send(context.Context, string, string) error { return errors.New("blocked by the user") }
+func (f *failSend) Send(context.Context, string, string) error {
+	return errors.New("blocked by the user")
+}
 
 func TestBridgeLogsSendErrorsAndStartErrors(t *testing.T) {
 	var logs []string

@@ -1464,6 +1464,38 @@ termocode ai exec --output stream-json --tools all --allow fileWrite "fix the ty
 | 5 | Step limit reached: the work is not finished |
 | 130 | Interrupted (Ctrl+C) |
 
+## Ask the AI from Telegram or Discord
+
+`termocode chat` runs your own bot. You write to it from your phone, and
+each message is one AI turn in the folder, like `termocode ai -x` with the
+tools that only read: it never changes a file. The answer comes back in
+the chat. Each message is its own question (no memory between messages).
+
+1. Make a bot: on Telegram with @BotFather, on Discord in the developer
+   portal (turn on the Message Content intent and add the bot to your
+   server).
+2. Save its token. It goes to termocode's secret store, never on the
+   command line:
+
+   ```sh
+   termocode chat token telegram      # or: termocode chat token discord
+   ```
+
+3. Start the bot in the project folder. Only the user ids in `--allow`
+   get answers. A bot is public, so this list is required. Write
+   `/whoami` to the bot to see your id.
+
+   ```sh
+   termocode chat telegram --allow 123456789
+   termocode chat discord --channel 112233445566778899 --allow 998877665544332211
+   ```
+
+- Messages written while the bot was off are skipped; they do not run later.
+- Someone not on the list gets one short reply with their id, and nothing else.
+- `--dir`, `--model` and `--tools read|none` change the turn. Secrets are
+  hidden in every answer. Discord answers never ping anyone.
+- Ctrl+C stops the bot. A token the service does not take any more stops it too.
+
 ## Keys at a glance
 
 | Key | Action |

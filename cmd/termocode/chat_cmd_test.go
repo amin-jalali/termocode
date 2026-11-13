@@ -38,7 +38,7 @@ func chatSeams(t *testing.T, secret map[string]string, turn func(context.Context
 	chatBase = map[string]string{"telegram": base, "discord": base}
 }
 
-func runChat(t *testing.T, ctx context.Context, stdin string, args ...string) (int, string, string) {
+func chatRun(t *testing.T, ctx context.Context, stdin string, args ...string) (int, string, string) {
 	t.Helper()
 	var out, errw bytes.Buffer
 	code := runChatIn(ctx, args, strings.NewReader(stdin), &out, &errw)
@@ -47,33 +47,33 @@ func runChat(t *testing.T, ctx context.Context, stdin string, args ...string) (i
 
 func TestChatUsage(t *testing.T) {
 	chatSeams(t, map[string]string{}, nil, "")
-	if code, _, e := runChat(t, context.Background(), ""); code != 2 || !strings.Contains(e, "termocode chat telegram") {
+	if code, _, e := chatRun(t, context.Background(), ""); code != 2 || !strings.Contains(e, "termocode chat telegram") {
 		t.Fatalf("no args: %d %q", code, e)
 	}
-	if code, o, _ := runChat(t, context.Background(), "", "--help"); code != 0 || !strings.Contains(o, "--allow") {
+	if code, o, _ := chatRun(t, context.Background(), "", "--help"); code != 0 || !strings.Contains(o, "--allow") {
 		t.Fatalf("help: %d %q", code, o)
 	}
-	if code, _, e := runChat(t, context.Background(), "", "slack", "--allow", "1"); code != 2 || !strings.Contains(e, "telegram or discord") {
+	if code, _, e := chatRun(t, context.Background(), "", "slack", "--allow", "1"); code != 2 || !strings.Contains(e, "telegram or discord") {
 		t.Fatalf("unknown service: %d %q", code, e)
 	}
 }
 
 func TestChatNeedsAllowAndChannel(t *testing.T) {
 	chatSeams(t, map[string]string{"chat.telegram.token": "t", "chat.discord.token": "d"}, nil, "")
-	if code, _, e := runChat(t, context.Background(), "", "telegram"); code != 2 || !strings.Contains(e, "--allow") {
+	if code, _, e := chatRun(t, context.Background(), "", "telegram"); code != 2 || !strings.Contains(e, "--allow") {
 		t.Fatalf("no --allow: %d %q", code, e)
 	}
-	if code, _, e := runChat(t, context.Background(), "", "discord", "--allow", "7"); code != 2 || !strings.Contains(e, "--channel") {
+	if code, _, e := chatRun(t, context.Background(), "", "discord", "--allow", "7"); code != 2 || !strings.Contains(e, "--channel") {
 		t.Fatalf("discord without --channel: %d %q", code, e)
 	}
-	if code, _, e := runChat(t, context.Background(), "", "telegram", "--allow", "7", "--tools", "all"); code != 2 || !strings.Contains(e, "--tools") {
+	if code, _, e := chatRun(t, context.Background(), "", "telegram", "--allow", "7", "--tools", "all"); code != 2 || !strings.Contains(e, "--tools") {
 		t.Fatalf("a chat never gets the mutating tools: %d %q", code, e)
 	}
 }
 
 func TestChatWithoutTokenSaysHowToSetIt(t *testing.T) {
 	chatSeams(t, map[string]string{}, nil, "")
-	code, _, e := runChat(t, context.Background(), "", "telegram", "--allow", "7")
+	code, _, e := chatRun(t, context.Background(), "", "telegram", "--allow", "7")
 	if code != 1 || !strings.Contains(e, "termocode chat token telegram") {
 		t.Fatalf("no token: %d %q", code, e)
 	}
@@ -82,18 +82,18 @@ func TestChatWithoutTokenSaysHowToSetIt(t *testing.T) {
 func TestChatTokenSavesToTheSecretStore(t *testing.T) {
 	sec := map[string]string{}
 	chatSeams(t, sec, nil, "")
-	code, o, e := runChat(t, context.Background(), "123:ABCsecret\n", "token", "telegram")
+	code, o, e := chatRun(t, context.Background(), "123:ABCsecret\n", "token", "telegram")
 	if code != 0 || sec["chat.telegram.token"] != "123:ABCsecret" {
 		t.Fatalf("token: %d %q %v", code, e, sec)
 	}
 	if strings.Contains(o+e, "ABCsecret") {
 		t.Fatalf("the token was printed: %q %q", o, e)
 	}
-	if code, _, _ := runChat(t, context.Background(), "\n", "token", "discord"); code == 0 {
+	if code, _, _ := chatRun(t, context.Background(), "\n", "token", "discord"); code == 0 {
 		t.Fatal("an empty token was saved")
 	}
 	chatSecretSet = func(string, string) error { return errors.New("the secret store is locked") }
-	if code, _, e := runChat(t, context.Background(), "x\n", "token", "discord"); code != 1 || !strings.Contains(e, "locked") {
+	if code, _, e := chatRun(t, context.Background(), "x\n", "token", "discord"); code != 1 || !strings.Contains(e, "locked") {
 		t.Fatalf("store error: %d %q", code, e)
 	}
 }
@@ -146,7 +146,7 @@ func TestChatTelegramAnswersWithAnAITurn(t *testing.T) {
 		got, asked = o, q
 		return "main.go starts the app.", nil
 	}, srv.URL)
-	code, _, e := runChat(t, ctx, "", "telegram", "--allow", "7,8", "--dir", dir)
+	code, _, e := chatRun(t, ctx, "", "telegram", "--allow", "7,8", "--dir", dir)
 	if code != 0 {
 		t.Fatalf("exit %d: %s", code, e)
 	}
