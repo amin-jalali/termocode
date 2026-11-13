@@ -281,7 +281,11 @@ type containerLSPState struct {
 	// mirrored: the mirror holds a fill (LocalDir may use it).
 	mirrored bool
 	filling  bool
-	plan     containerLSPPlan
+	// polling: a mirror poll runs; pollOff: a poll failed, no more
+	// (container_mirror_poll.go).
+	// pollTicking: a chain of polls is scheduled.
+	polling, pollOff, pollTicking bool
+	plan                          containerLSPPlan
 }
 
 // containerMirrorBase is the folder of all mirrors (tests point it to
@@ -453,6 +457,9 @@ func (m *Model) fillContainerMirrorCmd() tea.Cmd {
 
 // handleContainerLSPMsg routes the phase-5 messages. ok=false: not ours.
 func (m *Model) handleContainerLSPMsg(msg tea.Msg) (tea.Cmd, bool) {
+	if cmd, ok := m.handleMirrorPollMsg(msg); ok { // container_mirror_poll.go
+		return cmd, true
+	}
 	st := m.containerLSP
 	switch msg := msg.(type) {
 	case containerLSPProbedMsg:
@@ -476,13 +483,13 @@ func (m *Model) handleContainerLSPMsg(msg tea.Msg) (tea.Cmd, bool) {
 		case msg.err == nil:
 			st.mirrored = true
 			activeLSPMirror.Store(st.mirror)
-			cmd := m.applyContainerLSP(false)
+			cmd := tea.Batch(m.applyContainerLSP(false), m.startMirrorPoll())
 			return tea.Batch(cmd, m.pushToastDetail(toast.Info, "Local language server ready",
 				"Copied "+strconv.Itoa(msg.stats.Files)+" files of "+label+" into a read-only local mirror.")), true
 		case errors.Is(msg.err, lspmirror.ErrCap):
 			st.mirrored = true
 			activeLSPMirror.Store(st.mirror)
-			cmd := m.applyContainerLSP(false)
+			cmd := tea.Batch(m.applyContainerLSP(false), m.startMirrorPoll())
 			return tea.Batch(cmd, m.pushToastDetail(toast.Warn, "Mirror is only partial",
 				"The code of "+label+" is larger than 512 MB; the local language server sees part of it.")), true
 		}

@@ -111,7 +111,11 @@ Local Diagnostics in Container Workspace**.
 The mirror leaves out `node_modules`, `.venv`, `vendor`, `target`,
 `__pycache__` and `.git/objects`, holds at most 512 MB per folder and
 2 GB in all (the oldest go first). Your saves, renames, moves and
-deletes from termocode update it at once. In `config.json` the settings are `container_lsp`
+deletes from termocode update it at once. Every 5 seconds it also takes
+the files changed in the container in the last minute by anything else (a
+checkout or a build in the container's terminal), with one `find` in the
+container; an image without `find` skips this, and **LSP: Refresh
+Container Mirror** copies everything again. In `config.json` the settings are `container_lsp`
 (`auto`, `image`, `local`, `off`) and `container_local_lsp_diagnostics`
 (`on`, `off`).
 
