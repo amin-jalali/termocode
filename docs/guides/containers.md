@@ -262,6 +262,9 @@ stage, unstage, discard, commit, push, pull, fetch, checkout, and new
 branches all work there (git must be in the image). Staging, unstaging
 or discarding one hunk or a few lines works too: the patch goes to
 `git apply` on its input, so no file is written in the container.
+After a discard, a git command or an AI edit in the container, the open
+files read the container's text again; a file with unsaved edits keeps
+them and a warning says the file changed in the container.
 **Replace in Workspace** reads and writes the files through the
 container too.
 
