@@ -118,6 +118,9 @@ type warehouseQueries struct {
 	objects                 func(db, schema string) (string, []any)
 	columns                 func(db, schema, object string) (string, []any)
 	ddl                     func(db, schema, object string) (string, []any)
+	// objectCol names the objects' name column ("": the first column,
+	// its kind the second).
+	objectCol string
 }
 
 func warehouseIntrospect(ctx context.Context, s Session, q warehouseQueries, req IntrospectionRequest) (IntrospectionResult, error) {
@@ -135,6 +138,13 @@ func warehouseIntrospect(ctx context.Context, s Session, q warehouseQueries, req
 		res := run(q.objects(req.Database, req.Schema))
 		if res.Err != nil {
 			return out, res.Err
+		}
+		if q.objectCol != "" {
+			names, err := warehouseList(res, q.objectCol)
+			for _, n := range names {
+				out.Objects = append(out.Objects, SchemaObject{Name: n, Kind: "BASE TABLE"})
+			}
+			return out, err
 		}
 		for _, r := range res.Rows {
 			o := SchemaObject{Name: r[0].Text, Kind: "BASE TABLE"}
