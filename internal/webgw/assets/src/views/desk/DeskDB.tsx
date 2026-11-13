@@ -89,6 +89,7 @@ function read(op: string, args: unknown): void {
 function connItems(c: DBConnView): MenuItems {
   const act = canAct();
   const sql = c.sql;
+  const cql = c.driver === "cassandra"; // CQL has no transactions or schema compare
   return [
     { label: t("dbv.new_query"), disabled: !sql, run: () => showFile(sqlTab(c.id)) },
     c.connected
@@ -98,9 +99,9 @@ function connItems(c: DBConnView): MenuItems {
     null,
     { label: t("dbv.commit"), disabled: !act || !c.tx, run: () => ask(t("dbv.commit"), "db.tx", { conn: c.id, verb: "commit" }) },
     { label: t("dbv.rollback"), disabled: !act || !c.tx, run: () => ask(t("dbv.rollback"), "db.tx", { conn: c.id, verb: "rollback" }) },
-    { label: t("dbv.tx_mode"), disabled: !act || !sql, run: () => (dbForm.value = { kind: "tx", conn: c.id }) },
+    { label: t("dbv.tx_mode"), disabled: !act || !sql || cql, run: () => (dbForm.value = { kind: "tx", conn: c.id }) },
     null,
-    { label: t("dbv.compare"), disabled: !sql, run: () => (dbForm.value = { kind: "compare", conn: c.id }) },
+    { label: t("dbv.compare"), disabled: !sql || cql, run: () => (dbForm.value = { kind: "compare", conn: c.id }) },
     { label: t("dbv.ssh"), disabled: !act || c.driver === "sqlite", run: () => (dbForm.value = { kind: "ssh", conn: c.id }) },
     { label: t("dbv.ssl"), disabled: !act || c.driver === "sqlite", run: () => (dbForm.value = { kind: "ssl", conn: c.id }) },
   ];
@@ -110,7 +111,7 @@ function tableItems(c: DBConnView, name: string, view: boolean): MenuItems {
   return [
     { label: t("dbv.open_rows"), run: () => showFile(dbTab(c.id, name)) },
     { label: t("dbv.ddl"), run: () => showFile(ddlTab(c.id, name)) },
-    { label: t("dbv.import"), disabled: !canAct() || view || c.readonly, run: () => (dbForm.value = { kind: "import", conn: c.id, table: name }) },
+    { label: t("dbv.import"), disabled: !canAct() || view || c.readonly || c.driver === "cassandra", run: () => (dbForm.value = { kind: "import", conn: c.id, table: name }) },
   ];
 }
 
@@ -176,7 +177,7 @@ function ConnRows({ c }: { c: DBConnView }) {
       />
       {isOpen && (!tl || tl.s === "loading") && <p class="tr-note">{t("loading")}</p>}
       {isOpen && tl?.s === "err" && (tl.need ? <DBNeedAsk conn={c.id} need={tl.need} msg={tl.msg} onDone={() => loadChildren(c)} onNo={() => dropNeed(c.id)} /> : <p class="tr-note is-err">{tl.msg}</p>)}
-      {isOpen && tl?.s === "ok" && ("keys" in tl.v ? <KeyRows c={c} v={tl.v} /> : <SchemaRows c={c} v={tl.v} />)}
+      {isOpen && tl?.s === "ok" && ("keys" in tl.v ? <KeyRows c={c} v={tl.v} /> : (c.driver === "cassandra" ? <KeyspaceRows c={c} v={tl.v} /> : <SchemaRows c={c} v={tl.v} />))}
     </>
   );
 }
@@ -210,6 +211,20 @@ function KeyRows({ c, v }: { c: DBConnView; v: RedisKeys }) {
         />
       ))}
       {v.more && <p class="tr-note">{t("dbv.keys_more")}</p>}
+    </>
+  );
+}
+
+/** KeyspaceRows is a Cassandra connection: each keyspace is a schema (x.group). */
+function KeyspaceRows({ c, v }: { c: DBConnView; v: Tables }) {
+  const g = new Map<string, Tables["tables"]>();
+  for (const x of v.tables) g.set(x.group, [...(g.get(x.group) ?? []), x]);
+  return (
+    <>
+      {[...g].map(([schema, tables]) => (
+        <SchemaRows key={schema} c={c} v={{ schema, tables, more: 0 }} />
+      ))}
+      {v.more > 0 && <p class="tr-note">{t("dbv.more", { n: v.more })}</p>}
     </>
   );
 }

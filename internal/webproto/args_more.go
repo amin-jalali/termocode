@@ -146,12 +146,29 @@ type DBRowsArgs struct {
 	Conn  string `json:"conn"`
 	Table string `json:"table"`
 	From  int    `json:"from,omitempty"`
+	// Cursor is the page the previous answer's cursor names (Cassandra,
+	// which has no OFFSET; from is not used there).
+	Cursor string `json:"cursor,omitempty"`
 }
 
 // DBSQLArgs is one SQL statement for a connection.
 type DBSQLArgs struct {
 	Conn string `json:"conn"`
 	SQL  string `json:"sql"`
+	// Cursor is the next page of a CQL read (db.query), as db.rows has it.
+	Cursor string `json:"cursor,omitempty"`
+}
+
+// validCursor is empty, or the base64 of a CQL page state.
+func validCursor(c string) bool {
+	if c == "" {
+		return true
+	}
+	if len(c) > MaxDBCursor {
+		return false
+	}
+	_, err := base64.StdEncoding.DecodeString(c)
+	return err == nil
 }
 
 func (a *DBConnArgs) validate(int) error {
@@ -162,7 +179,7 @@ func (a *DBConnArgs) validate(int) error {
 }
 
 func (a *DBRowsArgs) validate(int) error {
-	if !validName(a.Conn, MaxID) || !validName(a.Table, MaxDBTable) || a.From < 0 || a.From > 1<<30 {
+	if !validName(a.Conn, MaxID) || !validName(a.Table, MaxDBTable) || a.From < 0 || a.From > 1<<30 || !validCursor(a.Cursor) {
 		return invalid("bad connection, table or page")
 	}
 	return nil
@@ -174,6 +191,9 @@ func (a *DBSQLArgs) validate(int) error {
 	}
 	if strings.TrimSpace(a.SQL) == "" || len(a.SQL) > MaxDBSQL || strings.ContainsRune(a.SQL, 0) {
 		return invalid("bad SQL")
+	}
+	if !validCursor(a.Cursor) {
+		return invalid("bad cursor")
 	}
 	return nil
 }

@@ -83,7 +83,7 @@ var opMoreRows = []Policy{
 	// Databases.
 	{Op: OpDBConns, New: newOf[EmptyArgs](), Role: RoleViewer, Rate: perSec(2), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV2},
 	{Op: OpDBTables, New: newOf[DBConnArgs](), Role: RoleViewer, Rate: perSec(2), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
-	{Op: OpDBRows, New: newOf[DBRowsArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 2 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
+	{Op: OpDBRows, New: newOf[DBRowsArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 6 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
 	{Op: OpDBQuery, New: newOf[DBSQLArgs](), Role: RoleController, Rate: perSec(1), MaxBytes: 72 * kib, Live: 1, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpDBExec, New: newOf[DBSQLArgs](), Role: RoleController, Rate: slow, MaxBytes: 72 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 
