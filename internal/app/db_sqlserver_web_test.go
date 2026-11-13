@@ -53,3 +53,22 @@ func TestSQLServerInWebAndMCPDBTools(t *testing.T) {
 		t.Errorf("where = %q", webDBWhere(c))
 	}
 }
+
+// The AI's db_explain on SQL Server (DBX-62): T-SQL has no EXPLAIN prefix,
+// so the tool sends the SHOWPLAN XML plan form (never the bare statement).
+func TestAIDBExplainSQLServerUsesShowplan(t *testing.T) {
+	e := newAIDBEnv(t)
+	conns := `{"connections":[{"id":"ms","driver":"sqlserver","host":"db","port":1433,"user":"sa","database":"shop"}]}`
+	if err := os.WriteFile(filepath.Join(e.root, ".termocode", "databases.json"), []byte(conns), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := e.gate(t, "db_explain", map[string]any{"conn": "ms", "sql": "SELECT * FROM orders"}); err != nil {
+		t.Fatalf("db_explain refused SQL Server: %v", err)
+	}
+	if _, err := e.run(t, "db_explain", map[string]any{"conn": "ms", "sql": "SELECT * FROM orders"}); err != nil {
+		t.Fatal(err)
+	}
+	if ran := strings.Join(e.log, ";"); !strings.Contains(ran, dbclient.SQLServerPlanForm("SELECT * FROM orders", false)) {
+		t.Fatalf("ran %q", ran)
+	}
+}
