@@ -26,6 +26,7 @@ type webConfig struct {
 	RequireTOTP bool   // web_require_totp (WEB-48)
 	AppKeyLogin bool   // web_app_key_login (MOB-27)
 	PushDetail  string // web_push_detail (MOB-30): none, count or title
+	Push        bool   // web_push (CMP-47): "off" sends no push to a phone at all
 	PhoneWatch  bool   // web_phone: "on": a paired phone that watches keeps the panel up (MOB-31)
 	// ApproveOnLaptop (web_approve_on_laptop): a web action that needs a
 	// confirm waits for the laptop's card; off, the page confirms it.
@@ -41,7 +42,7 @@ type webConfig struct {
 // webSettings reads and checks the web settings from config.json.
 func webSettings() webConfig {
 	s := loadSettings()
-	c := webConfig{On: true, IdleMinutes: 15, MaxHours: 12, OpenBrowser: true, MaxViewers: 4, PushDetail: webpush.DetailCount, ProjectsMax: 4, ProjectIdleMinutes: 60}
+	c := webConfig{On: true, IdleMinutes: 15, MaxHours: 12, OpenBrowser: true, MaxViewers: 4, Push: true, PushDetail: webpush.DetailCount, ProjectsMax: 4, ProjectIdleMinutes: 60}
 	switch strings.ToLower(strings.TrimSpace(s.WebPanel)) {
 	case "", "auto":
 	case "off":
@@ -59,6 +60,13 @@ func webSettings() webConfig {
 		c.LAN = true
 	default:
 		c.Problems = append(c.Problems, fmt.Sprintf("web_listen %q: use \"loopback\", \"tailnet\" or \"lan\"", s.WebListen))
+	}
+	switch strings.ToLower(strings.TrimSpace(s.WebPush)) {
+	case "", "on":
+	case "off":
+		c.Push = false
+	default:
+		c.Problems = append(c.Problems, fmt.Sprintf("web_push %q: use \"on\" or \"off\"", s.WebPush))
 	}
 	switch strings.ToLower(strings.TrimSpace(s.WebPhone)) {
 	case "", "off":

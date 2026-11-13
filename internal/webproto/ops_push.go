@@ -2,6 +2,7 @@ package webproto
 
 import (
 	"encoding/base64"
+	"strings"
 
 	"github.com/amin-jalali/termocode/internal/webpush"
 )
@@ -21,6 +22,8 @@ const (
 	OpPushKey         = "push.key"
 	OpPushSubscribe   = "push.subscribe"
 	OpPushUnsubscribe = "push.unsubscribe"
+	OpPushList        = "push.list"   // the web settings' list of subscriptions (CMP-47)
+	OpPushRemove      = "push.remove" // remove one device's subscription
 )
 
 // PushKeyArgs: Make creates the key when there is none yet.
@@ -77,6 +80,40 @@ func (a *PushSubArgs) validate(int) error {
 	return nil
 }
 
+// PushListArgs: no arguments.
+type PushListArgs struct{}
+
+// PushRemoveArgs names the device whose subscription is removed.
+type PushRemoveArgs struct {
+	Device string `json:"device"`
+}
+
+func (a *PushRemoveArgs) validate(int) error {
+	if !strings.HasPrefix(a.Device, "dev-") || len(a.Device) > 40 {
+		return invalid("bad device")
+	}
+	for _, r := range a.Device[4:] {
+		if !(r >= '0' && r <= '9' || r >= 'a' && r <= 'f') {
+			return invalid("bad device")
+		}
+	}
+	return nil
+}
+
+// PushItem is one device that gets pushes: its name, when it was added
+// (ms since 1970) and whether it is the asking device. Never an address.
+type PushItem struct {
+	Device string `json:"device"`
+	Name   string `json:"name"`
+	Added  int64  `json:"added"`
+	This   bool   `json:"this,omitempty"`
+}
+
+// PushList is the result of push.list and push.remove.
+type PushList struct {
+	Items []PushItem `json:"items"`
+}
+
 // PushState is the result of the push ops. State: ready (Key is set),
 // none (no key yet and make was false), locked (the laptop's secret
 // store is locked), off (this connection cannot get pushes: not a
@@ -90,6 +127,8 @@ type PushState struct {
 var opPushRows = []Policy{
 	{Op: OpPushKey, New: newOf[PushKeyArgs](), Role: RoleViewer, Rate: perSec(1), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
 	{Op: OpPushSubscribe, New: newOf[PushSubArgs](), Role: RoleViewer, Rate: slow, MaxBytes: 2 * kib, Live: 1, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpPushList, New: newOf[PushListArgs](), Role: RoleController, Rate: perSec(2), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
+	{Op: OpPushRemove, New: newOf[PushRemoveArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, Live: 1, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpPushUnsubscribe, New: newOf[PushUnsubscribeArgs](), Role: RoleViewer, Rate: slow, MaxBytes: 1 * kib, Live: 1, Audit: AuditYes, Phase: PhaseV2},
 }
 
@@ -99,4 +138,6 @@ func init() {
 	registerResult(OpPushKey, PushState{})
 	registerResult(OpPushSubscribe, PushState{})
 	registerResult(OpPushUnsubscribe, PushState{})
+	registerResult(OpPushList, PushList{})
+	registerResult(OpPushRemove, PushList{})
 }

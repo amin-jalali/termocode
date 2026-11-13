@@ -417,6 +417,8 @@ var fileOnlySettings = []SettingEntry{
 		Description: "Open the one-time link in the browser of this computer when the panel starts. false: only Web: Copy Link."},
 	{Key: "web_max_viewers", Type: "int", Default: "4", Category: "Web (file only)",
 		Description: "How many browsers may be connected at once (1..8). One more is turned away."},
+	{Key: "web_push", Type: "enum", Default: "on", Category: "Web (file only)", Choices: []string{"on", "off"},
+		Description: "on: a paired phone that turned on Notify me gets a push when the AI waits for you or a run ends and no page is open. off: no push is sent at all (the phones keep their subscription, and a later on sends again). The page's own notifications are not changed."},
 	{Key: "web_push_detail", Type: "enum", Default: "count", Category: "Web (file only)", Choices: []string{"none", "count", "title"},
 		Description: "What a push to a paired phone says when something waits for you and the web page is closed (Notify me on the phone, over tailnet). none: only \"Something needs you\". count: how many things wait. title: the count and a fixed text for the kind (an approval, a plan, a review). Never a title, a path or a command. The push is encrypted for the phone and goes through its browser's own push service."},
 	{Key: "web_phone", Type: "enum", Default: "off", Category: "Web (file only)", Choices: []string{"off", "on"},

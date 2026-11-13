@@ -100,6 +100,7 @@ func (m *Model) remoteRename(fsys workspace.FS, from, value string) tea.Cmd {
 		if err := fsys.Rename(ctx, from, to); err != nil {
 			return remoteOpFailedMsg("Rename failed", remoteErrText(label, err))
 		}
+		noteMirrorRename(from, to) // RC-6 (container_lsp.go)
 		return applyMsg(func(m *Model) tea.Cmd {
 			m.err = ""
 			m.followRename(from, to)
@@ -132,6 +133,7 @@ func remoteRemove(fsys workspace.FS, label, p string) error {
 	if err := fsys.Remove(context.Background(), p); err != nil {
 		return errors.New(remoteErrText(label, err))
 	}
+	noteMirrorRemove(p) // RC-6 (container_lsp.go)
 	return nil
 }
 

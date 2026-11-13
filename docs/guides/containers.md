@@ -262,6 +262,9 @@ stage, unstage, discard, commit, push, pull, fetch, checkout, and new
 branches all work there (git must be in the image). Staging, unstaging
 or discarding one hunk or a few lines works too: the patch goes to
 `git apply` on its input, so no file is written in the container.
+After a discard, a git command or an AI edit in the container, the open
+files read the container's text again; a file with unsaved edits keeps
+them and a warning says the file changed in the container.
 **Replace in Workspace** reads and writes the files through the
 container too.
 
@@ -277,6 +280,10 @@ The AI agent works on the container's files as well. `read_file`,
 `run_command` all run in the container, with the same approval cards as
 for a local folder. A file with unsaved edits in the editor is never
 overwritten. MCP clients served by this window get the same tools.
+An agent outside termocode reaches this window with
+`termocode mcp --workspace container:<context>/<name>:/app` (the context
+is `default` when none was given), for example
+`termocode mcp --workspace container:default/api-1:/app`.
 
 **File: Download** and **File: Upload** work in a container workspace
 too. A download first copies the file or folder out of the container

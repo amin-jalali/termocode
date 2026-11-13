@@ -197,6 +197,9 @@ var catppuccinMocha = Spec{
 	Regex: "#f5c2e7", Constant: "#fab387", Operator: "#89dceb",
 }
 
+// Latte: the accent colours (orange, yellow, green, cyan, pink) are the
+// official ones darkened to 3:1 on the sidebar, so text in them reads on a
+// light background (TestLatteTextColoursContrast).
 var catppuccinLatte = Spec{
 	ID: "catppuccin-latte", Name: "Catppuccin Latte", Light: true,
 	Base: "#eff1f5", Mantle: "#e6e9ef", Crust: "#dce0e8",
@@ -205,11 +208,11 @@ var catppuccinLatte = Spec{
 	Subtext0: "#6c6f85", Subtext1: "#5c5f77", Text: "#4c4f69",
 	Cursor: "#dc8a78", LineNr: "#7287fd",
 	Accent: "#8839ef", Selection: "#ccd0da",
-	Red: "#d20f39", Orange: "#fe640b", Yellow: "#df8e1d", Green: "#40a02b",
-	Teal: "#179299", Cyan: "#04a5e5", Blue: "#1e66f5", Purple: "#8839ef", Pink: "#ea76cb",
+	Red: "#d20f39", Orange: "#e25301", Yellow: "#b47317", Green: "#3b9428",
+	Teal: "#179299", Cyan: "#038abf", Blue: "#1e66f5", Purple: "#8839ef", Pink: "#e13ab4",
 	Keyword: "#8839ef", Control: "#8839ef", Function: "#1e66f5", Variable: "#4c4f69",
-	Type: "#df8e1d", String: "#40a02b", Number: "#fe640b", Comment: "#7c7f93",
-	Regex: "#ea76cb", Constant: "#fe640b", Operator: "#04a5e5",
+	Type: "#b47317", String: "#3b9428", Number: "#e25301", Comment: "#7c7f93",
+	Regex: "#e13ab4", Constant: "#e25301", Operator: "#038abf",
 }
 
 var tokyoNight = Spec{

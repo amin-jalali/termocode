@@ -209,6 +209,8 @@ end
 -- One buffer at a time: a plain :checktime skips buffers that are not
 -- shown in a window (the other tabs), which then kept the old text.
 for b in pairs(before) do pcall(vim.cmd, 'silent! checktime ' .. b) end
+-- Remote buffers (container workspace) are not reread by checktime.
+if _G._termocode_remote_reload then _G._termocode_remote_reload() end
 local out = { reloaded = {}, kept = {} }
 for b, tick in pairs(before) do
   if vim.api.nvim_buf_is_valid(b) then

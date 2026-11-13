@@ -57,6 +57,9 @@ folder.
 - `--dir` names the workspace. Without it, `termocode mcp` looks at the
   current folder and then up to seven parent folders for one with a
   running termocode.
+- `--workspace <id>` names a folder opened inside a container instead
+  (`termocode --container`): `container:<context>/<name>:/folder`, for
+  example `container:default/api-1:/app`.
 - If no termocode runs there, the server still answers the tool list, but
   every call fails with a message: open termocode in that folder, then
   restart the agent.

@@ -1093,6 +1093,13 @@ export interface PushSubArgs {
   auth?: string;
 }
 
+export interface PushListArgs {
+}
+
+export interface PushRemoveArgs {
+  device: string;
+}
+
 export interface PushUnsubscribeArgs {
   kind?: "webpush" | "unifiedpush";
 }
@@ -3809,6 +3816,17 @@ export interface PushState {
   on: boolean;
 }
 
+export interface PushList {
+  items: PushItem[];
+}
+
+export interface PushItem {
+  device: string;
+  name: string;
+  added: number;
+  this?: boolean;
+}
+
 export interface ServersList {
   engine: string;
   hosts: ServerHost[];
@@ -4288,6 +4306,8 @@ export interface OpArgs {
   "project.tasks": ProjectTasksArgs;
   "push.key": PushKeyArgs;
   "push.subscribe": PushSubArgs;
+  "push.list": PushListArgs;
+  "push.remove": PushRemoveArgs;
   "push.unsubscribe": PushUnsubscribeArgs;
   "ai.worktree_notes": AIWorktreeNotesArgs;
   "containers.servers": EmptyArgs;
@@ -4615,6 +4635,8 @@ export interface OpResult {
   "project.tasks": ProjectTasks;
   "push.key": PushState;
   "push.subscribe": PushState;
+  "push.list": PushList;
+  "push.remove": PushList;
   "push.unsubscribe": PushState;
   "ai.worktree_notes": ChatRef;
   "containers.servers": ServersList;

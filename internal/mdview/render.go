@@ -257,6 +257,11 @@ func newRenderer(src []byte, opt Options) *renderer {
 	if !theme.IsLight() {
 		card = theme.Lerp(theme.ToRGB(bg), theme.RGB{}, 0.25).LG()
 	}
+	codeBg := theme.Mix(bg, theme.TextPrimary, 0.10)
+	codeFg := c(theme.AccentAmber)
+	if theme.IsLight() { // inline code reads on its tinted chip too
+		codeFg = theme.ReadableOn(theme.AccentAmber, codeBg, 3.0)
+	}
 	p := palette{
 		bg:        c(bg),
 		text:      c(theme.TextPrimary),
@@ -264,8 +269,8 @@ func newRenderer(src []byte, opt Options) *renderer {
 		muted:     c(theme.TextMuted),
 		dim:       c(theme.TextDim),
 		link:      c(theme.AccentBlue),
-		codeFg:    c(theme.AccentAmber),
-		codeBg:    theme.Mix(bg, theme.TextPrimary, 0.10),
+		codeFg:    codeFg,
+		codeBg:    codeBg,
 		accent:    c(theme.AccentBlue),
 		h1Rule:    theme.Mix(theme.AccentBlue, bg, 0.35),
 		rule:      c(theme.BorderSubtle),

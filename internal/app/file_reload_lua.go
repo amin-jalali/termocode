@@ -103,7 +103,10 @@ vim.api.nvim_create_autocmd('FileChangedShellPost', {
 // checkTimeAllLua reloads every open file that changed on disk (see
 // _G._termocode_checktime_all above; a plain :checktime before the
 // handlers are in).
-const checkTimeAllLua = `if _G._termocode_checktime_all then _G._termocode_checktime_all() else pcall(vim.cmd, 'silent! checktime') end`
+// Remote buffers of a container workspace are read again too
+// (remote_buffers_lua.go).
+const checkTimeAllLua = `if _G._termocode_checktime_all then _G._termocode_checktime_all() else pcall(vim.cmd, 'silent! checktime') end
+if _G._termocode_remote_reload then _G._termocode_remote_reload() end`
 
 // nvimCheckTimeAll reloads the open files a git op, a replace or another
 // program changed on disk, the hidden tabs too.
