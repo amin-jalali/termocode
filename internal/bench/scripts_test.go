@@ -157,3 +157,50 @@ func TestDirtyScriptChangesAndRestoresTheRepo(t *testing.T) {
 		t.Fatalf("not restored: %q", out)
 	}
 }
+
+// The quick-open target is a file of every fixture repo: f01201.go was
+// only in the large one, so quick_open on the small repo never showed
+// it (bench finding, PR #535).
+func TestQuickOpenTargetIsInEveryRepo(t *testing.T) {
+	for name, spec := range FixtureRepos {
+		small := spec
+		small.Git = false
+		if small.Files > 400 {
+			small.Files = 400 // the target sits early in every repo; 400 files is enough to see it
+		}
+		d := t.TempDir()
+		if err := GenRepo(d, small); err != nil {
+			t.Fatal(err)
+		}
+		found := false
+		_ = filepath.Walk(d, func(p string, _ os.FileInfo, _ error) error {
+			found = found || filepath.Base(p) == QuickOpenTarget+".go"
+			return nil
+		})
+		if !found {
+			t.Errorf("%s repo has no %s.go", name, QuickOpenTarget)
+		}
+	}
+	for _, e := range Editors() {
+		if mk, ok := e.Scripts[MQuickOpen]; ok {
+			if sc := mk(Env{Repo: "/r"}); sc.Timed.Want != QuickOpenTarget+".go" {
+				t.Errorf("%s quick_open waits for %q", e.ID, sc.Timed.Want)
+			}
+		}
+	}
+}
+
+// A relative -fixtures path still finds the repo to make dirty: envRepo
+// took only absolute arguments and fell back to ".", so git_status
+// failed with "open README.md" (bench finding, PR #535).
+func TestEnvRepoTakesARelativeRepo(t *testing.T) {
+	base := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(base, "fx", "small", ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(base)
+	got := envRepo(Script{Args: []string{"--no-session", filepath.Join("fx", "small")}})
+	if want, _ := filepath.Abs(filepath.Join("fx", "small")); got != want {
+		t.Fatalf("envRepo = %q, want %q", got, want)
+	}
+}
