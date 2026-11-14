@@ -108,6 +108,7 @@ terminal panel): the session would show inside itself.
 | Command | What it does |
 |---|---|
 | `termocode [dir]` | Open `dir`; attach to its session if one runs |
+| `termocode file` | Open `file` in the editor, with its folder as the workspace. A session that already runs for that folder is attached as it is |
 | `termocode sessions` | List the running sessions |
 | `termocode attach [dir]` | Attach to the session of `dir`; error if none runs |
 | `termocode kill [dir]` | End the session of `dir` |

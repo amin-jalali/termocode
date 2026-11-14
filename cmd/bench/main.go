@@ -56,10 +56,7 @@ func run(args []string) error {
 }
 
 func makeFixtures(dir string) error {
-	for name, spec := range map[string]bench.RepoSpec{
-		"small": {Files: 200, Seed: 1, Git: true},
-		"large": {Files: 20000, Seed: 2, Git: true},
-	} {
+	for name, spec := range bench.FixtureRepos {
 		if err := bench.GenRepo(filepath.Join(dir, name), spec); err != nil {
 			return err
 		}

@@ -119,7 +119,7 @@ func Editors() []Editor {
 				MSearch:    keys(withFile("--no-session"), firstLine, Step{Keys: ctrlF + Needle + enter, Want: lastLine}, 1),
 				MScrollEnd: keys(withFile("--no-session"), firstLine, Step{Keys: ctrlEnd, Want: lastLine}, 1),
 				MQuickOpen: func(e Env) Script {
-					return Script{Args: []string{"--no-session", e.Repo}, ReadyText: "diag", Setup: []Step{{Keys: ctrlP, Pause: 300 * time.Millisecond}}, Timed: Step{Keys: "f01201", Want: "f01201.go"}}
+					return Script{Args: []string{"--no-session", e.Repo}, ReadyText: "diag", Setup: []Step{{Keys: ctrlP, Pause: 300 * time.Millisecond}}, Timed: Step{Keys: QuickOpenTarget, Want: QuickOpenTarget + ".go"}}
 				},
 				MFindInFiles: func(e Env) Script {
 					return Script{Args: []string{"--no-session", e.Repo}, ReadyText: "diag", Setup: []Step{{Keys: f8, Pause: 300 * time.Millisecond}}, Timed: Step{Keys: Needle + enter, Want: "README.md"}}
@@ -157,7 +157,7 @@ func Editors() []Editor {
 				MSearch:    keys(withFile(), firstLine, Step{Keys: "/" + Needle + enter, Want: lastLine}, 1),
 				MScrollEnd: keys(withFile(), firstLine, Step{Keys: "ge", Want: lastLine}, 1),
 				MQuickOpen: func(e Env) Script {
-					return Script{Args: []string{e.Repo}, ReadyText: "diag", Setup: []Step{{Keys: " f", Pause: 300 * time.Millisecond}}, Timed: Step{Keys: "f01201", Want: "f01201.go"}}
+					return Script{Args: []string{e.Repo}, ReadyText: "diag", Setup: []Step{{Keys: " f", Pause: 300 * time.Millisecond}}, Timed: Step{Keys: QuickOpenTarget, Want: QuickOpenTarget + ".go"}}
 				},
 				MFindInFiles: func(e Env) Script {
 					return Script{Args: []string{e.Repo}, ReadyText: "diag", Setup: []Step{{Keys: " /", Pause: 300 * time.Millisecond}}, Timed: Step{Keys: Needle + enter, Want: "README.md"}}
@@ -399,7 +399,11 @@ func doStep(s *Session, st Step, timeout time.Duration) error {
 // repo root (the arg itself, or the directory that holds .git above it).
 func envRepo(sc Script) string {
 	for _, a := range sc.Args {
-		if !filepath.IsAbs(a) {
+		if strings.HasPrefix(a, "-") || strings.HasPrefix(a, "+") {
+			continue // a flag or an editor command, not a path
+		}
+		a, err := filepath.Abs(a) // a relative -fixtures path too
+		if err != nil {
 			continue
 		}
 		for d := a; d != "/" && d != "."; d = filepath.Dir(d) {

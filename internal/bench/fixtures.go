@@ -22,6 +22,17 @@ import (
 // of each repo) so search measures have a known target.
 const Needle = "BENCH_NEEDLE_7f3a"
 
+// FixtureRepos are the repos `bench fixtures` writes, by name.
+var FixtureRepos = map[string]RepoSpec{
+	"small": {Files: 200, Seed: 1, Git: true},
+	"large": {Files: 20000, Seed: 2, Git: true},
+}
+
+// QuickOpenTarget is the file quick_open types and waits for (without
+// ".go"). Its number is below every repo's file count and is a Go file
+// (i%4 is 0 or 1 in GenRepo), so each fixture repo has it.
+const QuickOpenTarget = "f00161"
+
 // RepoSpec describes a generated repo. No private code is ever used.
 type RepoSpec struct {
 	Files int    // exact number of files, go.mod and others included

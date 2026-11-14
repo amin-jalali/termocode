@@ -1008,6 +1008,7 @@ func (m Model) handleNvimMsg(msg tea.Msg) (Model, tea.Cmd, bool) {
 		if sess.ActivePath != "" {
 			m.explorer.RevealPath(sess.ActivePath)
 		}
+		m.openStartFile() // `termocode <file>` (start_file.go)
 		// Persist the freshly-expanded set so a subsequent restart sees
 		// the same tree shape even if no further user interaction happens.
 		m.persistExplorerState()
