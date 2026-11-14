@@ -11,7 +11,7 @@ import { diff } from "../lib/textdiff";
 import { History } from "./history";
 import { HL_STYLES } from "./hlstyle";
 import { moveKeys } from "./moves";
-import { peerRanges } from "./peers";
+import { caretOf, peerRanges } from "./peers";
 
 /** origin marks transactions that are not the user's typing. */
 const origin = Annotation.define<"remote" | "undo" | "replace">();
@@ -155,6 +155,10 @@ export function mount(parent: HTMLElement, host: EditorHost): EditorHandle {
         EditorView.updateListener.of((u) => {
           for (const tr of u.transactions) record(tr);
           if (u.docChanged && u.transactions.some((tr) => tr.docChanged && tr.annotation(origin) !== "remote")) host.onChange();
+          if (u.selectionSet && host.onCaret) {
+            const c = caretOf(u.state.doc, u.state.selection.main.head);
+            host.onCaret(c.line, c.col);
+          }
           if (u.viewportChanged || u.docChanged) {
             const d = u.state.doc;
             host.onViewport(d.lineAt(u.view.viewport.from).number - 1, d.lineAt(u.view.viewport.to).number);
