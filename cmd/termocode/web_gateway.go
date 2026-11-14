@@ -33,6 +33,11 @@ var webAssets = gatewayAssets
 func gatewayAssets() http.Handler { return webgw.Assets() }
 
 func runWebGateway(args []string) int {
+	// fd 3 is taken only once the arguments are termocode's own: an unused
+	// *os.File would close the process's fd 3 when it is collected.
+	if _, ok := webGatewayConfig(args, os.Stderr); !ok {
+		return 2
+	}
 	return runWebGatewayIn(args, os.NewFile(3, "web-handoff"), os.Stderr)
 }
 
