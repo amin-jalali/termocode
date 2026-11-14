@@ -1564,6 +1564,12 @@ export const FA: Record<TranslatedKey, string> = {
   "look.run_view": "نمای اجرا",
   "look.wait": "منتظر شماست: {what}",
   "look.wait_open": "پاسخ",
+  // The phone remote's queue (queue.js, CMP-46)
+  "queue.title": "در صف ارسال: {n} از ۵",
+  "queue.now": "همین حالا بفرست",
+  "queue.back": "پس بگیر",
+  "queue.add": "بعد از این پاسخ بفرست",
+  "queue.full": "پنج پیام در صف هستند. صبر کنید یا یکی را پس بگیرید.",
   "ai.attach_list": "با پیام فرستاده می‌شود",
   "dictate.start": "به‌جای نوشتن، بگویید",
   "dictate.stop": "توقف شنیدن",

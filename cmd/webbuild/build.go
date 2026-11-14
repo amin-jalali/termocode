@@ -119,6 +119,12 @@ var coeditChunk = page{Name: "coedit", Entry: "coedit/main.ts"}
 // entry.
 var parquetChunk = page{Name: "parquet", Entry: "parquet.ts"}
 
+// queueChunk is the phone remote's queue (queue.js, CMP-46), built alone:
+// the page loads it with its one dynamic import (lib/queue.ts) when the
+// laptop's AI is busy or a message waits, and gives it Preact's h, the
+// link and the strings (it imports no value of the page).
+var queueChunk = page{Name: "queue", Entry: "queue/main.tsx"}
+
 // deskChunk is the desktop workbench's stylesheet (desk.css): index.html
 // links it for wide screens only (media="(min-width: 1200px)"), so a
 // phone neither waits for it nor counts it in its budget.
@@ -132,7 +138,7 @@ var deskChunk = page{Name: "desk", Entry: "desk.ts", CSSOnly: true}
 var relayPage = page{Name: "relay", Entry: "relay/main.ts", Template: "relay/relay.html", HTML: "relay.html"}
 
 // chunkPaths are the only dynamic imports a page may make.
-var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true, "/assets/" + workbenchChunk.Name + ".js": true, "/assets/" + homeChunk.Name + ".js": true, "/assets/" + linkChunk.Name + ".js": true, "/assets/" + persianChunk.Name + ".js": true, "/assets/" + monacoVim.Name + ".js": true, "/assets/" + deviceChunk.Name + ".js": true, "/assets/" + aictxChunk.Name + ".js": true, "/assets/" + pickerChunk.Name + ".js": true, "/assets/" + coeditChunk.Name + ".js": true, "/assets/" + parquetChunk.Name + ".js": true}
+var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true, "/assets/" + workbenchChunk.Name + ".js": true, "/assets/" + homeChunk.Name + ".js": true, "/assets/" + linkChunk.Name + ".js": true, "/assets/" + persianChunk.Name + ".js": true, "/assets/" + monacoVim.Name + ".js": true, "/assets/" + deviceChunk.Name + ".js": true, "/assets/" + aictxChunk.Name + ".js": true, "/assets/" + pickerChunk.Name + ".js": true, "/assets/" + coeditChunk.Name + ".js": true, "/assets/" + parquetChunk.Name + ".js": true, "/assets/" + queueChunk.Name + ".js": true}
 
 // kitPage is the component kit (WEB-UX-1). It is always built, so CI keeps
 // it fresh, but only a webdev build embeds and serves it.
@@ -162,7 +168,7 @@ func Build(dir string) (map[string][]byte, error) {
 	if err := copyServed(vendorDir, pkgs, out); err != nil {
 		return nil, err
 	}
-	for _, p := range []page{deskChunk, appPage, relayPage, editorChunk, persianChunk, deviceChunk, aictxChunk, pickerChunk, linkChunk, coeditChunk, parquetChunk, monacoAMD, monacoVim, monacoFrame, kitPage} {
+	for _, p := range []page{deskChunk, appPage, relayPage, editorChunk, persianChunk, deviceChunk, aictxChunk, pickerChunk, linkChunk, coeditChunk, parquetChunk, queueChunk, monacoAMD, monacoVim, monacoFrame, kitPage} {
 		if p.Name != appPage.Name {
 			if _, err := os.Stat(filepath.Join(abs, "src", p.Entry)); errors.Is(err, os.ErrNotExist) {
 				continue // a folder without the kit or the editor (test fixtures)

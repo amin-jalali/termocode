@@ -59,9 +59,9 @@ func TestTheOnlyDynamicImportsAreTheEditorAndTheWorkbench(t *testing.T) {
 		t.Fatal(err)
 	}
 	sort.Strings(found)
-	want := []string{`src/lib/aictx.ts "/assets/aictx.js"`, `src/lib/coedit.ts "/assets/coedit.js"`, `src/lib/device.tsx "/assets/device.js"`, `src/lib/lazy.ts "/assets/editor.js"`, `src/lib/lazy.ts "/assets/home.js"`, `src/lib/lazy.ts "/assets/picker.js"`, `src/lib/lazy.ts "/assets/strings-fa.js"`, `src/lib/lazy.ts "/assets/workbench.js"`, `src/lib/links.ts "/assets/link.js"`, `src/lib/parquet.ts "/assets/parquet.js"`, `src/monaco/frame.ts "/assets/monaco-vim.js"`}
+	want := []string{`src/lib/aictx.ts "/assets/aictx.js"`, `src/lib/coedit.ts "/assets/coedit.js"`, `src/lib/device.tsx "/assets/device.js"`, `src/lib/lazy.ts "/assets/editor.js"`, `src/lib/lazy.ts "/assets/home.js"`, `src/lib/lazy.ts "/assets/picker.js"`, `src/lib/lazy.ts "/assets/strings-fa.js"`, `src/lib/lazy.ts "/assets/workbench.js"`, `src/lib/links.ts "/assets/link.js"`, `src/lib/parquet.ts "/assets/parquet.js"`, `src/lib/queue.ts "/assets/queue.js"`, `src/monaco/frame.ts "/assets/monaco-vim.js"`}
 	if strings.Join(found, "\n") != strings.Join(want, "\n") {
-		t.Errorf("dynamic imports %q, want only lib/lazy.ts loading /assets/editor.js, /assets/home.js, /assets/picker.js, /assets/strings-fa.js and /assets/workbench.js, lib/aictx.ts loading /assets/aictx.js, lib/coedit.ts loading /assets/coedit.js (live editing together, G-COL), lib/device.tsx loading /assets/device.js, lib/links.ts loading /assets/link.js, lib/parquet.ts loading /assets/parquet.js, and monaco/frame.ts loading /assets/monaco-vim.js", found)
+		t.Errorf("dynamic imports %q, want only lib/lazy.ts loading /assets/editor.js, /assets/home.js, /assets/picker.js, /assets/strings-fa.js and /assets/workbench.js, lib/aictx.ts loading /assets/aictx.js, lib/coedit.ts loading /assets/coedit.js (live editing together, G-COL), lib/device.tsx loading /assets/device.js, lib/links.ts loading /assets/link.js, lib/parquet.ts loading /assets/parquet.js, lib/queue.ts loading /assets/queue.js, and monaco/frame.ts loading /assets/monaco-vim.js", found)
 	}
 }
 

@@ -120,6 +120,7 @@ export const reduceChat: Reducer = (data, delta) => {
       const out = { ...s };
       if (typeof d.busy === "boolean") out.busy = d.busy;
       if (d.title) out.title = d.title;
+      if (d.queue) out.queue = d.queue.queue; // CMP-46: the whole new queue
       if (typeof d.ctx_pct === "number") {
         out.ctx_pct = d.ctx_pct;
         out.ctx_tokens = typeof d.ctx_tokens === "number" ? d.ctx_tokens : 0;

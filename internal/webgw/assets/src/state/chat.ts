@@ -23,6 +23,7 @@ export function readChat(data: unknown): ChatSnap | null {
     profile: typeof data.profile === "string" ? data.profile : undefined,
     model: typeof data.model === "string" ? data.model : undefined,
     busy: data.busy === true,
+    queue: Array.isArray(data.queue) ? data.queue : [],
     messages: msgs.map(readMsg).filter((m): m is ChatMsg => m !== null),
     ctx_pct: typeof data.ctx_pct === "number" ? data.ctx_pct : undefined,
     ctx_tokens: typeof data.ctx_tokens === "number" ? data.ctx_tokens : undefined,
