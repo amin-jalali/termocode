@@ -49,3 +49,28 @@ func TestFewButtonsKeepTheirPadding(t *testing.T) {
 		}
 	}
 }
+
+// Spec: a word longer than the card is wide (a long path, as macOS temp
+// folders are) is cut over lines inside the card: it never runs over the
+// border, and the buttons are drawn where a click finds them.
+func TestLongWordStaysInsideTheCardAndButtonsMatch(t *testing.T) {
+	path := "/private/var/folders/h5/t85nd63d71x27_8gl5gw3l_w0000gn/T/TestUpdateCardInstallAndRollback3555449557/001/termocode.old"
+	buttons := []Button{{ID: "cancel", Title: "Cancel"}, {ID: "rollback", Title: "Roll back", Style: StyleDestructive}}
+	m := New("Roll back termocode?", "Puts back the termocode that the last update replaced ("+path+").", buttons)
+	m.SetSize(100, 40)
+	bx, _, bw, _ := m.Bounds()
+	rows := strings.Split(ansi.Strip(m.View()), "\n")
+	for y, row := range rows {
+		if w := ansi.StringWidth(strings.TrimRight(row, " ")); w > bx+bw+1 { // bw counts to the right border
+			t.Errorf("row %d is %d cells wide, past the card's right edge %d: %q", y, w, bx+bw, row)
+		}
+	}
+	if text := strings.Join(rows, ""); !strings.Contains(strings.ReplaceAll(strings.ReplaceAll(text, "│", ""), " ", ""), strings.ReplaceAll(path, " ", "")) {
+		t.Errorf("the path is not all shown:\n%s", strings.Join(rows, "\n"))
+	}
+	for i, r := range m.ButtonRects() {
+		if got := ansi.Cut(rows[r.Y], r.X, r.X+r.W); strings.TrimSpace(got) != buttons[i].Title {
+			t.Errorf("button %s draws %q at its target, want %q", r.ID, got, buttons[i].Title)
+		}
+	}
+}
