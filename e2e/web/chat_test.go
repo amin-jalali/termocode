@@ -219,7 +219,8 @@ func expectReq(t *testing.T, c *HubConn, op string) *webproto.Req {
 }
 
 // Send sends the draft to the chat on the laptop and clears it; while the
-// AI answers, Send becomes Stop. On a desktop Enter sends too.
+// AI answers, Stop comes first and Send lines a message up after the
+// answer (CMP-46: "Send after this answer"). On a desktop Enter sends too.
 func TestChatSendAndStop(t *testing.T) {
 	for _, vp := range Both {
 		t.Run(vp.Name, func(t *testing.T) {
@@ -239,8 +240,15 @@ func TestChatSendAndStop(t *testing.T) {
 			p.WaitJS(composer + `.querySelector("textarea").value === ""`)
 
 			c.Send(t, Delta("chat", 2, map[string]any{"op": "state", "busy": true}))
-			p.WaitJS(composer + `.querySelector(".stop")?.textContent === "Stop"`)
-			p.TapJS(composer + `.querySelector(".stop")`)
+			const stop = `.querySelector(".stop .btn:first-child")`
+			p.WaitJS(composer + stop + `?.textContent === "Stop"`)
+			// The queue's words load with queue.js: until then the button
+			// says Send, never its string key.
+			if got := Eval[string](p, composer+`.querySelector(".stop .btn:last-child")?.title ?? ""`); got != "Send" && got != "Send after this answer" {
+				t.Fatalf("while the AI answers the second button is %q, want Send after this answer", got)
+			}
+			p.WaitJS(composer + `.querySelector(".stop .btn:last-child")?.title === "Send after this answer"`)
+			p.TapJS(composer + stop)
 			r = expectReq(t, c, "chat.stop")
 			c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID})
 			c.Send(t, Delta("chat", 3, map[string]any{"op": "state", "busy": false}))
