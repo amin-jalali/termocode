@@ -180,7 +180,7 @@ func TestRelayStdoutOnlyJSON(t *testing.T) {
 }
 
 func TestUsageListsMCP(t *testing.T) {
-	if !strings.Contains(mcpUsage, "termocode mcp [--dir <workspace>]") {
+	if !strings.Contains(mcpUsage, "termocode mcp [--dir <workspace> | --workspace <id>]") {
 		t.Fatal("mcp usage text changed shape")
 	}
 }

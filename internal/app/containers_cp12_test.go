@@ -497,7 +497,7 @@ func TestContainersSearchPickPullAndBrowse(t *testing.T) {
 	f.Set(t, "search.json", string(b))
 	m.services.containerEngine.Binary = f.Docker()
 	m.servicesCursorTo(func(r svcRow) bool { return r.kind == svcRowSection && r.section == hostSection("registries") })
-	typeKeys(m, "s")
+	typeKeys(m, "f") // KB-2: f searches a registry
 	if !m.promptOpen || m.promptKind != promptKindContainerSearch {
 		t.Fatalf("search prompt open=%v kind=%v", m.promptOpen, m.promptKind)
 	}
