@@ -36,7 +36,7 @@ import (
 // in argv, env, a file of the gateway or a log.
 //
 // Who gets in: after the handshake the gateway knows the page's static
-// key. A paired device with that relay key, or a page that brought the
+// key. A paired device with that relay key (a guest viewer too), or a page that brought the
 // open pairing link's secret, goes on; any other is refused before any
 // HTTP. Inside, the panel's own sign-in still applies: a relay pairing
 // ends without a passkey (the relay's origin is not the laptop's, so a
@@ -297,7 +297,9 @@ func (l *relayLink) deviceFor(peer relaytun.PeerKey) (webdevices.Device, bool) {
 	return relayDevice(l.devices, peer)
 }
 
-// relayDevice is the paired, non-guest device bound to peer's key.
+// relayDevice is the paired device bound to peer's key. A guest (Share
+// as Viewer, NEW-11) is one too: its role stays viewer (or edit), as
+// with a guest's passkey on the laptop's own address.
 func relayDevice(st *webdevices.Store, peer relaytun.PeerKey) (webdevices.Device, bool) {
 	if st == nil {
 		return webdevices.Device{}, false
@@ -308,7 +310,7 @@ func relayDevice(st *webdevices.Store, peer relaytun.PeerKey) (webdevices.Device
 	}
 	want := peer.String()
 	for _, d := range devs {
-		if d.RelayKey != "" && d.RelayKey == want && !d.Guest {
+		if d.RelayKey != "" && d.RelayKey == want {
 			return d, true
 		}
 	}

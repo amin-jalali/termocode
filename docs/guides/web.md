@@ -214,7 +214,7 @@ not need Tailscale or any cloud. Add to `config.json`:
   again by itself.
 - A normal browser shows a certificate warning on this address. Use the
   termocode app.
-- Share as Viewer needs tailnet mode.
+- Share as Viewer needs tailnet mode, or a relay.
 - The AI can never change `web_listen`.
 
 ### Or: the relay (any network, no VPN app)
@@ -245,6 +245,9 @@ address to `config.json`:
   its place. With a sign-in code (`web_require_totp`) the phone asks
   for it after its key, as on the tailnet; the laptop checks it.
 - **Web: Devices…** removes a phone: its relay sessions end at once.
+- **Notify me** works on a relay page too (it is https). The push goes
+  from this computer through the phone browser's own push service, never
+  through the relay.
 - **Web: Stop Relay** stops only the relay: phones on it are cut off at
   once, and the panel goes on at its own address (pairing links too).
   The panel's next start uses the relay again.
@@ -513,7 +516,10 @@ keeps only the run and the step, never the text.
 To let someone else watch, run **Web: Share as Viewer…**:
 
 1. Share this computer with them in Tailscale first (in the admin
-   console, **Share** on this machine). They need Tailscale too.
+   console, **Share** on this machine). They need Tailscale too. With a
+   relay (`web_relay`) they need nothing: the link goes through it, and
+   later they come back with their browser's relay key instead of a
+   passkey, still only to watch.
 2. **Copy link** and send it to them. It works **once**, for **10
    minutes**.
 3. They open it and read you the **6-digit code** they see. If it is the
@@ -734,8 +740,7 @@ issue.
 - At most 32 paired devices.
 - At most **4** projects open at once from a phone (`web_projects_max`,
   up to 8).
-- Over the relay: at most **4** phones at once; Share as Viewer and
-  phone pushes do not go through the relay.
+- Over the relay: at most **4** phones at once.
 
 ## Settings
 
