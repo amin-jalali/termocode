@@ -119,7 +119,7 @@ func (s *AthenaSession) Run(ctx context.Context, stmt string, opts RunOptions) R
 }
 
 func (s *AthenaSession) run(ctx context.Context, stmt string, opts RunOptions) Result {
-	if err := warehouseGuard(s.readOnly, "Athena", stmt); err != nil {
+	if err := warehouseGuard(s.readOnly, "Athena", s.conn.Driver, stmt); err != nil {
 		return Result{Err: err}
 	}
 	in := map[string]any{"QueryString": stmt, "WorkGroup": s.workgroup(),

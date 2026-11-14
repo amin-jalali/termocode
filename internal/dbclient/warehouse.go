@@ -16,12 +16,13 @@ import (
 
 // warehouseGuard refuses anything but a read on a read-only session,
 // before it reaches the account. These APIs have no read-only flag, so
-// the classifier decides; anything it cannot call a read is refused.
-func warehouseGuard(readOnly bool, title, stmt string) error {
+// the classifier decides (in the connection's dialect); anything it
+// cannot call a read is refused.
+func warehouseGuard(readOnly bool, title, driver, stmt string) error {
 	if !readOnly {
 		return nil
 	}
-	if k, _ := Classify(stmt, "postgres"); k != KindRead {
+	if k, _ := Classify(stmt, driver); k != KindRead {
 		return fmt.Errorf("%s: this is a read-only session; only reads run here", title)
 	}
 	return nil

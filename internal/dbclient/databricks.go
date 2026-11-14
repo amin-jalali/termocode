@@ -136,7 +136,7 @@ func (s *DatabricksSession) Run(ctx context.Context, stmt string, opts RunOption
 }
 
 func (s *DatabricksSession) run(ctx context.Context, stmt string, opts RunOptions) Result {
-	if err := warehouseGuard(s.readOnly, "Databricks SQL", stmt); err != nil {
+	if err := warehouseGuard(s.readOnly, "Databricks SQL", s.conn.Driver, stmt); err != nil {
 		return Result{Err: err}
 	}
 	req := databricksRequest{Statement: namedPlaceholders(stmt, len(opts.Args)), WarehouseID: warehouseParam(s.conn, "warehouse"),

@@ -141,7 +141,7 @@ func (s *SnowflakeSession) Run(ctx context.Context, stmt string, opts RunOptions
 }
 
 func (s *SnowflakeSession) run(ctx context.Context, stmt string, opts RunOptions) Result {
-	if err := warehouseGuard(s.readOnly, "Snowflake", stmt); err != nil {
+	if err := warehouseGuard(s.readOnly, "Snowflake", s.conn.Driver, stmt); err != nil {
 		return Result{Err: err}
 	}
 	req := snowflakeRequest{Statement: stmt, Timeout: 3600, Database: s.conn.Database,

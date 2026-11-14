@@ -176,10 +176,10 @@ func (s *DynamoDBSession) Run(ctx context.Context, stmt string, opts RunOptions)
 }
 
 func (s *DynamoDBSession) run(ctx context.Context, stmt string, opts RunOptions) Result {
-	if err := warehouseGuard(s.readOnly, "DynamoDB", stmt); err != nil {
+	if err := warehouseGuard(s.readOnly, "DynamoDB", s.conn.Driver, stmt); err != nil {
 		return Result{Err: err}
 	}
-	k, _ := Classify(stmt, "postgres")
+	k, _ := Classify(stmt, s.conn.Driver)
 	var items []json.RawMessage
 	token := ""
 	truncated := false
