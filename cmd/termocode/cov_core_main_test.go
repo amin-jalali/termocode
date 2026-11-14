@@ -247,6 +247,34 @@ func TestCovCoreRunOpensFolder(t *testing.T) {
 	}
 }
 
+// A file on the command line: its folder is the workspace and the UI
+// (here, or the one a new session starts) gets the file to open from
+// TERMOCODE_START_FILE (bench finding, PR #535: it was dropped).
+func TestCovCoreRunOpensFile(t *testing.T) {
+	covMainEnv(t)
+	t.Setenv("TERMOCODE_START_FILE", "")
+	dir := t.TempDir()
+	file := filepath.Join(dir, "main.go")
+	if err := os.WriteFile(file, []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	r := covCall(t, []string{"--no-session", file}, nil)
+	if r.code != 0 || r.tuiStart != 1 {
+		t.Errorf("open file: %+v", r)
+	}
+	wd, _ := os.Getwd()
+	want, _ := filepath.EvalSymlinks(dir)
+	if got, _ := filepath.EvalSymlinks(wd); got != want {
+		t.Errorf("cwd = %q, want the file's folder %q", got, want)
+	}
+	if got := os.Getenv("TERMOCODE_START_FILE"); got != file {
+		t.Errorf("start file = %q, want %q", got, file)
+	}
+	if len(os.Args) != 1 {
+		t.Errorf("os.Args still holds the file: %q", os.Args)
+	}
+}
+
 // A terminal with persistent_session on starts the UI in a session.
 func TestCovCoreRunInSession(t *testing.T) {
 	covMainEnv(t)
