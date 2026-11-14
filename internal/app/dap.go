@@ -257,15 +257,18 @@ func (m *Model) dapStop() tea.Cmd {
 	_ = m.nvim.ExecLua(`local ok, dap = pcall(require, 'dap'); if ok and dap.session() then dap.terminate() end`)
 	m.ensureDebug().status = "Stopping…"
 	force := tea.Tick(3*time.Second, func(time.Time) tea.Msg {
-		return debugMsg{apply: func(m *Model) tea.Cmd {
-			if !m.dapSessionActive || m.nvim == nil {
-				return nil
-			}
-			_ = m.nvim.ExecLua(`local ok, dap = pcall(require, 'dap'); if ok and dap.session() then dap.close() end`)
-			return m.debugRefresh()
-		}}
+		return debugMsg{apply: (*Model).dapForceClose}
 	})
 	return tea.Batch(m.debugToast("stopping session"), m.debugRefresh(), force)
+}
+
+// dapForceClose closes a session that did not end after the terminate request.
+func (m *Model) dapForceClose() tea.Cmd {
+	if !m.dapSessionActive || m.nvim == nil {
+		return nil
+	}
+	_ = m.nvim.ExecLua(`local ok, dap = pcall(require, 'dap'); if ok and dap.session() then dap.close() end`)
+	return m.debugRefresh()
 }
 
 // dapStepOver / dapStepInto / dapStepOut / dapContinue / dapPause /
