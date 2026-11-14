@@ -166,3 +166,54 @@ func TestCovHTTPSIOSendFromBuffer(t *testing.T) {
 		t.Errorf("toast %q", covHTTPToast(m))
 	}
 }
+
+// The documented `# @auth {…}` of a SOCKETIO request is the namespace
+// CONNECT payload, not the HTTP auth helper: the send key must not
+// refuse it as an unknown variable, and the server gets the payload
+// with its variables filled in.
+func TestCovHTTPSIOAuthPayloadFromBuffer(t *testing.T) {
+	m, root, _ := covHTTP(t)
+	got := make(chan string, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ws, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer func() { _ = ws.CloseNow() }()
+		ctx := r.Context()
+		_ = ws.Write(ctx, websocket.MessageText, []byte(`0{"sid":"e1","pingInterval":25000,"pingTimeout":20000}`))
+		for {
+			_, b, err := ws.Read(ctx)
+			if err != nil {
+				return
+			}
+			if msg := string(b); strings.HasPrefix(msg, "40") {
+				select {
+				case got <- strings.TrimPrefix(msg, "40"):
+				default:
+				}
+				_ = ws.Write(ctx, websocket.MessageText, []byte(`40{"sid":"s1"}`))
+			}
+		}
+	}))
+	t.Cleanup(srv.Close)
+	file := filepath.Join(root, "auth.http")
+	src := "@chatToken = abc123\n\n###\n# @name chat\n# @auth {\"token\": \"{{chatToken}}\"}\n# @listen 100ms\nSOCKETIO " + srv.URL + "\n"
+	if err := os.WriteFile(file, []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	covHTTPEdit(t, m, file, 7)
+	c := covHTTPDispatch(t, m, "http-send")
+	if !m.httpS().sioRunning {
+		t.Fatalf("not sent: %q", covHTTPToast(m))
+	}
+	newCovHTTPLoop(t, m).run(c, func() bool { return !m.httpS().sioRunning })
+	select {
+	case payload := <-got:
+		if payload != `{"token": "abc123"}` {
+			t.Errorf("CONNECT payload %q", payload)
+		}
+	default:
+		t.Fatalf("the server got no CONNECT: %q", covHTTPToast(m))
+	}
+}
