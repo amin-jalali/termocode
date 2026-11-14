@@ -51,7 +51,11 @@ func Classify(sql string, dialectName string) (Kind, []Statement) {
 		return k, []Statement{{SQL: text, Kind: k}}
 	}
 	dialect := dialectArg([]string{dialectName})
-	sqls, splitErr := Split(sql, string(dialect))
+	splitName := string(dialect)
+	if strings.EqualFold(dialectName, "oracle") {
+		splitName = "oracle"
+	}
+	sqls, splitErr := Split(sql, splitName)
 	if splitErr != nil {
 		return KindWrite, []Statement{{SQL: strings.TrimSpace(sql), Kind: KindWrite}}
 	}
@@ -593,6 +597,9 @@ func dollarTag(b []byte, i int, dialect SQLDialect) (string, int) {
 }
 
 func Split(sql string, dialectName string) ([]string, error) {
+	if strings.EqualFold(dialectName, "oracle") {
+		return splitOracle(sql) // PL/SQL units and "/" lines (DBX-63)
+	}
 	dialect := dialectArg([]string{dialectName})
 	var out []string
 	start := 0

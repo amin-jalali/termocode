@@ -26,6 +26,9 @@ import (
 const (
 	confirmKindDBSourceSubmit confirmKindEnum = 3971
 	pickerKindDBSourcePending pickerKindEnum  = 3972
+	// pickerKindDBSourcePackagePart asks for an Oracle package's spec or
+	// body (DBX-63).
+	pickerKindDBSourcePackagePart pickerKindEnum = 3976
 )
 
 // dbSourceState tracks the opened sources by buffer file.
@@ -33,6 +36,8 @@ type dbSourceState struct {
 	edits   map[string]*dbSourceOpen
 	pending dbclient.PendingSources
 	submit  *dbSourceSubmit // the open submit card
+	// pkgRow is the Oracle package row whose spec or body is being picked.
+	pkgRow *dbTreeRow
 }
 
 type dbSourceOpen struct {
@@ -61,6 +66,8 @@ type dbSourceCheckedMsg struct {
 type dbSourceStoredMsg struct {
 	file string
 	err  error
+	// compile are the PL/SQL compile errors after an Oracle submit.
+	compile []dbclient.CompileError
 }
 
 func (s *dbState) sourceState() *dbSourceState {
@@ -126,15 +133,26 @@ func dbReadSource(ctx context.Context, sess dbclient.Session, driver string, kin
 		return "", err
 	}
 	defer ro.Close()
-	r := ro.Run(ctx, q.SQL, dbclient.RunOptions{MaxRows: 1, Args: q.Args})
+	max := 1
+	if q.Lines {
+		max = dbSourceMaxLines
+	}
+	r := ro.Run(ctx, q.SQL, dbclient.RunOptions{MaxRows: max, Args: q.Args})
 	if r.Err != nil {
 		return "", r.Err
 	}
-	if len(r.Rows) == 0 || q.Column >= len(r.Rows[0]) {
+	if q.Lines && r.Truncated {
+		return "", fmt.Errorf("the source of %s %s has more than %d lines", kind, name, dbSourceMaxLines)
+	}
+	text, ok := q.Text(r)
+	if !ok {
 		return "", fmt.Errorf("no stored source for %s %s", kind, name)
 	}
-	return r.Rows[0][q.Column].String(), nil
+	return text, nil
 }
+
+// dbSourceMaxLines bounds the all_source lines read for one PL/SQL unit.
+const dbSourceMaxLines = 200000
 
 // databaseEditSourceStart reads the source of the tree row's object.
 func (m *Model) databaseEditSourceStart() tea.Cmd {
@@ -152,6 +170,32 @@ func (m *Model) databaseEditSourceStart() tea.Cmd {
 		return nil
 	}
 	key := s.sessionKeyFor(r.path, r.conn)
+	if s.sessions[key] == nil {
+		return m.pushToastDetail(toast.Info, "Not connected", "Press Enter on the connection in the Databases view first.")
+	}
+	if c.Driver == "oracle" && strings.Contains(r.path, "/Packages/") {
+		row := r
+		s.sourceState().pkgRow = &row
+		m.picker = picker.NewItems(" Edit package "+sanitizeDBText(r.name)+" ", []picker.Item{
+			{ID: "spec", Title: "Package spec", Hint: "the declarations"},
+			{ID: "body", Title: "Package body", Hint: "the code"},
+		})
+		m.picker.SetSize(m.w, m.h)
+		m.pickerOpen = true
+		m.pickerKind = pickerKindDBSourcePackagePart
+		return nil
+	}
+	return m.databaseEditSourceLoad(r, kind)
+}
+
+// databaseEditSourceLoad reads the source of kind for the tree row r.
+func (m *Model) databaseEditSourceLoad(r dbTreeRow, kind dbclient.ObjectKind) tea.Cmd {
+	s := m.databases
+	c, ok := s.connection(r.conn)
+	if !ok {
+		return nil
+	}
+	key := s.sessionKeyFor(r.path, r.conn)
 	sess := s.sessions[key]
 	if sess == nil {
 		return m.pushToastDetail(toast.Info, "Not connected", "Press Enter on the connection in the Databases view first.")
@@ -161,6 +205,9 @@ func (m *Model) databaseEditSourceStart() tea.Cmd {
 		d := dbclient.DialectFor(c.Driver)
 		name = d.QuoteIdent(sch) + "." + d.QuoteIdent(r.name)
 	}
+	if sch := dbAncestorSchema(r.path); sch != "" && c.Driver == "oracle" {
+		name = sch + "." + r.name
+	}
 	driver := c.Driver
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), dbCompareTimeout)
@@ -169,6 +216,11 @@ func (m *Model) databaseEditSourceStart() tea.Cmd {
 		if err != nil && kind == dbclient.ObjectFunction && dbDriverFamily(driver) == "mysql" {
 			if t2, err2 := dbReadSource(ctx, sess, driver, dbclient.ObjectProcedure, name); err2 == nil {
 				kind, text, err = dbclient.ObjectProcedure, t2, nil
+			}
+		}
+		if err == nil && driver == "oracle" && (kind == dbclient.ObjectFunction || kind == dbclient.ObjectProcedure) {
+			if k, ok := dbclient.SourceHeaderKind(text); ok {
+				kind = k // a routine row is the procedure or function it is
 			}
 		}
 		return dbSourceLoadedMsg{conn: r.conn, driver: driver, sessKey: key, name: name, kind: kind, text: text, err: err}
@@ -327,6 +379,8 @@ func (m *Model) databaseSourceConfirm(id string) (tea.Cmd, bool) {
 	}
 	manual := m.databases.manualMode(o.edit.Conn)
 	plan, file := sub.plan, sub.file
+	plsql := o.driver == "oracle" && dbclient.IsPLSQLKind(o.edit.Kind)
+	kind, name, text := o.edit.Kind, o.edit.Name, o.edit.Text
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), dbCompareTimeout)
 		defer cancel()
@@ -337,7 +391,7 @@ func (m *Model) databaseSourceConfirm(id string) (tea.Cmd, bool) {
 			}
 		}
 		for _, stmt := range plan.Statements {
-			if r := sess.Run(ctx, stmt, dbclient.RunOptions{}); r.Err != nil {
+			if r := sess.Run(ctx, stmt, dbclient.RunOptions{}); r.Err != nil && !(plsql && strings.Contains(r.Err.Error(), "ORA-24344")) {
 				if tx {
 					_ = sess.Rollback(context.Background())
 				}
@@ -349,7 +403,19 @@ func (m *Model) databaseSourceConfirm(id string) (tea.Cmd, bool) {
 				return dbSourceStoredMsg{file: file, err: err}
 			}
 		}
-		return dbSourceStoredMsg{file: file}
+		if !plsql {
+			return dbSourceStoredMsg{file: file}
+		}
+		// Oracle stores a unit that does not compile: read why (DBX-63).
+		q, err := dbclient.OracleCompileErrorsQuery(kind, name)
+		if err != nil {
+			return dbSourceStoredMsg{file: file}
+		}
+		r := sess.Run(ctx, q.SQL, dbclient.RunOptions{MaxRows: 500, Args: q.Args})
+		if r.Err != nil {
+			return dbSourceStoredMsg{file: file, err: fmt.Errorf("stored, but the compile errors could not be read: %w", r.Err)}
+		}
+		return dbSourceStoredMsg{file: file, compile: dbclient.OracleCompileErrors(r, text)}
 	}, true
 }
 
@@ -367,7 +433,55 @@ func (m *Model) onDBSourceStored(msg dbSourceStoredMsg) tea.Cmd {
 	}
 	o.edit.Stored = o.edit.Text
 	st.pending.Drop(o.edit.Conn, o.edit.Kind, o.edit.Name)
+	m.databaseSetCompileProblems(msg.file, o.edit.Name, msg.compile)
+	if errs := dbCompileErrorCount(msg.compile); len(msg.compile) > 0 {
+		var lines []string
+		for i, e := range msg.compile {
+			if i == 5 {
+				lines = append(lines, fmt.Sprintf("… %d more in the buffer's problems", len(msg.compile)-5))
+				break
+			}
+			lines = append(lines, fmt.Sprintf("line %d: %s", e.Line, sanitizeDBText(e.Text)))
+		}
+		level, title := toast.Warn, fmt.Sprintf("Stored %s %s: compiled with %s", o.edit.Kind, sanitizeDBText(o.edit.Name), dbPlural(len(msg.compile)-errs, "warning"))
+		if errs > 0 {
+			level, title = toast.Errr, fmt.Sprintf("Stored %s %s, but it compiled with %s", o.edit.Kind, sanitizeDBText(o.edit.Name), dbPlural(errs, "error"))
+		}
+		return m.pushToastDetail(level, title, strings.Join(lines, "\n"))
+	}
 	return m.pushToastDetail(toast.Info, "Stored "+string(o.edit.Kind)+" "+sanitizeDBText(o.edit.Name), "")
+}
+
+func dbCompileErrorCount(list []dbclient.CompileError) int {
+	n := 0
+	for _, e := range list {
+		if !e.Warning {
+			n++
+		}
+	}
+	return n
+}
+
+// dbCompileNamespace is the vim.diagnostic namespace of PL/SQL compile
+// errors.
+const dbCompileNamespace = "termocode-plsql"
+
+// databaseSetCompileProblems puts the compile errors of a submit on the
+// source buffer as diagnostics (an empty list clears them), so they show
+// in the gutter and in Problems.
+func (m *Model) databaseSetCompileProblems(file, name string, list []dbclient.CompileError) {
+	if m.nvim == nil {
+		return
+	}
+	diags := make([]any, 0, len(list))
+	for _, e := range list {
+		sev := 1
+		if e.Warning {
+			sev = 2
+		}
+		diags = append(diags, []any{e.Line, e.Col, sev, e.Text})
+	}
+	_ = m.nvim.ExecLuaArgs(setTaskDiagnosticsLua, []any{[]any{file, diags}}, "oracle: "+name, dbCompileNamespace)
 }
 
 // databasePendingSources lists the saved, not yet submitted sources.
@@ -411,6 +525,22 @@ func (m *Model) databasePendingSources() tea.Cmd {
 
 // databaseSourcePicker opens the chosen pending source.
 func (m *Model) databaseSourcePicker(id string) (tea.Cmd, bool) {
+	if m.pickerKind == pickerKindDBSourcePackagePart {
+		if m.databases == nil {
+			return nil, true
+		}
+		st := m.databases.sourceState()
+		row := st.pkgRow
+		st.pkgRow = nil
+		if row == nil || (id != "spec" && id != "body") {
+			return nil, true
+		}
+		kind := dbclient.ObjectPackage
+		if id == "body" {
+			kind = dbclient.ObjectPackageBody
+		}
+		return m.databaseEditSourceLoad(*row, kind), true
+	}
 	if m.pickerKind != pickerKindDBSourcePending {
 		return nil, false
 	}
