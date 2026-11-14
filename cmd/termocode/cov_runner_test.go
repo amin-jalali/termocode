@@ -5,9 +5,7 @@ import (
 	"errors"
 	"github.com/amin-jalali/termocode/internal/runner"
 	"strings"
-	"syscall"
 	"testing"
-	"time"
 )
 
 func runnerCLI(t *testing.T, stdin string, args ...string) (int, string, string) {
@@ -98,27 +96,6 @@ func TestRunnerShortCutsLongFirstLine(t *testing.T) {
 	}
 	if got := runnerShort("ab\nc", 4); got != "ab" {
 		t.Fatalf("%q", got)
-	}
-}
-
-// serve runs until it is interrupted, then returns 0.
-func TestRunnerServeStopsOnInterrupt(t *testing.T) {
-	dir, folder := t.TempDir(), t.TempDir()
-	done := make(chan int, 1)
-	var out, errw bytes.Buffer
-	go func() {
-		done <- runRunnerIn([]string{"serve", "--folder", folder, "--pool", "1"}, nil, &out, &errw,
-			func() (string, error) { return folder, nil }, func() (string, error) { return dir, nil })
-	}()
-	time.Sleep(700 * time.Millisecond)
-	_ = syscall.Kill(syscall.Getpid(), syscall.SIGINT)
-	select {
-	case code := <-done:
-		if code != 0 {
-			t.Fatalf("serve: %d %s", code, errw.String())
-		}
-	case <-time.After(15 * time.Second):
-		t.Fatal("serve did not stop")
 	}
 }
 

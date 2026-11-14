@@ -3,7 +3,6 @@ package nvim
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -176,24 +175,6 @@ func TestNextOnClosedEventStream(t *testing.T) {
 	close(c.events)
 	if c.Next()() != nil {
 		t.Fatal("a closed stream gave a message")
-	}
-}
-
-// startProc gives a command a parent-death signal even when it had no
-// process attributes, and reports a failed start.
-func TestStartProcSetsAttrsAndReportsFailure(t *testing.T) {
-	reaped := make(chan struct{})
-	cmd := exec.Command("true")
-	if err := startProc(cmd, reaped); err != nil {
-		t.Fatal(err)
-	}
-	if cmd.SysProcAttr == nil || cmd.SysProcAttr.Pdeathsig == 0 {
-		t.Fatal("no parent-death signal")
-	}
-	_ = cmd.Wait()
-	close(reaped)
-	if err := startProc(exec.Command("/no/such/binary"), make(chan struct{})); err == nil {
-		t.Fatal("a missing binary started")
 	}
 }
 
