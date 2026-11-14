@@ -10,7 +10,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/spawn"
@@ -180,16 +179,11 @@ func (s *Session) Settle(mark int, quiet, timeout time.Duration) int {
 // Close kills the program and its process group, and frees the PTY.
 func (s *Session) Close() {
 	s.once.Do(func() {
-		_ = syscall.Kill(-s.pid, syscall.SIGKILL)
-		_ = syscall.Kill(s.pid, syscall.SIGKILL)
+		killGroup(s.pid)
 		_ = s.ptmx.Close()
 		_ = s.cmd.Wait()
 		s.wg.Wait()
 	})
-}
-
-func alive(pid int) bool {
-	return syscall.Kill(pid, 0) == nil
 }
 
 // Stats is a summary of repeated timings.
