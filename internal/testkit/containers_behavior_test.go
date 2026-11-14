@@ -252,7 +252,18 @@ func TestContainersRunImageOptionalStepsFinishOnEmptyEnter(t *testing.T) {
 	if !d.WaitForText("Run image?", 3*time.Second) {
 		t.Fatalf("no run card:\n%s", screen(d))
 	}
-	text := strings.Join(strings.Fields(screen(d)), " ")
+	// Only the card's own text: the command wraps inside the card (where
+	// depends on the temp path's length), and the panes beside it must
+	// not land between "-e" and "A=1".
+	var inside []string
+	for _, row := range cardText(screen(d), "Run image?") {
+		row = strings.TrimPrefix(row, "│")
+		if i := strings.Index(row, "│"); i >= 0 {
+			row = row[:i]
+		}
+		inside = append(inside, row)
+	}
+	text := strings.Join(strings.Fields(strings.Join(inside, " ")), " ")
 	for _, want := range []string{"run", "-p 8080:80", "-e A=1", "-e B=2"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("run card misses %q:\n%s", want, screen(d))
