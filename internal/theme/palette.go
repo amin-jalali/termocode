@@ -2,6 +2,8 @@ package theme
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"sync/atomic"
 
 	"github.com/charmbracelet/lipgloss"
@@ -224,8 +226,14 @@ var BracketPairs = []Color256{
 }
 
 // indexHex maps every Color256 currently in use to a truecolor hex string.
-// SetPalette replaces this map atomically when the user switches themes.
-var indexHex = defaultIndexHex()
+// SetPalette replaces this map atomically when the user switches themes;
+// a stored map is never written again.
+var indexHex atomic.Pointer[map[Color256]string]
+
+func init() {
+	m := defaultIndexHex()
+	indexHex.Store(&m)
+}
 
 func defaultIndexHex() map[Color256]string {
 	return map[Color256]string{
@@ -294,121 +302,130 @@ func CurrentRenderKey() RenderKey {
 // call. The view layer must trigger a re-render after this returns.
 func SetPalette(p Palette256) {
 	paletteGen.Add(1)
-	BgEditor = p.BgEditor
-	BgSidebar = p.BgSidebar
-	BgActivityBar = p.BgActivityBar
-	BgTitleBar = p.BgTitleBar
-	BgPanel = p.BgPanel
-	BgStatusBar = p.BgStatusBar
-	BgSelection = p.BgSelection
-	BgHover = p.BgHover
-	BgActiveLine = p.BgActiveLine
-	BgInactiveSel = p.BgInactiveSel
-	BgSectionHdr = p.BgSectionHdr
+	set(&BgEditor, p.BgEditor)
+	set(&BgSidebar, p.BgSidebar)
+	set(&BgActivityBar, p.BgActivityBar)
+	set(&BgTitleBar, p.BgTitleBar)
+	set(&BgPanel, p.BgPanel)
+	set(&BgStatusBar, p.BgStatusBar)
+	set(&BgSelection, p.BgSelection)
+	set(&BgHover, p.BgHover)
+	set(&BgActiveLine, p.BgActiveLine)
+	set(&BgInactiveSel, p.BgInactiveSel)
+	set(&BgSectionHdr, p.BgSectionHdr)
 	if p.BgKeycap != 0 {
-		BgKeycap = p.BgKeycap
+		set(&BgKeycap, p.BgKeycap)
 	}
-	BgFloat = p.BgFloat
-	if BgFloat == 0 {
-		BgFloat = BgSidebar
-	}
+	set(&BgFloat, or(p.BgFloat, BgSidebar))
 
-	TextPrimary = p.TextPrimary
-	TextSecondary = p.TextSecondary
-	TextMuted = p.TextMuted
-	TextDim = p.TextDim
-	TextDimmer = p.TextDimmer
+	set(&TextPrimary, p.TextPrimary)
+	set(&TextSecondary, p.TextSecondary)
+	set(&TextMuted, p.TextMuted)
+	set(&TextDim, p.TextDim)
+	set(&TextDimmer, p.TextDimmer)
 	if p.TextQuaternary != 0 {
-		TextQuaternary = p.TextQuaternary
+		set(&TextQuaternary, p.TextQuaternary)
 	}
-	TextWhite = p.TextWhite
-	OnAccent = p.OnAccent
-	if OnAccent == 0 {
-		OnAccent = TextWhite
-	}
-	Cursor = p.Cursor
-	ActiveLineNum = p.ActiveLineNum
+	set(&TextWhite, p.TextWhite)
+	set(&OnAccent, or(p.OnAccent, TextWhite))
+	set(&Cursor, p.Cursor)
+	set(&ActiveLineNum, p.ActiveLineNum)
 
 	if p.AccentBlue != 0 {
-		AccentBlue = p.AccentBlue
+		set(&AccentBlue, p.AccentBlue)
 	}
 	if p.AccentGreen != 0 {
-		AccentGreen = p.AccentGreen
+		set(&AccentGreen, p.AccentGreen)
 	}
 	if p.AccentAmber != 0 {
-		AccentAmber = p.AccentAmber
+		set(&AccentAmber, p.AccentAmber)
 	}
 	if p.AccentRedCoral != 0 {
-		AccentRedCoral = p.AccentRedCoral
+		set(&AccentRedCoral, p.AccentRedCoral)
 	}
 	if p.AccentMagenta != 0 {
-		AccentMagenta = p.AccentMagenta
+		set(&AccentMagenta, p.AccentMagenta)
 	}
 	if p.AccentLavender != 0 {
-		AccentLavender = p.AccentLavender
+		set(&AccentLavender, p.AccentLavender)
 	}
 
 	// Group A: AI tokens fall back to their neighbours when a palette
 	// doesn't set them.
-	AIGhost = p.AIGhost
-	if AIGhost == 0 {
-		AIGhost = TextDim
+	set(&AIGhost, or(p.AIGhost, TextDim))
+	set(&AIAccent, or(p.AIAccent, AccentLavender))
+
+	set(&BorderDefault, p.BorderDefault)
+	set(&BorderFocus, p.BorderFocus)
+	set(&BorderSubtle, p.BorderSubtle)
+
+	set(&SyntaxKeyword, p.SyntaxKeyword)
+	set(&SyntaxControl, p.SyntaxControl)
+	set(&SyntaxFunction, p.SyntaxFunction)
+	set(&SyntaxVariable, p.SyntaxVariable)
+	set(&SyntaxType, p.SyntaxType)
+	set(&SyntaxString, p.SyntaxString)
+	set(&SyntaxNumber, p.SyntaxNumber)
+	set(&SyntaxComment, p.SyntaxComment)
+	set(&SyntaxRegex, p.SyntaxRegex)
+	set(&SyntaxConstant, p.SyntaxConstant)
+	set(&SyntaxOperator, p.SyntaxOperator)
+
+	set(&DiagError, p.DiagError)
+	set(&DiagWarning, p.DiagWarning)
+	set(&DiagInfo, p.DiagInfo)
+	set(&DiagHint, p.DiagHint)
+
+	set(&GitModified, p.GitModified)
+	set(&GitAdded, p.GitAdded)
+	set(&GitUntracked, p.GitUntracked)
+	set(&GitDeleted, p.GitDeleted)
+	set(&GitConflict, p.GitConflict)
+	set(&GitIgnored, p.GitIgnored)
+	set(&GitSubmodule, p.GitSubmodule)
+
+	if len(p.BracketPairs) > 0 && !slices.Equal(BracketPairs, p.BracketPairs) {
+		BracketPairs = slices.Clone(p.BracketPairs)
 	}
-	AIAccent = p.AIAccent
-	if AIAccent == 0 {
-		AIAccent = AccentLavender
-	}
 
-	BorderDefault = p.BorderDefault
-	BorderFocus = p.BorderFocus
-	BorderSubtle = p.BorderSubtle
-
-	SyntaxKeyword = p.SyntaxKeyword
-	SyntaxControl = p.SyntaxControl
-	SyntaxFunction = p.SyntaxFunction
-	SyntaxVariable = p.SyntaxVariable
-	SyntaxType = p.SyntaxType
-	SyntaxString = p.SyntaxString
-	SyntaxNumber = p.SyntaxNumber
-	SyntaxComment = p.SyntaxComment
-	SyntaxRegex = p.SyntaxRegex
-	SyntaxConstant = p.SyntaxConstant
-	SyntaxOperator = p.SyntaxOperator
-
-	DiagError = p.DiagError
-	DiagWarning = p.DiagWarning
-	DiagInfo = p.DiagInfo
-	DiagHint = p.DiagHint
-
-	GitModified = p.GitModified
-	GitAdded = p.GitAdded
-	GitUntracked = p.GitUntracked
-	GitDeleted = p.GitDeleted
-	GitConflict = p.GitConflict
-	GitIgnored = p.GitIgnored
-	GitSubmodule = p.GitSubmodule
-
-	if len(p.BracketPairs) > 0 {
-		BracketPairs = append(BracketPairs[:0], p.BracketPairs...)
-	}
+	// The hex map is swapped whole (never written in place) so Hex can
+	// read it from any goroutine. Shadow's fallback 232 needs an entry.
+	hex := *indexHex.Load()
 	if p.IndexHex != nil {
-		indexHex = p.IndexHex
+		hex = p.IndexHex
 	}
-	// Shadow is resolved last: its fallback is derived from the (new)
-	// editor background, so the hex map must already be swapped in.
-	Shadow = p.Shadow
-	if Shadow == 0 {
-		Shadow = 232
-		if _, ok := indexHex[232]; !ok {
-			indexHex[232] = "#080808"
-		}
+	set(&Shadow, or(p.Shadow, 232))
+	if _, ok := hex[232]; !ok && p.Shadow == 0 {
+		hex = maps.Clone(hex)
+		hex[232] = "#080808"
 	}
+	if !maps.Equal(hex, *indexHex.Load()) {
+		hex = maps.Clone(hex)
+		indexHex.Store(&hex)
+	}
+}
+
+// set writes v to *dst only when it differs. Applying the palette that
+// is already active (every new Model does) then writes nothing, so it
+// cannot race with a command that renders on its own goroutine.
+func set[T comparable](dst *T, v T) {
+	if *dst != v {
+		*dst = v
+	}
+}
+
+// or returns c, or def when c is zero ("derive").
+func or(c, def Color256) Color256 {
+	if c == 0 {
+		return def
+	}
+	return c
 }
 
 // Hex returns the truecolor hex string for a 256-index. Falls back to the
 // generic "color<N>" name lipgloss accepts when the index isn't in the map.
 func Hex(c Color256) string {
-	if v, ok := indexHex[c]; ok {
+	if v, ok := (*indexHex.Load())[c]; ok {
 		return v
 	}
 	return fmt.Sprintf("color%d", c)
