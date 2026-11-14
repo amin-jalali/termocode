@@ -399,3 +399,23 @@ func TestRelayForgetsAWaitingGatewayThatWentAway(t *testing.T) {
 	_ = gw.CloseNow()
 	waitWaiting(t, r.srv, room, 0)
 }
+
+// A connection that comes once the relay is closing is refused with 503
+// before it is upgraded: Close's wait never races a new connection.
+func TestRelayRefusesConnectionsOnceClosed(t *testing.T) {
+	r := newRig(t, Config{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	r.srv.Close()
+	c, resp, err := r.dial(ctx, testRoom(t), SideGateway)
+	if c != nil {
+		_ = c.CloseNow()
+	}
+	if err == nil || resp == nil || resp.StatusCode != http.StatusServiceUnavailable {
+		code := 0
+		if resp != nil {
+			code = resp.StatusCode
+		}
+		t.Fatalf("dial after Close: err %v, status %d, want 503", err, code)
+	}
+}
