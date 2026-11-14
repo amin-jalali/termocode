@@ -60,7 +60,9 @@ func words(spans []span) []word {
 			continue
 		}
 		if s.code {
-			add(s, s.text)
+			// lipgloss draws a tab as four spaces; measure it so, or a
+			// row holding one is cut short (the end falls off).
+			add(s, strings.ReplaceAll(s.text, "\t", "    "))
 			continue
 		}
 		t := strings.ReplaceAll(s.text, "\t", " ")
