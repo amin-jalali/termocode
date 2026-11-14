@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
 	"strconv"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // MergeMethod says how a pull request is merged.
@@ -33,7 +34,7 @@ func Merge(ctx context.Context, run Runner, dir string, number int, method Merge
 }
 
 // shaRe is a plain hex commit id.
-var shaRe = regexp.MustCompile(`^[0-9a-fA-F]{4,64}$`)
+var shaRe = lazyre.New(`^[0-9a-fA-F]{4,64}$`)
 
 // MergeHead merges a pull request only if its head is still sha
 // (`gh pr merge N --METHOD --match-head-commit SHA`): a push after CI

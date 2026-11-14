@@ -7,7 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Caps.
@@ -162,7 +163,7 @@ func (c *collector) keyOf(data json.RawMessage) string {
 	return hashKey(data)
 }
 
-var plainKeyRe = regexp.MustCompile(`^[A-Za-z0-9._:/#@+=-]+$`)
+var plainKeyRe = lazyre.New(`^[A-Za-z0-9._:/#@+=-]+$`)
 
 // cleanKey keeps a short plain key; anything else (spaces, new lines,
 // control or very long text from an outside system) becomes the hash.

@@ -16,6 +16,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/cfgfile"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	secretstore "github.com/amin-jalali/termocode/internal/secrets"
 )
 
@@ -863,13 +864,13 @@ func RegisterSecret(s string) {
 	secretsByLen = list
 }
 
-var redactPatterns = []*regexp.Regexp{
-	regexp.MustCompile(`sk-ant-[A-Za-z0-9_\-]{8,}`),
-	regexp.MustCompile(`sk-(?:or-|proj-)?[A-Za-z0-9_\-]{16,}`),
-	regexp.MustCompile(`(?i)(bearer\s+)[A-Za-z0-9._~+/=\-]{8,}`),
-	regexp.MustCompile(`(?i)(x-api-key["':=\s]+)[^\s"',}]{8,}`),
-	regexp.MustCompile(`(?i)("?(?:access_token|refresh_token|api_key|apikey)"?\s*[:=]\s*"?)[^"\s,}&]{8,}`),
-	regexp.MustCompile(`(?i)([?&](?:code|key|token)=)[^&\s"]{8,}`),
+var redactPatterns = []*lazyre.Regexp{
+	lazyre.New(`sk-ant-[A-Za-z0-9_\-]{8,}`),
+	lazyre.New(`sk-(?:or-|proj-)?[A-Za-z0-9_\-]{16,}`),
+	lazyre.New(`(?i)(bearer\s+)[A-Za-z0-9._~+/=\-]{8,}`),
+	lazyre.New(`(?i)(x-api-key["':=\s]+)[^\s"',}]{8,}`),
+	lazyre.New(`(?i)("?(?:access_token|refresh_token|api_key|apikey)"?\s*[:=]\s*"?)[^"\s,}&]{8,}`),
+	lazyre.New(`(?i)([?&](?:code|key|token)=)[^&\s"]{8,}`),
 }
 
 // TokenPrefixes start well-known service tokens (GitHub, GitLab, Slack,
@@ -882,12 +883,12 @@ var TokenPrefixes = []string{"ghp_", "gho_", "ghu_", "ghs_", "ghr_", "github_pat
 const TokenMinTail = 12
 
 // tokenPrefixRe matches a prefixed token at the start of a word.
-var tokenPrefixRe = func() *regexp.Regexp {
+var tokenPrefixRe = func() *lazyre.Regexp {
 	alts := make([]string, len(TokenPrefixes))
 	for i, p := range TokenPrefixes {
 		alts[i] = regexp.QuoteMeta(p)
 	}
-	return regexp.MustCompile(`(^|[^A-Za-z0-9_])(?:` + strings.Join(alts, "|") + `)[A-Za-z0-9_\-]{` + strconv.Itoa(TokenMinTail) + `,}`)
+	return lazyre.New(`(^|[^A-Za-z0-9_])(?:` + strings.Join(alts, "|") + `)[A-Za-z0-9_\-]{` + strconv.Itoa(TokenMinTail) + `,}`)
 }()
 
 // redactTokenPrefixes hides the prefixed tokens in s.

@@ -5,10 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"regexp"
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // ErrInvalid is returned by Validate for a block that breaks a cap or a
@@ -28,11 +29,11 @@ var (
 	diffSet    = setOf("add", "del", "ctx")
 	condSet    = setOf("eq", "ne", "gt", "lt", "ge", "le", "contains", "starts", "in", "empty", "not_empty")
 	densitySet = setOf("", "compact", "detailed")
-	idRe       = regexp.MustCompile(`^[A-Za-z0-9_.:\-]+$`)
-	opRe       = regexp.MustCompile(`^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$`)
+	idRe       = lazyre.New(`^[A-Za-z0-9_.:\-]+$`)
+	opRe       = lazyre.New(`^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$`)
 	// secretish names a form field must never have: a form never asks for
 	// a secret (they stay on the laptop).
-	secretish = regexp.MustCompile(`(?i)password|passphrase|(^|[^a-z])(pass|pin|otp)([^a-z]|$)|secret|token([^a-z]|$)|api[_-]?key|private[_-]?key|credential`)
+	secretish = lazyre.New(`(?i)password|passphrase|(^|[^a-z])(pass|pin|otp)([^a-z]|$)|secret|token([^a-z]|$)|api[_-]?key|private[_-]?key|credential`)
 )
 
 func setOf(vs ...string) map[string]bool {

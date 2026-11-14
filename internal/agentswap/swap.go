@@ -18,7 +18,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Vault is the part of the secret store the swap uses.
@@ -46,7 +47,7 @@ type Swapper struct {
 	GOOS    string
 }
 
-var labelRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$`)
+var labelRe = lazyre.New(`^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$`)
 
 // ValidLabel reports a label that is safe in a secret name.
 func ValidLabel(l string) bool { return labelRe.MatchString(l) }

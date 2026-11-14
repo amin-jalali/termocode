@@ -9,13 +9,14 @@ package agentdag
 
 import (
 	"fmt"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
 	"unicode"
 
 	"github.com/charmbracelet/x/ansi"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // State is the execution state of one node.
@@ -63,7 +64,7 @@ const (
 	CategoryDeep  = "deep"
 )
 
-var categoryRe = regexp.MustCompile(`^[a-z][a-z0-9-]{0,23}$`)
+var categoryRe = lazyre.New(`^[a-z][a-z0-9-]{0,23}$`)
 
 // ValidCategory reports whether name can be a category: lower-case
 // letters, digits and '-', starting with a letter, at most 24.

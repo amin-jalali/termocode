@@ -6,12 +6,13 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // ── Add a cluster to the kubeconfig (CTX-39) ─────────────────────────
@@ -30,7 +31,7 @@ type ClusterAdd struct {
 	CAFile string // optional absolute path of the CA certificate
 }
 
-var clusterNameRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:/@-]*$`)
+var clusterNameRe = lazyre.New(`^[A-Za-z0-9][A-Za-z0-9._:/@-]*$`)
 
 // CheckClusterAdd refuses what must never reach the file.
 func CheckClusterAdd(a ClusterAdd) error {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/agentlog"
 	"github.com/amin-jalali/termocode/internal/agents"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -61,8 +61,8 @@ func agentCLIAgent(cli agentlog.CLI) (agents.Agent, bool) {
 }
 
 var (
-	agentResumeIDRe     = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$`)
-	agentCodexResumeRe  = regexp.MustCompile(`(?m)^\s+resume\b`)
+	agentResumeIDRe     = lazyre.New(`^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$`)
+	agentCodexResumeRe  = lazyre.New(`(?m)^\s+resume\b`)
 	agentResumeHelpWait = 3 * time.Second
 )
 

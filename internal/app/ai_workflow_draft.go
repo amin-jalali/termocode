@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 
@@ -15,6 +14,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/cfgfile"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/workflow"
 	"github.com/amin-jalali/termocode/internal/workflow/wire"
 )
@@ -35,7 +35,7 @@ var aiWorkflowAllow = map[string]string{"workflow_draft": "Create", "workflow_dr
 // aiWorkflowCancelFirst are the cards whose safe button says Cancel.
 var aiWorkflowCancelFirst = map[string]bool{"workflow_draft": true}
 
-var aiWfxNameRe = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,39}$`)
+var aiWfxNameRe = lazyre.New(`^[a-z][a-z0-9_-]{0,39}$`)
 
 // aiWfxDiffCap caps the lines of the card's diff.
 const aiWfxDiffCap = 400

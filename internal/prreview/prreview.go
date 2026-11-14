@@ -10,11 +10,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 const (
@@ -113,7 +113,7 @@ func Prompt(base, diff string, cut bool, rules string) []ai.Message {
 	return []ai.Message{{Role: ai.RoleSystem, Content: sys}, {Role: ai.RoleUser, Content: b.String()}}
 }
 
-var findingRe = regexp.MustCompile(`^\s*(?:[-*]|\d+[.)])?\s*\[?\*{0,2}(P[0-9])\*{0,2}\]?\s*[:—–-]?\s*` + "`?" + `([^\s:` + "`" + `]+?)(?::(\d+))?` + "`?" + `(?:\s*[—–:]\s*|\s+-{1,2}\s+)(.+)$`)
+var findingRe = lazyre.New(`^\s*(?:[-*]|\d+[.)])?\s*\[?\*{0,2}(P[0-9])\*{0,2}\]?\s*[:—–-]?\s*` + "`?" + `([^\s:` + "`" + `]+?)(?::(\d+))?` + "`?" + `(?:\s*[—–:]\s*|\s+-{1,2}\s+)(.+)$`)
 
 // Parse reads the AI's answer. Only P0 and P1 lines are kept, at most
 // MaxFindings, without repeats.

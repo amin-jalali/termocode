@@ -6,12 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/httpclient"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/secrets"
 )
 
@@ -49,8 +49,8 @@ type HTTPInput struct {
 var ErrStatus = errors.New("http status")
 
 var (
-	secretRefRe = regexp.MustCompile(`\$\{secret:([^}]*)\}`)
-	anyRefRe    = regexp.MustCompile(`\$\{[^}]*\}?`)
+	secretRefRe = lazyre.New(`\$\{secret:([^}]*)\}`)
+	anyRefRe    = lazyre.New(`\$\{[^}]*\}?`)
 )
 
 // redactedText replaces a secret value in errors and items.

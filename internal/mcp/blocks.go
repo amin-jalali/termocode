@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/blocks"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // MCP results as phone blocks (MOB-12, mobile plan 3.4). When the AI
@@ -39,7 +39,7 @@ const (
 	laptopNote   = "This result cannot be shown on the phone. Open it on the laptop."
 )
 
-var blockIDBad = regexp.MustCompile(`[^A-Za-z0-9_.:\-]+`)
+var blockIDBad = lazyre.New(`[^A-Za-z0-9_.:\-]+`)
 
 // BlockOf turns one tools/call result of server's tool t into a block.
 func BlockOf(server string, t Tool, res CallResult, o BlockOptions) blocks.Block {

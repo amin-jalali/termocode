@@ -2,9 +2,10 @@ package agents
 
 import (
 	"errors"
-	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // ── Launch profiles (CMP-21) ────────────────────────────────────────────
@@ -93,9 +94,9 @@ func ProfileModeOf(agent, mode string) (ProfileMode, bool) {
 func HasProfileFlags(id string) bool { _, ok := flagTable[id]; return ok }
 
 var (
-	profileNameRe  = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,23}$`)
-	profileModelRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:/@+-]{0,79}$`)
-	envNameRe      = regexp.MustCompile(`^[A-Z_][A-Z0-9_]{0,63}$`)
+	profileNameRe  = lazyre.New(`^[a-z0-9][a-z0-9_-]{0,23}$`)
+	profileModelRe = lazyre.New(`^[A-Za-z0-9][A-Za-z0-9._:/@+-]{0,79}$`)
+	envNameRe      = lazyre.New(`^[A-Z_][A-Z0-9_]{0,63}$`)
 	// secretWords mark a variable that holds a secret.
 	secretWords = []string{"KEY", "TOKEN", "SECRET", "PASSWORD", "PASSWD", "PASS", "CREDENTIAL", "AUTH", "COOKIE", "SESSION"}
 	// loaderEnv change which programs or libraries run.

@@ -15,12 +15,12 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Limits of one fetch.
@@ -176,13 +176,13 @@ func Fetch(ctx context.Context, rawURL string, o Options) (Page, error) {
 }
 
 var (
-	reDrop    = regexp.MustCompile(`(?is)<(script|style|noscript|svg|template|head)\b.*?</(script|style|noscript|svg|template|head)\s*>|<!--.*?-->`)
-	reTitle   = regexp.MustCompile(`(?is)<title\b[^>]*>(.*?)</title\s*>`)
-	reBreak   = regexp.MustCompile(`(?i)<(br|hr)\b[^>]*>|</(p|div|li|h[1-6]|tr|pre|blockquote|section|article|table|ul|ol|dt|dd)\s*>`)
-	reItem    = regexp.MustCompile(`(?i)<li\b[^>]*>`)
-	reTag     = regexp.MustCompile(`(?s)<[^>]*>`)
-	reSpaces  = regexp.MustCompile(`[ \t\r\f\v\x{a0}]+`)
-	reNewline = regexp.MustCompile(`\n\s*\n+`)
+	reDrop    = lazyre.New(`(?is)<(script|style|noscript|svg|template|head)\b.*?</(script|style|noscript|svg|template|head)\s*>|<!--.*?-->`)
+	reTitle   = lazyre.New(`(?is)<title\b[^>]*>(.*?)</title\s*>`)
+	reBreak   = lazyre.New(`(?i)<(br|hr)\b[^>]*>|</(p|div|li|h[1-6]|tr|pre|blockquote|section|article|table|ul|ol|dt|dd)\s*>`)
+	reItem    = lazyre.New(`(?i)<li\b[^>]*>`)
+	reTag     = lazyre.New(`(?s)<[^>]*>`)
+	reSpaces  = lazyre.New(`[ \t\r\f\v\x{a0}]+`)
+	reNewline = lazyre.New(`\n\s*\n+`)
 )
 
 // HTMLText turns an HTML page into its title and readable text: scripts,

@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/ai"
@@ -40,7 +39,7 @@ const aiCtxMentionMax = 10
 var aiCtxMentionRe = lazyre.New(`(?:^|\s)@([a-z]+)(?::(\S+))?`)
 
 // aiMentionBaseRe is a plain ref name for @diff:<base>.
-var aiMentionBaseRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._/-]*$`)
+var aiMentionBaseRe = lazyre.New(`^[A-Za-z0-9][A-Za-z0-9._/-]*$`)
 
 // aiCtxMentionKinds are the mention kinds; true: nothing without an argument.
 var aiCtxMentionKinds = map[string]bool{"chat": true, "symbol": true, "url": true, "diagnostics": false, "diff": false, "changes": false}

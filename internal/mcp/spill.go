@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 	"unicode/utf8"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Big results (AI-4, AI-5, AI-6): a tool result over its limit is never
@@ -38,7 +38,7 @@ type Spill struct {
 // NewSpill uses dir (made on the first save).
 func NewSpill(dir string) *Spill { return &Spill{Dir: dir} }
 
-var spillIDRe = regexp.MustCompile(`^r[0-9]+-[A-Za-z0-9_-]{1,80}$`)
+var spillIDRe = lazyre.New(`^r[0-9]+-[A-Za-z0-9_-]{1,80}$`)
 
 // save writes text and returns its id.
 func (s *Spill) save(server, tool, text string) (string, error) {

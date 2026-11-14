@@ -20,12 +20,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Dir is where specs live, relative to the project root.
@@ -272,7 +273,7 @@ func List(root string) ([]Spec, error) {
 	return out, nil
 }
 
-var tickRe = regexp.MustCompile(`(?m)^([-*] \[)[xX](\])`)
+var tickRe = lazyre.New(`(?m)^([-*] \[)[xX](\])`)
 
 // hashOf is the approval hash of a phase's file: for Tasks the ticks
 // are ignored (Build ticks them).
@@ -364,9 +365,9 @@ type Task struct {
 }
 
 var (
-	taskRe  = regexp.MustCompile(`^[-*] \[([ xX])\] +(.*)$`)
-	numRe   = regexp.MustCompile(`^(\d+)[.)] +`)
-	afterRe = regexp.MustCompile(`(?i)\s*\(after ([\d,\s]+)\)\s*$`)
+	taskRe  = lazyre.New(`^[-*] \[([ xX])\] +(.*)$`)
+	numRe   = lazyre.New(`^(\d+)[.)] +`)
+	afterRe = lazyre.New(`(?i)\s*\(after ([\d,\s]+)\)\s*$`)
 )
 
 // ParseTasks reads the top-level tick boxes of tasks.md (indented ones

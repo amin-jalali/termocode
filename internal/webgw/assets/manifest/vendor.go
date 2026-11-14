@@ -14,8 +14,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // VendorFile is the name of the vendor manifest inside the vendor folder.
@@ -143,7 +144,7 @@ func VerifyVendor(dir string) ([]Package, error) {
 
 // servedName is a file name under /assets/: a folder, then a plain name
 // of a script, a style sheet or a font.
-var servedName = regexp.MustCompile(`^[a-z0-9-]+/[A-Za-z0-9._-]+\.(js|css|ttf|woff2)$`)
+var servedName = lazyre.New(`^[a-z0-9-]+/[A-Za-z0-9._-]+\.(js|css|ttf|woff2)$`)
 
 func sortedKeys(m map[string]string) []string {
 	keys := make([]string, 0, len(m))

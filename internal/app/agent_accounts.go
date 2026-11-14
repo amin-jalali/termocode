@@ -4,7 +4,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -12,6 +11,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/agents"
 	"github.com/amin-jalali/termocode/internal/cfgfile"
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -42,7 +42,7 @@ const (
 // agentStartAs starts agent a as account label (a var for tests).
 var agentStartAs = func(m *Model, a agents.Agent, label string) tea.Cmd { return m.startAgentAs(a, label) }
 
-var agentAccountLabelRe = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,23}$`)
+var agentAccountLabelRe = lazyre.New(`^[a-z0-9][a-z0-9_-]{0,23}$`)
 
 // agentAccountLabelOK checks a label: 1–24 of a-z 0-9 _ -, not first - or _.
 func agentAccountLabelOK(label string) error {

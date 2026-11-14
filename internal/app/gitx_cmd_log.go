@@ -3,13 +3,13 @@ package app
 import (
 	"fmt"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
@@ -56,7 +56,7 @@ func init() {
 }
 
 // gitxURLUser matches the user (and token) part of a URL.
-var gitxURLUser = regexp.MustCompile(`://([^/@\s]+)@`)
+var gitxURLUser = lazyre.New(`://([^/@\s]+)@`)
 
 // gitxCmdLogAdd keeps one git command (other programs and the status
 // polls left out).

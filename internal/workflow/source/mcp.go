@@ -6,9 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Mcp source limits.
@@ -84,7 +85,7 @@ type MCPInput struct {
 	Shape
 }
 
-var mcpNameRe = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,128}$`)
+var mcpNameRe = lazyre.New(`^[A-Za-z0-9_.-]{1,128}$`)
 
 // MCP calls the tool and returns the items of its answer. The answer is
 // the tool's structuredContent when it has one, else the JSON in its

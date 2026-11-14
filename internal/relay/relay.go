@@ -25,7 +25,6 @@ import (
 	"errors"
 	"net"
 	"net/http"
-	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -34,6 +33,7 @@ import (
 	"github.com/coder/websocket"
 
 	"github.com/amin-jalali/termocode/internal/crash"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // PathPrefix is where the relay answers: PathPrefix + room + "?side=gw|page".
@@ -134,7 +134,7 @@ func (c Config) withDefaults() Config {
 	return c
 }
 
-var roomRE = regexp.MustCompile(`^[A-Za-z0-9_-]{22}$`)
+var roomRE = lazyre.New(`^[A-Za-z0-9_-]{22}$`)
 
 // ValidRoom reports whether id is a room id: 22 base64url characters
 // (128 bits), nothing else.

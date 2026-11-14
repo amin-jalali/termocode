@@ -10,8 +10,9 @@ package agents
 
 import (
 	"path"
-	"regexp"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Agent is one external CLI agent.
@@ -190,13 +191,13 @@ func (s State) String() string {
 
 // rules are the screen patterns of one agent.
 type rules struct {
-	waiting, working, done []*regexp.Regexp
+	waiting, working, done []*lazyre.Regexp
 }
 
-func res(exprs ...string) []*regexp.Regexp {
-	out := make([]*regexp.Regexp, len(exprs))
+func res(exprs ...string) []*lazyre.Regexp {
+	out := make([]*lazyre.Regexp, len(exprs))
 	for i, e := range exprs {
-		out[i] = regexp.MustCompile(e)
+		out[i] = lazyre.New(e)
 	}
 	return out
 }
@@ -263,7 +264,7 @@ func Detect(id string, lines []string) State {
 		return Unknown
 	}
 	tail := bottom(lines)
-	match := func(rs []*regexp.Regexp) bool {
+	match := func(rs []*lazyre.Regexp) bool {
 		for _, l := range tail {
 			for _, re := range rs {
 				if re.MatchString(l) {

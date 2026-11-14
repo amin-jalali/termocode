@@ -2,14 +2,14 @@ package app
 
 import (
 	"path/filepath"
-	"regexp"
 
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // nvimWriteLine matches nvim's raw write message: `"path" [New] 9L, 81B
 // written` (or "3 lines, 20 bytes written" with shortmess changed).
-var nvimWriteLine = regexp.MustCompile(`^"(.+)"(?: \[[^\]]*\])* .*\bwritten$`)
+var nvimWriteLine = lazyre.New(`^"(.+)"(?: \[[^\]]*\])* .*\bwritten$`)
 
 // nvimPromptToast turns nvim's last message into a toast: its raw write
 // line becomes a short clean "Saved <name>" note (WEBP-10: the web showed

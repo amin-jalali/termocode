@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 	"sync"
 
 	"github.com/amin-jalali/termocode/internal/cfgfile"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // MCP profiles (MCPX-27): named sets of servers and tools, so a chat can
@@ -37,7 +37,7 @@ type profilesFile struct {
 	Profiles map[string]Profile `json:"profiles"`
 }
 
-var profileName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`)
+var profileName = lazyre.New(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`)
 
 // ProfilesPath is the user's profiles file in the config dir.
 func ProfilesPath(configDir string) string { return filepath.Join(configDir, "mcp-profiles.json") }

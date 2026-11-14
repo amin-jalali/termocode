@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // GitHub source limits.
@@ -32,8 +33,8 @@ type GitHubInput struct {
 }
 
 var (
-	ghRepoRe  = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,99}/[A-Za-z0-9._-]{1,100}$`)
-	ghLabelRe = regexp.MustCompile(`^[^-\x00-\x1f][^\x00-\x1f]{0,99}$`)
+	ghRepoRe  = lazyre.New(`^[A-Za-z0-9][A-Za-z0-9._-]{0,99}/[A-Za-z0-9._-]{1,100}$`)
+	ghLabelRe = lazyre.New(`^[^-\x00-\x1f][^\x00-\x1f]{0,99}$`)
 )
 
 const (

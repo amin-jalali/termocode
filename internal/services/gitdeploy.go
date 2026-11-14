@@ -5,8 +5,9 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // GitDeploy is "deploy a compose stack from git": a shallow clone (or a
@@ -21,9 +22,9 @@ type GitDeploy struct {
 }
 
 var (
-	gitScpURL  = regexp.MustCompile(`^[A-Za-z0-9._-]+@[A-Za-z0-9.-]+:[A-Za-z0-9._~/-]+$`)
-	gitRefOK   = regexp.MustCompile(`^[A-Za-z0-9._/-]+$`)
-	gitNameBad = regexp.MustCompile(`[^A-Za-z0-9._-]`)
+	gitScpURL  = lazyre.New(`^[A-Za-z0-9._-]+@[A-Za-z0-9.-]+:[A-Za-z0-9._~/-]+$`)
+	gitRefOK   = lazyre.New(`^[A-Za-z0-9._/-]+$`)
+	gitNameBad = lazyre.New(`[^A-Za-z0-9._-]`)
 )
 
 // PlanGitDeploy reads "url" or "url#ref" and plans the deploy under base.

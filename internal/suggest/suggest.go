@@ -15,10 +15,11 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Kind names what a task is about.
@@ -187,10 +188,10 @@ func isBinary(src []byte) bool {
 // markerRe finds a marker word inside a comment. The comment token
 // (//, #, /*, *, --, ;, <!--) must come before it on the line, so a
 // "TODO" in a string or a name is not a task.
-var markerRe = regexp.MustCompile(`(?://|#|/\*|^\s*\*|--|;|<!--)\s*(?:@)?\b(TODO|FIXME|BUG|HACK|XXX|OPTIMIZE|PERF)\b(?:\([^)]*\))?\s*[:!-]?\s*(.*)$`)
+var markerRe = lazyre.New(`(?://|#|/\*|^\s*\*|--|;|<!--)\s*(?:@)?\b(TODO|FIXME|BUG|HACK|XXX|OPTIMIZE|PERF)\b(?:\([^)]*\))?\s*[:!-]?\s*(.*)$`)
 
 // commentEnd is cut from the end of the text.
-var commentEnd = regexp.MustCompile(`\s*(?:\*/|-->)\s*$`)
+var commentEnd = lazyre.New(`\s*(?:\*/|-->)\s*$`)
 
 // ScanComments finds the marker comments in one file.
 func ScanComments(file string, src []byte) []Task {

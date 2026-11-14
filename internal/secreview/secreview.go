@@ -10,9 +10,10 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // MaxModel is the most bytes of the threat model put in a request.
@@ -31,26 +32,26 @@ func (h Hint) Where() string { return h.File + ":" + strconv.Itoa(h.Line) }
 
 type rule struct {
 	kind   string
-	re     *regexp.Regexp
+	re     *lazyre.Regexp
 	noText bool // do not copy the line (it may hold a secret)
 }
 
 var rules = []rule{
-	{kind: "secret in code", noText: true, re: regexp.MustCompile(`(?i)(password|passwd|secret|api[_-]?key|token)\w*["']?\s*(:=|=|:)\s*["'][^"'\s]{6,}["']`)},
-	{kind: "command exec", re: regexp.MustCompile(`\bexec\.Command(Context)?\(|\bos\.system\(|\bsubprocess\.|\bchild_process\b|Runtime\.getRuntime\(\)\.exec`)},
-	{kind: "TLS check off", re: regexp.MustCompile(`InsecureSkipVerify:\s*true|verify\s*=\s*False|rejectUnauthorized:\s*false`)},
-	{kind: "SQL built from strings", re: regexp.MustCompile(`(?i)["'` + "`" + `]\s*(select|insert|update|delete)\b[^"'` + "`" + `]*["'` + "`" + `]\s*\+|Sprintf\(\s*["'` + "`" + `]\s*(select|insert|update|delete)\b`)},
-	{kind: "raw HTML", re: regexp.MustCompile(`template\.HTML\(|dangerouslySetInnerHTML|\.innerHTML\s*=|\|\s*safe\b`)},
-	{kind: "eval", re: regexp.MustCompile(`\beval\(|\bnew Function\(`)},
-	{kind: "unsafe decode", re: regexp.MustCompile(`pickle\.loads?\(|\byaml\.load\(|ObjectInputStream|\bMarshal\.load\b`)},
-	{kind: "weak hash", re: regexp.MustCompile(`\b(md5|sha1)\.(New|Sum)|hashlib\.(md5|sha1)\(|createHash\(["'](md5|sha1)`)},
-	{kind: "path from input", re: regexp.MustCompile(`(filepath\.Join|os\.Open|os\.ReadFile|open)\([^)]*\b(r\.URL|req\.|request\.|params|query)`)},
-	{kind: "network listener", re: regexp.MustCompile(`\bhttp\.HandleFunc\(|ListenAndServe(TLS)?\(|\bnet\.Listen\(|\bapp\.(get|post|put|delete)\(`)},
-	{kind: "wide file mode", re: regexp.MustCompile(`\b0o?7[67]7\b|\b0o?666\b`)},
-	{kind: "unsafe memory", re: regexp.MustCompile(`\bunsafe\.Pointer\b`)},
+	{kind: "secret in code", noText: true, re: lazyre.New(`(?i)(password|passwd|secret|api[_-]?key|token)\w*["']?\s*(:=|=|:)\s*["'][^"'\s]{6,}["']`)},
+	{kind: "command exec", re: lazyre.New(`\bexec\.Command(Context)?\(|\bos\.system\(|\bsubprocess\.|\bchild_process\b|Runtime\.getRuntime\(\)\.exec`)},
+	{kind: "TLS check off", re: lazyre.New(`InsecureSkipVerify:\s*true|verify\s*=\s*False|rejectUnauthorized:\s*false`)},
+	{kind: "SQL built from strings", re: lazyre.New(`(?i)["'` + "`" + `]\s*(select|insert|update|delete)\b[^"'` + "`" + `]*["'` + "`" + `]\s*\+|Sprintf\(\s*["'` + "`" + `]\s*(select|insert|update|delete)\b`)},
+	{kind: "raw HTML", re: lazyre.New(`template\.HTML\(|dangerouslySetInnerHTML|\.innerHTML\s*=|\|\s*safe\b`)},
+	{kind: "eval", re: lazyre.New(`\beval\(|\bnew Function\(`)},
+	{kind: "unsafe decode", re: lazyre.New(`pickle\.loads?\(|\byaml\.load\(|ObjectInputStream|\bMarshal\.load\b`)},
+	{kind: "weak hash", re: lazyre.New(`\b(md5|sha1)\.(New|Sum)|hashlib\.(md5|sha1)\(|createHash\(["'](md5|sha1)`)},
+	{kind: "path from input", re: lazyre.New(`(filepath\.Join|os\.Open|os\.ReadFile|open)\([^)]*\b(r\.URL|req\.|request\.|params|query)`)},
+	{kind: "network listener", re: lazyre.New(`\bhttp\.HandleFunc\(|ListenAndServe(TLS)?\(|\bnet\.Listen\(|\bapp\.(get|post|put|delete)\(`)},
+	{kind: "wide file mode", re: lazyre.New(`\b0o?7[67]7\b|\b0o?666\b`)},
+	{kind: "unsafe memory", re: lazyre.New(`\bunsafe\.Pointer\b`)},
 }
 
-var hunkRe = regexp.MustCompile(`^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@`)
+var hunkRe = lazyre.New(`^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@`)
 
 // ScanDiff returns the hints of the added lines of a unified diff, one per
 // line (the first rule that matches), at most max (0: no limit).

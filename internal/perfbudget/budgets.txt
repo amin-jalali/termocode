@@ -119,3 +119,10 @@ web_races_topic_20         10   ms   # the races topic of 20 races x 4 lanes x 2
 worktrees_list_200         25   ms   # parse 200 worktree list blocks + build the model with metadata; local 0.3 ms (floor)
 worktrees_status_200       50   ms   # UI-thread share of a status refresh of 200 worktrees (git runs in 4 workers); local 0.4 ms (floor)
 worktrees_draw_200         25   ms   # one WORKTREES frame of 200 worktrees, nothing cached, 150x42; local 3.3 ms (floor)
+
+# Package init (PERF-1; cmd/termocode/init_cost_test.go): the heap that
+# termocode's own packages allocate before main, in every process (the
+# session client, the server, the UI, mcp …). Exact counts, no timing, so
+# it runs in every test run (not under -cover). Measured 2026-11-14.
+init_own_heap_kib   2048  KiB  # local 1028 KiB (5215 before PERF-1: patterns compiled at init, a Lua replacer per string)
+init_own_allocs    10700  1    # local 5348 (47625 before PERF-1)

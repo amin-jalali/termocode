@@ -2,12 +2,12 @@ package views
 
 import (
 	"path"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/blocks"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // LooksSecret reports whether an arg value looks like a key or a token.
@@ -47,10 +47,10 @@ func opaqueRun(v string) bool {
 }
 
 var (
-	secretRe = regexp.MustCompile(`(?i)(^|[^a-z0-9])((ghp_|gho_|ghs_|ghu_|github_pat_|glpat-|sk-|sk_live_|rk_live_|xox[abpr]-)[a-z0-9_\-]{16,}|akia[0-9a-z]{16}|aiza[0-9a-z_\-]{30,})|-----begin|\$\{secret:`)
-	nameRe   = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_.\-]{0,127}$`)
-	intRe    = regexp.MustCompile(`^-?[0-9]{1,18}$`)
-	uriRe    = regexp.MustCompile(`^[a-z][a-z0-9+.\-]*:[^\s]{1,400}$`)
+	secretRe = lazyre.New(`(?i)(^|[^a-z0-9])((ghp_|gho_|ghs_|ghu_|github_pat_|glpat-|sk-|sk_live_|rk_live_|xox[abpr]-)[a-z0-9_\-]{16,}|akia[0-9a-z]{16}|aiza[0-9a-z_\-]{30,})|-----begin|\$\{secret:`)
+	nameRe   = lazyre.New(`^[A-Za-z_][A-Za-z0-9_.\-]{0,127}$`)
+	intRe    = lazyre.New(`^-?[0-9]{1,18}$`)
+	uriRe    = lazyre.New(`^[a-z][a-z0-9+.\-]*:[^\s]{1,400}$`)
 )
 
 // condKinds says on which field kinds each filter op works.

@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/jsonc"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // DBX-45: saved SQL runs. A run is a script file played on one or many
@@ -103,7 +103,7 @@ func SQLRunPath(root, p string) string {
 	return filepath.Join(root, p)
 }
 
-var envKeyPattern = regexp.MustCompile(`^[A-Z_][A-Z0-9_]*$`)
+var envKeyPattern = lazyre.New(`^[A-Z_][A-Z0-9_]*$`)
 
 // SQLRunShell builds the POSIX shell line of a run and the environment
 // it needs. The before steps run first, then the script on each target
