@@ -96,7 +96,7 @@ type settingsConfig struct {
 	// AgentAccounts: agent id → account labels (agent_accounts.go,
 	// AGX-13). Labels only; each has its own config folder. File only.
 	AgentAccounts map[string][]string `json:"agent_accounts,omitempty"`
-	// AgentAccountSwap: allow Agent: Switch Account… to replace the CLI's
+	// AgentAccountSwap: allow Agent: Swap Sign-In Account… to replace the CLI's
 	// own sign-in file (agent_swap.go, AGX-14). Off by default; File only.
 	AgentAccountSwap bool `json:"agent_account_swap,omitempty"`
 	// AgentProfiles: agent id → launch profiles (model, mode, env;

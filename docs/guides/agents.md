@@ -702,7 +702,7 @@ agent thread. On the web, this is not there yet.
 
 **Agent: Accounts…** gives each account its own folder and never touches `~/.claude` or `~/.codex`.
 If you want the CLI's own sign-in itself to change, set `agent_account_swap` to `true` in
-`config.json`. Then **Agent: Switch Account…** can:
+`config.json`. Then **Agent: Swap Sign-In Account…** can:
 
 - **Save the signed-in account as…** — keeps a copy of the CLI's sign-in file in the secret store
   (never shown, never in a log).

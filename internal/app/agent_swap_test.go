@@ -9,7 +9,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/agentswap"
 )
 
-// AGX-14: Agent: Switch Account… moves the CLI's own sign-in file in
+// AGX-14: Agent: Swap Sign-In Account… moves the CLI's own sign-in file in
 // place. It is off until agent_account_swap is true in config.json.
 
 func swapModel(t *testing.T, on bool) (*Model, string) {

@@ -16,7 +16,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
-// Agent: Switch Account… (AGX-14, owner D2): the in-place switch of the
+// Agent: Swap Sign-In Account… (AGX-14, owner D2): the in-place switch of the
 // signed-in account of Claude Code or Codex. It writes the CLI's own
 // credential file in your home, so it is off until agent_account_swap is
 // true in config.json. The account files live in the secret store; a
@@ -29,7 +29,7 @@ const agentSwapPaletteID = "agent-swap-account"
 
 func init() {
 	registerGitx(gitxFeature{
-		palette:  []picker.Item{{ID: agentSwapPaletteID, Title: "Agent: Switch Account…", Hint: "agent_account_swap"}},
+		palette:  []picker.Item{{ID: agentSwapPaletteID, Title: "Agent: Swap Sign-In Account…", Hint: "agent_account_swap"}},
 		policies: map[string]aiActionPolicy{agentSwapPaletteID: aiNever(aiNoAIConfig + "; it replaces the credential file of an outside agent")},
 		dispatch: func(m *Model, id string) (tea.Cmd, bool) {
 			if id == agentSwapPaletteID {
@@ -167,7 +167,7 @@ func (m *Model) agentSwapUseCard(sw agentswap.Swapper, cli, label string) tea.Cm
 	if sw.Running != nil && sw.Running(cli) {
 		return m.pushToastDetail(toast.Warn, "Cannot use "+label, agentswap.ErrRunning.Error())
 	}
-	body := fmt.Sprintf("File: %s\nSize: %d bytes (contents hidden)\n\nThe file now there is kept as %s%s. Every new %s run uses %s. Undo: Agent: Switch Account… → Undo.",
+	body := fmt.Sprintf("File: %s\nSize: %d bytes (contents hidden)\n\nThe file now there is kept as %s%s. Every new %s run uses %s. Undo: Agent: Swap Sign-In Account… → Undo.",
 		pv.Path, pv.Size, pv.Path, agentswap.BackupSuffix, cli, label)
 	m.gitxCard("Use account "+label+" for "+cli+"?", body, func(m *Model, id string) tea.Cmd {
 		if id != "apply" {
@@ -176,7 +176,7 @@ func (m *Model) agentSwapUseCard(sw agentswap.Swapper, cli, label string) tea.Cm
 		if err := sw.Apply(cli, label); err != nil {
 			return m.pushToastDetail(toast.Errr, "Account not switched", err.Error())
 		}
-		return m.pushToastDetail(toast.Info, "Using "+label, "Undo: Agent: Switch Account… → Undo the last switch.")
+		return m.pushToastDetail(toast.Info, "Using "+label, "Undo: Agent: Swap Sign-In Account… → Undo the last switch.")
 	}, confirm.Button{ID: "apply", Title: "Switch", Style: confirm.StyleDestructive})
 	return nil
 }
