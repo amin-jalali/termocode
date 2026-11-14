@@ -20,6 +20,20 @@ func (m *Model) openStartFile() {
 		return
 	}
 	_ = os.Unsetenv(EnvStartFile)
+	m.openCommandLineFile(p)
+}
+
+// openAttachFile opens the file of `termocode <file>` that attached to
+// this running session (TerminalChangedMsg.Open). The session belongs to
+// the file's folder, so only a file inside the workspace opens.
+func (m *Model) openAttachFile(p string) {
+	if root := workspaceRoot(); root != "" && !pathWithin(p, root) {
+		return
+	}
+	m.openCommandLineFile(p)
+}
+
+func (m *Model) openCommandLineFile(p string) {
 	if abs, err := filepath.Abs(p); err == nil {
 		p = abs
 	}
