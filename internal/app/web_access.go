@@ -118,7 +118,7 @@ func (m *Model) openWebPair(guest bool) tea.Cmd {
 	if st.url == "" && st.relay == nil {
 		return m.webToast(toast.Warn, `Pairing a device needs "web_listen": "lan" (same Wi-Fi) or "tailnet" in config.json. Set it, then start the panel again.`)
 	}
-	if guest && st.fp != "" {
+	if guest && st.fp != "" && st.relay == nil { // the relay link works from any network
 		return m.webToast(toast.Warn, "Share as Viewer needs tailnet mode. On the same Wi-Fi, pair the device instead.")
 	}
 	if m.confirmOpen {
@@ -135,10 +135,13 @@ func (m *Model) openWebPair(guest bool) tea.Cmd {
 		"The phone then shows a 6-digit code; you check it here."
 	if guest {
 		title = "Share as a viewer"
+		reach := "They need this computer shared to them on Tailscale. When they open the link,\n"
+		if st.relay != nil {
+			reach = "It works from any network, through the relay. When they open the link,\n"
+		}
 		body = "Send this link to the person you share with (Copy link). It works once, for 10 minutes.\n" +
 			"They can only watch, unless you let them edit files when they open it.\n" +
-			"They need this computer shared to them on Tailscale. When they open the link,\n" +
-			"they read you a 6-digit code; you check it here and let them in."
+			reach + "they read you a 6-digit code; you check it here and let them in."
 	}
 	m.confirm = confirm.New(title, body, []confirm.Button{
 		{ID: "close", Title: "Close"},

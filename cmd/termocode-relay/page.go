@@ -17,13 +17,15 @@ import (
 var hostRE = regexp.MustCompile(`^([A-Za-z0-9.-]+|\[[0-9A-Fa-f:.]+\])(:[0-9]{1,5})?$`)
 
 // pageHandler serves the relay page (relay.html at /) and the panel's
-// built files under /assets/, the same bytes the laptop serves. The CSP
+// built files under /assets/, the same bytes the laptop serves, and
+// over https the push-only worker at /sw.js (Notify me on a phone). The CSP
 // is the panel's own for this host, with one Trusted Types policy
 // ("relay") so relay.js can load app.js once its tunnel is ready.
 // tlsProxy: a TLS proxy is in front (the page is https).
 func pageHandler(tlsProxy bool) http.Handler {
 	page, err := fs.ReadFile(assets.FS(), "relay.html")
 	files := webgw.Assets()
+	sw := webgw.ServiceWorker()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			http.NotFound(w, r)
@@ -56,6 +58,8 @@ func pageHandler(tlsProxy bool) http.Handler {
 			}
 			h.Set("Content-Type", "text/html; charset=utf-8")
 			_, _ = w.Write(page)
+		case r.URL.Path == webgw.SWPath && scheme == "https":
+			sw.ServeHTTP(w, r) // the push-only worker, with its own policy (NEW-11)
 		case strings.HasPrefix(r.URL.Path, "/assets/"):
 			files.ServeHTTP(w, r) // the editor's frame sets its own policy
 		default:

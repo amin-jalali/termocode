@@ -79,7 +79,8 @@ Alternatives on the table:
   someone knock; the handshake decides. Deleting `web.relay.key` makes
   a new key and room, and every relay phone pairs again.
 - **Trust.** After the handshake the gateway knows the page's proven
-  key. It lets in a paired, non-guest device bound to that key, or a
+  key. It lets in a paired device bound to that key (a Share as Viewer
+  guest too, still a viewer: NEW-11), or a
   page that brought the open pairing link's secret (checked, not used
   up); every other page is refused before any HTTP. Inside, the
   panel's own rules apply: the pairing card on the laptop with Not now
@@ -150,4 +151,5 @@ Alternatives on the table:
 - **−** Timing and size metadata is visible to the relay.
 - Follow-ups: owner OK on a public relay (hosting, cost, operator);
   MOB-42 (the app's own relay
-  transport); share as viewer and phone pushes over the relay.
+  transport). Share as Viewer and phone pushes work over the relay
+  (NEW-11: the relay serves the push-only `/sw.js` on https).
