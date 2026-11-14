@@ -1,9 +1,15 @@
 package ai
 
 import (
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
+
+// redactListRuns makes each run's secrets new: the secret list is
+// global and never forgets, so -count=N must not reuse a value.
+var redactListRuns atomic.Int64
 
 func redactPerfSecrets() {
 	for i := 0; i < 12; i++ {
@@ -43,7 +49,9 @@ func BenchmarkRedactSecrets32KB(b *testing.B) {
 // A secret registered after earlier redactions is hidden from then on,
 // and a longer secret that holds a shorter one is hidden whole.
 func TestRedactSecretListStaysCurrent(t *testing.T) {
-	short, long := "zq-short-secret-1", "zq-short-secret-1-and-more"
+	n := strconv.FormatInt(redactListRuns.Add(1), 10)
+	short := "zq-short-secret-" + n
+	long := short + "-and-more"
 	if got := Redact("x " + short); got != "x "+short {
 		t.Fatalf("not registered yet: %q", got)
 	}
