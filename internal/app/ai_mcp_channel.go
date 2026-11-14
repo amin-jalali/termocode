@@ -44,9 +44,22 @@ func mcpChannelPush(server, content string, meta map[string]string) {
 }
 
 // mcpChannelWaitCmd waits for the next pushed message (the Init command,
-// and again after each one).
-func mcpChannelWaitCmd() tea.Cmd {
-	return func() tea.Msg { return <-mcpChannelCh }
+// and again after each one). It ends when the Model closes (the crash
+// listener's stop is the Model's shared "closed" signal), so a closed
+// Model leaves no goroutine that would take the next Model's messages.
+func (m *Model) mcpChannelWaitCmd() tea.Cmd {
+	var stop <-chan struct{}
+	if m.crash != nil {
+		stop = m.crash.stop
+	}
+	return func() tea.Msg {
+		select {
+		case msg := <-mcpChannelCh:
+			return msg
+		case <-stop:
+			return nil
+		}
+	}
 }
 
 // onAIMCPChannel notes the message in the chat and toasts it.
@@ -67,5 +80,5 @@ func (m *Model) onAIMCPChannel(msg aiMCPChannelMsg) tea.Cmd {
 	m.aiNote(head + ":\n" + text)
 	var c tea.Cmd
 	m.toast, c = m.toast.PushDetail(toast.Info, ai.Redact(aiCleanText(msg.server))+" sent a message", firstLineOf(text))
-	return tea.Batch(c, mcpChannelWaitCmd())
+	return tea.Batch(c, m.mcpChannelWaitCmd())
 }
