@@ -32,6 +32,8 @@ import (
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/relay"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 func main() {
@@ -122,13 +124,13 @@ func run(ctx context.Context, args []string, logw, outw io.Writer) error {
 	}
 	fmt.Fprintf(outw, "termocode-relay: listening on %s\n", ln.Addr())
 	errc := make(chan error, 1)
-	go func() {
+	crash.GoWith("relay: serve", func() {
 		if o.cert != "" {
 			errc <- srv.ServeTLS(ln, o.cert, o.key)
 		} else {
 			errc <- srv.Serve(ln)
 		}
-	}()
+	}, func() { errc <- errors.New("the server stopped on an internal error") })
 	select {
 	case <-ctx.Done():
 	case err := <-errc:

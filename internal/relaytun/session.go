@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/flynn/noise"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // Frames inside a transport message: type (1 byte), stream id (4 bytes,
@@ -65,7 +67,7 @@ func newSession(c MsgConn, send, recv *noise.CipherState, peer PeerKey, initiato
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Session{conn: c, send: send, recv: recv, peer: peer, initiator: initiator, ctx: ctx, cancel: cancel,
 		streams: map[uint32]*stream{}, nextID: 1, accept: make(chan *stream, MaxStreams), done: make(chan struct{})}
-	go s.readLoop()
+	crash.GoWith("relaytun: read loop", s.readLoop, s.cancel)
 	return s
 }
 
@@ -144,7 +146,7 @@ func (s *Session) handle(pt []byte) error {
 		s.mu.Lock()
 		if len(s.streams) >= MaxStreams {
 			s.mu.Unlock()
-			go func() { _ = s.writeFrame(frClose, id, nil) }()
+			crash.Go("relaytun: refuse stream", func() { _ = s.writeFrame(frClose, id, nil) })
 			return nil
 		}
 		st := newStream(s, id)

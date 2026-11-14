@@ -32,6 +32,8 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // PathPrefix is where the relay answers: PathPrefix + room + "?side=gw|page".
@@ -402,7 +404,7 @@ type msg struct {
 // readAll reads c until an error, which is the last message, or done.
 func readAll(c *websocket.Conn, done <-chan struct{}) <-chan msg {
 	ch := make(chan msg)
-	go func() {
+	crash.Go("relay: read", func() {
 		for {
 			typ, b, err := c.Read(context.Background())
 			select {
@@ -414,7 +416,7 @@ func readAll(c *websocket.Conn, done <-chan struct{}) <-chan msg {
 				return
 			}
 		}
-	}()
+	})
 	return ch
 }
 
@@ -561,9 +563,10 @@ func (s *Server) pipe(id string, gw *websocket.Conn, gwMsgs <-chan msg, p pairin
 			n.Add(int64(len(b)))
 		}
 	}
-	go copyOne(pageMsgs, gw, &up)
-	go copyOne(gwMsgs, page, &down)
-	go func() { // the idle watch, the lifetime and the relay's stop
+	panicked := func() { res <- result{websocket.StatusInternalError, "panic"} } // res has room for all three
+	crash.GoWith("relay: page to gateway", func() { copyOne(pageMsgs, gw, &up) }, panicked)
+	crash.GoWith("relay: gateway to page", func() { copyOne(gwMsgs, page, &down) }, panicked)
+	crash.GoWith("relay: idle watch", func() { // the idle watch, the lifetime and the relay's stop
 		t := time.NewTicker(maxDur(s.cfg.Idle/4, 10*time.Millisecond))
 		defer t.Stop()
 		for {
@@ -578,7 +581,7 @@ func (s *Server) pipe(id string, gw *websocket.Conn, gwMsgs <-chan msg, p pairin
 				}
 			}
 		}
-	}()
+	}, panicked)
 	r := <-res
 	switch {
 	case r.code != 0:
@@ -595,10 +598,10 @@ func (s *Server) pipe(id string, gw *websocket.Conn, gwMsgs <-chan msg, p pairin
 	var wg sync.WaitGroup
 	for _, c := range []*websocket.Conn{page, gw} {
 		wg.Add(1)
-		go func() {
+		crash.Go("relay: close", func() {
 			defer wg.Done()
 			_ = c.Close(r.code, "")
-		}()
+		})
 	}
 	wg.Wait()
 }
