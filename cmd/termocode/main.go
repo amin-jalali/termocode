@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"runtime/debug"
 	"runtime/pprof"
@@ -391,6 +392,14 @@ func run(argv []string) int {
 				// Drop the path arg so subsequent code (which checks os.Args
 				// length for option flags) doesn't see it as a command.
 				os.Args = append(os.Args[:1], os.Args[2:]...)
+			} else if err == nil && info.Mode().IsRegular() {
+				// A file: its folder is the workspace and the UI opens it
+				// (app.EnvStartFile), not the current folder's Welcome page.
+				if abs, err := filepath.Abs(first); err == nil {
+					_ = os.Setenv(app.EnvStartFile, abs)
+					_ = os.Chdir(filepath.Dir(abs))
+					os.Args = append(os.Args[:1], os.Args[2:]...)
+				}
 			}
 		}
 	}
@@ -460,6 +469,7 @@ func printUsage() {
 	fmt.Println()
 	fmt.Println("Usage:")
 	fmt.Println("  termocode [dir]            open dir (default: the current folder)")
+	fmt.Println("  termocode file             open file, with its folder as the workspace")
 	fmt.Println("  termocode --no-session     run without a persistent session")
 	fmt.Println("  termocode --lite [dir]     run without the editor (no Neovim needed):")
 	fmt.Println("                             terminals, agents, git and worktrees")
