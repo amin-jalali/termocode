@@ -40,3 +40,22 @@ func TestOtherEnginesKeepThePlainJSONView(t *testing.T) {
 		t.Fatalf("plain JSON view changed:\n%s", text)
 	}
 }
+
+// DBX-68: a MongoDB result in the JSON view is the same document view, in
+// shell syntax: ObjectId and nested documents as the shell writes them.
+func TestMongoJSONViewIsADocumentView(t *testing.T) {
+	s := newDBState()
+	s.conns = []dbclient.Conn{{ID: "c", Driver: "mongodb"}}
+	m := dbTestModel(s)
+	m.w, m.h = 120, 40
+	res := dbclient.Result{Columns: []dbclient.Column{{Name: "_id", PK: true}, {Name: "n"}, {Name: "addr"}}}
+	res.Rows = [][]dbclient.Cell{{{Text: `ObjectId("6501")`, Kind: "literal"}, {Text: "7", Kind: "number"}, {Text: `{"city": "Rome"}`, Kind: "json"}}}
+	c := m.dbConsole()
+	c.shown, c.size, c.sortCol, c.view = &dbRun{conn: "c", sql: "db.users.find()", result: res}, 100, -1, dbViewJSON
+	text := strings.Join(m.databasePage().lines, "\n")
+	for _, want := range []string{"Documents", `"_id": ObjectId("6501")`, `"n": 7`, `"city": "Rome"`} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("no %q:\n%s", want, text)
+		}
+	}
+}

@@ -789,9 +789,13 @@ func mongoCell(v any) Cell {
 	case MongoDoc, []any:
 		return Cell{Text: MongoShellJSON(x), Kind: "json"}
 	case MongoObjectID:
-		return Cell{Text: MongoShellJSON(x)}
+		return Cell{Text: MongoShellJSON(x), Kind: "literal"}
 	case float64:
-		return Cell{Text: strconv.FormatFloat(x, 'g', -1, 64)}
+		return Cell{Text: strconv.FormatFloat(x, 'g', -1, 64), Kind: "number"}
+	case int32, int64, int:
+		return Cell{Text: fmt.Sprint(x), Kind: "number"}
+	case bool:
+		return Cell{Text: strconv.FormatBool(x), Kind: "bool"}
 	}
 	return CellOf(v)
 }

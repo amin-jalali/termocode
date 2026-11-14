@@ -656,7 +656,7 @@ Press `n` to open the console. It is a SQL console file that holds shell command
 
 Reads run at once. A write, an index change or an `aggregate` with `$out` or `$merge` shows a card first, like SQL. A read-only connection and the AI tools send reads only. Add `.explain()` (or `.explain("executionStats")`) to see the plan as JSON; the server plans an explained write but never applies it.
 
-Documents show as rows: `_id` first, then every top-level field in the order first seen; nested objects and arrays as compact JSON, an ObjectId as `ObjectId("…")` so you can paste it into a filter. One batch is read (up to `db_max_rows` documents, or your `limit`); when the server has more, the page says so and the cursor is closed. `bulkWrite` and `renameCollection` are not supported in the console. There are no SQL transactions: each command commits on its own.
+Documents show as rows: `_id` first, then every top-level field in the order first seen; nested objects and arrays as compact JSON, an ObjectId as `ObjectId("…")` so you can paste it into a filter. The **Documents** view (the JSON chip on a MongoDB result) writes each document as the shell does, one field per line: `_id` as `ObjectId("…")`, nested objects and arrays nested, numbers and booleans bare, dates as `ISODate("…")`; a field a document lacks is left out. One batch is read (up to `db_max_rows` documents, or your `limit`); when the server has more, the page says so and the cursor is closed. `bulkWrite` and `renameCollection` are not supported in the console. There are no SQL transactions: each command commits on its own.
 
 ## Firebird, Vertica, Exasol, SAP HANA, IBM Db2 and Spark SQL / Hive
 
