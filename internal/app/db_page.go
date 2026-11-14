@@ -438,6 +438,12 @@ func (m *Model) databasePage() dbPage {
 		}
 		var b bytes.Buffer
 		page := s.pageResult()
+		if docs && m.databaseDriver(r.conn) == "mongodb" {
+			for _, l := range strings.Split(dbSafeMultiline(dbclient.ToMongoDocs(page)), "\n") {
+				p.add(" " + l)
+			}
+			break
+		}
 		toJSON := dbclient.ToJSON
 		if docs {
 			toJSON = dbclient.ToDocsJSON
@@ -459,8 +465,20 @@ func (m *Model) databaseDocView(conn string) bool {
 	if m.databases == nil {
 		return false
 	}
+	d := m.databaseDriver(conn)
+	return d == "dynamodb" || d == "mongodb"
+}
+
+// databaseDriver is the driver of a connection, "" when unknown.
+func (m *Model) databaseDriver(conn string) string {
+	if m.databases == nil {
+		return ""
+	}
 	c, ok := m.databases.connection(conn)
-	return ok && c.Driver == "dynamodb"
+	if !ok {
+		return ""
+	}
+	return c.Driver
 }
 
 func dbPlural(n int, word string) string {
