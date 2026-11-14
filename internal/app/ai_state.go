@@ -43,6 +43,12 @@ import (
 // aiState is the AI feature state. Held by pointer on Model so Bubble Tea
 // value copies and background goroutines share one instance.
 type aiState struct {
+	// queue is what the phone lined up for the open chat (queueChat)
+	// while the AI answers; queueN numbers the ids (CMP-46,
+	// web_chat_queue.go).
+	queue     []aiQueued
+	queueChat string
+	queueN    int
 	// follow is Follow Agent (ai_follow.go): the editor jumps to each
 	// agent edit; followAt is the last "rel:line" it jumped to.
 	follow           bool
@@ -925,6 +931,7 @@ func (m *Model) aiCancelAll() tea.Cmd {
 	s := m.aiS()
 	stopped := s.streaming || s.actionBusy != ""
 	s.keep.stopped = true                                    // OMX-45: Stop ends a keep-going chain at once
+	s.dropChatQueue()                                        // CMP-46: nothing goes out behind the user's back
 	dropped := m.aiDropQueuedRuns("the user stopped the AI") // G-API: Stop stops what the AI queued too
 	if m.aiBgStopAll() > 0 {                                 // OMX-6: and its background runs
 		stopped = true

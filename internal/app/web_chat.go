@@ -63,6 +63,7 @@ type webChatPub struct {
 	title  string
 	busy   bool
 	ctx    [3]int // pct, tokens, window (CMP-7)
+	queue  string // the queue's ids (CMP-46)
 	msgs   []webChatSent
 }
 
@@ -88,6 +89,10 @@ func (m *Model) webChatBuild(p *webChatPub) webproto.ChatSnap {
 		snap.CtxPct, snap.CtxTokens, snap.CtxWindow = pct, tokens, window
 	}
 	p.ctx = [3]int{snap.CtxPct, snap.CtxTokens, snap.CtxWindow}
+	if l := s.webQueueList(); len(l.Queue) > 0 {
+		snap.Queue = l.Queue
+	}
+	p.queue = s.webQueueKey()
 	n := len(s.conv.Messages)
 	full := webChatFullFrom(s.conv.Messages)
 	wait, wkey := m.webChatWait()
@@ -209,8 +214,13 @@ func (m *Model) webPublishChat(tea.Msg) tea.Cmd {
 	if tokens, window, pct, ok := s.contextUse(); ok {
 		ctx = [3]int{pct, tokens, window}
 	}
-	if s.streaming != p.busy || title != p.title || ctx != p.ctx {
+	qkey := s.webQueueKey()
+	if s.streaming != p.busy || title != p.title || ctx != p.ctx || qkey != p.queue {
 		d := webChatDelta{Op: webproto.ChatState}
+		if qkey != p.queue {
+			l := s.webQueueList()
+			d.Queue = &l
+		}
 		if s.streaming != p.busy {
 			busy := s.streaming
 			d.Busy = &busy
@@ -222,7 +232,7 @@ func (m *Model) webPublishChat(tea.Msg) tea.Cmd {
 			pct, tokens, window := ctx[0], ctx[1], ctx[2]
 			d.CtxPct, d.CtxTokens, d.CtxWindow = &pct, &tokens, &window
 		}
-		p.busy, p.title, p.ctx = s.streaming, title, ctx
+		p.busy, p.title, p.ctx, p.queue = s.streaming, title, ctx, qkey
 		h.publish("chat", d)
 	}
 	return nil
@@ -493,6 +503,9 @@ func (d webChatDelta) coalesce(next any) (any, bool) {
 		if n.CtxPct != nil {
 			m.CtxPct, m.CtxTokens, m.CtxWindow = n.CtxPct, n.CtxTokens, n.CtxWindow
 		}
+		if n.Queue != nil {
+			m.Queue = n.Queue
+		}
 		return m, true
 	}
 	return nil, false
@@ -535,6 +548,12 @@ func webApplyChat(snap, delta json.RawMessage) (json.RawMessage, error) {
 		}
 		if d.Title != "" {
 			s.Title = d.Title
+		}
+		if d.Queue != nil {
+			s.Queue = d.Queue.Queue
+			if len(s.Queue) == 0 {
+				s.Queue = nil
+			}
 		}
 		if d.CtxPct != nil {
 			s.CtxPct = *d.CtxPct

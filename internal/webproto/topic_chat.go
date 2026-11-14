@@ -53,12 +53,14 @@ type ChatsDelta struct {
 // follows it; chat.open shows another one read-only). Also the result of
 // chat.open.
 type ChatSnap struct {
-	ID       string    `json:"id"`
-	Title    string    `json:"title"`
-	Profile  string    `json:"profile,omitempty"` // the active agent profile, "" for the default
-	Model    string    `json:"model,omitempty"`
-	Busy     bool      `json:"busy"` // the AI is answering
-	Messages []ChatMsg `json:"messages"`
+	ID      string `json:"id"`
+	Title   string `json:"title"`
+	Profile string `json:"profile,omitempty"` // the active agent profile, "" for the default
+	Model   string `json:"model,omitempty"`
+	Busy    bool   `json:"busy"` // the AI is answering
+	// Queue is what the phone lined up for after the turn (CMP-46).
+	Queue    []ChatQueued `json:"queue,omitempty"`
+	Messages []ChatMsg    `json:"messages"`
 	// CtxPct is how full the model's context window was on the chat's
 	// newest turn, in percent; CtxTokens and CtxWindow are the counts
 	// behind it. All 0 while unknown (CMP-7).
@@ -139,7 +141,7 @@ const (
 	ChatAppend   = "append"   // Text goes at the end of message I's text (a streaming answer)
 	ChatMessage  = "message"  // Msg is new (Msg.I == len(messages)) or replaces message Msg.I
 	ChatTruncate = "truncate" // only the first N messages stay
-	ChatState    = "state"    // Busy, Title and / or the context use changed
+	ChatState    = "state"    // Busy, Title, the queue and / or the context use changed
 	ChatSwitched = "switched" // the laptop opened another chat: Chat is all of it
 )
 
@@ -153,6 +155,8 @@ type ChatDelta struct {
 	Busy  *bool     `json:"busy,omitempty"`  // state
 	Title string    `json:"title,omitempty"` // state
 	Chat  *ChatSnap `json:"chat,omitempty"`  // switched
+	// Queue is the whole new queue (state; CMP-46).
+	Queue *ChatQueueList `json:"queue,omitempty"`
 	// CtxPct, CtxTokens and CtxWindow are the chat's new context use
 	// (state; 0 = unknown again).
 	CtxPct    *int `json:"ctx_pct,omitempty"`

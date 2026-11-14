@@ -510,6 +510,12 @@ export interface AIInfoArgs {
   kind: "usage" | "rules" | "memory" | "skills" | "hooks" | "web-tools" | "mcp-log" | "serve-status" | "serve-config" | "configure" | "bug-report";
 }
 
+export interface ChatQueueArgs {
+  text?: string;
+  remove?: string;
+  now?: string;
+}
+
 export interface GitPeekArgs {
   path: string;
   line: number;
@@ -1280,10 +1286,16 @@ export interface ChatSnap {
   profile?: string;
   model?: string;
   busy: boolean;
+  queue?: ChatQueued[];
   messages: ChatMsg[];
   ctx_pct?: number;
   ctx_tokens?: number;
   ctx_window?: number;
+}
+
+export interface ChatQueued {
+  id: string;
+  text: string;
 }
 
 export interface ChatMsg {
@@ -1492,9 +1504,14 @@ export interface ChatDelta {
   busy?: boolean;
   title?: string;
   chat?: ChatSnap;
+  queue?: ChatQueueList;
   ctx_pct?: number;
   ctx_tokens?: number;
   ctx_window?: number;
+}
+
+export interface ChatQueueList {
+  queue: ChatQueued[];
 }
 
 export interface CardsSnap {
@@ -4173,6 +4190,7 @@ export interface OpArgs {
   "ai.next_edit": AINextEditArgs;
   "ai.action": AIActionArgs;
   "ai.info": AIInfoArgs;
+  "chat.queue": ChatQueueArgs;
   "git.peek": GitPeekArgs;
   "git.file_log": GitFileLogArgs;
   "git.text": GitTextArgs;
@@ -4516,6 +4534,7 @@ export interface OpResult {
   "ai.next_edit": AINextEdit;
   "ai.action": AIAction;
   "ai.info": AIInfo;
+  "chat.queue": ChatQueueList;
   "git.peek": GitPeek;
   "git.file_log": GitFileLog;
   "git.text": GitText;

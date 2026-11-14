@@ -2227,6 +2227,20 @@
       "phase": "v2"
     },
     {
+      "op": "chat.queue",
+      "args": "ChatQueueArgs",
+      "result": "ChatQueueList",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 73728,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "git.peek",
       "args": "GitPeekArgs",
       "result": "GitPeek",
@@ -7886,6 +7900,9 @@
             "switched"
           ]
         },
+        "queue": {
+          "$ref": "#/defs/ChatQueueList"
+        },
         "text": {
           "type": "string"
         },
@@ -8115,6 +8132,53 @@
       ],
       "additionalProperties": false
     },
+    "ChatQueueArgs": {
+      "type": "object",
+      "properties": {
+        "now": {
+          "type": "string"
+        },
+        "remove": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "ChatQueueList": {
+      "type": "object",
+      "properties": {
+        "queue": {
+          "items": {
+            "$ref": "#/defs/ChatQueued"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "queue"
+      ],
+      "additionalProperties": true
+    },
+    "ChatQueued": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "text"
+      ],
+      "additionalProperties": true
+    },
     "ChatRef": {
       "type": "object",
       "properties": {
@@ -8243,6 +8307,12 @@
         },
         "profile": {
           "type": "string"
+        },
+        "queue": {
+          "items": {
+            "$ref": "#/defs/ChatQueued"
+          },
+          "type": "array"
         },
         "title": {
           "type": "string"

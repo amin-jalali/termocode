@@ -762,6 +762,9 @@ func (m *Model) onAIChatDone(msg aiChatDoneMsg) tea.Cmd {
 		return tea.Batch(cmd, rc) // SCN-32: Restart waited for this turn
 	}
 	var more tea.Cmd
+	if more = m.aiSendQueued(); more != nil { // CMP-46: what the phone lined up goes next
+		return tea.Batch(cmd, mem, queued, more)
+	}
 	if msg.run == nil {
 		if more = m.aiOnStopHook(msg.stop); more == nil { // CMP-59: a stop hook first
 			more = m.aiKeepGoingNext() // OMX-7: open todos, keep going on
