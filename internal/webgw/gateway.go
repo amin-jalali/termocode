@@ -538,6 +538,10 @@ func onCtlEvent(kind string, data json.RawMessage, t ctlTargets) {
 		if t.relay != nil {
 			t.relay.setKey(data)
 		}
+	case EvRelayOff:
+		if t.relay != nil {
+			t.relay.pause()
+		}
 	case EvPairClose:
 		if pairing != nil {
 			pairing.CloseSecret()

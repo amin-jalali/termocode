@@ -356,3 +356,23 @@ func TestRelayEndsWithThePanel(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 }
+
+// Spec (NEW-12): relay_off from the UI ends the gateway's wait in its
+// room and every session; the panel's own address keeps working, and a
+// new relay_key starts the wait again.
+func TestRelayOffStopsWaiting(t *testing.T) {
+	r := startRelayRig(t)
+	r.ctl.send(r.t, `{"t":"ev","kind":"relay_off"}`)
+	deadline := time.Now().Add(10 * time.Second)
+	for r.rl.Waiting(r.room) > 0 {
+		if time.Now().After(deadline) {
+			t.Fatal("the gateway still waits in its relay room after relay_off")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	time.Sleep(200 * time.Millisecond)
+	if n := r.rl.Waiting(r.room); n != 0 {
+		t.Fatalf("the gateway dialed the relay again (%d waiting)", n)
+	}
+	r.sendKey() // waits until it is back in the room
+}

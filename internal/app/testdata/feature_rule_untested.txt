@@ -71,7 +71,6 @@ palette/db-goto-definition
 palette/db-refresh
 palette/db-result-pin
 palette/db-test-connection
-palette/debug-add-watch
 palette/debug-clear-bps
 palette/debug-conditional-bp
 palette/debug-continue
@@ -142,14 +141,6 @@ palette/terminal-focus-next-pane
 palette/terminal-grow-pane
 palette/terminal-minimize
 palette/terminal-shrink-pane
-palette/testing-collapse
-palette/testing-focus
-palette/testing-refresh
-palette/testing-rerun-failed
-palette/testing-results
-palette/testing-run-cursor
-palette/testing-run-file
-palette/testing-stop
 palette/toggle-actions-panel
 palette/toggle-comment
 palette/toggle-inlay-hints

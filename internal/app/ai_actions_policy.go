@@ -705,6 +705,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"web-start-panel": aiNever(aiNoWeb),
 	"web-stop":        aiNever(aiNoWeb),
 	"web-copy-link":   aiNever(aiNoWeb + " (the link logs a browser in)"),
+	"web-relay-stop":  aiNever(aiNoWeb),
 	"web-pair":        aiNever(aiNoWeb + " (pairing lets another device in)"),
 	"web-devices":     aiNever(aiNoWeb + " (who may come in)"),
 	"web-totp":        aiNever(aiNoWeb + " (a second factor of the web sign-in)"),

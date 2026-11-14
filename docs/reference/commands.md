@@ -1050,6 +1050,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Web: Share as Viewer… | `web-share` |   |   |
 | Web: Start Panel | `web-start-panel` |   |   |
 | Web: Stop Panel | `web-stop` |   |   |
+| Web: Stop Relay | `web-relay-stop` |   |   |
 
 ## Workflows
 

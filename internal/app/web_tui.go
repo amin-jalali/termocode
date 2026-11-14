@@ -27,6 +27,7 @@ func webPaletteItems() []picker.Item {
 		{ID: "web-start-panel", Title: "Web: Start Panel"}, // the old name, same command
 		{ID: "web-stop", Title: "Web: Stop Panel"},
 		{ID: "web-copy-link", Title: "Web: Copy Link"},
+		{ID: "web-relay-stop", Title: "Web: Stop Relay"},
 	}
 }
 
@@ -42,6 +43,8 @@ func (m *Model) dispatchWebPalette(id string) (tea.Cmd, bool) {
 			return m.webToast(toast.Warn, webOffText), true
 		}
 		return m.webNewLink(false, true), true
+	case "web-relay-stop":
+		return m.webRelayStop(), true
 	}
 	return nil, false
 }

@@ -122,3 +122,49 @@ func TestWebPairShowsTheRelayLink(t *testing.T) {
 		t.Fatal("the link's secret is not the one the gateway got")
 	}
 }
+
+// Spec (NEW-12): Web: Stop Relay stops waiting on the relay while the
+// panel keeps running: the gateway gets relay_off, the pairing link is
+// the panel's own again, a control connection that comes later gets no
+// key, and the AI can never run it. With no relay on it says so.
+func TestWebStopRelay(t *testing.T) {
+	relayMemoryStore(t)
+	r := newAccessRig(t)
+	found := false
+	for _, it := range webPaletteItems() {
+		if it.ID == "web-relay-stop" && it.Title == "Web: Stop Relay" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("no palette entry Web: Stop Relay")
+	}
+	if p, ok := aiActionPolicies["web-relay-stop"]; !ok || p.Gate != aiGateNever {
+		t.Fatal("the AI may stop the relay")
+	}
+	r.m.dispatchWebPalette("web-relay-stop")
+	if !strings.Contains(webTestToasts(*r.m), "relay is not on") {
+		t.Fatalf("no relay: toast %q", webTestToasts(*r.m))
+	}
+	writeUserConfig(t, `{"web_panel":"on","web_relay":"https://relay.example.org"}`)
+	if err := r.m.webRelayArm(webSettings()); err != nil {
+		t.Fatal(err)
+	}
+	r.ctlEvent("relay_key")
+	if _, ok := r.m.dispatchWebPalette("web-relay-stop"); !ok {
+		t.Fatal("web-relay-stop is not dispatched")
+	}
+	r.ctlEvent("relay_off")
+	if r.m.webPanel.relay != nil {
+		t.Error("the pairing link still goes through the relay")
+	}
+	r.m.web.mu.Lock()
+	key := r.m.web.relayKey
+	r.m.web.mu.Unlock()
+	if key != nil {
+		t.Error("a later control connection would still get the relay key")
+	}
+	if !strings.Contains(webTestToasts(*r.m), "Relay stopped") {
+		t.Errorf("toast %q", webTestToasts(*r.m))
+	}
+}
