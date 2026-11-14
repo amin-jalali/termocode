@@ -415,3 +415,14 @@ func TestPayloadForDoneAtCount(t *testing.T) {
 		t.Errorf("none/done: %q", p)
 	}
 }
+
+// Spec (CMP-47, NEW-9): an AI question (a db tool waits for a password
+// or a host key) is a kind a push may name: "ask".
+func TestPayloadNamesAnAIQuestion(t *testing.T) {
+	if got := string(PayloadFor(DetailTitle, 1, "ask", "")); got != `{"n":1,"k":"ask"}` {
+		t.Errorf("title: %s", got)
+	}
+	if got := string(PayloadFor(DetailCount, 1, "ask", "")); got != `{"n":1}` {
+		t.Errorf("count: %s", got)
+	}
+}

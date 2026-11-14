@@ -18,7 +18,8 @@ func TestPushOpenAndUnavailableNote(t *testing.T) {
 		return string(b)
 	}
 	push, tap, mainTsx, phone := read("src/lib/push.ts"), read("src/lib/pushtap.ts"), read("src/main.tsx"), read("src/views/phone/ThisPhone.tsx")
-	for _, want := range []string{"export async function pushOn"} {
+	// NEW-9: the worker speaks the page's language (sw.js reads ?l=).
+	for _, want := range []string{"export async function pushOn", `"/sw.js?l=" + lang.value`} {
 		if !strings.Contains(push, want) {
 			t.Errorf("lib/push.ts lacks %s", want)
 		}

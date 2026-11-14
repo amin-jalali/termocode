@@ -318,3 +318,35 @@ func TestWebPushSettingOff(t *testing.T) {
 		t.Error("an end from while it was off is sent now")
 	}
 }
+
+// Spec (CMP-47, NEW-9): an AI question (a db_* tool waits for the
+// database password) needs the user too: it counts as a waiting thing,
+// so a phone with no page open gets a push, and a wake; with detail
+// title the push names the kind "ask".
+func TestWebPushForAIQuestion(t *testing.T) {
+	withConfigDir(t)
+	r := newWebPushRig(t)
+	webPushKey(true)
+	r.devs = []webdevices.Device{{ID: "dev-0000000a"}}
+	r.subscribe(t, "dev-0000000a")
+	m := aiTestModel(t)
+	webTestHub(t, &m)
+	writeUserConfig(t, `{"web_push_detail":"title"}`) // after aiTestModel: it makes a new config dir
+	m.web.push.any = true
+	m.databases = &dbState{}
+	m.databases.pendingSecretAI = &dbAIPasswordAsk{conn: "c1", name: "db.c1", done: make(chan string, 1)}
+	if n, kind := m.webPushWaiting(); n != 1 || kind != "ask" {
+		t.Fatalf("waiting = %d %q, want 1 ask", n, kind)
+	}
+	if n := m.webWaitingCards(); n != 1 {
+		t.Errorf("wake count = %d, want 1", n)
+	}
+	cmd := m.webPushAfterUpdate(nil)
+	if cmd == nil {
+		t.Fatal("an AI question sends no push")
+	}
+	cmd()
+	if got := r.payload(t, "dev-0000000a"); !strings.HasPrefix(got, `{"n":1,"k":"ask"`) {
+		t.Errorf("payload: %s", got)
+	}
+}

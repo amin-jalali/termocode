@@ -422,8 +422,10 @@ What a Web Push says is set by `web_push_detail` in `config.json`:
 | `title` | the number and the kind of the newest one, such as "A plan needs you", and the name of the folder the panel runs in as the title |
 
 The kind comes from a short fixed list (tool, MCP, plan, review, trust,
-workflow). The phone shows its own fixed text for it. A push never
-holds a file name, a command, a path or words the AI wrote.
+workflow, and an AI question: the AI's database tool waits for a
+password or a host key). The phone shows its own fixed text for it, in
+the page's language (English or Persian). A push never holds a file
+name, a command, a path or words the AI wrote.
 
 #### What a push can tell
 
