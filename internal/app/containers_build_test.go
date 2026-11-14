@@ -55,7 +55,8 @@ func TestBuildImageAsksTagArgsTargetPlatformThenCancelFirstCard(t *testing.T) {
 	if b := m.confirm.Buttons(); len(b) != 2 || b[0].ID != "cancel" || b[1].ID != "build" {
 		t.Fatalf("buttons = %#v, want Cancel first then Build", b)
 	}
-	card := strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " ")
+	// The command wraps over the card's lines: read it without the borders.
+	card := strings.Join(strings.Fields(strings.ReplaceAll(ansi.Strip(m.confirm.View()), "│", " ")), " ")
 	for _, want := range []string{"-t shop:dev", "--build-arg GO=1.23", "--target runtime", "--platform linux/amd64"} {
 		if !strings.Contains(card, want) {
 			t.Errorf("card %q misses %q", card, want)
