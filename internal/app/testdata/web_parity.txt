@@ -573,6 +573,7 @@ missing	db-find-object	Databases|S
 missing	db-grant	Databases|S
 missing	db-history-connection	Databases|S
 missing	db-import-connections	Databases|S
+missing	db-pause-run	Databases|S
 missing	db-quick-fix	Databases|S
 missing	db-rename	Databases|S
 missing	db-restore	Databases|M
@@ -638,7 +639,10 @@ missing	db-sql-intentions	Databases|S
 missing	db-server-info	Databases|S
 missing	db-sessions	Databases|S
 missing	db-submit-source	Databases|S
+missing	db-tsqlt-run	Databases|S
 missing	db-virtual-objects	Databases|S
+missing	debug-sidecar-start	Debug|S
+missing	debug-sidecar-stop	Debug|S
 missing	git-ai-changelog	Git|S
 missing	git-ai-commit-msg	Git|S
 missing	git-ai-compose	Git|S
