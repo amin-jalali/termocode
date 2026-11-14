@@ -51,3 +51,16 @@ func TestRelayServesThePage(t *testing.T) {
 		t.Errorf("a bad Host = %d, want 400", r.StatusCode)
 	}
 }
+
+// Spec (WEBP-10 finding, NEW-11): over https the relay page may also
+// make the push worker's one policy, "sw" (lib/push.ts), beside "relay".
+func TestRelayPageCSPAllowsThePushWorkerPolicy(t *testing.T) {
+	h := secure(handler(nil, pageHandler(true)))
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Host = "relay.example.org"
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if csp := w.Result().Header.Get("Content-Security-Policy"); !strings.HasSuffix(csp, "trusted-types relay sw") {
+		t.Errorf("CSP %q", csp)
+	}
+}
