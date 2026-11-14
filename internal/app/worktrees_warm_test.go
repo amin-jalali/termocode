@@ -46,7 +46,9 @@ func TestWTSetupWarm(t *testing.T) {
 	f := m.wt.form
 	f.cfg = cfg
 	m.wtSetupAsk(f, newTree())
-	box := ansi.Strip(m.confirm.Box())
+	// The card's whole text: a long temp path (macOS) pushes the end of the
+	// drawn card into its "…and N more lines" row.
+	box := m.confirm.Message() + "\n" + ansi.Strip(m.confirm.Box())
 	for _, want := range []string{"npm ci", "PORT", "node_modules"} {
 		if !strings.Contains(box, want) {
 			t.Errorf("trust card lacks %q:\n%s", want, box)
