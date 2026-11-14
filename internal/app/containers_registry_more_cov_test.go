@@ -2,8 +2,8 @@ package app
 
 import (
 	"crypto/x509"
-	"errors"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
