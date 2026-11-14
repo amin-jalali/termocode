@@ -162,7 +162,12 @@ func TestCovDBLOBNewRowAndTooBig(t *testing.T) {
 	_ = f.Truncate(dbLOBMax + 1)
 	_ = f.Close()
 	dbePump(m, m.databaseEditKey("gL", 2, 2))
-	dbePrompt(t, m, big)
+	m.promptOpen = false
+	read, ok := m.databaseLOBPrompt(promptKindDBLOBLoad, big)
+	if !ok || read == nil {
+		t.Fatal("no read")
+	}
+	m.onDBLOBLoaded(read().(dbLOBLoadedMsg)) // a 16 MB read: run it to its end, not under the pump's short wait
 	dbeToastHas(t, m, "the file is bigger than")
 	if !dbPosValid(tab, dbEditPos{orig: -1, added: 0, col: 2}) || dbPosValid(tab, dbEditPos{col: 99}) {
 		t.Fatal("dbPosValid")
