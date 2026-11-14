@@ -115,9 +115,12 @@ func TestWorktreeMovePackThenUnpack(t *testing.T) {
 	if !m.confirmOpen || m.confirmKind != confirmKindWTUnpack || m.confirm.SafeID() != "cancel" {
 		t.Fatalf("no unpack card: %v %d", m.confirmOpen, m.confirmKind)
 	}
+	// The card's whole text: a long host and path (macOS temp folders)
+	// push the end of a drawn card into its "…and N more lines" row.
+	unpack := strings.Join(strings.Fields(m.confirm.Message()), " ") + " " + wtFlatBox(m)
 	for _, want := range []string{"branch feat/x-moved", "Nothing here is written over", "1 new file", "Unpack as a new worktree"} {
-		if !strings.Contains(wtFlatBox(m), want) {
-			t.Errorf("unpack card lacks %q:\n%s", want, wtFlatBox(m))
+		if !strings.Contains(unpack, want) {
+			t.Errorf("unpack card lacks %q:\n%s", want, unpack)
 		}
 	}
 	m.confirmOpen = false
