@@ -17,8 +17,10 @@ const fs = require("fs");
 const handlers = {};
 const out = { shown: null, opened: null, posted: [], focused: false };
 const clientsList = JSON.parse(process.argv[3]);
+const step = JSON.parse(process.argv[4]);
 global.self = {
-  location: { origin: "https://box.ts.net" },
+  location: { origin: "https://box.ts.net", search: step.search || "" },
+  navigator: { language: step.lang || "en-US" },
   addEventListener: (t, f) => { handlers[t] = f; },
   skipWaiting() {}, clients: {
     claim() {},
@@ -28,7 +30,6 @@ global.self = {
   registration: { showNotification: async (title, o) => { out.shown = { title, body: o.body, data: o.data }; } },
 };
 eval(fs.readFileSync(process.argv[2], "utf8"));
-const step = JSON.parse(process.argv[4]);
 (async () => {
   let p;
   if (step.push !== undefined) {
@@ -128,5 +129,32 @@ func TestServiceWorkerTapOpensTheCard(t *testing.T) {
 	o = runSW(t, []string{"https://evil.example/"}, map[string]any{"data": map[string]any{"open": "cards"}})
 	if o.Focused || o.Opened != "/?open=cards" {
 		t.Errorf("foreign window: %+v", o)
+	}
+}
+
+// Spec (CMP-47, NEW-9): an AI question push says so in fixed words and a
+// tap leads to the cards; the worker speaks Persian when the page
+// registered it with ?l=fa (or, with no l, the browser is Persian), and
+// English when the page asked for it.
+func TestServiceWorkerAIQuestionAndPersian(t *testing.T) {
+	o := runSW(t, nil, map[string]any{"push": map[string]any{"n": 1, "k": "ask"}})
+	if o.Shown == nil || o.Shown.Body != "The AI has a question for you." || o.Shown.Data.Open != "cards" {
+		t.Errorf("ask: %+v", o.Shown)
+	}
+	o = runSW(t, nil, map[string]any{"push": map[string]any{"n": 1, "k": "ask"}, "search": "?l=fa"})
+	if o.Shown == nil || o.Shown.Body != "هوش مصنوعی از شما سؤالی دارد." {
+		t.Errorf("ask fa: %+v", o.Shown)
+	}
+	o = runSW(t, nil, map[string]any{"push": map[string]any{"n": 3}, "search": "?l=fa"})
+	if o.Shown == nil || o.Shown.Body != "۳ چیز منتظر شماست." {
+		t.Errorf("count fa: %+v", o.Shown)
+	}
+	o = runSW(t, nil, map[string]any{"push": map[string]any{"n": 0, "k": "done"}, "lang": "fa-IR"})
+	if o.Shown == nil || o.Shown.Body != "کار هوش مصنوعی تمام شد." {
+		t.Errorf("done fa by browser: %+v", o.Shown)
+	}
+	o = runSW(t, nil, map[string]any{"push": map[string]any{"n": 1, "k": "plan"}, "search": "?l=en", "lang": "fa-IR"})
+	if o.Shown == nil || o.Shown.Body != "A plan waits for your approval." {
+		t.Errorf("page asked for English: %+v", o.Shown)
 	}
 }
