@@ -172,3 +172,10 @@ func noAnswer(t *testing.T, c *HubConn, d time.Duration) {
 		}
 	}
 }
+
+// sheetButton is the sheet card's button whose text is exactly text (the
+// kit shows inline cards with the same labels too). Here, not in
+// approvalsheet_test.go: this file builds without webdev.
+func sheetButton(text string) string {
+	return `[...document.querySelectorAll(".sheet .card-foot button")].find((b) => b.textContent.trim() === ` + jsq(text) + `)`
+}
