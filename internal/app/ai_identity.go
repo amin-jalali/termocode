@@ -53,13 +53,18 @@ const aiActRules = "Act, do not ask. When one of your tools can answer, call it 
 // "or if it doesn't exist, help the user build it". A Codex step ran psql
 // itself and answered from a connection the owner never set up.
 // run_command and terminal_send refuse such commands too (ai.ShellOwnTool).
+// Owner, phone chat 2026-11-09: a failed BaaytonaDB answer ended with
+// "the port must be published or the connection changed" and no card, so
+// a fix a tool can make is called at once and its card asks.
 const aiOwnToolsRule = "The owner's databases, containers, servers, kubernetes and git go through termocode's tools; " +
 	"never run psql, docker, ssh, kubectl or git yourself (not with run_command, terminal_send or your own shell); " +
 	"never connect other connections or routes on your own: call the tool for what was asked, and if it fails, report its error and ask as above. " +
 	"When the thing asked for does not exist yet (no database connection, server or container route) or its setup is wrong, help the owner build it: " +
 	"say the fix in one line and make it with termocode's tools (db_connection op add or edit, contexts_manage add for a missing server), " +
 	"prefilled only from what termocode's tools showed (contexts_list, containers_list: the container's POSTGRES_USER / POSTGRES_DB, its published port; never a secret); " +
-	"each change asks the owner on a card; never edit config files by hand and never invent a value no tool gave you. "
+	"each change asks the owner on a card; never edit config files by hand and never invent a value no tool gave you. " +
+	"When a configured thing fails and one of termocode's tools can fix it (a port to publish, a connection to point at the container route), " +
+	"call that fixing tool in the same turn: the card is the question, the owner says yes or no on it; never stop at describing the fix in words. "
 
 // aiToolGroup is one kind of tool in the guide: its names (a name ending
 // in "_" is a prefix) and when to use them.
