@@ -419,3 +419,56 @@ func TestRelayRefusesConnectionsOnceClosed(t *testing.T) {
 		t.Fatalf("dial after Close: err %v, status %d, want 503", err, code)
 	}
 }
+
+// Spec (MOB-42): the phone app carries its own relay page, so its page
+// side comes from the app's own origin (https://localhost on Android,
+// capacitor://localhost on iOS), not from the relay's host; the relay
+// pairs it like its own page. Any other site's page is still refused,
+// and so is the app's origin on the gateway side.
+func TestRelayTakesThePhoneAppsPageOrigin(t *testing.T) {
+	r := newRig(t, Config{})
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	dialFrom := func(room, side, origin string) (*websocket.Conn, *http.Response, error) {
+		h := http.Header{}
+		h.Set("Origin", origin)
+		return websocket.Dial(ctx, r.url(room, side), &websocket.DialOptions{HTTPHeader: h})
+	}
+	for _, origin := range []string{"https://localhost", "capacitor://localhost"} {
+		room := testRoom(t)
+		gw := r.mustDial(ctx, room, SideGateway)
+		waitWaiting(t, r.srv, room, 1)
+		page, _, err := dialFrom(room, SidePage, origin)
+		if err != nil {
+			t.Fatalf("%s: the app's page was refused: %v", origin, err)
+		}
+		typ, b, err := gw.Read(ctx)
+		if err != nil || typ != websocket.MessageText || string(b) != MsgPaired {
+			t.Fatalf("%s: the gateway got %v %q %v, want %q", origin, typ, b, err, MsgPaired)
+		}
+		if err := page.Write(ctx, websocket.MessageBinary, []byte("hi")); err != nil {
+			t.Fatal(err)
+		}
+		if _, got, err := gw.Read(ctx); err != nil || string(got) != "hi" {
+			t.Fatalf("%s: the gateway got %q %v", origin, got, err)
+		}
+		_ = page.CloseNow()
+	}
+	room := testRoom(t)
+	for _, c := range []struct{ side, origin string }{
+		{SidePage, "https://evil.example"},
+		{SidePage, "http://localhost"},
+		{SidePage, "https://localhost.evil.example"},
+		{SideGateway, "https://localhost"},
+	} {
+		conn, resp, err := dialFrom(room, c.side, c.origin)
+		if err == nil {
+			_ = conn.CloseNow()
+			t.Errorf("%s from %s: the relay took it, want a refusal", c.side, c.origin)
+			continue
+		}
+		if resp == nil || resp.StatusCode != http.StatusForbidden {
+			t.Errorf("%s from %s: %v, want 403", c.side, c.origin, resp)
+		}
+	}
+}
