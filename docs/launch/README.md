@@ -9,7 +9,7 @@ when and where (release tag and public posts are owner decisions).
 | [reddit-neovim.md](reddit-neovim.md) | r/neovim post, plus short r/commandline, r/golang and r/LocalLLaMA variants |
 | [lists.md](lists.md) | awesome lists, newsletters, directories: the one-paragraph entries |
 | [persian.md](persian.md) | Persian community: Virgool / LinkedIn / Telegram texts |
-| [../../CHANGELOG.md](../../CHANGELOG.md) | what is in v0.1.0 |
+| [CHANGELOG.md](https://github.com/amin-jalali/termocode/blob/main/CHANGELOG.md) | what is in v0.1.0 |
 
 ## Rules for every text
 
