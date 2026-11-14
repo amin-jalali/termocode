@@ -70,7 +70,7 @@ let loading: Promise<Mod> | null = null;
 
 /** withAI runs f with aictx.js, loading it once (a failed load can be
  * tried again). */
-export function withAI(f: (m: Mod) => void): void {
+export function withAI<R>(f: (m: Mod) => R): Promise<R> {
   if (!loading)
     loading = import("/assets/aictx.js").then(
       (m: Mod) => (m.init(host()), m),
@@ -79,7 +79,12 @@ export function withAI(f: (m: Mod) => void): void {
         throw e;
       },
     );
-  loading.then(f, () => toast("warn", t("cmd.failed")));
+  // A failed load says so; the answer of f goes to a caller that waits
+  // for it (one that does not is no unhandled rejection).
+  loading.catch(() => toast("warn", t("cmd.failed")));
+  const p = loading.then(f);
+  p.catch(() => undefined);
+  return p;
 }
 
 /** aiMenu is a row's right-click handler: its own menu (own), then Add

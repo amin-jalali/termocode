@@ -63,7 +63,7 @@ export let exportNow: ((e: MouseEvent | { x: number; y: number }) => void) | nul
 
 /** Edit is a table's pending changes: cells set (by "row:col"), rows
  * deleted, rows added (null: not set, the column's default). */
-interface Edit {
+export interface Edit {
   set: ReadonlyMap<string, DBCellView>;
   del: ReadonlySet<number>;
   add: readonly (DBCellView | null)[][];
@@ -216,35 +216,6 @@ function Meta({ r, children }: { r: DBRowsView; children?: ComponentChildren }) 
 
 // ── A table's rows ──────────────────────────────────────────────────────
 
-/** editRequest is db.edit's args for the pending changes. */
-function editRequest(conn: string, table: string, r: DBRowsView, e: Edit): unknown {
-  const val = (col: string, c: DBCellView) => (c.n ? { col, n: true } : { col, v: c.v });
-  const keyOf = (row: DBCellView[]) => r.key.map((k) => val(k, row[r.columns.indexOf(k)]));
-  const edits: unknown[] = [];
-  e.del.forEach((i) => edits.push({ kind: "delete", key: keyOf(r.rows[i]) }));
-  r.rows.forEach((row, i) => {
-    if (e.del.has(i)) return;
-    const set: unknown[] = [];
-    const old: unknown[] = [];
-    r.columns.forEach((col, j) => {
-      const c = e.set.get(i + ":" + j);
-      if (!c) return;
-      set.push(val(col, c));
-      if (!row[j].m && !row[j].c) old.push(val(col, row[j]));
-    });
-    if (set.length) edits.push({ kind: "update", key: keyOf(row), set, old: old.length ? old : undefined });
-  });
-  e.add.forEach((row, a) => {
-    const set: unknown[] = [];
-    r.columns.forEach((col, j) => {
-      const c = e.set.get(r.rows.length + a + ":" + j) ?? row[j];
-      if (c) set.push(val(col, c));
-    });
-    if (set.length) edits.push({ kind: "insert", set });
-  });
-  return { conn, table, edits };
-}
-
 /** pendingOf is the open table tab's pending changes (commands). */
 export let pendingOf: { submit(): void; revert(): void; n: number } | null = null;
 
@@ -352,7 +323,7 @@ export function DBTableTab({ conn, table, slot }: { conn: string; table: string;
         <AskLaptop
           label={t("dbv.submit")}
           text={t("dbv.submit_q", { n: dirty, table, conn })}
-          send={() => link.request("db.edit", editRequest(conn, table, r, e))}
+          send={() => withAI((m) => link.request("db.edit", m.editRequest(conn, table, r, e)))}
           onDone={() => setStep("")}
           onConfirmed={() => setTimeout(() => setN((x) => x + 1), 300)}
         />
@@ -490,7 +461,9 @@ export function DBQueryTab({ conn, slot }: { conn: string; slot: string }) {
       )
       .finally(() => setBusy(false));
   };
-  const run = () => go("db.query", { conn, sql: text() }, false);
+  // Cassandra: the last run's CQL; Next rows reads the rest by its cursor.
+  const ran = useRef("");
+  const run = () => go("db.query", { conn, sql: (ran.current = text()) }, false);
   const cql = connView(conn)?.driver === "cassandra";
   const explain = (analyze: boolean) => go("db.explain", { conn, sql: text(), analyze: analyze || undefined }, true);
   const last = res.o?.kind === "rows" ? res.o.r : null;
@@ -550,7 +523,7 @@ export function DBQueryTab({ conn, slot }: { conn: string; slot: string }) {
         ) : view ? (
           <>
             <DBGrid r={view.r} />
-            <Meta r={view.r} />
+            <Meta r={view.r}>{shown < 0 && view.r.cursor && <Act icon="chevron-right" label={t("db.next_rows")} disabled={busy || !live.value} onClick={() => go("db.query", { conn, sql: ran.current, cursor: view.r.cursor }, false)} />}</Meta>
           </>
         ) : (
           <p class="dbg-empty">{t("dbv.no_results", { keys: `${modKey()}+Enter` })}</p>
