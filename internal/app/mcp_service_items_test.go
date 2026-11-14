@@ -58,9 +58,9 @@ func TestMCPFavoritesAreKeptInTheConfigDir(t *testing.T) {
 func TestMCPBrowseAServiceEndToEnd(t *testing.T) {
 	m := covMCPModel(t)
 	writeUserMCP(t, mcptest.Config(map[string]map[string]string{"fake": nil}))
-	cmd := m.openMCPService()
-	if cmd == nil {
-		t.Fatal("no command")
+	cmd, ok := m.dispatchGitxPalette(mcpServiceBrowseID) // AI: MCP: Browse a Service…
+	if !ok || cmd == nil {
+		t.Fatal("the palette command gave no command")
 	}
 	msg := cmd().(gitxDoneMsg)
 	msg.apply(m)

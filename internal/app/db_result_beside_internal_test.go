@@ -59,6 +59,10 @@ func TestDBResultBesideDrawsTwoGrids(t *testing.T) {
 // rows, a pick shows it beside, Close puts the one grid back.
 func TestDBResultBesidePickAndClose(t *testing.T) {
 	m, s := besideModel(t)
+	if _, ok := m.dispatchDatabasesPalette("db-result-beside"); !ok || !m.pickerOpen || m.pickerKind != pickerKindDBBeside {
+		t.Fatal("Databases: Show Result Beside… did not open the picker")
+	}
+	m.pickerOpen = false
 	items := m.databaseBesideItems()
 	if len(items) != 1 || items[0].ID != "1" {
 		t.Fatalf("items %+v, want only tab 2", items)

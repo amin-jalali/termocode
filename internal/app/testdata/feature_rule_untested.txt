@@ -8,7 +8,6 @@ key/ApplyPreferredCodeAction
 key/ClipboardHistory
 key/DetachSession
 key/DiscardHunk
-key/FileHistory
 key/FormatDocument
 key/GitBlameLine
 key/GotoTypeDef
@@ -37,7 +36,6 @@ key/TerminalSplitRight
 key/ToggleActionsPanel
 key/ToggleBookmark
 key/UnstageHunk
-key/UnstageLines
 palette/ai-apply-proposal
 palette/ai-attach
 palette/ai-doc
