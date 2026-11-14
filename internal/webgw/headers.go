@@ -7,12 +7,18 @@ import (
 	"strings"
 )
 
+// PushPolicy is the Trusted Types policy that makes the push worker's
+// URL (lib/push.ts).
+const PushPolicy = "sw"
+
 // CSP is the Content-Security-Policy for site: only our own scripts,
 // styles, fonts and images; no inline code, no frames, no forms, no base
-// URL; an installable (https) site may read its own manifest. Trusted Types are required with no policy allowed, so even a bug
-// cannot hand a string to an HTML or script sink (never-do 20); the page
-// builds DOM from text nodes only. connect-src names the WebSocket origins in full as well as 'self',
-// because older engines do not count ws:// as 'self'.
+// URL; an installable (https) site may read its own manifest. Trusted
+// Types are required with no policy allowed (an https site: only
+// PushPolicy, for the push worker's one URL), so even a bug cannot hand
+// a string to an HTML or script sink (never-do 20); the page builds DOM
+// from text nodes only. connect-src names the WebSocket origins in full
+// as well as 'self', because older engines do not count ws:// as 'self'.
 func CSP(site Site) string {
 	connect := []string{"'self'"}
 	for _, h := range site.Hosts {
@@ -31,12 +37,19 @@ func CSP(site Site) string {
 	if site.Installable() {
 		parts = append(parts, "manifest-src 'self'")
 	}
+	// Trusted Types: no policy, except on an https site (the only one
+	// with Web Push) the push worker's "sw", which lib/push.ts makes and
+	// which passes only /sw.js?l=en|fa (serviceWorker.register is a sink).
+	tt := "trusted-types 'none'"
+	if site.Installable() {
+		tt = "trusted-types " + PushPolicy
+	}
 	return strings.Join(append(parts,
 		"frame-ancestors 'none'",
 		"base-uri 'none'",
 		"form-action 'none'",
 		"require-trusted-types-for 'script'",
-		"trusted-types 'none'",
+		tt,
 	), "; ")
 }
 

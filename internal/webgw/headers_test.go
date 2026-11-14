@@ -79,3 +79,18 @@ func TestSecurityHeadersExact(t *testing.T) {
 		}
 	}
 }
+
+// Spec (WEBP-10 finding): Chrome treats serviceWorker.register as a
+// Trusted Types sink, so with "trusted-types 'none'" the push worker
+// never registered and no push came. An https site (the only one with
+// push) allows one policy, "sw" (lib/push.ts: /sw.js?l=en|fa only); a
+// loopback site keeps 'none'.
+func TestCSPAllowsThePushWorkerPolicyOnHTTPS(t *testing.T) {
+	csp := CSP(Site{Scheme: "https", Hosts: []string{"box.tail1234.ts.net"}})
+	if !strings.HasSuffix(csp, "; require-trusted-types-for 'script'; trusted-types sw") {
+		t.Errorf("https CSP: %s", csp)
+	}
+	if csp := CSP(LoopbackSite(41237)); !strings.HasSuffix(csp, "trusted-types 'none'") {
+		t.Errorf("loopback CSP: %s", csp)
+	}
+}

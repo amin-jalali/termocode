@@ -37,7 +37,11 @@ func pageHandler(tlsProxy bool) http.Handler {
 		if r.TLS != nil || tlsProxy {
 			scheme = "https"
 		}
-		csp := strings.Replace(webgw.CSP(webgw.Site{Scheme: scheme, Hosts: []string{r.Host}}), "trusted-types 'none'", "trusted-types relay", 1)
+		// relay.js loads app.js through its own policy, "relay"; the push
+		// worker's ("sw") stays for an https page.
+		csp := webgw.CSP(webgw.Site{Scheme: scheme, Hosts: []string{r.Host}})
+		csp = strings.Replace(csp, "trusted-types 'none'", "trusted-types relay", 1)
+		csp = strings.Replace(csp, "trusted-types "+webgw.PushPolicy, "trusted-types relay "+webgw.PushPolicy, 1)
 		h := w.Header()
 		h.Set("Content-Security-Policy", csp)
 		h.Set("Cross-Origin-Opener-Policy", "same-origin")

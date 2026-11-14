@@ -42,6 +42,21 @@ function same(a: ArrayBuffer | null, b: Uint8Array): boolean {
   return x.every((v, i) => v === b[i]);
 }
 
+/** SW_URL is the only worker URL: the push worker in the page's language. */
+const SW_URL = /^\/sw\.js\?l=(en|fa)$/;
+
+type ScriptURLs = { createScriptURL(u: string): unknown };
+let policy: ScriptURLs | undefined;
+
+/** swURL is u through the Trusted Types policy "sw" (serviceWorker.register
+ * is a sink; the CSP of an https site allows only this policy), or u as
+ * it is where the browser has no Trusted Types. */
+function swURL(u: string): string {
+  const tt = (globalThis as unknown as { trustedTypes?: { createPolicy(n: string, p: { createScriptURL(u: string): string }): ScriptURLs } }).trustedTypes;
+  policy ??= tt?.createPolicy("sw", { createScriptURL: (u) => (SW_URL.test(u) ? u : "") });
+  return (policy ? policy.createScriptURL(u) : u) as string;
+}
+
 /** pushOn runs after the user turned notifications on; true: pushes come. */
 export async function pushOn(): Promise<boolean> {
   const c = container();
@@ -49,7 +64,7 @@ export async function pushOn(): Promise<boolean> {
   try {
     const st = (await link.request("push.key", { make: true })) as PushState;
     if (st.state !== "ready" || !st.key) return false;
-    const reg = await c.register("/sw.js?l=" + lang.value, { scope: "/" }); // the worker speaks the page's language
+    const reg = await c.register(swURL("/sw.js?l=" + lang.value), { scope: "/" }); // the worker speaks the page's language
     await c.ready;
     const key = bytes(st.key);
     let sub = await reg.pushManager.getSubscription();
