@@ -350,6 +350,7 @@ func withNote(caps *ClientCaps, note string) *ClientCaps {
 	}
 	c := *caps
 	c.Note = note
+	c.Open = "" // opened at the first attach (a reconnect is not a new request)
 	return &c
 }
 

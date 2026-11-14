@@ -204,3 +204,22 @@ func TestEnvRepoTakesARelativeRepo(t *testing.T) {
 		t.Fatalf("envRepo = %q, want %q", got, want)
 	}
 }
+
+// Bench finding (PR #539): after a jump to the end of the last line (the
+// needle is at its end) an editor without wrap scrolls sideways, and
+// "line " at the start of the line leaves the screen. The search and
+// scroll_end scripts wait for the line's number, which stays.
+func TestJumpToTheLastLineWaitsForTextThatStaysOnScreen(t *testing.T) {
+	env := Env{Repo: t.TempDir(), BigFile: filepath.Join(t.TempDir(), "big.txt")}
+	for _, e := range Editors() {
+		for _, m := range []Measure{MSearch, MScrollEnd} {
+			mk, ok := e.Scripts[m]
+			if !ok {
+				continue
+			}
+			if want := mk(env).Timed.Want; strings.HasPrefix(want, "line ") {
+				t.Errorf("%s/%s waits for %q: the start of a long line scrolls off after the jump", e.ID, m, want)
+			}
+		}
+	}
+}

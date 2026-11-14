@@ -119,6 +119,9 @@ func runClient(dir string, o clientOpts) int {
 	caps := clientCaps(running)
 	if running {
 		caps.Note = o.note
+		// `termocode <file>`: the running UI opens it (a new session's UI
+		// reads app.EnvStartFile itself).
+		caps.Open = os.Getenv(app.EnvStartFile)
 	}
 	var announce chan string
 	if o.link && o.webPort > 0 {
@@ -187,7 +190,7 @@ func applyClientEnv(c *session.ClientCaps) {
 // terminal. Without a probe from the client its environment decides.
 func terminalChange(c *session.ClientCaps) app.TerminalChangedMsg {
 	if c.Graphics != nil {
-		return app.TerminalChangedMsg{Graphics: graphicsFromSession(c.Graphics), Gen: c.Gen, Note: c.Note}
+		return app.TerminalChangedMsg{Graphics: graphicsFromSession(c.Graphics), Gen: c.Gen, Note: c.Note, Open: c.Open}
 	}
 	g := termimg.Caps{Protocol: termimg.Blocks, Reason: "no probe from the attaching terminal"}
 	switch termimg.ParseMode(app.ConfigDisplay().Images) {
@@ -195,7 +198,7 @@ func terminalChange(c *session.ClientCaps) app.TerminalChangedMsg {
 	default:
 		g.Protocol, _ = termimg.DetectEnv(func(k string) string { return c.Env[k] })
 	}
-	return app.TerminalChangedMsg{Graphics: g, Gen: c.Gen, Note: c.Note}
+	return app.TerminalChangedMsg{Graphics: g, Gen: c.Gen, Note: c.Note, Open: c.Open}
 }
 
 // cmdSSH runs `termocode ssh`: the editor of a far machine in this

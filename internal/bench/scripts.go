@@ -82,7 +82,10 @@ const (
 	f8      = "\x1b[19~"
 )
 
-const lastLine = "line 0050000"
+// lastLine is the last line's number in its text: the jump to the needle
+// at the end of that line scrolls an editor without wrap sideways, and
+// "line " at its start leaves the screen (the key was not lost).
+const lastLine = "0050000"
 const firstLine = "line 0000001"
 
 func open(args func(Env) []string, ready string) func(Env) Script {

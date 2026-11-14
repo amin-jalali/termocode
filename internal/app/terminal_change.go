@@ -24,6 +24,8 @@ type TerminalChangedMsg struct {
 	Graphics termimg.Caps
 	Gen      int
 	Note     string
+	// Open is the file `termocode <file>` asked for at this attach.
+	Open string
 }
 
 // applyTerminalChange re-resolves everything that depends on the terminal:
@@ -38,6 +40,9 @@ func (m *Model) applyTerminalChange(msg TerminalChangedMsg) tea.Cmd {
 	m.dropTerminalDownload() // transfer.go: the old terminal is gone
 	if m.w > 0 && m.h > 0 {
 		m.applyLayout()
+	}
+	if msg.Open != "" {
+		m.openAttachFile(msg.Open) // start_file.go
 	}
 	if msg.Note == "" {
 		return nil

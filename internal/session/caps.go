@@ -45,6 +45,10 @@ type ClientCaps struct {
 	// Note is a message for the user that comes with this attach, e.g.
 	// "Reconnected after 12 s" when the client came back by itself.
 	Note string `json:"note,omitempty"`
+	// Open is a file the attaching command line asked for (`termocode
+	// <file>` while the session runs): the UI opens it. Only the first
+	// hello carries it; a reconnect does not open it again.
+	Open string `json:"open,omitempty"`
 }
 
 // GraphicsCaps mirrors termimg.Caps with a stable protocol name, so a
