@@ -1,0 +1,2 @@
+go test fuzz v1
+string("{\"version\":1,\"0000\":\"0000000000000000000000000\",\"steps\":[{\"type\":\"0sk-fuzz0123456789abcdefghij\"}]}")
