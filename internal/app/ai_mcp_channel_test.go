@@ -5,6 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
 )
@@ -50,5 +53,24 @@ func TestMCPChannelsAreOffUntilListed(t *testing.T) {
 	}
 	if !mcpChannelAllowed("ci") || mcpChannelAllowed("other") {
 		t.Fatal("mcp_channels is not read per server")
+	}
+}
+
+// The wait for pushed MCP messages ends when its Model closes: a closed
+// Model (each test, each testkit restart) leaves no goroutine behind to
+// eat the next Model's messages (NEW-5: thousands piled up in a nightly).
+func TestMCPChannelWaitEndsOnClose(t *testing.T) {
+	m := &Model{crash: newCrashUI()}
+	wait := m.mcpChannelWaitCmd()
+	got := make(chan tea.Msg, 1)
+	go func() { got <- wait() }()
+	m.crash.close()
+	select {
+	case msg := <-got:
+		if msg != nil {
+			t.Fatalf("closed wait returned %T, want nil", msg)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("the wait for pushed messages outlived its Model")
 	}
 }
