@@ -154,6 +154,9 @@ func (m *Model) httpSocketIOSend(file string, vars []httpclient.Var, req httpcli
 	// `# @auth {…}` is the CONNECT payload here, not the HTTP auth
 	// helper the resolver reads it as (and reports as "@auth").
 	un = slices.DeleteFunc(un, func(u httpclient.Unresolved) bool { return u.Field == "auth" && u.Name == "@auth" })
+	if a := rr.Directives["auth"]; len(un) == 0 && strings.Contains(a, "{{") {
+		return m.pushToastDetail(toast.Warn, "Socket.IO: unknown variable in @auth", "Define it in http-client.env.json or with @name = value")
+	}
 	if len(un) > 0 {
 		return m.pushToastDetail(toast.Warn, "Socket.IO: unknown variable {{"+un[0].Name+"}}", "Define it in http-client.env.json or with @name = value")
 	}
