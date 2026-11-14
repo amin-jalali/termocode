@@ -61,7 +61,7 @@ func TestContextCreateStepsEndOnCard(t *testing.T) {
 	}
 	m.onContextPrompt(promptKindContextTLS, "/ca.pem /cert.pem /key.pem")
 	want := "docker context create stage --docker host=tcp://h:2376,ca=/ca.pem,cert=/cert.pem,key=/key.pem"
-	if !m.confirmOpen || !strings.Contains(cardText(m), want) {
+	if !m.confirmOpen || !strings.Contains(strings.ReplaceAll(cardText(m), " ", ""), strings.ReplaceAll(want, " ", "")) { // a long argument is cut over lines
 		t.Fatalf("create card: %s", cardText(m))
 	}
 	if m.confirm.Buttons()[0].ID != "cancel" {

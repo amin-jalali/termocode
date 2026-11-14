@@ -861,7 +861,8 @@ func wrap(s string, w int) []string {
 }
 
 // cutLongWords cuts each word wider than w (a long path) into pieces of
-// at most w cells, so no line of the body is wider than the card.
+// at most w cells, after a / , = or : near the end when there is one, so
+// no line of the body is wider than the card.
 func cutLongWords(words []string, w int) []string {
 	var out []string
 	for _, word := range words {
@@ -869,6 +870,10 @@ func cutLongWords(words []string, w int) []string {
 			head := ansi.Truncate(word, w, "")
 			if head == "" { // one rune wider than w: keep it whole
 				break
+			}
+			// Cut after a path or list separator near the end when there is one.
+			if i := strings.LastIndexAny(head, "/,=:"); i >= len(head)*2/3 && i < len(head)-1 {
+				head = head[:i+1]
 			}
 			out = append(out, head)
 			word = word[len(head):]
