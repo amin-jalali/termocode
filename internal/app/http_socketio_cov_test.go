@@ -217,3 +217,19 @@ func TestCovHTTPSIOAuthPayloadFromBuffer(t *testing.T) {
 		t.Fatalf("the server got no CONNECT: %q", covHTTPToast(m))
 	}
 }
+
+// An unknown {{variable}} in a Socket.IO @auth payload is not sent as
+// written: the send key says which payload needs it.
+func TestCovHTTPSIOAuthUnknownVariable(t *testing.T) {
+	m, root, _ := covHTTP(t)
+	file := filepath.Join(root, "auth.http")
+	src := "###\n# @name chat\n# @auth {\"token\": \"{{nope}}\"}\nSOCKETIO http://127.0.0.1:1/\n"
+	if err := os.WriteFile(file, []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	covHTTPEdit(t, m, file, 4)
+	covHTTPDispatch(t, m, "http-send")
+	if m.httpS().sioRunning || !strings.Contains(covHTTPToast(m), "unknown variable") || !strings.Contains(covHTTPToast(m), "@auth") {
+		t.Fatalf("running %v toast %q", m.httpS().sioRunning, covHTTPToast(m))
+	}
+}
