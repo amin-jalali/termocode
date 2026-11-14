@@ -26,3 +26,21 @@ func TestOpenFileFromTheCommandLine(t *testing.T) {
 	tm.WaitText("argdir-sub", uiTimeout) // the explorer lists the file's folder
 	tm.Quit()
 }
+
+// Spec (bench finding, PR #539): `termocode <file>` while a session runs
+// for the file's folder attaches to it and opens the file there. Before,
+// the session was attached as it was and the file did not open.
+func TestOpenFileInTheRunningSession(t *testing.T) {
+	r := newSessionRig(t)
+	a := r.start()
+	a.OpenFile("notes.txt")
+	a.WaitText("first note", uiTimeout)
+	file := filepath.Join(r.ws, "later.txt")
+	if err := os.WriteFile(file, []byte("opened in the running session\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	b := Start(t, StartOpts{Home: r.home, Workspace: r.ws, Env: r.env, Args: []string{file}})
+	b.WaitText("opened in the running session", bootTimeout)
+	b.Quit()
+	r.waitSocket(false)
+}
