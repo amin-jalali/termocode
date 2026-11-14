@@ -89,9 +89,9 @@ Alternatives on the table:
   ends without a passkey and binds the device to the phone's relay key
   (`devices.json` `relay_key`, public half only); that key signs it in
   at `/login/relay`, which exists only inside the tunnel.
-  `web_require_totp` still asks for the code there (the relay page does
-  not show the code step yet: such a phone signs in on the tailnet or
-  LAN). Removing the device ends its relay sessions at once.
+  `web_require_totp` still asks for the code there: the relay page
+  keeps the ticket and the panel shows its own code step (NEW-10).
+  Removing the device ends its relay sessions at once.
 - **Requests in the tunnel.** Each HTTP request and WebSocket of the
   page is one stream (frames OPEN, DATA, FIN, CLOSE, WINDOW; a 256 KiB
   window per stream; at most 128 streams per session and 4 sessions per
@@ -144,9 +144,9 @@ Alternatives on the table:
   page's own server. Run your own relay, or wait for the app (MOB-42),
   which carries its own code.
 - **−** No passkey over the relay (the phone's non-extractable key takes
-  its place); the sign-in code step is not in the relay page yet.
+  its place); the sign-in code step works there.
 - **−** A new crypto dependency (`github.com/flynn/noise`, pure Go).
 - **−** Timing and size metadata is visible to the relay.
 - Follow-ups: owner OK on a public relay (hosting, cost, operator);
-  the sign-in code step in the relay page; MOB-42 (the app's own relay
+  MOB-42 (the app's own relay
   transport); share as viewer and phone pushes over the relay.

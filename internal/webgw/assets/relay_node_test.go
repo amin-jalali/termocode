@@ -216,7 +216,7 @@ console.log("ok");
 	if !strings.Contains(main, "keepRelaySignIn(") {
 		t.Error("relay/main.ts does not keep the relay sign-in's ticket")
 	}
-	if !strings.Contains(sign, `"termocode.totp"`) || !strings.Contains(sign, `state.value = "code"`) {
+	if !strings.Contains(readSrc(t, "src/net/auth.ts"), `"termocode.totp"`) || !strings.Contains(sign, "takeRelayTicket()") || !strings.Contains(sign, `state.value = "code"`) {
 		t.Error("SignInScreen does not open the code step with the relay's ticket")
 	}
 	if !strings.Contains(panel, "relayCode") {

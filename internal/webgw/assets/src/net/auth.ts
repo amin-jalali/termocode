@@ -43,6 +43,18 @@ export function takePair(): string | null {
   return m ? m[1] : null;
 }
 
+/** takeRelayTicket reads, once, the code step's ticket that the relay
+ * page (relay/signin.ts) kept after the phone's relay sign-in (NEW-10). */
+export function takeRelayTicket(): string | null {
+  try {
+    const v = sessionStorage.getItem("termocode.totp");
+    sessionStorage.removeItem("termocode.totp");
+    return v;
+  } catch {
+    return null;
+  }
+}
+
 export function savedToken(): string | null {
   try {
     return sessionStorage.getItem(TOKEN_KEY);

@@ -4,16 +4,17 @@
 // browser's relay key once (IndexedDB, not extractable), opens the Noise
 // tunnel through the relay to the laptop, and puts fetch and WebSocket
 // for the laptop's own paths through it. A paired phone signs in with
-// its relay key alone. Then it loads the panel (app.js, by its SRI hash):
+// its relay key alone (and the one-time code, in the panel's code step,
+// when the laptop asks for it). Then it loads the panel (app.js, by its SRI hash):
 // the panel runs unchanged, and the relay sees only ciphertext.
 
 import { newStaticKey, unb64url, type StaticKey } from "./noise";
 import { tunnelFetch } from "./http";
+import { keepRelaySignIn } from "./signin";
 import { makeSocketClass } from "./socket";
 import { Tunnel, type Wire } from "./tunnel";
 
 const CONF = "termocode.relay";
-const TOKEN = "termocode.session"; // net/auth.ts's key: the panel finds the token there
 const LINK = /^#r=([A-Za-z0-9_-]{22})&k=([A-Za-z0-9_-]{43})(?:&p=([A-Za-z0-9_-]{43}))?$/;
 /** OURS are the laptop's own paths: they go through the tunnel. */
 const OURS = /^\/(auth|ws|watch)(\/|$)|^\/(pair|login)\//;
@@ -137,13 +138,13 @@ if (conf) {
   });
 }
 
-/** signIn: a paired phone signs in with its relay key alone. */
+/** signIn: a paired phone signs in with its relay key alone; with
+ * web_require_totp the panel's code step takes the ticket on. */
 async function signIn(): Promise<void> {
   if (!conf || pair) return;
   try {
     const r = await globalThis.fetch("/login/relay", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
-    const d = (await r.json()) as { token?: unknown };
-    if (r.ok && typeof d.token === "string" && d.token) sessionStorage.setItem(TOKEN, d.token);
+    keepRelaySignIn(r.ok, (await r.json()) as object, sessionStorage);
   } catch {
     // not paired, the laptop is away or the relay is down: the panel says so
   }

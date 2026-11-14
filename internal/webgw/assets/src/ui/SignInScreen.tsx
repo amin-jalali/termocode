@@ -4,7 +4,7 @@
 // PIN is the browser's own step.
 import { h } from "preact";
 import { signal } from "@preact/signals";
-import { keepIssuedToken, postJSON, type Reply } from "../net/auth";
+import { keepIssuedToken, postJSON, takeRelayTicket, type Reply } from "../net/auth";
 import { keepDeviceKey, useDeviceKey } from "../net/devicekey";
 import { passkeysHere, usePasskey } from "../net/passkey";
 import { appKeyLogin, inApp } from "../net/appkey";
@@ -20,6 +20,16 @@ type SignInState = "ready" | "busy" | "failed" | "removed" | "clone" | "expired"
 const state = signal<SignInState>("ready");
 const code = signal("");
 let ticket = "";
+
+// Over the relay (NEW-10) relay.js signed in with the phone's relay key
+// and the laptop wants the code: its ticket waits here, once.
+const relayTicket = takeRelayTicket();
+if (relayTicket) {
+  ticket = relayTicket;
+  state.value = "code";
+}
+/** relayCode: the page opens on the code step of a relay sign-in. */
+export const relayCode = !!relayTicket;
 
 const errorText: Partial<Record<SignInState, StringKey>> = {
   failed: "signin.failed",

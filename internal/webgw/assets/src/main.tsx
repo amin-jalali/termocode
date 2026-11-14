@@ -45,7 +45,7 @@ import { TABS } from "./state/route";
 import { openCards } from "./ui/CardSheet";
 import { ConnectScreen, type ConnectState } from "./ui/ConnectScreen";
 import { PairScreen } from "./ui/PairScreen";
-import { SignInScreen, bookmarkRemoved, signInWithBookmark } from "./ui/SignInScreen";
+import { SignInScreen, bookmarkRemoved, relayCode, signInWithBookmark } from "./ui/SignInScreen";
 import { passkeysHere } from "./net/passkey";
 import { isRemembered } from "./net/devicekey";
 import { lang, addStrings, persian, t, type Lang } from "./strings";
@@ -57,7 +57,7 @@ const RTL_LANGS = /^(fa|ar|he|ur|ps|ckb|dv|yi|sd|ug)\b/i;
 // of a paired device (where the browser can, or with the bookmark key of
 // a remembered browser, WEBP-12) or says to use the link.
 const phase = signal<"connect" | "pair" | "signin" | "pick" | "shell">(
-  secret ? "connect" : pairSecret ? "pair" : passkeysHere() || isRemembered() ? "signin" : "connect",
+  secret ? "connect" : pairSecret ? "pair" : relayCode || passkeysHere() || isRemembered() ? "signin" : "connect",
 );
 const connect = signal<ConnectState>(secret ? "ready" : "nolink");
 
@@ -224,7 +224,7 @@ effect(() => wantCards.value && waiting.value.count > 0 && ((wantCards.value = f
 if (soloBuf(route.peek()) !== null && window.opener) window.opener = null;
 
 if (!secret && !pairSecret && token()) startShell();
-else if (!secret && !pairSecret && isRemembered()) {
+else if (!secret && !pairSecret && !relayCode && isRemembered()) {
   // A bookmark: sign in with the kept key; when it is refused here and
   // no passkey can be used, the page says to use the laptop's link.
   void signInWithBookmark(startPick).then((going) => {
