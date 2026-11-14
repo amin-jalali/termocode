@@ -165,6 +165,8 @@ type Server struct {
 	mu    sync.Mutex
 	rooms map[string]*room
 	ips   map[string]*client
+	// closing is set by Close: new connections are refused (join).
+	closing bool
 }
 
 type room struct {
@@ -199,10 +201,27 @@ func New(cfg Config) *Server {
 		rooms: map[string]*room{}, ips: map[string]*client{}}
 }
 
-// Close ends every connection and waits for them.
+// Close ends every connection and waits for them; a connection that
+// comes after is refused (join).
 func (s *Server) Close() {
+	s.mu.Lock()
+	s.closing = true
+	s.mu.Unlock()
 	s.cancel()
 	s.wg.Wait()
+}
+
+// join counts a new connection for Close to wait for; false once the
+// relay is closing (the Add and Close's flag share the lock, so no Add
+// comes while Close waits).
+func (s *Server) join() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closing {
+		return false
+	}
+	s.wg.Add(1)
+	return true
 }
 
 // Waiting is the number of gateways waiting in room (for tests and the
@@ -253,14 +272,18 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer s.release(ip)
-	c, err := websocket.Accept(w, r, &websocket.AcceptOptions{CompressionMode: websocket.CompressionDisabled})
-	if err != nil {
+	if !s.join() {
+		http.Error(w, "the relay is stopping", http.StatusServiceUnavailable)
 		return
 	}
+	c, err := websocket.Accept(w, r, &websocket.AcceptOptions{CompressionMode: websocket.CompressionDisabled})
+	if err != nil {
+		s.wg.Done()
+		return
+	}
+	defer s.wg.Done() // added in join, before the upgrade
 	defer func() { _ = c.CloseNow() }()
 	c.SetReadLimit(s.cfg.MaxMessage)
-	s.wg.Add(1)
-	defer s.wg.Done()
 	s.log(Event{Kind: EvConnect, Room: RoomHash(id), Side: side})
 	if side == SideGateway {
 		s.serveGateway(id, c)
