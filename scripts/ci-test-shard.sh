@@ -106,13 +106,15 @@ shorten() { sed -E 's/(of statements in ).*/\1-coverpkg/'; }
 status=0
 pid_deal="" pid_split=""
 if [ ${#pkgs[@]} -gt 0 ]; then
-	go test "$@" "${cover_deal[@]+"${cover_deal[@]}"}" "${pkgs[@]}" > >(shorten) &
+	# Each job is a pipe in a subshell, not > >(…): it ends only once
+	# shorten has printed everything (a failure's output was lost on macOS).
+	(go test "$@" "${cover_deal[@]+"${cover_deal[@]}"}" "${pkgs[@]}" | shorten; exit "${PIPESTATUS[0]}") &
 	pid_deal=$!
 fi
 if [ ${#names[@]} -gt 0 ]; then
 	re="^($(IFS='|'; echo "${names[*]}"))\$"
 	# shellcheck disable=SC2086
-	go test "$@" "${cover_split[@]+"${cover_split[@]}"}" -run "$re" $split > >(shorten) &
+	(go test "$@" "${cover_split[@]+"${cover_split[@]}"}" -run "$re" $split | shorten; exit "${PIPESTATUS[0]}") &
 	pid_split=$!
 fi
 if [ -n "$pid_deal" ]; then wait "$pid_deal" || status=1; fi
