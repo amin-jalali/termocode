@@ -157,33 +157,37 @@ func TestLiveEditorConflictFromHub(t *testing.T) {
 	}
 }
 
-// Both sides changed while a send was on its way: the user's newer text
-// stays; Use the laptop's text shows the laptop's, and Undo brings the
-// user's back (and sends it).
+// Both sides changed while a send was on its way, on the same text: the
+// user's newer text stays; Use the laptop's text shows the laptop's, and
+// Undo brings the user's back (and sends it). (Changes that do not touch
+// the same text are joined instead: live editing together, G-COL.)
 func TestLiveEditorConflictKeepsUnsentText(t *testing.T) {
 	p, c := openFiles(t, Tablet)
 	openBuf(t, p, c, 2, "notes.txt", "alpha", "beta")
 	openEditor(t, p)
 	typeAtStart(p, "Y")
 	r, _ := expectSetText(t, c)
-	typeAtStart(p, "Z") // unsent: the first send is still on its way
+	p.Do(chromedp.KeyEvent(kb.End))
+	p.Do(chromedp.KeyEvent("Z")) // unsent, at the end of line 1: the first send is still on its way
 	c.Send(t, Delta("buf:2", 2, map[string]any{"kind": "lines", "first": 0, "last": 1, "lines": []string{"Yalpha"}, "tick": 4}))
-	c.Send(t, Delta("buf:2", 3, map[string]any{"kind": "lines", "first": 1, "last": 2, "lines": []string{"BETA"}, "tick": 5}))
+	// The laptop changes "a\nb" around the user's Z: a real overlap.
+	c.Send(t, Delta("buf:2", 3, map[string]any{"kind": "lines", "first": 0, "last": 2, "lines": []string{"YalphX", "Xeta"}, "tick": 5}))
 	okEdit(t, c, r, 4)
 	p.WaitJS(`document.querySelector(".live-conflict")`)
-	if got := edText(p); got != "ZYalpha\nbeta" {
+	if got := edText(p); got != "YalphaZ\nbeta" {
 		t.Fatalf("the user's text is %q", got)
 	}
 	noReq(t, c, 400*time.Millisecond)
 	p.TapJS(ButtonByText("Use the laptop's text"))
 	p.WaitJS(`!document.querySelector(".live-conflict")`)
-	if got := edText(p); got != "Yalpha\nBETA" {
+	if got := edText(p); got != "YalphX\nXeta" {
 		t.Fatalf("after Use the laptop's text: %q", got)
 	}
 	noReq(t, c, 300*time.Millisecond) // the laptop's text is not sent back
 	p.TapJS(ButtonByText("Undo"))
 	_, a := expectSetText(t, c)
-	if a.Tick != 5 || strings.Join(a.Lines, "|") != "ZYalpha|beta" {
+	// Only what differs from the laptop's text: "X\nX" back to "aZ\nb".
+	if a.Tick != 5 || a.Start != (webproto.Pos{Row: 0, Col: 5}) || a.End != (webproto.Pos{Row: 1, Col: 1}) || strings.Join(a.Lines, "|") != "aZ|b" {
 		t.Fatalf("undo after taking the laptop's text sent %+v", a)
 	}
 }

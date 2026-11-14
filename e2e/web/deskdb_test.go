@@ -138,7 +138,7 @@ func TestDeskDBParity(t *testing.T) {
 	p.TapJS(`document.querySelector('.ed-actions [data-act="pin"]')`)
 	p.WaitJS(`document.querySelector('[data-view="db-query"] .dbq-pin')?.textContent.includes("Pinned 1")`)
 	p.TapJS(`document.querySelector('.ed-actions [data-act="export"]')`)
-	p.WaitJS(`[...document.querySelectorAll(".ctx-item")].map((b) => b.textContent).join() === "CSV,JSON,Markdown"`)
+	p.WaitJS(`[...document.querySelectorAll(".ctx-item")].map((b) => b.textContent).join() === "CSV,JSON,Markdown,Parquet"`)
 	p.Key(kb.Escape)
 
 	// The connection menu: Commit asks the laptop.
