@@ -241,3 +241,26 @@ func TestCovDBRenameTextEdges(t *testing.T) {
 		t.Fatalf("a big file was renamed: %d", len(got))
 	}
 }
+
+// The rename card lists every file that changes (up to eight, then how
+// many more), not only the first.
+func TestCovDBRenameCardListsEveryFile(t *testing.T) {
+	m := cdbRealModel(t, dbclient.Conn{ID: "pg", Driver: "postgres", Host: "h", Port: 5432})
+	wd, _ := os.Getwd()
+	for i := 0; i < 10; i++ {
+		p := filepath.Join(wd, fmt.Sprintf("f%d.sql", i))
+		if err := os.WriteFile(p, []byte("SELECT 1 FROM users;\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cdbOpenFile(t, m, "cur.sql", "SELECT * FROM users;\n")
+	_ = m.nvim.ExecLua(`vim.api.nvim_win_set_cursor(0, {1, 15})`)
+	m.databaseRenameStart()
+	cdbSubmit(t, m, "customers")
+	card := m.confirm.Message()
+	for _, want := range []string{"f0.sql (1)", "f1.sql (1)", "f7.sql (1)", "… 2 more files"} {
+		if !strings.Contains(card, want) {
+			t.Fatalf("card lacks %q:\n%s", want, card)
+		}
+	}
+}
