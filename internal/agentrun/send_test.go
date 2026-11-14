@@ -55,3 +55,38 @@ func TestSendReachesARunningNode(t *testing.T) {
 		t.Fatal("after the end Send must refuse")
 	}
 }
+
+// A step takes messages from the moment it shows as running: the UI
+// learns "running" from NodeStart, and a message sent right then was
+// refused ("the step does not run now") when the mailbox opened after
+// that event (NEW-3: TestAgentsSendMessageToStep on macOS).
+func TestSendRightAtNodeStart(t *testing.T) {
+	pa := &fakeProv{replies: []ai.Chunk{{Delta: "working"}, {Delta: "done with the note"}}}
+	h := newHarness(map[string]*fakeProv{"a": pa})
+	opt := h.options(1)
+	started, sent := make(chan struct{}), make(chan struct{})
+	emit := opt.Emit
+	opt.Emit = func(e Event) {
+		emit(e)
+		if e.Kind == NodeStart && e.NodeID == "a" {
+			close(started)
+			<-sent // the loop waits here, right after the event
+		}
+	}
+	r, err := Start(context.Background(), chain("a"), opt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	<-started
+	err = r.Send("a", "also check the tests")
+	close(sent)
+	if err != nil {
+		t.Fatalf("Send at NodeStart: %v", err)
+	}
+	if end := wait(t, r); end.Kind != RunDone {
+		t.Fatalf("end %+v", end)
+	}
+	if ev, ok := h.find(NodeMessage, "a"); !ok || ev.Err != "" {
+		t.Fatalf("NodeMessage %+v %v", ev, ok)
+	}
+}
