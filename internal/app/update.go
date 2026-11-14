@@ -1715,13 +1715,9 @@ func (m Model) fetchStateCmd() tea.Cmd {
 }
 
 func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
-	// Debug: log every key the app actually receives so when a binding
-	// "doesn't work" we can tell from the log whether (a) the host
-	// terminal swallowed the key (no entry), (b) Bubble Tea reported it
-	// under a different name than we bound (entry shows the surprising
-	// name), or (c) the action ran but failed (entry but no follow-up
-	// toast). Cheap: just appends to errors.log via recordError.
-	recordError("[key] " + msg.String())
+	// No key is logged: errors.log is opened on the UI goroutine, and
+	// what the user types (a password in a terminal tab) must not reach
+	// the disk (PERF-2).
 	// Any key ends a wheel scroll of the terminal scrollback; a key meant
 	// for the shell then goes to the prompt (terminal_scroll.go).
 	m.endTerminalScroll()
