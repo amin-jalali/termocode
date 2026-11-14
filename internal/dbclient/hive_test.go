@@ -203,7 +203,7 @@ func TestHiveSessionRunsRows(t *testing.T) {
 
 func TestHiveSessionRunsStartSQL(t *testing.T) {
 	f := &fakeHive{}
-	s := openFakeHive(t, f, Conn{Options: ConnOptions{Schema: "sales", InitSQL: "SET hive.exec.parallel=true"}})
+	s := openFakeHive(t, f, Conn{Options: &ConnOptions{Schema: "sales", InitSQL: "SET hive.exec.parallel=true"}})
 	_ = s.Run(context.Background(), "SELECT 1", RunOptions{})
 	got := strings.Join(f.queries, "|")
 	if !strings.Contains(got, "USE `sales`") || !strings.Contains(got, "SET hive.exec.parallel=true") {
