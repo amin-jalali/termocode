@@ -7,6 +7,7 @@ require (
 	github.com/SAP/go-hdb v1.21.0
 	github.com/alecthomas/chroma/v2 v2.23.1
 	github.com/apache/cassandra-gocql-driver/v2 v2.1.2
+	github.com/beltran/gohive v1.8.1
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/harmonica v0.2.0
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834
@@ -20,6 +21,7 @@ require (
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/go-webauthn/webauthn v0.18.2
 	github.com/gomodule/redigo v1.9.2
+	github.com/ibmdb/go_ibm_db v0.5.4
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/mattn/go-runewidth v0.0.19
 	github.com/microsoft/go-mssqldb v1.11.2
@@ -57,7 +59,6 @@ require (
 	github.com/andybalholm/brotli v1.2.3 // indirect
 	github.com/apache/thrift v0.22.0 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/beltran/gohive v1.8.1 // indirect
 	github.com/beltran/gosasl v1.0.0 // indirect
 	github.com/beltran/gssapi v0.0.0-20200324152954-d86554db4bab // indirect
 	github.com/charmbracelet/colorprofile v0.4.1 // indirect
@@ -82,7 +83,6 @@ require (
 	github.com/google/go-tpm v0.9.8 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
-	github.com/ibmdb/go_ibm_db v0.5.4 // indirect
 	github.com/ibmruntimes/go-recordio/v2 v2.0.0-20240416213906-ae0ad556db70 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
