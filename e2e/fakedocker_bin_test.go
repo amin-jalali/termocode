@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/containerhost/fakedocker"
 )
@@ -95,6 +96,10 @@ func fakeDockerWorkspace(t *testing.T) (root, state string) {
 		t.Fatal(err)
 	}
 	state = t.TempDir()
+	// Runs before state is removed (cleanups go last-in first-out): a fake
+	// docker call still on its way (the UI's last poll, slow on macOS) may
+	// write into state while it is removed, so wait for the folder to rest.
+	t.Cleanup(func() { waitDirRests(state, 300*time.Millisecond, 5*time.Second) })
 	root = filepath.Join(state, "root")
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
@@ -110,3 +115,29 @@ func fakeDockerWorkspace(t *testing.T) (root, state string) {
 
 // shQuote quotes s for /bin/sh.
 func shQuote(s string) string { return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'" }
+
+// waitDirRests waits until nothing in dir changed for quiet (at most max).
+func waitDirRests(dir string, quiet, max time.Duration) {
+	stamp := func() string {
+		var b strings.Builder
+		_ = filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
+			if err == nil {
+				if fi, err := d.Info(); err == nil {
+					fmt.Fprintf(&b, "%s %d %d\n", p, fi.Size(), fi.ModTime().UnixNano())
+				}
+			}
+			return nil
+		})
+		return b.String()
+	}
+	end := time.Now().Add(max)
+	last, since := stamp(), time.Now()
+	for time.Now().Before(end) {
+		time.Sleep(50 * time.Millisecond)
+		if s := stamp(); s != last {
+			last, since = s, time.Now()
+		} else if time.Since(since) >= quiet {
+			return
+		}
+	}
+}
