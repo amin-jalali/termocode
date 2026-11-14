@@ -240,7 +240,7 @@ jobs:
       # The patched Bubble Tea renderer (third_party/bubbletea/PATCHES.md).
       - name: Test the renderer patch
         if: matrix.shard == 1
-        run: go -C third_party/bubbletea test -race -count=1 -run TestRendererIdlesAndWakes .
+        run: go -C third_party/bubbletea test -race -count=1 -run 'TestRendererIdlesAndWakes|TestRendererFlushesTheFirstFrameAfterIdleAtOnce' .
 
       - name: Upload the cover profiles
         if: ${{ !cancelled() && env.COVER == 'true' }}
@@ -295,7 +295,7 @@ jobs:
 
       - name: Test the renderer patch
         if: matrix.shard == 1
-        run: go -C third_party/bubbletea test -race -count=1 -run TestRendererIdlesAndWakes .
+        run: go -C third_party/bubbletea test -race -count=1 -run 'TestRendererIdlesAndWakes|TestRendererFlushesTheFirstFrameAfterIdleAtOnce' .
 
       - name: Save the Go cache (main)
         if: ${{ !cancelled() }}

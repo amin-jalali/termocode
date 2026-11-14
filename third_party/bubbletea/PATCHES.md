@@ -19,6 +19,11 @@ First frame at once (termocode PERF-1):
   size is known is flushed at once (`write` / `writeFrame`), not on the
   next tick: startup showed it up to one frame interval later. Later
   frames still wait for the tick.
+- The first frame after an idle stop goes out at once too (PERF-2):
+  nothing went out for at least a frame interval, so a key typed after
+  a pause no longer waits up to one interval. The next frames in the
+  interval wait for the tick; an unchanged frame does not wake the
+  ticker. Test: `idle_renderer_test.go`.
 - Test: `first_frame_test.go`. `screen_test.go`'s `TestClearMsg` sends
   the window size after its commands, so the frame still comes last.
 

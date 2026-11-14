@@ -26,6 +26,10 @@ type frameGate struct {
 	at    time.Time // when it was drawn
 	skip  bool      // View returns frame as is
 	tick  bool      // a frameTickMsg is on its way
+	// free: the last draw gave the same frame, so the next message may
+	// draw inside the interval; freeUsed: this draw is that one.
+	free, freeUsed bool
+	updated        bool // the next View follows an Update (not a repeat call)
 }
 
 type frameTickMsg struct{}
@@ -49,7 +53,11 @@ func (m Model) gateUpdate(msg tea.Msg, cmd tea.Cmd) tea.Cmd {
 	}
 	since := time.Since(g.at)
 	if g.frame == "" || since >= frameInterval || drawAtOnce(msg) {
-		g.skip = false
+		g.skip, g.updated = false, true
+		return cmd
+	}
+	if g.free {
+		g.free, g.freeUsed, g.skip, g.updated = false, true, false, true
 		return cmd
 	}
 	g.skip = true
@@ -82,6 +90,13 @@ func (m Model) gatedView(draw func() string) string {
 	if g.skip && g.frame != "" {
 		return g.frame
 	}
-	g.frame, g.at, g.skip = draw(), time.Now(), false
+	// A draw that gives the same frame sent nothing to the terminal: the
+	// next message (nvim's redraw right after the key that caused it) may
+	// draw at once instead of waiting for the tick, once per interval so
+	// a burst of messages that change nothing is still held (PERF-2).
+	f := draw()
+	g.free = g.updated && f == g.frame && !g.freeUsed
+	g.freeUsed, g.updated = false, false
+	g.frame, g.at, g.skip = f, time.Now(), false
 	return g.frame
 }
