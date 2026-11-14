@@ -38,8 +38,9 @@ export interface LinkHost {
 let host: LinkHost;
 
 // The port preview's own strings: they load with this chunk only, so the
-// page's first files do not carry them; English only, like device.js.
-// Same voice as strings.ts. {port} marks the port.
+// page's first files do not carry them. Same voice as strings.ts and
+// strings.fa.ts; {port} marks the port. Persian when the page is
+// (main.tsx sets <html lang>).
 const FS = {
   title: "Port {port} of the computer",
   body: "This link is on the computer termocode runs on, not on this device.",
@@ -47,7 +48,14 @@ const FS = {
   ssh: "Port {port} opens on your computer.",
 };
 
-const fs = (k: keyof typeof FS, port = 0) => FS[k].replace("{port}", String(port));
+const FA = {
+  title: "درگاه {port} رایانه",
+  body: "این پیوند روی رایانه‌ای است که termocode روی آن اجرا می‌شود، نه روی این دستگاه.",
+  forward: "رساندن درگاه",
+  ssh: "درگاه {port} روی رایانه‌ی شما باز می‌شود.",
+};
+
+const fs = (k: keyof typeof FS, port = 0) => (document.documentElement.lang === "fa" ? FA : FS)[k].replace("{port}", String(port));
 
 /** wanted: the link each asked port came from, for its path. */
 const wanted = new Map<number, string>();

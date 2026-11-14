@@ -19,6 +19,7 @@ import { exportText, type Fmt } from "./export";
 import type { DBRowsView } from "../state/more";
 
 export { exportText };
+export { editRequest } from "./edit";
 /** look is the desktop chat's look (look.tsx, lib/toolblocks.ts). */
 export { look } from "./look";
 export { pickMCP } from "./mcp";
