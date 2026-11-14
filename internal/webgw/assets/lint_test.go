@@ -196,7 +196,10 @@ func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
 			// load anything. The other rules hold for it too.
 			text = regexp.MustCompile(`(?i)(https?|wss?):\/\/|\bimport\s*\(`).ReplaceAllString(text, "")
 		}
-		if pageFile(e.Path) { // the page's dynamic imports (lib/lazy.ts, lib/links.ts), fixed paths
+		// The page's dynamic imports (lib/lazy.ts, lib/links.ts), fixed
+		// paths; the dev-only kit shows the page's views, so it carries
+		// lib/lazy.ts too (views/Chat.tsx loads home.js through it).
+		if pageFile(e.Path) || e.Path == "kit.js" {
 			text = strings.Replace(text, `import("/assets/editor.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/workbench.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/strings-fa.js")`, "", 1)

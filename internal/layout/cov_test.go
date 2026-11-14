@@ -48,6 +48,9 @@ func TestFindMissingLayout(t *testing.T) {
 
 // Names that differ only in case keep a fixed order.
 func TestListOrdersNamesThatDifferOnlyInCase(t *testing.T) {
+	if caseInsensitiveFS(t) {
+		t.Skip("this file system ignores case (the macOS default): abc and Abc are one file")
+	}
 	s := testStore(t)
 	for _, n := range []string{"abc", "Abc"} {
 		if _, err := s.Save(User, Layout{Name: n}); err != nil {
@@ -94,4 +97,16 @@ func TestSaveErrors(t *testing.T) {
 			t.Fatal("saved into a read-only folder")
 		}
 	}
+}
+
+// caseInsensitiveFS reports whether the temp folder's file system treats
+// "a" and "A" as one name.
+func caseInsensitiveFS(t *testing.T) bool {
+	t.Helper()
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "a"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := os.Stat(filepath.Join(dir, "A"))
+	return err == nil
 }
