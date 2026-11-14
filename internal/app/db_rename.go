@@ -403,13 +403,17 @@ func (m *Model) databaseGotoRoutine(conn, name string) (tea.Cmd, bool) {
 				lastErr = err
 				continue
 			}
-			res := dbRunReadOnly(ctx, sess, q.SQL, dbclient.RunOptions{MaxRows: 1, Args: q.Args})
+			max := 1
+			if q.Lines {
+				max = dbSourceMaxLines
+			}
+			res := dbRunReadOnly(ctx, sess, q.SQL, dbclient.RunOptions{MaxRows: max, Args: q.Args})
 			if res.Err != nil {
 				lastErr = res.Err
 				continue
 			}
-			if len(res.Rows) > 0 && q.Column < len(res.Rows[0]) && !res.Rows[0][q.Column].Null {
-				return dbSourceMsg{gen: gen, title: title, text: res.Rows[0][q.Column].Text}
+			if text, ok := q.Text(res); ok {
+				return dbSourceMsg{gen: gen, title: title, text: text}
 			}
 		}
 		if lastErr == nil {

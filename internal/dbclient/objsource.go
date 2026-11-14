@@ -27,6 +27,10 @@ type SourceQuery struct {
 	SQL    string
 	Args   []any
 	Column int
+	// Lines joins column Column of every row (Oracle all_source) after
+	// Prefix; see Text.
+	Lines  bool
+	Prefix string
 }
 
 // ObjectSourceQuery is the read-only query that returns the stored source
@@ -63,6 +67,8 @@ func ObjectSourceQuery(driver string, kind ObjectKind, name string) (SourceQuery
 		case ObjectView, ObjectTrigger:
 			return SourceQuery{SQL: `SELECT sql FROM sqlite_master WHERE type = ? AND name = ?`, Args: []any{string(kind), name}}, nil
 		}
+	case "oracle":
+		return oracleSourceQuery(kind, name)
 	}
 	return SourceQuery{}, fmt.Errorf("editing the source of a %s is not supported for %s", kind, driver)
 }
@@ -103,6 +109,13 @@ func SubmitObjectSource(driver string, kind ObjectKind, name, source string) (So
 		return SourcePlan{}, err
 	}
 	switch normDriver(driver) {
+	case "oracle": // one statement; a PL/SQL unit keeps its final ';'
+		for _, st := range stmts {
+			if t := strings.TrimSpace(st); t != "" {
+				return SourcePlan{Statements: []string{orReplace(t)}, Transactional: true}, nil
+			}
+		}
+		return SourcePlan{}, errors.New("the source is empty")
 	case "postgres", "postgresql":
 		return SourcePlan{Statements: []string{orReplace(src)}, Transactional: true}, nil
 	case "mysql":
@@ -136,9 +149,12 @@ func checkSourceHeader(src string, kind ObjectKind, name string) error {
 	for i := 1; i < len(f); i++ {
 		w := strings.ToLower(f[i])
 		switch ObjectKind(w) {
-		case ObjectView, ObjectFunction, ObjectProcedure, ObjectTrigger:
+		case ObjectView, ObjectFunction, ObjectProcedure, ObjectTrigger, ObjectPackage:
 		default:
 			continue
+		}
+		if w == "package" && i+1 < len(f) && strings.EqualFold(f[i+1], "body") {
+			w, i = string(ObjectPackageBody), i+1
 		}
 		if ObjectKind(w) != kind {
 			return fmt.Errorf("the source creates a %s, not a %s", w, kind)
