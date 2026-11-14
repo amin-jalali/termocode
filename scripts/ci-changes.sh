@@ -23,7 +23,7 @@ ALL='^(go\.(mod|sum)|e2e/go\.(mod|sum)|third_party/.*|\.github/workflows/.*|scri
 # The packages the browser suite (e2e/web) builds on, the web commands and
 # the web tests of the e2e module. The "checks" job fails when e2e/web
 # starts to import a package that is missing here.
-WEB_DEPS='^(internal/(webgw|webproto|webhl|webdevices|webtools|webtotp|webpush|blocks|services|session|workspace|spawn|crash|lazyre|termfont)/|cmd/web[^/]*/|e2e/web|e2e/ssh_web)'
+WEB_DEPS='^(internal/(webgw|webproto|webhl|webdevices|webtools|webtotp|webpush|blocks|services|session|workspace|spawn|crash|lazyre|termfont|relay|relaytun)/|cmd/web[^/]*/|e2e/web|e2e/ssh_web)'
 # Browser sources: embedded in the binary, but not Go code.
 BROWSER='^internal/webgw/assets/.*\.(js|ts|css|html|svg|json|webmanifest|woff2?|ttf|txt|lock|png)$'
 
