@@ -5,8 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/x/ansi"
-
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/containers"
 )
@@ -40,7 +38,7 @@ func TestDuplicateContainerCardIsCancelFirstWithACopyName(t *testing.T) {
 	if b[0].ID != "cancel" || b[len(b)-1].ID != "duplicate" {
 		t.Fatalf("buttons %+v", b)
 	}
-	card := strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " ")
+	card := cardText(&m)
 	if !strings.Contains(card, "--name nginx-copy") || strings.Contains(card, "K=v") {
 		t.Fatalf("card %q", card)
 	}

@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/x/ansi"
 )
 
 func TestDebugToolboxKeyAsksImageThenCancelFirstCard(t *testing.T) {
@@ -29,7 +28,7 @@ func TestDebugToolboxKeyAsksImageThenCancelFirstCard(t *testing.T) {
 	if b := m.confirm.Buttons(); b[0].ID != "cancel" {
 		t.Fatalf("buttons = %#v, want Cancel first", b)
 	}
-	card := strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " ")
+	card := cardText(&m)
 	for _, want := range []string{"--pid container:" + c.ID, "--network container:" + c.ID, "busybox:stable", "--rm"} {
 		if !strings.Contains(card, want) {
 			t.Errorf("card %q misses %q", card, want)

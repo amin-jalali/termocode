@@ -3,8 +3,6 @@ package app
 import (
 	"strings"
 	"testing"
-
-	"github.com/charmbracelet/x/ansi"
 )
 
 // KB-1: D removes (asks first); making a context the default moved to u.
@@ -14,7 +12,7 @@ func TestKB1DOnAContextAsksToRemoveIt(t *testing.T) {
 	if cmd := press(m, "D"); cmd != nil {
 		t.Fatal("D ran something before the card")
 	}
-	if !m.confirmOpen || !strings.Contains(strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " "), "context rm prod") {
+	if !m.confirmOpen || !strings.Contains(cardText(m), "context rm prod") {
 		t.Fatalf("D on a context did not ask to remove it: open=%v", m.confirmOpen)
 	}
 	if f.Count("context rm") != 0 {
@@ -26,7 +24,7 @@ func TestKB1UMakesAContextTheDefault(t *testing.T) {
 	m, _ := ctxSession(t)
 	selectContext(t, m.services, "prod")
 	press(m, "u")
-	card := strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " ")
+	card := cardText(m)
 	if !m.confirmOpen || !strings.Contains(card, "context use prod") {
 		t.Fatalf("u did not open the make-default card: open=%v %s", m.confirmOpen, card)
 	}

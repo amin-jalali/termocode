@@ -6,7 +6,6 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/git"
-	"github.com/charmbracelet/x/ansi"
 )
 
 // aiPlanWTFakes makes the plan worktree in a temp folder and records the
@@ -63,7 +62,7 @@ func TestAIPlanRunInWorktreeThenShip(t *testing.T) {
 		t.Fatalf("no Not-now-first ship card (open %v kind %v)", m.confirmOpen, m.confirmKind)
 	}
 	m.confirm.SetSize(160, 50)
-	if body := strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " "); !strings.Contains(body, git.AgentBranchPrefix) || !strings.Contains(body, "asks first") {
+	if body := cardText(m); !strings.Contains(body, git.AgentBranchPrefix) || !strings.Contains(body, "asks first") {
 		t.Fatalf("card text:\n%s", body)
 	}
 	cmd := m.answerAIPlanShip("ship")

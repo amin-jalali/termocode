@@ -319,7 +319,7 @@ func TestContextMakeDefaultNeedsTheCardAndRunsExactCommand(t *testing.T) {
 	if !m.confirmOpen {
 		t.Fatal("no confirm card")
 	}
-	card := strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " ")
+	card := cardText(m)
 	if !strings.Contains(card, "context use prod") || !strings.Contains(card, "every terminal") {
 		t.Fatalf("card does not name the exact command and the effect: %s", card)
 	}

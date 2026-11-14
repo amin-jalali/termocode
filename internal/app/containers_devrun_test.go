@@ -33,7 +33,7 @@ func TestRunTargetCardIsCancelFirstAndCancelRunsNothing(t *testing.T) {
 	if b := m.confirm.Buttons(); len(b) != 2 || b[0].ID != "cancel" {
 		t.Fatalf("buttons = %#v, want Cancel first", b)
 	}
-	card := strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " ")
+	card := cardText(&m)
 	if !strings.Contains(card, "compose") || !strings.Contains(card, "up api") {
 		t.Fatalf("card = %q", card)
 	}

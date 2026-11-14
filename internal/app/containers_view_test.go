@@ -637,7 +637,7 @@ func TestContainersAIComposeActionFindsNamedProject(t *testing.T) {
 	if !m.confirmOpen || m.pendingContainerProject != "shop" || m.pendingContainerDir != dir {
 		t.Fatalf("compose action did not open the shop confirmation card: open=%v project=%q dir=%q", m.confirmOpen, m.pendingContainerProject, m.pendingContainerDir)
 	}
-	card := strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " ")
+	card := cardText(&m)
 	if !strings.Contains(card, "shop") || !strings.Contains(card, dir) {
 		t.Fatalf("confirmation card does not identify shop and its folder:\n%s", card)
 	}
@@ -712,7 +712,7 @@ func TestTagPromptConfirmsMovingAnExistingTag(t *testing.T) {
 	if !m.confirmOpen {
 		t.Fatal("tagging over an existing reference did not open a confirmation card")
 	}
-	card := strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " ")
+	card := cardText(&m)
 	if !strings.Contains(card, "postgres:15-alpine") || !strings.Contains(card, "postgres:16") || !strings.Contains(card, "docker tag") {
 		t.Fatalf("tag replacement card did not show source, destination, and command: %s", card)
 	}
@@ -785,12 +785,12 @@ func TestImageAndStorageConfirmCardsNameSafeCommands(t *testing.T) {
 	if cmd := m.askImageRemove(st.imageRows[0]); cmd != nil {
 		t.Fatal("image removal card returned a command")
 	}
-	card := strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " ")
+	card := cardText(&m)
 	if !strings.Contains(card, "Image is in use") || !strings.Contains(card, "Close") || strings.Contains(card, "docker rmi") {
 		t.Fatalf("image-in-use card should explain and offer Close: %s", card)
 	}
 	m.askImagePrune()
-	card = strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " ")
+	card = cardText(&m)
 	if !strings.Contains(card, "docker image prune -f") || strings.Contains(card, "-a") {
 		t.Fatalf("dangling prune card is not exact: %s", card)
 	}
@@ -800,7 +800,7 @@ func TestImageAndStorageConfirmCardsNameSafeCommands(t *testing.T) {
 	if cmd := m.askStorageRemove(r); cmd != nil {
 		t.Fatal("network removal card returned a command")
 	}
-	card = strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " ")
+	card = cardText(&m)
 	if !strings.Contains(card, "docker network rm termocode_default") || strings.Contains(card, "-f") {
 		t.Fatalf("network card command is not safe and exact: %s", card)
 	}
@@ -810,7 +810,7 @@ func TestImageAndStorageConfirmCardsNameSafeCommands(t *testing.T) {
 	if cmd := m.askStorageRemove(volume); cmd != nil {
 		t.Fatal("volume-in-use card returned a command")
 	}
-	card = strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " ")
+	card = cardText(&m)
 	if !strings.Contains(card, "Volume is in use") || !strings.Contains(card, "Close") || strings.Contains(card, "Command:") || strings.Contains(card, "docker volume rm") {
 		t.Fatalf("volume-in-use card should be plain text with Close: %s", card)
 	}

@@ -674,7 +674,7 @@ func TestPodmanMakeDefaultCard(t *testing.T) {
 	if cmd := press(m, "u"); cmd != nil || !m.confirmOpen {
 		t.Fatal("u did not open the card first")
 	}
-	card := strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " ")
+	card := cardText(m)
 	if !strings.Contains(card, "system connection default build-box") || !strings.Contains(card, "default connection") {
 		t.Fatalf("card = %s", card)
 	}
