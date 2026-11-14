@@ -326,3 +326,37 @@ console.log("ok");
 		t.Error("LiveEditor draws carets on the desktop only")
 	}
 }
+
+// Spec (NEW-8, G-COL): the phone's editor sends its caret too: caretOf
+// turns the editor's head offset into the 1-based line and UTF-16
+// column the desktop editor reports, the editor tells the host when the
+// selection moves, and the phone's mount hands that to buf.cursor
+// (coedit.js), as the desktop's does.
+func TestPhoneEditorSendsCaret(t *testing.T) {
+	out := runJS(t, `
+import { Text } from "@codemirror/state";
+import { caretOf } from "../editor/peers";
+function eq(a: unknown, b: unknown, what: string) {
+  const x = JSON.stringify(a), y = JSON.stringify(b);
+  if (x !== y) throw new Error(what + ": got " + x + ", want " + y);
+}
+const doc = Text.of(["ab", "cdef"]);
+eq(caretOf(doc, 0), { line: 1, col: 1 }, "start");
+eq(caretOf(doc, 5), { line: 2, col: 3 }, "second line");
+eq(caretOf(doc, 7), { line: 2, col: 5 }, "end");
+console.log("ok");
+`, nil)
+	if !strings.Contains(out, "ok") {
+		t.Fatalf("harness: %s", out)
+	}
+	ed, api, live := raceSrc(t, "editor/main.ts"), raceSrc(t, "editor/api.ts"), raceSrc(t, "views/LiveEditor.tsx")
+	if !strings.Contains(api, "onCaret?(line: number, col: number): void;") {
+		t.Error("editor/api.ts: EditorHost has no onCaret")
+	}
+	if !strings.Contains(ed, "u.selectionSet") || !strings.Contains(ed, "host.onCaret") {
+		t.Error("editor/main.ts does not tell the host where the caret is")
+	}
+	if strings.Count(live, "onCaret") < 2 {
+		t.Error("LiveEditor.tsx gives the caret handler to the desktop editor only, not to the phone's")
+	}
+}

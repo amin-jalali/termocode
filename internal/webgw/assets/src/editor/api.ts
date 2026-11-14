@@ -33,6 +33,9 @@ export interface EditorHost {
   onDone(): void;
   /** onViewport hears which rows [first, last) are drawn. */
   onViewport(first: number, last: number): void;
+  /** onCaret hears the user's caret (1-based line and UTF-16 column),
+   * for the laptop's editor (G-COL). */
+  onCaret?(line: number, col: number): void;
 }
 
 /** EditorHandle is how the page drives a mounted editor. */

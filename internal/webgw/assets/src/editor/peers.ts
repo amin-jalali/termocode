@@ -26,3 +26,10 @@ export function peerRanges(doc: Text, items: readonly FramePeer[]): PeerRange[] 
     return s === at ? { at, name: p.name } : { at, name: p.name, from: Math.min(s, at), to: Math.max(s, at) };
   });
 }
+
+/** caretOf is the 1-based line and UTF-16 column of offset at in doc,
+ * as the desktop editor reports its caret (G-COL). */
+export function caretOf(doc: Text, at: number): { line: number; col: number } {
+  const l = doc.lineAt(at);
+  return { line: l.number, col: at - l.from + 1 };
+}

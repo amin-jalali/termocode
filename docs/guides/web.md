@@ -531,8 +531,8 @@ You and a person on the web page can type in the same file at once:
   a change to the same text stops their page and asks them to choose
   (**Use the laptop's text** or **Send mine**).
 - Their page shows your cursor as a thin amber bar (hover: **Laptop's
-  cursor**). Your editor shows their cursor with their device's name. It
-  goes when they leave.
+  cursor**). Your editor shows their cursor with their device's name,
+  from a phone too. It goes when they leave.
 - Two web pages on one file see each other's cursors too, with the
   device's name on hover.
 

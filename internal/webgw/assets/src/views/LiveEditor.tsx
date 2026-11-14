@@ -134,6 +134,8 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
     let dead = false;
     const peek = () => readBuf(store.topic(topic).peek()?.data);
     const d = desk;
+    // Live editing together (G-COL): the laptop sees this caret.
+    const onCaret = diff || d?.readOnly ? undefined : (line: number, col: number) => coedit.peek()?.caret(buf, line, col, () => ed.current?.text() ?? "");
     const load: Promise<EditorModule> = d
       ? Promise.resolve({
           mount: (el, host) =>
@@ -159,8 +161,7 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
               onDiff: (n, a, r) => diffRef.current?.onCount(n, a, r),
               onGlyph: diff ? undefined : (line, menu, x, y) => onGlyph(path, line, menu, x, y),
               onGitMark: diff ? undefined : (line) => peekChange(path, line),
-              // Live editing together (G-COL): the laptop sees this caret.
-              onCaret: diff || d.readOnly ? undefined : (line, col) => coedit.peek()?.caret(buf, line, col, () => ed.current?.text() ?? ""),
+              onCaret,
             }),
         })
       : loadEditor();
@@ -176,6 +177,7 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
           onRemoteLost: () => sync?.lost(),
           onSave: saveLive,
           onDone: doneLive,
+          onCaret,
           onViewport: (a, b) => {
             if (view.current.a !== a || view.current.b !== b) {
               view.current = { a, b };
