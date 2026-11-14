@@ -64,7 +64,7 @@ func TestAICannotAnswerWebCards(t *testing.T) {
 		"answerWebStart":      {"ai_config_ui.go"},
 		"handleAIConfirm":     {"confirm.go"},
 		"handleConfirmSelect": {"update.go", "web_ask_mirror.go"}, // confirm.SelectMsg; a page's answer to a laptop dialog its own action opened (webMirrorKinds only, never a web or AI card)
-		"onAIConfirmClosed":   {"update.go"}, // confirm.CloseMsg (Esc) only
+		"onAIConfirmClosed":   {"update.go"},                      // confirm.CloseMsg (Esc) only
 		"webAskDone":          {"web_ask.go", "web_cards_answer.go"},
 		"webAskOpen":          {"web_ask.go", "web_call.go"},
 		"startWebPanel":       {"web_panel.go", "web_tui.go", "web_pair_lan.go"}, // Pair a Device: the owner's palette pick or Use this Wi-Fi
