@@ -242,8 +242,8 @@ address to `config.json`:
   anything. A paired phone signs in again with its key alone.
 - No passkey over the relay: a passkey belongs to one web address, and
   the relay's address is not the laptop's. The phone's own key takes
-  its place. A sign-in code (`web_require_totp`) is not asked over the
-  relay yet; see Limits.
+  its place. With a sign-in code (`web_require_totp`) the phone asks
+  for it after its key, as on the tailnet; the laptop checks it.
 - **Web: Devices…** removes a phone: its relay sessions end at once.
 - **Web: Stop Relay** stops only the relay: phones on it are cut off at
   once, and the panel goes on at its own address (pairing links too).
@@ -734,10 +734,8 @@ issue.
 - At most 32 paired devices.
 - At most **4** projects open at once from a phone (`web_projects_max`,
   up to 8).
-- Over the relay: at most **4** phones at once; a sign-in code
-  (`web_require_totp`) is not asked there yet, so a phone with one set
-  signs in on the tailnet or LAN instead; Share as Viewer and phone
-  pushes do not go through the relay.
+- Over the relay: at most **4** phones at once; Share as Viewer and
+  phone pushes do not go through the relay.
 
 ## Settings
 

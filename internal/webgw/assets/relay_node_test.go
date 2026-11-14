@@ -178,3 +178,48 @@ func TestRelayPageCodeTalksToTheGateway(t *testing.T) {
 		}
 	}
 }
+
+// Spec (NEW-10): the relay page keeps what the relay sign-in gave: a
+// token for the panel, or, when the laptop wants the one-time code, the
+// ticket for the panel's code step (termocode.totp), never both; a
+// refused sign-in keeps nothing. The panel opens its code step with
+// that ticket (SignInScreen), also with no passkey here.
+func TestRelaySignInHandsTheCodeStepToThePanel(t *testing.T) {
+	out := runJS(t, `
+import { keepRelaySignIn } from "../relay/signin";
+function eq(a: unknown, b: unknown, what: string) {
+  const x = JSON.stringify(a), y = JSON.stringify(b);
+  if (x !== y) throw new Error(what + ": got " + x + ", want " + y);
+}
+const store = () => {
+  const m: Record<string, string> = {};
+  return { m, setItem: (k: string, v: string) => void (m[k] = v) };
+};
+let s = store();
+keepRelaySignIn(true, { token: "tok" }, s);
+eq(s.m, { "termocode.session": "tok" }, "token");
+s = store();
+keepRelaySignIn(true, { totp: true, ticket: "abc" }, s);
+eq(s.m, { "termocode.totp": "abc" }, "ticket");
+s = store();
+keepRelaySignIn(false, { error: "removed" }, s);
+eq(s.m, {}, "refused");
+s = store();
+keepRelaySignIn(true, { totp: true }, s);
+eq(s.m, {}, "no ticket");
+console.log("ok");
+`, nil)
+	if !strings.Contains(out, "ok") {
+		t.Fatalf("harness: %s", out)
+	}
+	main, sign, panel := readSrc(t, "src/relay/main.ts"), readSrc(t, "src/ui/SignInScreen.tsx"), readSrc(t, "src/main.tsx")
+	if !strings.Contains(main, "keepRelaySignIn(") {
+		t.Error("relay/main.ts does not keep the relay sign-in's ticket")
+	}
+	if !strings.Contains(readSrc(t, "src/net/auth.ts"), `"termocode.totp"`) || !strings.Contains(sign, "takeRelayTicket()") || !strings.Contains(sign, `state.value = "code"`) {
+		t.Error("SignInScreen does not open the code step with the relay's ticket")
+	}
+	if !strings.Contains(panel, "relayCode") {
+		t.Error("main.tsx does not show the sign-in screen for the relay's code step")
+	}
+}
