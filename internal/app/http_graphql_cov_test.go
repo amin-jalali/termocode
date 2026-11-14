@@ -151,7 +151,9 @@ func TestCovHTTPGQLCommands(t *testing.T) {
 	covHTTPEdit(t, m, file, 24)
 	covHTTPReset(m)
 	c = covHTTPDispatch(t, m, "http-gql-schema")
-	loop.run(c, func() bool { return fetches.Load() == 2 && strings.Contains(covHTTPToast(m), "GraphQL schema: 6 types") })
+	loop.run(c, func() bool {
+		return fetches.Load() == 2 && strings.Contains(covHTTPToast(m), "GraphQL schema: 6 types")
+	})
 }
 
 // A schema that cannot be fetched says why: an HTTP error, a GraphQL
