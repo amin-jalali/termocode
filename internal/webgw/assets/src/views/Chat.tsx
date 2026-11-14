@@ -320,7 +320,7 @@ export function ChatView() {
       </>
     );
   } else if (st) {
-    foot = <Composer chat={laptop?.id ?? ""} busy={laptop?.busy ?? false} profile={laptop?.profile ?? ""} model={laptop?.model ?? ""} ctx={laptop?.ctx_pct ? { pct: laptop.ctx_pct, tokens: laptop.ctx_tokens ?? 0, window: laptop.ctx_window ?? 0 } : undefined} />;
+    foot = <Composer chat={laptop?.id ?? ""} busy={laptop?.busy ?? false} queue={laptop?.queue ?? []} profile={laptop?.profile ?? ""} model={laptop?.model ?? ""} ctx={laptop?.ctx_pct ? { pct: laptop.ctx_pct, tokens: laptop.ctx_tokens ?? 0, window: laptop.ctx_window ?? 0 } : undefined} />;
   }
   return (
     <View

@@ -72,7 +72,7 @@ termocode.
 
 | Tab | What it does |
 |---|---|
-| **Chat** | Read and write in the AI chat. Answers stream in. Answer the AI's cards. |
+| **Chat** | Read and write in the AI chat. Answers stream in. Answer the AI's cards. While the AI answers, **Send** puts your message in a line: it goes when the answer ends. Up to 5 wait above the box. **Send now** stops the answer and sends that one next. **Take back** removes one. **Stop** clears the line. |
 | **Files** | Browse the workspace, read files, change lines and send them. Each row's **⋯** makes a new file or folder, renames, deletes, downloads a file or uploads into a folder. |
 | **Term** | Watch the terminals and type into them, with a key bar for Esc, Ctrl, Alt and arrows. |
 | **Git** | See changes and diffs, stage and unstage, commit. The **⇅** button pushes, pulls, stashes and switches branch. |

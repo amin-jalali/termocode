@@ -6,7 +6,10 @@
 // chat the page read is then the laptop's open one). Enter sends with a keyboard; on a phone Enter
 // is a new line and the Send button sends. Where the browser has speech
 // input, a microphone button dictates into the draft (CMP-48, dictate.ts);
-// nothing is sent until Send.
+// nothing is sent until Send. While the laptop's AI answers in its open
+// chat (queue given), Send lines the message up instead (CMP-46,
+// queue.js): the waiting ones show above the box with Send now and Take
+// back, at most 5; Stop drops them.
 import { aiSnap } from "../lib/ai";
 import { look } from "../lib/toolblocks";
 import { h } from "preact";
@@ -24,6 +27,8 @@ import { errText } from "../ui/CardSheet";
 import { canDictate, dictateChat, listening, stopDictate, toggleDictate } from "../lib/dictate";
 import { attachArgs, clearRefs } from "../lib/tochat";
 import { RefChips } from "../ui/RefChips";
+import { loadQueue, queueMod } from "../lib/queue";
+import type { ChatQueued } from "../../../../webproto/proto";
 
 const MAX_ROWS_PX = 160;
 
@@ -36,6 +41,7 @@ export function Composer({
   onSent,
   placeholder,
   ws = "",
+  queue,
 }: {
   chat: string;
   busy: boolean;
@@ -47,6 +53,8 @@ export function Composer({
   placeholder?: string;
   /** ws sends in another project through the door (MOB-55); "" is the home one. */
   ws?: string;
+  /** queue is the laptop's open chat's waiting messages; given, a busy chat queues. */
+  queue?: readonly ChatQueued[];
 }) {
   const desk = layout.value === "desktop";
   useEffect(() => takePending(chat), [chat, pendingDraft.value]);
@@ -54,6 +62,11 @@ export function Composer({
   const [note, setNote] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const box = useRef<HTMLTextAreaElement | null>(null);
+  const q = queueMod.value;
+  const queues = busy && !!queue;
+  useEffect(() => {
+    if (queue && (busy || queue.length)) loadQueue().catch(() => undefined);
+  }, [busy, queue]);
 
   // The microphone writes to the chat this composer shows.
   useEffect(() => {
@@ -82,14 +95,14 @@ export function Composer({
 
   const send = () => {
     const body = getDraft(chat);
-    if (!live.peek() || sending || !body.trim()) return;
+    if (!live.peek() || sending || !body.trim() || (queues && (!q || q.full(queue!)))) return;
     setSending(true);
     const attach = getAttaches(chat); // MOB-5: references only, the laptop reads them
     // The refs from ↩ go with the text, as references only (MOBUX-19).
     const refs = attachArgs() ?? [];
     const sent = inProject([...attach, ...refs], ws); // MOB-55: one project per send (the laptop checks)
     const args = { text: body, ...(chat ? { chat_id: chat } : {}), ...(sent.length ? { attach: sent } : {}) };
-    link.requestWithID("chat.send", args, ws || undefined).result.then(
+    (queues ? q!.add(body) : link.requestWithID("chat.send", args, ws || undefined).result).then(
       () => {
         setSending(false);
         setNote(null);
@@ -101,6 +114,7 @@ export function Composer({
       (e: unknown) => {
         setSending(false);
         if (e instanceof OfflineError) return; // the box shows Offline; the draft stays
+        if (queues) return setNote(q!.note(e));
         const key: StringKey | null = e instanceof ReqError ? (e.code === "conflict" ? "chat.conflict" : e.code === "busy" ? "chat.busy" : e.code === "not_found" ? "chat.gone" : null) : null;
         setNote(key ? t(key) : errText(e));
       },
@@ -126,12 +140,13 @@ export function Composer({
   // phone too: the box gets the row's width.
   const act = (
     <span class={busy ? "stop" : "send"}>
-      {busy ? (
+      {busy && (
         <Button kind={desk ? "quiet" : "neutral"} needsLink icon={desk ? <Cod name="debug-stop" /> : <IconStop />} iconOnly title={t("stop")} onClick={stop}>
           {t("stop")}
         </Button>
-      ) : (
-        <Button kind={desk ? "quiet" : "primary"} needsLink icon={desk ? <Cod name="send" /> : <IconSend />} iconOnly title={desk ? `${t("send")} (Enter)` : t("send")} disabled={sending || !text.trim()} onClick={send}>
+      )}
+      {(!busy || queues) && (
+        <Button kind={desk ? "quiet" : "primary"} needsLink icon={desk ? <Cod name="send" /> : <IconSend />} iconOnly title={queues ? t("queue.add") : desk ? `${t("send")} (Enter)` : t("send")} disabled={sending || !text.trim() || (queues && (!q || q.full(queue!)))} onClick={send}>
           {t("send")}
         </Button>
       )}
@@ -147,6 +162,7 @@ export function Composer({
       )}
       {!desk && <RefChips />}
       <div class={desk ? "composer-frame" : "composer-plain"}>
+      {queue && q && <q.Queue items={queue} />}
       {getAttaches(chat).length > 0 && (
         <ul class="composer-attach" aria-label={t("ai.attach_list")}>
           {getAttaches(chat).map((a, i) => (

@@ -38,7 +38,7 @@ var sourceRules = []rule{
 	// loads Add to AI Chat (aictx.js, lib/aictx.ts) and This device, Pair
 	// a Device… and Devices… (device.js, lib/device.tsx). Each is a
 	// fixed path.
-	{name: "dynamic import", re: regexp.MustCompile(`\bimport\s*\(`), allow: map[string]bool{"lib/lazy.ts": true, "monaco/frame.ts": true, "lib/device.tsx": true, "lib/aictx.ts": true, "lib/links.ts": true, "lib/coedit.ts": true, "lib/parquet.ts": true}},
+	{name: "dynamic import", re: regexp.MustCompile(`\bimport\s*\(`), allow: map[string]bool{"lib/lazy.ts": true, "monaco/frame.ts": true, "lib/device.tsx": true, "lib/aictx.ts": true, "lib/links.ts": true, "lib/coedit.ts": true, "lib/parquet.ts": true, "lib/queue.ts": true}},
 	{name: "remote script/style", re: regexp.MustCompile(`(?i)@import|url\(\s*["']?(https?:)?//`)},
 	// Only the prefs module touches localStorage, and it never holds a
 	// secret; and the bookmark key of a remembered browser (WEBP-12), the
@@ -207,6 +207,7 @@ func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
 			text = strings.Replace(text, `import("/assets/picker.js")`, "", 1) // the session picker (WEB-55)
 			text = strings.Replace(text, `import("/assets/link.js")`, "", 1)   // a link's sheet (WEB-54)
 			text = strings.Replace(text, `import("/assets/coedit.js")`, "", 1) // live editing together (lib/coedit.ts), a fixed path
+			text = strings.Replace(text, `import("/assets/queue.js")`, "", 1)  // the phone remote's queue (lib/queue.ts), a fixed path
 		}
 		if e.Path == "kit.js" { // the kit's chat links load the link sheet as the page does (lib/links.ts)
 			text = strings.Replace(text, `import("/assets/link.js")`, "", 1)
