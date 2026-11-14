@@ -277,6 +277,12 @@ func TestPerfGuardChatStreamLaysOutItsEnd(t *testing.T) {
 	if per > 2 {
 		t.Errorf("a token of a 48 KB answer took %.2f ms of layout, budget 2 ms", per)
 	}
+	// Tokens come faster than frames (10 ms apart): keeping the view at
+	// its end lays the page out once a frame, not once a token in the
+	// token's own task (NEW-3: that pushed a token's frame late on macOS).
+	if sp.Layouts >= 300*9/10 {
+		t.Errorf("300 tokens laid the page out %d times: once a token, want once a frame", sp.Layouts)
+	}
 	if m := statsOf(paint).med; m > 34 {
 		t.Errorf("a token was drawn %.1f ms after it came (median), budget 34 ms (two frames)", m)
 	}
