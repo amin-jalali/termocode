@@ -262,6 +262,11 @@ func TestAIDebugBreakpointsFollowRenameAndDelete(t *testing.T) {
 	withDap(d, false)
 	open(d, "b.txt")
 	askAI(d, "move them")
+	// delete asks every time, with no Always allow.
+	if !d.WaitForText("AI wants to: delete", 15*time.Second) {
+		t.Fatalf("no card for delete:\n%s\nresults %q", screen(d), s.toolResults())
+	}
+	clickAIAllow(d)
 	if !d.WaitForText("fake-done", 15*time.Second) {
 		t.Fatalf("no final answer:\n%s\nresults %q", screen(d), s.toolResults())
 	}

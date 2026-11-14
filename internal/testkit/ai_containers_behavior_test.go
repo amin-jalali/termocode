@@ -39,10 +39,11 @@ func aiContainersFake(t *testing.T) *servicestest.Fake {
 // CP-9, the plan's flow: "why is 8081 busy?" The model lists the host
 // containers (no card), finds who publishes 8081, inspects it (env values
 // masked), then tries to stop it: a bad id is refused with no card; the
-// first card is denied and nothing runs; the second gets "Always allow
-// containers" and runs exactly `stop <id>`; a restart in the same session
-// runs without a card. The .env password never reaches the model or the
-// screen, and the "always" choice is not saved in config.json.
+// first card is denied and nothing runs; stop asks every time (no Always
+// allow), so the second card gets Allow and runs exactly `stop <id>`; the
+// restart's card offers "Always allow containers", which runs it. The .env
+// password never reaches the model or the screen, and the "always" choice
+// is not saved in config.json.
 func TestAIContainersPortBusyFlow(t *testing.T) {
 	f := aiContainersFake(t)
 	s, srv := fakeToolModel(t,
@@ -64,13 +65,15 @@ func TestAIContainersPortBusyFlow(t *testing.T) {
 	}
 	sc := screen(d)
 	for _, want := range []string{"containers_control", "Stop container api-1", "stop 9f3c2e1a1234", "context default",
-		"Allow", "Always allow containers", "Deny"} {
+		"Allow", "Deny"} {
 		if !strings.Contains(sc, want) {
 			t.Errorf("confirm card has no %q:\n%s", want, sc)
 		}
 	}
-	if strings.Contains(sc, "Always in project") {
-		t.Errorf("class containers must not offer \"Always in project\":\n%s", sc)
+	for _, never := range []string{"Always allow containers", "Always in project"} {
+		if strings.Contains(sc, never) {
+			t.Errorf("stop asks every time; its card must not offer %q:\n%s", never, sc)
+		}
 	}
 	clickTextOn(d, "Deny")
 	if !d.WaitFor(func() bool { return len(s.toolResults()) >= 4 }, 10*time.Second) {
@@ -79,8 +82,12 @@ func TestAIContainersPortBusyFlow(t *testing.T) {
 	if n := f.Count("stop "); n != 0 {
 		t.Fatalf("Deny ran a stop: %q", f.Calls())
 	}
-	if !d.WaitForText("Always allow containers", 10*time.Second) {
+	if !d.WaitFor(func() bool { return strings.Contains(screen(d), "AI wants to") && len(s.toolResults()) == 4 }, 10*time.Second) {
 		t.Fatalf("no second card:\n%s", screen(d))
+	}
+	clickAIAllow(d)
+	if !d.WaitForText("Always allow containers", 10*time.Second) {
+		t.Fatalf("no restart card with Always allow containers:\n%s", screen(d))
 	}
 	clickTextOn(d, "Always allow containers")
 	if !d.WaitForText("fake-done", 20*time.Second) {
@@ -130,8 +137,8 @@ func TestAIContainersPortBusyFlow(t *testing.T) {
 }
 
 // CP-9: images_pull from the fake model. A flag-like ref is refused with
-// no card; a real ref shows the three-button card, and Allow opens the
-// visible "pull: nginx:1.27" tab that runs exactly `pull nginx:1.27`.
+// no card; a real ref opens, with no card (as the GUI pulls), the visible
+// "pull: nginx:1.27" tab that runs exactly `pull nginx:1.27`.
 func TestAIContainersImagesPullFlow(t *testing.T) {
 	f := aiContainersFake(t)
 	s, srv := fakeToolModel(t,
@@ -141,22 +148,8 @@ func TestAIContainersImagesPullFlow(t *testing.T) {
 	d := aiDriver(t, srv.URL, nil, false)
 	open(d, "a.txt")
 	askAI(d, "pull nginx 1.27 please")
-	if !d.WaitForText("AI wants to", 20*time.Second) {
-		t.Fatalf("no confirm card for images_pull:\n%s", screen(d))
-	}
-	sc := screen(d)
-	for _, want := range []string{"images_pull", "Pull image nginx:1.27", "Allow", "Always allow containers", "Deny"} {
-		if !strings.Contains(sc, want) {
-			t.Errorf("confirm card has no %q:\n%s", want, sc)
-		}
-	}
-	if strings.Contains(sc, "Always in project") {
-		t.Errorf("class containers must not offer \"Always in project\":\n%s", sc)
-	}
-	if f.Count("pull") != 0 {
-		t.Fatalf("pull ran before the card was answered: %q", f.Calls())
-	}
-	clickAIAllow(d)
+	// images_pull runs at once, as the Containers view pulls without a
+	// question (in a visible terminal tab).
 	if !d.WaitForText("fake-done", 20*time.Second) {
 		t.Fatalf("no final answer:\n%s", screen(d))
 	}

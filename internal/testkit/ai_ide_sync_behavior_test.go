@@ -246,6 +246,11 @@ func TestAIDeleteClosesTabAndExplorerRow(t *testing.T) {
 	open(d, "a.txt")
 	open(d, "b.txt")
 	askAI(d, "delete b")
+	// delete asks every time, with no Always allow (as tree.delete does).
+	if !d.WaitForText("AI wants to: delete", 5*time.Second) {
+		t.Fatalf("no card for delete:\n%s", screen(d))
+	}
+	clickAIAllow(d)
 	waitReached(d, after, "delete")
 	if !d.WaitFor(func() bool {
 		got, _ := tabs(d)
@@ -273,6 +278,11 @@ func TestAIGitAndShellRefreshStatusAndExplorer(t *testing.T) {
 	afterRun, releaseRun := s.holdAt(2)
 	d := aiDriver(t, srv.URL, nil, true, "git", "run")
 	askAI(d, "branch and run")
+	// A new branch asks every time (Cancel first), whatever is auto-approved.
+	if !d.WaitForText("AI wants to: git_checkout", 5*time.Second) {
+		t.Fatalf("no card for git_checkout:\n%s", screen(d))
+	}
+	clickAIAllow(d)
 	waitReached(d, afterCheckout, "git_checkout")
 	if !d.WaitFor(func() bool { return strings.Contains(screen(d), "ai-topic") }, 3*time.Second) {
 		t.Fatalf("branch ai-topic not shown:\n%s", screen(d))
