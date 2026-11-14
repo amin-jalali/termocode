@@ -43,6 +43,25 @@ go test ./internal/search -run Fallback -v
   the manual checks you performed in the pull request description.
 - Tests cache hard. If a result looks stale: `go clean -testcache`.
 
+### Real database servers
+
+Tests that talk to a real database server sit behind the `dbint` build tag;
+no CI job runs them (CI never starts a database server).
+
+```sh
+go test -tags dbint ./internal/dbclient -run 'TestDBInt' -v
+```
+
+- Point a test at a server with its env vars (`DBINT_POSTGRES_DSN`,
+  `DBINT_MYSQL_HOST`, `DBINT_SQLSERVER_HOST`, `DBINT_ORACLE_HOST`, … with
+  `_PORT`, `_USER`, `_PASSWORD`).
+- Without them the SQL Server and Oracle tests start a local image
+  (`mcr.microsoft.com/mssql/server:2022-latest`, `gvenzl/oracle-free:slim`)
+  when it is already pulled, and remove the container after the test. They
+  never pull an image.
+- No server: the test skips. `TERMOCODE_DBINT=1` turns a missing server into
+  a failure.
+
 ### Coverage per system
 
 ```sh
