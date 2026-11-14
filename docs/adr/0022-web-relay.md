@@ -101,7 +101,8 @@ Alternatives on the table:
 - **The page.** The relay serves `relay.html` and the panel's built
   files (the same bytes the laptop serves) with the panel's strict CSP
   plus one Trusted Types policy, `relay`, which may load only
-  `/assets/app.js`, by its SRI hash. `relay.js` opens the tunnel, puts
+  `/assets/app.js`, by its SRI hash (over https also the panel's own
+  `sw`, which passes only the push worker's `/sw.js?l=en|fa`). `relay.js` opens the tunnel, puts
   the laptop's own paths (`/auth`, `/ws`, `/watch`, `/pair/`, `/login/`)
   through it and then loads the panel unchanged.
 - **Limits.** Per pair: 4 MiB/s, idle 15 minutes, at most 12 hours (the
