@@ -378,10 +378,14 @@ func (r *standardRenderer) write(s string) {
 	}
 }
 
-// writeFrame stores the next frame and reports whether it is the first
-// one at the window's size, which write flushes at once (termocode
-// patch: the first full frame shows up to a frame interval sooner).
-func (r *standardRenderer) writeFrame(s string) (first bool) {
+// writeFrame stores the next frame and reports whether write flushes it
+// at once: the first one at the window's size (termocode patch: the
+// first full frame shows up to a frame interval sooner), and the first
+// one after an idle stop (PERF-2: nothing went out for at least a frame
+// interval, so a key typed after a pause shows without waiting for the
+// next tick; the ones after it in the same interval wait as before).
+
+func (r *standardRenderer) writeFrame(s string) (now bool) {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
 	r.buf.Reset()
@@ -395,12 +399,16 @@ func (r *standardRenderer) writeFrame(s string) (first bool) {
 	}
 
 	_, _ = r.buf.WriteString(s)
+	if r.idle && s == r.lastRender {
+		return false // unchanged: the ticker stays stopped
+	}
+	woke := r.idle && r.ticker != nil
 	r.wake()
 	if !r.sizedFrame && r.width > 0 && r.height > 0 {
 		r.sizedFrame = true
 		return true
 	}
-	return false
+	return woke && (r.pacer == nil || r.pacer.ready())
 }
 
 func (r *standardRenderer) repaint() {
