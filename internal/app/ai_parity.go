@@ -504,6 +504,7 @@ var aiRestNotForAI = map[string]string{
 	"update-check":                  "updates or rolls back the termocode binary; only the user decides that",
 	"update-rollback":               "updates or rolls back the termocode binary; only the user decides that",
 	"web-copy-link":                 "the web panel gives shell access from a browser; only the user changes it, in config.json (the link logs a browser in)",
+	"web-relay-stop":                "the web panel gives shell access from a browser; only the user changes it, in config.json",
 	"web-devices":                   "the web panel gives shell access from a browser; only the user changes it, in config.json (who may come in)",
 	"web-forward-port":              "the web panel gives shell access from a browser; only the user changes it, in config.json (opens a port of this computer to the browser)",
 	"web-forwarded-ports":           "the web panel gives shell access from a browser; only the user changes it, in config.json (the open port forwards)",

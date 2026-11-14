@@ -476,6 +476,7 @@ excluded	view/Search	removed from the laptop activity bar (the enum value is kep
 excluded	web-copy-link	laptop only: copies to the laptop clipboard
 excluded	web-devices	laptop only: the paired devices (list, rename, revoke) are managed on the laptop; a web page never sees or changes who may come in
 excluded	web-forwarded-ports	laptop only: the open port forwards and their stop are the laptop's; a web page never sees or ends a forward
+excluded	web-relay-stop	laptop only: stops the web panel's relay itself
 excluded	web-start	laptop only: starts the web panel itself
 excluded	web-start-panel	laptop only: starts the web panel itself
 excluded	web-stop	laptop only: stops the web panel itself

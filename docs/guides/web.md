@@ -245,6 +245,9 @@ address to `config.json`:
   its place. A sign-in code (`web_require_totp`) is not asked over the
   relay yet; see Limits.
 - **Web: Devices…** removes a phone: its relay sessions end at once.
+- **Web: Stop Relay** stops only the relay: phones on it are cut off at
+  once, and the panel goes on at its own address (pairing links too).
+  The panel's next start uses the relay again.
 - Stopping the panel stops the relay too.
 - The AI can never change `web_relay`.
 

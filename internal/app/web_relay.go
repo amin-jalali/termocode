@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"net/url"
 
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/amin-jalali/termocode/internal/toast"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -39,6 +42,26 @@ func (m *Model) webRelayArm(cfg webConfig) error {
 	m.web.setRelayKey(data)
 	m.webPanel.relay = &webRelayInfo{url: cfg.Relay, room: id.Room, pub: id.Key.Public.String()}
 	return nil
+}
+
+// webRelayStop is Web: Stop Relay (NEW-12): the gateway stops waiting
+// on the relay and ends its relay sessions; the panel runs on at its
+// own address, and pairing links are that address again. No card:
+// stopping is the safe way. The panel's next start (web_relay in
+// config.json) turns it on again.
+func (m *Model) webRelayStop() tea.Cmd {
+	if m.webPanel == nil || m.web == nil || m.webPanel.relay == nil {
+		return m.webToast(toast.Info, "The relay is not on.")
+	}
+	host := webRelayHost(m.webPanel.relay)
+	m.webPanel.relay = nil
+	m.web.mu.Lock()
+	m.web.relayKey = nil
+	m.web.mu.Unlock()
+	for _, c := range m.web.ctlConns() {
+		c.send(&webproto.Event{T: webproto.KindEv, Kind: "relay_off"})
+	}
+	return m.webToast(toast.Info, "Relay stopped ("+host+"). Phones reach the panel only at its own address until it starts again.")
 }
 
 // setRelayKey keeps the relay_key event for control connections that

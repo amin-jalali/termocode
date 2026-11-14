@@ -57,6 +57,11 @@ type RelayConfig struct {
 // key as 43 base64url characters of the X25519 private key.
 const EvRelayKey = "relay_key"
 
+// EvRelayOff is the UI's event that stops waiting on the relay (Web:
+// Stop Relay): the dialer and every relay session end; the panel's own
+// address goes on. A new EvRelayKey starts the wait again.
+const EvRelayOff = "relay_off"
+
 // maxRelaySessions caps the phones on the relay at once.
 const maxRelaySessions = 4
 
@@ -320,6 +325,22 @@ func (l *relayLink) recheck() {
 			_ = s.Close()
 		}
 	}
+}
+
+// pause ends the dialer and every session; the tunnel's server stays
+// for a later setKey.
+func (l *relayLink) pause() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.stopLoop == nil {
+		return
+	}
+	l.stopLoop()
+	l.stopLoop = nil
+	for s := range l.sessions {
+		_ = s.Close()
+	}
+	_ = l.audit.Log(Event{Kind: EvOp, Op: "relay", Summary: "stopped"})
 }
 
 // stop ends the dialer, every session and the tunnel's server.
