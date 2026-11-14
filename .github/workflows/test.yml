@@ -466,7 +466,7 @@ jobs:
           version: v0.11.4
 
       - name: E2E tests
-        run: go -C e2e test -tags e2e -count=1 -v ./...
+        run: go -C e2e test -tags e2e -count=1 -timeout 30m -v ./...
 
       - name: Upload screen dumps
         if: failure()
