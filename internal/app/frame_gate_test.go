@@ -100,3 +100,25 @@ func TestFrameGateDrawsAttachAtOnce(t *testing.T) {
 		t.Error("WindowSizeMsg held back for a tick")
 	}
 }
+
+type gateNoopMsg struct{}
+
+// TestFrameGateUnchangedDrawIsNoFrame (PERF-2): a typed key is drawn at
+// once but changes nothing yet (nvim has not redrawn); nvim's redraw 1-2
+// ms later must show at once too, not wait for the tick. A draw that
+// gives the same frame does not count as one.
+func TestFrameGateUnchangedDrawIsNoFrame(t *testing.T) {
+	m := gateModel(t)
+	first := m.View()
+	time.Sleep(20 * time.Millisecond)
+	nm, _ := m.Update(gateNoopMsg{}) // the key: nothing changed on screen
+	m = nm.(Model)
+	if m.View() != first {
+		t.Fatal("a message that changes nothing changed the frame")
+	}
+	nm, _ = m.Update(DevActionMsg{ID: "toast:gate-test"}) // nvim's redraw
+	m = nm.(Model)
+	if m.View() == first {
+		t.Error("the change right after an unchanged draw waited for the tick")
+	}
+}
