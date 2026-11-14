@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"io"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -37,7 +38,7 @@ var fakeSeq atomic.Int64
 // open registers a driver for f and returns a pool on it.
 func (f *fakeSQL) open(t *testing.T) *sql.DB {
 	t.Helper()
-	name := "fakesql-" + strings.ReplaceAll(t.Name(), "/", "-") + "-" + string(rune('a'+fakeSeq.Add(1)%26))
+	name := "fakesql-" + strings.ReplaceAll(t.Name(), "/", "-") + "-" + strconv.FormatInt(fakeSeq.Add(1), 10)
 	sql.Register(name, fakeDriver{f})
 	db, err := sql.Open(name, "")
 	if err != nil {
