@@ -8,7 +8,9 @@ import (
 	"io"
 	"net"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -285,7 +287,7 @@ func TestCovCoreWatchRepaint(t *testing.T) {
 	covMainEnv(t)
 	// Outside a session nothing is watched.
 	t.Setenv(session.EnvSession, "")
-	watchRepaint(nil)
+	watchRepaint(nil)()
 
 	caps := filepath.Join(t.TempDir(), "caps.json")
 	b, _ := json.Marshal(session.ClientCaps{Env: map[string]string{"TERM": "foot"}, Gen: 9,
@@ -307,7 +309,7 @@ func TestCovCoreWatchRepaint(t *testing.T) {
 	done := make(chan struct{})
 	go func() { _, _ = p.Run(); close(done) }()
 	defer func() { p.Quit(); <-done }()
-	watchRepaint(p)
+	defer watchRepaint(p)()
 	if err := syscall.Kill(os.Getpid(), session.RepaintSignal); err != nil {
 		t.Fatal(err)
 	}
@@ -331,5 +333,60 @@ func TestCovCoreWatchRepaint(t *testing.T) {
 	}
 	if os.Getenv("TERM") != "foot" {
 		t.Errorf("TERM = %q, want the client's foot", os.Getenv("TERM"))
+	}
+}
+
+// covMark is a message a test sends to know the program has read all
+// that came before it.
+type covMark struct{}
+
+// The stop watchRepaint returns ends its watcher: a later repaint signal
+// (another client attaching, another test) no longer touches the program
+// or the process's stdout, which a test may be swapping (NEW-5 race).
+func TestWatchRepaintStopEndsTheWatcher(t *testing.T) {
+	covMainEnv(t)
+	caps := filepath.Join(t.TempDir(), "caps.json")
+	if err := os.WriteFile(caps, []byte(`{"env":{"TERM":"foot"},"gen":3}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, k := range session.CapsEnvKeys {
+		t.Setenv(k, os.Getenv(k))
+	}
+	t.Setenv(session.EnvSession, "k")
+	t.Setenv(session.EnvCapsFile, caps)
+	var mu sync.Mutex
+	var msgs []tea.Msg
+	pr, pw := io.Pipe()
+	defer pw.Close()
+	p := tea.NewProgram(covRecorder{&mu, &msgs}, tea.WithInput(pr), tea.WithOutput(io.Discard), tea.WithoutRenderer(), tea.WithoutSignalHandler())
+	done := make(chan struct{})
+	go func() { _, _ = p.Run(); close(done) }()
+	defer func() { p.Quit(); <-done }()
+
+	stop := watchRepaint(p)
+	stop()
+	stop() // twice is fine
+
+	// Our own watcher keeps the signal from ending the test process.
+	own := make(chan os.Signal, 1)
+	signal.Notify(own, session.RepaintSignal)
+	defer signal.Stop(own)
+	if err := syscall.Kill(os.Getpid(), session.RepaintSignal); err != nil {
+		t.Fatal(err)
+	}
+	<-own
+	p.Send(covMark{})
+	for seen := false; !seen; {
+		mu.Lock()
+		for _, m := range msgs {
+			switch m.(type) {
+			case covMark:
+				seen = true
+			case app.TerminalChangedMsg, tea.WindowSizeMsg:
+				t.Fatalf("a stopped watcher still repainted: %T", m)
+			}
+		}
+		mu.Unlock()
+		runtime.Gosched()
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"syscall"
 	"time"
 
@@ -276,16 +277,24 @@ func cmdKill(dir string) int {
 // client attached): the new terminal starts empty, and Bubble Tea only
 // draws changed lines. The new terminal may be another program (kitty
 // first, a plain xterm later): its caps, stored by the server, replace
-// ours before the redraw.
-func watchRepaint(p *tea.Program) {
+// ours before the redraw. The returned stop ends the watcher and waits
+// for it, so no later signal touches p or stdout.
+func watchRepaint(p *tea.Program) (stop func()) {
 	if os.Getenv(session.EnvSession) == "" {
-		return
+		return func() {}
 	}
 	capsFile := os.Getenv(session.EnvCapsFile)
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, session.RepaintSignal)
+	quit, ended := make(chan struct{}), make(chan struct{})
 	crash.Go("the session repaint", func() {
-		for range sig {
+		defer close(ended)
+		for {
+			select {
+			case <-quit:
+				return
+			case <-sig:
+			}
 			if w, h, err := term.GetSize(int(os.Stdout.Fd())); err == nil {
 				p.Send(tea.WindowSizeMsg{Width: w, Height: h})
 			}
@@ -298,6 +307,14 @@ func watchRepaint(p *tea.Program) {
 			p.Send(tea.ClearScreen())
 		}
 	})
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			signal.Stop(sig)
+			close(quit)
+			<-ended
+		})
+	}
 }
 
 // The door's hooks for other projects' sessions (MOB-51): the home UI

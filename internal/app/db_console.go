@@ -196,7 +196,7 @@ func (s *dbConsoleState) historyStore() *dbclient.History {
 	if s.hist == nil {
 		s.hist = &dbclient.History{Path: dbConfigPath("history.jsonl")}
 	}
-	s.hist.Max = loadDBConsoleSettings().historyMax()
+	s.hist.SetMax(loadDBConsoleSettings().historyMax()) // an Append may be running off the UI goroutine
 	return s.hist
 }
 

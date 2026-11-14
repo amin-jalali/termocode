@@ -1146,7 +1146,7 @@ func (m Model) Init() tea.Cmd {
 	cmds = append(cmds, m.explorer.ScheduleLoads())   // FIX-2: a container root's first listing
 	cmds = append(cmds, wfxBootCmd())                 // WFX-15: the workflow scheduler (workflows_sched.go)
 	cmds = append(cmds, m.devcontainerOfferCmd())     // RC-7: "reopen in a dev container?" (devcontainer_offer.go)
-	cmds = append(cmds, mcpChannelWaitCmd())          // PR-37: messages a server pushes (ai_mcp_channel.go)
+	cmds = append(cmds, m.mcpChannelWaitCmd())        // PR-37: messages a server pushes (ai_mcp_channel.go)
 	cmds = append(cmds, aiChatSchedBootCmd())         // CMP-43: scheduled chats (ai_chat_sched.go)
 	if cmd := m.containerWatchInitCmd(); cmd != nil { // RC-4: is the container still running? (container_workspace.go)
 		cmds = append(cmds, cmd)

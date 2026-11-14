@@ -109,5 +109,5 @@ func TestTerminalChangeFromEnvironment(t *testing.T) {
 
 func TestWatchRepaintNeedsASession(t *testing.T) {
 	t.Setenv(session.EnvSession, "")
-	watchRepaint(nil) // returns before touching the program
+	watchRepaint(nil)() // returns before touching the program
 }

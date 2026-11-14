@@ -90,6 +90,12 @@ func TestEditorMouseClickAndDrag(t *testing.T) {
 	if err := m.Open(path); err != nil {
 		t.Fatal(err)
 	}
+	// Click only once nvim waits for input in normal mode: a message
+	// prompt (mode "r") would eat the click and the drag.
+	eventually(t, "nvim idle in normal mode", func() bool {
+		mode, blocking, err := c.Mode()
+		return err == nil && mode == "n" && !blocking
+	})
 	m, _ = m.HandleMouse(2, 1, tea.MouseLeft)
 	m, _ = m.HandleMouse(4, 2, tea.MouseLeft)   // drag
 	m, _ = m.HandleMouse(4, 2, tea.MouseMotion) // same cell: dropped

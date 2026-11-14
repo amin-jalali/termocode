@@ -35,6 +35,21 @@ func startGit(t *testing.T, ws string) *Term {
 	return tm
 }
 
+// rebaseRunning reports whether a rebase is still going in ws.
+func rebaseRunning(t *testing.T, ws string) bool {
+	t.Helper()
+	for _, d := range []string{"rebase-merge", "rebase-apply"} {
+		p := strings.TrimSpace(gitOut(t, ws, "rev-parse", "--git-path", d))
+		if !filepath.IsAbs(p) {
+			p = filepath.Join(ws, p)
+		}
+		if _, err := os.Stat(p); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
 func subjects(t *testing.T, ws string) string {
 	t.Helper()
 	return strings.TrimSpace(gitOut(t, ws, "log", "--format=%s", "--", "."))
@@ -59,8 +74,10 @@ func TestGitInteractiveRebaseDrop(t *testing.T) {
 	tm.WaitText("Start the rebase?", uiTimeout)
 	tm.settle()
 	tm.ClickText("Stash and Continue") // main.go of the fixture repo has changes
-	waitUntil(t, "c2 dropped", 30*time.Second, func() bool {
-		return !strings.Contains(gitOut(t, ws, "log", "--format=%s"), "c2")
+	// Mid-rebase HEAD sits on c1 with c3 and c4 not yet picked again:
+	// "c2 is gone" alone holds then too, so wait for the rebase to end.
+	waitUntil(t, "c2 dropped and the rebase done", 30*time.Second, func() bool {
+		return !strings.Contains(gitOut(t, ws, "log", "--format=%s"), "c2") && !rebaseRunning(t, ws)
 	})
 	got := gitOut(t, ws, "log", "--format=%s")
 	for _, want := range []string{"c1", "c3", "c4"} {

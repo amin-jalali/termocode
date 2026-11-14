@@ -23,8 +23,16 @@ type HistoryEntry struct {
 }
 type History struct {
 	Path string
-	Max  int
+	Max  int // set before first use; later changes go through SetMax
 	mu   sync.Mutex
+}
+
+// SetMax changes how many entries the file keeps. It takes the lock, so
+// it is safe while an Append runs on another goroutine.
+func (h *History) SetMax(n int) {
+	h.mu.Lock()
+	h.Max = n
+	h.mu.Unlock()
 }
 
 func (h *History) Append(e HistoryEntry) error {
