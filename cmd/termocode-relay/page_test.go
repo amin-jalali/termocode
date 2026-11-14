@@ -64,3 +64,28 @@ func TestRelayPageCSPAllowsThePushWorkerPolicy(t *testing.T) {
 		t.Errorf("CSP %q", csp)
 	}
 }
+
+// Spec (NEW-11): a phone on an https relay page can turn on pushes: the
+// relay serves the panel's push-only worker at /sw.js (its own CSP,
+// which loads and connects to nothing); on plain http there is none.
+func TestRelayServesThePushWorker(t *testing.T) {
+	get := func(tls bool) *http.Response {
+		h := secure(handler(nil, pageHandler(tls)))
+		r := httptest.NewRequest(http.MethodGet, "/sw.js?l=fa", nil)
+		r.Host = "relay.example.org"
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		return w.Result()
+	}
+	res := get(true)
+	body, _ := io.ReadAll(res.Body)
+	if res.StatusCode != 200 || res.Header.Get("Content-Type") != "text/javascript; charset=utf-8" || !strings.Contains(string(body), `addEventListener("push"`) {
+		t.Fatalf("https /sw.js = %d %q %.80s", res.StatusCode, res.Header.Get("Content-Type"), body)
+	}
+	if csp := res.Header.Get("Content-Security-Policy"); csp != "default-src 'none'" {
+		t.Errorf("worker CSP %q", csp)
+	}
+	if res := get(false); res.StatusCode != 404 {
+		t.Errorf("http /sw.js = %d, want 404", res.StatusCode)
+	}
+}

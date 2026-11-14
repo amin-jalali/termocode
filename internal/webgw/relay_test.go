@@ -184,8 +184,13 @@ func (p *phone) post(path, body string) (int, map[string]any) {
 
 // pairOverRelay runs a whole pairing over the relay; the owner picks role.
 func (r *relayRig) pairOverRelay(p *phone, role string) string {
+	return r.pairOverRelayAs(p, role, false)
+}
+
+// pairOverRelayAs is pairOverRelay for a share (guest: Share as Viewer).
+func (r *relayRig) pairOverRelayAs(p *phone, role string, guest bool) string {
 	r.t.Helper()
-	plain := r.openPairing(false)
+	plain := r.openPairing(guest)
 	var err error
 	for i := 0; i < 100; i++ { // the pairing event may come after the first try
 		if err = r.connect(p, plain); err == nil {
@@ -425,5 +430,28 @@ func TestRelayLoginAsksForTheCode(t *testing.T) {
 	c, res := check("123456")
 	if tok, _ := res["token"].(string); c != http.StatusOK || tok == "" {
 		t.Fatalf("right code: %d %v", c, res)
+	}
+}
+
+// Spec (NEW-11): Share as Viewer works over the relay: the guest pairs
+// with the share link's secret and is a viewer whatever the answer
+// said; later its relay key alone signs it in again, still a viewer
+// (as a guest's passkey does on the tailnet). Removing it ends that.
+func TestRelayShareAsViewer(t *testing.T) {
+	r := startRelayRig(t)
+	p := r.newPhone()
+	r.pairOverRelayAs(p, webdevices.RoleControl, true)
+	devs, _ := webdevices.Open(r.cfg.DevicesDir).List()
+	if len(devs) != 1 || !devs[0].Guest || devs[0].Role != webdevices.RoleViewer || devs[0].RelayKey != p.key.Public.String() {
+		t.Fatalf("devices = %+v, want one guest viewer with the relay key", devs)
+	}
+	_ = p.sess.Close()
+	p2 := &phone{t: t, key: p.key}
+	if err := r.connect(p2, ""); err != nil {
+		t.Fatalf("the guest's relay key was refused: %v", err)
+	}
+	code, m := p2.post("/login/relay", `{}`)
+	if tok, _ := m["token"].(string); code != http.StatusOK || tok == "" || m["role"] != webdevices.RoleViewer {
+		t.Fatalf("guest relay login: %d %v", code, m)
 	}
 }

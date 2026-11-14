@@ -168,3 +168,31 @@ func TestWebStopRelay(t *testing.T) {
 		t.Errorf("toast %q", webTestToasts(*r.m))
 	}
 }
+
+// Spec (NEW-11): with a relay, Web: Share as Viewer works from any
+// network, also when the panel itself is on the Wi-Fi (LAN mode): the
+// link goes through the relay and the card does not ask for Tailscale.
+func TestWebShareOverRelay(t *testing.T) {
+	relayMemoryStore(t)
+	r := newAccessRig(t)
+	writeUserConfig(t, `{"web_panel":"on","web_relay":"https://relay.example.org"}`)
+	if err := r.m.webRelayArm(webSettings()); err != nil {
+		t.Fatal(err)
+	}
+	r.m.webPanel.fp = "AB:CD" // LAN mode
+	r.m.openWebPair(true)
+	if !r.m.confirmOpen || r.m.confirm.Title() != "Share as a viewer" {
+		t.Fatalf("no share card: toast %q", webTestToasts(*r.m))
+	}
+	msg := r.m.confirm.Message()
+	if strings.Contains(msg, "Tailscale") || !strings.Contains(msg, "any network") {
+		t.Errorf("card text: %q", msg)
+	}
+	if ev := r.ctlEvent("pair"); ev["guest"] != true {
+		t.Errorf("pair event %v", ev)
+	}
+	r.m.answerWebPairQR("copy")
+	if link := <-r.links; !strings.HasPrefix(link, "https://relay.example.org/#r=") {
+		t.Errorf("share link %q", link)
+	}
+}
