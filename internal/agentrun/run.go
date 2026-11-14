@@ -462,6 +462,11 @@ func (h *Handle) loop(runCtx context.Context) {
 						break
 					}
 					input := h.input(id)
+					// The mailbox opens before the step shows as running:
+					// a message sent on NodeStart must find it.
+					if h.node(id).CLI == "" {
+						h.mail.openNode(id)
+					}
 					h.setState(id, func(n *agentdag.Node) { n.State = agentdag.StateRunning; n.Attempt++; n.Error = "" })
 					h.emit(Event{NodeID: id, Kind: NodeStart, Round: h.round()})
 					running++
@@ -469,9 +474,6 @@ func (h *Handle) loop(runCtx context.Context) {
 					h.mu.Lock()
 					h.stops[id] = stop
 					h.mu.Unlock()
-					if h.node(id).CLI == "" {
-						h.mail.openNode(id)
-					}
 					if h.o.Parallel > 1 && h.sharesWave(id) {
 						nctx = context.WithValue(nctx, sharedWaveKey{}, true)
 					}
