@@ -274,7 +274,7 @@ func (m *Model) databaseRenamePlan(value string) tea.Cmd {
 	}
 	text := "Places: " + body + ".\nOnly the SQL text changes, not the database (use ALTER … RENAME for that). Strings and comments are left alone."
 	if len(list) > 0 {
-		text += "\n\n" + sanitizeDBText(strings.Join(list, "\n"))
+		text += "\n\n" + sanitizeDBLines(strings.Join(list, "\n"))
 	}
 	m.confirm = confirm.New("Rename "+sanitizeDBText(r.old)+" to "+sanitizeDBText(r.new)+"?", text, []confirm.Button{
 		{ID: "cancel", Title: "Cancel"},
