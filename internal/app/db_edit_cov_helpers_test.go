@@ -42,6 +42,14 @@ func newDBESession() *dbeSession {
 			fks:  []dbclient.SchemaForeignKey{{Name: "orders_customer_fk", Column: "customer_id", RefTable: "customers", RefColumn: "id"}},
 			rows: [][]dbclient.Cell{{dbeNum("1"), dbeNum("5"), cdbCell("first")}, {dbeNum("2"), {Null: true}, cdbCell("second")}},
 		},
+		"files": {
+			cols: []dbclient.Column{{Name: "id", Type: "int4", PK: true}, {Name: "data", Type: "bytea"}, {Name: "body", Type: "text"}, {Name: "n", Type: "int4"}},
+			keys: []string{"id"},
+			rows: [][]dbclient.Cell{
+				{dbeNum("1"), dbclient.CellOfBytes([]byte("\x89PNG\r\n\x1a\nrest")), cdbCell("hello"), dbeNum("3")},
+				{dbeNum("2"), {Null: true}, cdbCell("x"), dbeNum("4")},
+			},
+		},
 		"customers": {
 			cols: []dbclient.Column{{Name: "id", Type: "int4", PK: true}, {Name: "name", Type: "text"}},
 			keys: []string{"id"},
@@ -81,6 +89,7 @@ func dbeModel(t *testing.T) (*Model, *dbeSession) {
 	cdbAddNode(s, "pg/db/app/schema/public", "pg/db/app/schema/public/Tables", dbNodeGroup, "Tables")
 	cdbAddNode(s, "pg/db/app/schema/public/Tables", "pg/db/app/schema/public/Tables/orders", dbNodeTable, "orders")
 	cdbAddNode(s, "pg/db/app/schema/public/Tables", "pg/db/app/schema/public/Tables/customers", dbNodeTable, "customers")
+	cdbAddNode(s, "pg/db/app/schema/public/Tables", "pg/db/app/schema/public/Tables/files", dbNodeTable, "files")
 	sess := newDBESession()
 	s.sessions["pg"] = sess
 	return m, sess
