@@ -82,7 +82,19 @@ func newDBESession() *dbeSession {
 // customers under public) and the session.
 func dbeModel(t *testing.T) (*Model, *dbeSession) {
 	t.Helper()
-	m := cdbModel(t, dbclient.Conn{ID: "pg", Driver: "postgres", Host: "h", Port: 5432, Database: "app"})
+	return dbeTree(t, cdbModel(t, dbeConn))
+}
+
+// dbeRealModel is dbeModel with a real editor: the result page is drawn.
+func dbeRealModel(t *testing.T) (*Model, *dbeSession) {
+	t.Helper()
+	return dbeTree(t, cdbRealModel(t, dbeConn))
+}
+
+var dbeConn = dbclient.Conn{ID: "pg", Driver: "postgres", Host: "h", Port: 5432, Database: "app"}
+
+func dbeTree(t *testing.T, m *Model) (*Model, *dbeSession) {
+	t.Helper()
 	s := m.databases
 	cdbAddNode(s, "pg", "pg/db/app", dbNodeDatabase, "app")
 	cdbAddNode(s, "pg/db/app", "pg/db/app/schema/public", dbNodeSchema, "public")
