@@ -236,8 +236,8 @@ func TestContainersGuideQuestionMarkHasOneMeaning(t *testing.T) {
 	}
 }
 
-// CT-13: the key table lists `a` / `A` (start all / stop all), which the
-// view handles.
+// CT-13: the key table lists start all / stop all, which the view
+// handles: `s` / `x` on the SERVICES header since KB-2 (a means add).
 func TestContainersGuideListsStartAllKeys(t *testing.T) {
 	b, err := docs.FS.ReadFile("guides/containers.md")
 	if err != nil {
@@ -245,11 +245,11 @@ func TestContainersGuideListsStartAllKeys(t *testing.T) {
 	}
 	found := false
 	for _, l := range strings.Split(string(b), "\n") {
-		if strings.HasPrefix(l, "| `a` / `A` |") && strings.Contains(l, "start all") && strings.Contains(l, "stop all") {
+		if strings.HasPrefix(l, "| `s` / `x` on the SERVICES header |") && strings.Contains(l, "start all") && strings.Contains(l, "stop all") {
 			found = true
 		}
 	}
 	if !found {
-		t.Error("the key table has no `a` / `A` row for start all / stop all")
+		t.Error("the key table has no `s` / `x` SERVICES header row for start all / stop all")
 	}
 }

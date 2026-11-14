@@ -671,8 +671,8 @@ func TestPodmanMakeDefaultCard(t *testing.T) {
 	m, f := podSession(t)
 	st := m.services
 	selectContext(t, st, "build-box")
-	if cmd := press(m, "D"); cmd != nil || !m.confirmOpen {
-		t.Fatal("D did not open the card first")
+	if cmd := press(m, "u"); cmd != nil || !m.confirmOpen {
+		t.Fatal("u did not open the card first")
 	}
 	card := strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " ")
 	if !strings.Contains(card, "system connection default build-box") || !strings.Contains(card, "default connection") {

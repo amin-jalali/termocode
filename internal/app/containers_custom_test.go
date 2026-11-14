@@ -80,10 +80,10 @@ func TestCustomCommandBangPickerThenCancelFirstCard(t *testing.T) {
 }
 
 func TestCustomCommandHotkeyOpensCard(t *testing.T) {
-	writeCustomCommands(t, `[{"name":"Top","view":"containers","key":"f","argv":["docker","top","{{name}}"]}]`)
+	writeCustomCommands(t, `[{"name":"Top","view":"containers","key":"B","argv":["docker","top","{{name}}"]}]`)
 	m := svcTestModel(svcHostState(), 120, 40)
 	c := svcCursorOnContainer(t, &m)
-	m2, _ := m.handleServicesSidebarKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("f")})
+	m2, _ := m.handleServicesSidebarKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("B")})
 	if !m2.confirmOpen || !strings.Contains(ansi.Strip(m2.confirm.View()), "docker top "+containerShownName(c)) {
 		t.Fatal("the hotkey did not open the card of its command")
 	}
