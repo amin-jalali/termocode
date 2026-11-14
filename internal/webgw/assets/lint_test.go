@@ -431,14 +431,15 @@ func TestHomeChunkImportsNoState(t *testing.T) {
 }
 
 // The page registers one worker only, the gateway's push-only /sw.js
-// (MOB-30), with the site as its scope.
+// (MOB-30), with the site as its scope; ?l= is the page's language
+// (NEW-9), nothing else.
 func TestPushRegistersOnlyTheGatewayWorker(t *testing.T) {
 	b, err := os.ReadFile("src/lib/push.ts")
 	if err != nil {
 		t.Fatal(err)
 	}
 	reg := regexp.MustCompile(`\.register\(([^)]*)\)`).FindAllStringSubmatch(string(b), -1)
-	if len(reg) != 1 || reg[0][1] != `"/sw.js", { scope: "/" }` {
+	if len(reg) != 1 || reg[0][1] != `"/sw.js?l=" + lang.value, { scope: "/" }` {
 		t.Errorf("lib/push.ts registers %v, want only /sw.js", reg)
 	}
 }

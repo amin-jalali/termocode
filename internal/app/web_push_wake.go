@@ -101,9 +101,13 @@ func (m *Model) webPushWake(tea.Msg) tea.Cmd {
 	return nil
 }
 
-// webWaitingCards counts the cards that wait for the user.
+// webWaitingCards counts the cards that wait for the user, and an AI
+// question.
 func (m *Model) webWaitingCards() int {
 	n := 0
+	if m.webAIDBAskNow() != nil {
+		n++
+	}
 	for _, r := range m.webCards(&webCardsPub{}, false) {
 		if r.card.Kind != webproto.CardLaptop {
 			n++

@@ -296,9 +296,20 @@ func (p *webPushState) arm(d time.Duration) tea.Cmd {
 	return tea.Tick(d, func(time.Time) tea.Msg { return webPushTickMsg{} })
 }
 
+// webPushAsk is the push kind of an AI question (a db_* tool waits for
+// the user: web_ask_aidb.go). It is no card of the cards topic.
+const webPushAsk = "ask"
+
 // webPushWaiting counts the cards that wait for the user (not a laptop
-// card, which is the web's own request) and the kind of the newest.
+// card, which is the web's own request) and the kind of the newest. An
+// AI question counts too and is the newest: the AI stops until it is
+// answered.
 func (m *Model) webPushWaiting() (n int, kind string) {
+	defer func() {
+		if m.webAIDBAskNow() != nil {
+			n, kind = n+1, webPushAsk
+		}
+	}()
 	newest := int64(-1)
 	for _, r := range m.webCards(&webCardsPub{}, false) {
 		c := r.card

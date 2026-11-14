@@ -325,13 +325,13 @@ func TestWebPushSettingOff(t *testing.T) {
 // title the push names the kind "ask".
 func TestWebPushForAIQuestion(t *testing.T) {
 	withConfigDir(t)
-	writeUserConfig(t, `{"web_push_detail":"title"}`)
 	r := newWebPushRig(t)
 	webPushKey(true)
 	r.devs = []webdevices.Device{{ID: "dev-0000000a"}}
 	r.subscribe(t, "dev-0000000a")
 	m := aiTestModel(t)
 	webTestHub(t, &m)
+	writeUserConfig(t, `{"web_push_detail":"title"}`) // after aiTestModel: it makes a new config dir
 	m.web.push.any = true
 	m.databases = &dbState{}
 	m.databases.pendingSecretAI = &dbAIPasswordAsk{conn: "c1", name: "db.c1", done: make(chan string, 1)}

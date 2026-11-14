@@ -8,6 +8,7 @@
 // the page stays in the browser. All of it is best effort: the plain
 // notifications of lib/notify.ts work without it.
 import { link } from "../session";
+import { lang } from "../strings";
 
 interface PushState {
   state: "ready" | "none" | "locked" | "off";
@@ -48,7 +49,7 @@ export async function pushOn(): Promise<boolean> {
   try {
     const st = (await link.request("push.key", { make: true })) as PushState;
     if (st.state !== "ready" || !st.key) return false;
-    const reg = await c.register("/sw.js", { scope: "/" });
+    const reg = await c.register("/sw.js?l=" + lang.value, { scope: "/" }); // the worker speaks the page's language
     await c.ready;
     const key = bytes(st.key);
     let sub = await reg.pushManager.getSubscription();

@@ -20,7 +20,8 @@ var Details = []string{DetailNone, DetailCount, DetailTitle}
 // Kinds is the closed list of kinds a push may name; the service worker
 // has one fixed text for each. They are the card kinds of the web.
 // done and failed are not cards: an AI run or a task ended (CMP-47).
-var Kinds = []string{"tool", "mcp", "plan", "review", "trust", "workflow", "done", "failed"}
+// ask is an AI question: a db tool waits for a password or a host key.
+var Kinds = []string{"tool", "mcp", "plan", "review", "trust", "workflow", "ask", "done", "failed"}
 
 // Payload is the plaintext of a push: nil for DetailNone, else {"n":N}
 // and, for DetailTitle, "k" with kind when it is on the closed list. An
