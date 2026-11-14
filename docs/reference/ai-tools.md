@@ -110,8 +110,8 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`networks_list`](#networks_list) | auto | yes | Every network on a host: name, id, driver, scope, compose project. |
 | [`contexts_list`](#contexts_list) | auto | yes | Every host (servers): the engine's contexts (docker) or connections (podman), each with where it points (user@host or this machine), ssh / tcp / local, which is the engine default, which one the tools use by default, and whether it answers now. |
 | [`registries_list`](#registries_list) | auto | yes | Registry hosts from this machine's login file: signed in or not, the user (when known) and the credential helper. |
-| [`containers_control`](#containers_control) | confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved), and busy containers or no-op actions are refused first | asks | Do one action on one container of a host (any project), as the Containers view's row and menu: start, stop, restart, pause, unpause, kill (signal, default KILL), remove (force: true stops a running one first), rename (name), restart_policy (policy: no, always, unless-stopped, on-failure[:N]), resources (cpus, memory, memory_swap), network_connect / network_disconnect (network), commit (image, message: a new image from it) and export (file: a tar in the workspace). |
-| [`images_pull`](#images_pull) | confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved) | yes | Pull an image (ref like nginx:1.27 or ghcr.io/acme/api:1.4) in a visible terminal tab "pull: <ref>", at once, as the Containers view pulls. |
+| [`containers_control`](#containers_control) | stop, kill, remove, restart_policy, resources, network_connect and network_disconnect: confirm (always asks), Deny first<br>the other actions: confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved)<br>busy containers or no-op actions are refused first | asks | Do one action on one container of a host (any project), as the Containers view's row and menu: start, stop, restart, pause, unpause, kill (signal, default KILL), remove (force: true stops a running one first), rename (name), restart_policy (policy: no, always, unless-stopped, on-failure[:N]), resources (cpus, memory, memory_swap), network_connect / network_disconnect (network), commit (image, message: a new image from it) and export (file: a tar in the workspace). |
+| [`images_pull`](#images_pull) | auto | yes | Pull an image (ref like nginx:1.27 or ghcr.io/acme/api:1.4) in a visible terminal tab "pull: <ref>", at once, as the Containers view pulls. |
 | [`compose_up`](#compose_up) | confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved) | asks | Run `docker compose up -d` for a compose project that has containers on a host (see containers_list), in its own folder, in a visible terminal tab. |
 | [`contexts_manage`](#contexts_manage) | add: confirm (always asks)<br>use: confirm (containers)<br>default: confirm (always asks)<br>remove: confirm (always asks)<br>inspect: auto<br>terminal: auto | some ask | Manage the hosts (servers) of the Containers view, as the GUI does. |
 | [`containers_exec`](#containers_exec) | shell: auto<br>attach: auto<br>exec: confirm (containers)<br>debug: confirm (always asks)<br>files: auto<br>read: auto<br>upload: confirm (always asks)<br>pair_sync: auto | some ask | Work inside a running container of a host, as the Containers view does. |
@@ -1458,7 +1458,7 @@ No arguments.
 
 Do one action on one container of a host (any project), as the Containers view's row and menu: start, stop, restart, pause, unpause, kill (signal, default KILL), remove (force: true stops a running one first), rename (name), restart_policy (policy: no, always, unless-stopped, on-failure[:N]), resources (cpus, memory, memory_swap), network_connect / network_disconnect (network), commit (image, message: a new image from it) and export (file: a tar in the workspace). stop, kill, remove, restart_policy, resources and the network actions ask the user every time; the others ask (Always allow containers lasts this session). Refused when the container is busy or already in that state.
 
-**Gate:** confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved), and busy containers or no-op actions are refused first
+**Gate:** stop, kill, remove, restart_policy, resources, network_connect and network_disconnect: confirm (always asks), Deny first · the other actions: confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved) · busy containers or no-op actions are refused first
 
 **MCP server:** asks
 
@@ -1483,7 +1483,7 @@ Do one action on one container of a host (any project), as the Containers view's
 
 Pull an image (ref like nginx:1.27 or ghcr.io/acme/api:1.4) in a visible terminal tab "pull: <ref>", at once, as the Containers view pulls. wait_ms waits (max 120000) for the pull to end.
 
-**Gate:** confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved)
+**Gate:** auto
 
 **MCP server:** yes
 
