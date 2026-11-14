@@ -287,7 +287,7 @@ func TestCovCoreWatchRepaint(t *testing.T) {
 	covMainEnv(t)
 	// Outside a session nothing is watched.
 	t.Setenv(session.EnvSession, "")
-	watchRepaint(nil)
+	watchRepaint(nil)()
 
 	caps := filepath.Join(t.TempDir(), "caps.json")
 	b, _ := json.Marshal(session.ClientCaps{Env: map[string]string{"TERM": "foot"}, Gen: 9,
@@ -309,7 +309,7 @@ func TestCovCoreWatchRepaint(t *testing.T) {
 	done := make(chan struct{})
 	go func() { _, _ = p.Run(); close(done) }()
 	defer func() { p.Quit(); <-done }()
-	watchRepaint(p)
+	defer watchRepaint(p)()
 	if err := syscall.Kill(os.Getpid(), session.RepaintSignal); err != nil {
 		t.Fatal(err)
 	}

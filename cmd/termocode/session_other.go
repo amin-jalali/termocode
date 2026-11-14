@@ -22,4 +22,4 @@ func runClient(string, clientOpts) int { return unsupported() }
 func cmdSessions() int                 { return unsupported() }
 func cmdSSH([]string) int              { return unsupported() }
 func cmdKill(string) int               { return unsupported() }
-func watchRepaint(*tea.Program)        {}
+func watchRepaint(*tea.Program) func() { return func() {} }

@@ -643,7 +643,8 @@ func runTUI() {
 		tea.WithReportFocus(),
 	)
 	prog.Store(p)
-	watchRepaint(p)
+	stopRepaint := watchRepaint(p)
+	defer stopRepaint() // after the program ended: its Send no longer blocks
 	watchHangup(p)
 	stopProfile := startCPUProfile()
 	defer stopProfile()

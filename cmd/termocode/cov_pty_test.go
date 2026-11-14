@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -219,11 +220,16 @@ func TestWatchRepaintHandlesTheSignal(t *testing.T) {
 	}
 	t.Setenv(session.EnvCapsFile, capsFile)
 
-	p := tea.NewProgram(plain{}, tea.WithInput(nil), tea.WithOutput(io.Discard))
-	watchRepaint(p)
-	time.Sleep(100 * time.Millisecond)
+	p := tea.NewProgram(plain{}, tea.WithInput(nil), tea.WithOutput(io.Discard), tea.WithoutRenderer(), tea.WithoutSignalHandler())
+	done := make(chan struct{})
+	go func() { _, _ = p.Run(); close(done) }()
+	defer func() { p.Quit(); <-done }()
+	defer watchRepaint(p)()
+	own := make(chan os.Signal, 1) // the signal never ends the test process
+	signal.Notify(own, session.RepaintSignal)
+	defer signal.Stop(own)
 	_ = syscall.Kill(syscall.Getpid(), session.RepaintSignal)
-	time.Sleep(300 * time.Millisecond)
+	<-own
 }
 
 func TestServerStartFailures(t *testing.T) {
