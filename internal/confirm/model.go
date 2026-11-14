@@ -841,7 +841,7 @@ func wrap(s string, w int) []string {
 			continue
 		}
 		var line string
-		for _, word := range words {
+		for _, word := range cutLongWords(words, w) {
 			if line == "" {
 				line = word
 				continue
@@ -855,6 +855,26 @@ func wrap(s string, w int) []string {
 		}
 		if line != "" {
 			out = append(out, line)
+		}
+	}
+	return out
+}
+
+// cutLongWords cuts each word wider than w (a long path) into pieces of
+// at most w cells, so no line of the body is wider than the card.
+func cutLongWords(words []string, w int) []string {
+	var out []string
+	for _, word := range words {
+		for lipgloss.Width(word) > w {
+			head := ansi.Truncate(word, w, "")
+			if head == "" { // one rune wider than w: keep it whole
+				break
+			}
+			out = append(out, head)
+			word = word[len(head):]
+		}
+		if word != "" {
+			out = append(out, word)
 		}
 	}
 	return out
