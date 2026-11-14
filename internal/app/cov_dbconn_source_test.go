@@ -47,7 +47,7 @@ func TestCovDBReadSource(t *testing.T) {
 	if err != nil || !strings.Contains(got, "CREATE VIEW") {
 		t.Fatalf("%q %v", got, err)
 	}
-	if _, err := dbReadSource(ctx, sess, "oracle", dbclient.ObjectView, "v1"); err == nil {
+	if _, err := dbReadSource(ctx, sess, "clickhouse", dbclient.ObjectView, "v1"); err == nil {
 		t.Fatal("unknown driver")
 	}
 	sess.roErr = errors.New("ro")
