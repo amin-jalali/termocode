@@ -77,7 +77,7 @@ type relayRig struct {
 
 const relayPageMarker = "PAGE-MARKER-index-html"
 
-func startRelayRig(t *testing.T) *relayRig {
+func startRelayRig(t *testing.T, more ...func(*RunConfig)) *relayRig {
 	t.Helper()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -98,6 +98,9 @@ func startRelayRig(t *testing.T) *relayRig {
 		c.DevicesDir = devices
 		c.Assets = page
 		c.Relay = &RelayConfig{URL: url}
+		for _, f := range more {
+			f(c)
+		}
 	})
 	key, err := relaytun.GenerateKeypair()
 	if err != nil {
@@ -375,4 +378,52 @@ func TestRelayOffStopsWaiting(t *testing.T) {
 		t.Fatalf("the gateway dialed the relay again (%d waiting)", n)
 	}
 	r.sendKey() // waits until it is back in the room
+}
+
+// Spec (NEW-10, ADR 0022): with web_require_totp a paired phone on the
+// relay signs in with its relay key and then the one-time code: the
+// relay login gives a ticket, not a token; the laptop checks the code
+// (web.totp_check on the control connection); a wrong code is refused
+// and the right one gives the token, all inside the tunnel.
+func TestRelayLoginAsksForTheCode(t *testing.T) {
+	r := startRelayRig(t, func(c *RunConfig) { c.RequireTOTP = true })
+	p := r.newPhone()
+	r.pairOverRelay(p, webdevices.RoleControl)
+	_ = p.sess.Close()
+	p2 := &phone{t: t, key: p.key}
+	if err := r.connect(p2, ""); err != nil {
+		t.Fatalf("a paired phone's key was refused: %v", err)
+	}
+	code, m := p2.post("/login/relay", `{}`)
+	ticket, _ := m["ticket"].(string)
+	if code != http.StatusOK || m["totp"] != true || ticket == "" || m["token"] != nil {
+		t.Fatalf("relay login with the code on: %d %v", code, m)
+	}
+	check := func(want string) (int, map[string]any) {
+		done := make(chan struct{})
+		var c int
+		var res map[string]any
+		go func() {
+			defer close(done)
+			c, res = p2.post("/login/totp", `{"ticket":"`+ticket+`","code":"`+want+`"}`)
+		}()
+		ask := r.ctl.line(t)
+		if ask["op"] != "web.totp_check" {
+			t.Fatalf("ask = %v", ask)
+		}
+		if want == "123456" {
+			r.ctl.send(t, `{"t":"res","id":`+jsonNum(ask["id"])+`,"data":null}`)
+		} else {
+			r.ctl.send(t, `{"t":"err","id":`+jsonNum(ask["id"])+`,"code":"forbidden","msg":"wrong"}`)
+		}
+		<-done
+		return c, res
+	}
+	if c, res := check("000000"); c != http.StatusUnauthorized {
+		t.Fatalf("wrong code: %d %v", c, res)
+	}
+	c, res := check("123456")
+	if tok, _ := res["token"].(string); c != http.StatusOK || tok == "" {
+		t.Fatalf("right code: %d %v", c, res)
+	}
 }
