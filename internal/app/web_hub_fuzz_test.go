@@ -171,6 +171,25 @@ func FuzzHubSequence(f *testing.F) {
 	f.Add([]byte{1, 3, 0, 0, 0})
 	f.Add([]byte{0, 0, 5, 10, '{', '"', 't', '"', ':', '1', '}'})
 	f.Add([]byte{0, 1, 0, 7, 2, 9, 1, 7, 3, 10, 2, 3, 0, 255, 0})
+	// An op behind a laptop card that is built off the UI thread (ai.lane_start,
+	// db.edit, db.import) answers from the command it returns; this harness
+	// runs no commands, so those ops get the same fake deferred answer as
+	// the hub's own fakes.
+	var laterWG sync.WaitGroup
+	saved := webAskLaterOps
+	webAskLaterOps = map[string]func(*Model, *webCall, func(*webAsk) tea.Msg) tea.Cmd{}
+	for op := range saved {
+		webAskLaterOps[op] = func(_ *Model, call *webCall, _ func(*webAsk) tea.Msg) tea.Cmd {
+			call.later()
+			laterWG.Add(1)
+			go func() {
+				defer laterWG.Done()
+				call.reply(nil)
+			}()
+			return nil
+		}
+	}
+	f.Cleanup(func() { webAskLaterOps = saved })
 	f.Fuzz(func(t *testing.T, data []byte) {
 		r := &fuzzReader{b: data}
 		role := webproto.RoleController
@@ -237,7 +256,7 @@ func FuzzHubSequence(f *testing.F) {
 			}
 		}
 		done := make(chan struct{})
-		go func() { wg.Wait(); close(done) }()
+		go func() { wg.Wait(); laterWG.Wait(); close(done) }()
 		select {
 		case <-done:
 		case <-time.After(10 * time.Second):

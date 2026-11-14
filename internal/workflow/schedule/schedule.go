@@ -372,11 +372,15 @@ func (s *Schedule) inGap(w time.Time) bool {
 	return after > before
 }
 
-// maxDays is how far Next looks: a leap day can be 8 years away.
-const maxDays = 366*8 + 2
+// maxDays is how far Next looks: the Gregorian calendar repeats every
+// 400 years (146097 days, a whole number of weeks), so a day and weekday
+// pair ("March 22 on a Sunday", 11 years apart; Feb 29 on a Monday, up
+// to 40) that ever comes again comes within it. Only such rare schedules
+// walk that far; each day is a few bit tests.
+const maxDays = 146097 + 2
 
 // Next returns the first run time strictly after `after`, in the
-// schedule's zone, or the zero time when there is none within 8 years.
+// schedule's zone, or the zero time when there is none.
 func (s *Schedule) Next(after time.Time) time.Time {
 	local := after.In(s.loc)
 	// Day d-1 too: a slot of the previous wall day can still be ahead in

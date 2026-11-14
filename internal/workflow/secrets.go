@@ -24,8 +24,9 @@ import (
 
 // Token-like literals: the prefixes of the mcp.json warning
 // (internal/mcp secretLiteralRe), with a minimum length, so words like
-// "task-list" do not match.
-var tokenRe = regexp.MustCompile(`(?i)(\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}|\bgithub_pat_[A-Za-z0-9_]{20,}|\bglpat-[A-Za-z0-9_-]{16,}|\bxox[pbas]-[A-Za-z0-9-]{10,}|\bsk-[A-Za-z0-9_-]{20,}|\blin_api_[A-Za-z0-9]{20,}|\bAKIA[0-9A-Z]{16}\b|\bbearer\s+[A-Za-z0-9._~+/=-]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)`)
+// "task-list" do not match. A prefix may follow a digit or "_"
+// ("0sk-…", "key_ghp_…"), only not a letter; group 1 is that byte.
+var tokenRe = regexp.MustCompile(`(?i)(^|[^a-z])((ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|glpat-[A-Za-z0-9_-]{16,}|xox[pbas]-[A-Za-z0-9-]{10,}|sk-[A-Za-z0-9_-]{20,}|lin_api_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}\b|bearer\s+[A-Za-z0-9._~+/=-]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)`)
 
 var (
 	refRe       = regexp.MustCompile(`\$\{\s*([A-Za-z]+)\s*:([^}]*)\}`)
@@ -38,7 +39,7 @@ func hideTokens(s string) string {
 	if !tokenRe.MatchString(s) {
 		return s
 	}
-	return tokenRe.ReplaceAllString(s, "(hidden)")
+	return tokenRe.ReplaceAllString(s, "${1}(hidden)")
 }
 
 // looksSecret reports whether s holds a literal that looks like a key.

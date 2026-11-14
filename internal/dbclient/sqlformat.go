@@ -262,6 +262,10 @@ func fmtWouldMerge(a *fmtTok, at string, b *fmtTok, bt string) bool {
 	}
 	x, y := at[len(at)-1], bt[0]
 	switch {
+	case a.kind == fkString && x == '$' && y == '$':
+		// "$$$$" then "$$" read back the same glued ("$" after a "$" is
+		// no new quote); a space would open a new dollar quote.
+		return false
 	case fmtWordByte(x) && fmtWordByte(y):
 		return true
 	case strings.IndexByte(fmtOpChars, x) >= 0 && strings.IndexByte(fmtOpChars, y) >= 0:
@@ -424,6 +428,11 @@ func fmtSpace(w *fmtWriter, prev, t *fmtTok, isKW bool) bool {
 	// Around a "." next to a number the source spacing stays ("1 .5" is
 	// not "1.5").
 	if (t.text == "." || prev.text == ".") && (fmtDigitStart(prev.text) || fmtDigitStart(t.text)) {
+		return t.sp
+	}
+	// A word glued to a dollar quote ("$$$$" then "$$") keeps the
+	// source spacing: a space would open a new dollar quote.
+	if prev.kind == fkString && strings.HasSuffix(prev.text, "$") && strings.HasPrefix(t.text, "$") {
 		return t.sp
 	}
 	switch t.text {

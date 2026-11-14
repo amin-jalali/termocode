@@ -127,8 +127,10 @@ func onlyPlaceholders(v string) bool {
 var secretQueryRe = lazyre.New(`(?i)([?&;](?:[\w.-]*(?:token|secret|password|passwd|pwd|api[_-]?key|apikey|signature|sig|auth|session|code|key)[\w.-]*)=)([^&#\s"']+)`)
 
 // userinfoRe finds "scheme://user:password@" in a text; the user may
-// be empty ("redis://:password@host").
-var userinfoRe = lazyre.New(`(?i)\b([a-z][a-z0-9+.-]*://[^/\s:@]*:)([^/\s@]+)(@)`)
+// be empty ("redis://:password@host"). Like url.Parse, the user ends at
+// the first ":" and the password at the last "@" of the authority, so a
+// raw "@" in the password ("a://:p@ss@host") is hidden too.
+var userinfoRe = lazyre.New(`(?i)\b([a-z][a-z0-9+.-]*://[^/?#\s:]*:)([^/?#\s]+)(@)`)
 
 // RedactURL hides secret query values (token, key, password, sig, …)
 // and the password part of user:password@ in s. It works on any text,
