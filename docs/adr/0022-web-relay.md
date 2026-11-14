@@ -52,6 +52,12 @@ Alternatives on the table:
   `paired` (the only text it ever sends) and the gateway opens the next
   waiting one. A room holds at most 2 waiting gateway connections and 4
   pairs. A waiting gateway that goes away leaves the room at once.
+- **The app's page (MOB-42).** The phone app carries its own relay
+  page and the panel's files, so the relay serves it no code. Its page
+  side comes from the app's own origin (`https://localhost` on Android,
+  `capacitor://localhost` on iOS); the relay takes exactly these two
+  origins on the page side (`relay.AppOrigins`), never on the gateway
+  side.
 - **Who dials.** The gateway dials out to the relay (`https` only; plain
   `http` only on loopback, for tests) when `web_relay` is set. The phone
   page dials the same room. Nothing on the laptop listens on the

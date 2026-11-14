@@ -252,6 +252,13 @@ func (s *Server) log(e Event) {
 	}
 }
 
+// AppOrigins are the phone app's own page origins (MOB-42): the app
+// carries its own relay page, so its page side comes from the app
+// (Capacitor: https://localhost on Android, capacitor://localhost on
+// iOS), not from the relay's host. Only the page side takes them; the
+// handshake inside still decides who gets in.
+var AppOrigins = []string{"https://localhost", "capacitor://localhost"}
+
 // ServeHTTP answers PathPrefix + room + "?side=gw|page" with a WebSocket.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	id, ok := strings.CutPrefix(r.URL.Path, PathPrefix)
@@ -276,7 +283,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "the relay is stopping", http.StatusServiceUnavailable)
 		return
 	}
-	c, err := websocket.Accept(w, r, &websocket.AcceptOptions{CompressionMode: websocket.CompressionDisabled})
+	opts := &websocket.AcceptOptions{CompressionMode: websocket.CompressionDisabled}
+	if side == SidePage {
+		opts.OriginPatterns = AppOrigins
+	}
+	c, err := websocket.Accept(w, r, opts)
 	if err != nil {
 		s.wg.Done()
 		return
