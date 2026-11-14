@@ -268,7 +268,9 @@ vim.diagnostic.config({
   virtual_text = { prefix = '●', spacing = 2 },
   signs = true,
   underline = true,
-  update_in_insert = false,
+  -- termocode is modeless: the editor stays in insert mode, so without
+  -- this the signs, underlines and text of a diagnostic never showed.
+  update_in_insert = true,
   severity_sort = true,
   float = { border = 'rounded' },
 })
