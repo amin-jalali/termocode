@@ -146,7 +146,7 @@ export function Composer({
         </Button>
       )}
       {(!busy || queues) && (
-        <Button kind={desk ? "quiet" : "primary"} needsLink icon={desk ? <Cod name="send" /> : <IconSend />} iconOnly title={queues ? t("queue.add") : desk ? `${t("send")} (Enter)` : t("send")} disabled={sending || !text.trim() || (queues && (!q || q.full(queue!)))} onClick={send}>
+        <Button kind={desk ? "quiet" : "primary"} needsLink icon={desk ? <Cod name="send" /> : <IconSend />} iconOnly title={queues ? (q ? t("queue.add") : t("send")) : desk ? `${t("send")} (Enter)` : t("send")} disabled={sending || !text.trim() || (queues && (!q || q.full(queue!)))} onClick={send}>
           {t("send")}
         </Button>
       )}
