@@ -105,3 +105,42 @@ func TestFileTooBigOnDiskNotReloaded(t *testing.T) {
 		t.Fatal("the reload check read the 300 MB file into the editor")
 	}
 }
+
+// nvim's own checks (the FocusGained / BufEnter / CursorHold :checktime,
+// a second after the last key) must not read a too-big file in either:
+// with 'autoread' on they reloaded a clean buffer without asking the
+// FileChangedShell guard, and a 300 MB file then hung Ctrl+Q on macOS
+// (NEW-3, TestDownloadITerm2TooBigFallsBack).
+func TestFileTooBigOnDiskNotReloadedByPlainChecktime(t *testing.T) {
+	c, err := nvim.New()
+	if err != nil {
+		t.Skipf("nvim not available: %v", err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	if err := c.Attach(80, 24); err != nil {
+		t.Fatalf("Attach: %v", err)
+	}
+	for _, cmd := range []string{"set cmdheight=0", "set autoread"} { // as the app's startup
+		_ = c.Command(cmd)
+	}
+	if err := c.ExecLua(notifyLua); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.ExecLua(fileReloadLua); err != nil {
+		t.Fatal(err)
+	}
+	_ = c.ExecLua(`_G._termocode_reload_max = 4096`) // a small cap: the test stays fast
+	big := filepath.Join(t.TempDir(), "huge.txt")
+	_ = os.WriteFile(big, []byte("head\n"), 0o644)
+	_ = c.Command("edit " + big)
+	time.Sleep(1100 * time.Millisecond) // a new mtime second
+	if err := os.Truncate(big, 64<<10); err != nil {
+		t.Fatal(err)
+	}
+	_ = c.Command("silent! checktime") // what the CursorHold autocmd runs
+	// The grown file is "head\n" and then zeros: a reload shows as a
+	// second line (line 1 reads "head" either way).
+	if n, _ := c.EvalLuaString(`return tostring(vim.api.nvim_buf_line_count(vim.fn.bufnr('huge.txt')))`); n != "1" {
+		t.Errorf("buffer has %s lines after the check, want the 1 line it had (it was reloaded)", n)
+	}
+}

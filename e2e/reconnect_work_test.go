@@ -95,7 +95,22 @@ func selectNginx(t *testing.T, tm *Term) {
 	tm.Palette("Containers: Focus")
 	tm.WaitText("CONTAINERS", uiTimeout)
 	tm.WaitText("nginx", uiTimeout)
+	// The footer names the row's image a moment after the cursor lands
+	// (slower on macOS with a query running): on the nginx row wait for
+	// it, rather than pressing Down past the row.
+	onNginx := func() bool {
+		for _, l := range tm.Lines() {
+			if strings.Contains(l, "▌") && strings.Contains(l, "nginx") && !strings.Contains(l, "logs:") {
+				return true
+			}
+		}
+		return false
+	}
 	for i := 0; i < 30 && !cursorFooterHas(tm, "nginx:1.27"); i++ {
+		if onNginx() {
+			tm.WaitFor("the nginx row's footer", uiTimeout, func([]string) bool { return cursorFooterHas(tm, "nginx:1.27") })
+			break
+		}
 		tm.Send(KeyDown)
 		tm.settle()
 	}

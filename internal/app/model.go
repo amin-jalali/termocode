@@ -1189,11 +1189,11 @@ func (m Model) attachCmd() tea.Cmd {
 			// scroll — keeps the side-by-side diff snappy.
 			"set mousescroll=ver:6,hor:6",
 			"set signcolumn=auto",
-			// External file change detection: autoread silently reloads
-			// buffers whose mtime changed on disk (e.g., after `git pull`
-			// or edits from another editor); updatetime=1000 makes the
-			// CursorHold-driven checktime fire promptly during idle.
-			"set autoread",
+			// External file change detection: the FileChangedShell handler
+			// (fileReloadLua, which also turns 'autoread' off) reloads
+			// buffers whose file changed on disk (e.g., after `git pull`);
+			// updatetime=1000 makes the CursorHold-driven checktime fire
+			// promptly during idle.
 			"set updatetime=1000",
 			// numberwidth=7: room for 5-digit line numbers + breathing
 			// space on both sides (1+ left padding via right-align, 2
@@ -1459,9 +1459,10 @@ func (m Model) attachCmd() tea.Cmd {
 		// by the user (Ctrl+S, Save All, the quit / close questions) or by
 		// the auto_save setting when it is on (toggleAutoSave).
 		// Auto-reload buffers when their on-disk file changes (e.g. `git pull`,
-		// edits from another editor). Combined with `set autoread` above, the
-		// reload is silent; buffers with unsaved local changes keep them
-		// (fileReloadLua answers the W12 prompt that would block nvim).
+		// edits from another editor). fileReloadLua's FileChangedShell
+		// handler reloads clean buffers silently; buffers with unsaved
+		// local changes keep them (it answers the W12 prompt that would
+		// block nvim), and a file grown past the cap is not read in.
 		_ = m.nvim.Command("autocmd FocusGained,BufEnter,CursorHold,CursorHoldI * silent! checktime")
 		// File-watcher toast: when a buffer is reloaded from disk (autoread
 		// kicks in after checktime detects a change), record the path in a

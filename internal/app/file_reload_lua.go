@@ -25,14 +25,15 @@ const fileReloadLua = `
 -- A file that grew past this on disk (a log, a dump) is not read in:
 -- reading 300 MB kept nvim busy for 20 s and the app hung.
 _G._termocode_reload_max = 64 * 1024 * 1024
+-- 'autoread' off: with it on, nvim reloads a clean buffer by itself
+-- without asking FileChangedShell (below), so every check (CursorHold,
+-- BufEnter, focus, the timer) read a too-big file in. Off, the handler
+-- sees every change and reloads the clean buffers itself.
+vim.o.autoread = false
 _G._termocode_checktime_all = function()
 	for _, b in ipairs(vim.api.nvim_list_bufs()) do
 		local name = vim.api.nvim_buf_get_name(b)
 		if vim.api.nvim_buf_is_loaded(b) and vim.bo[b].buftype == '' and name ~= '' then
-			-- 'autoread' reloads without asking FileChangedShell (below),
-			-- so a big file gets it off and the handler keeps the text.
-			local st = (vim.uv or vim.loop).fs_stat(name)
-			if st and st.size > _G._termocode_reload_max then vim.bo[b].autoread = false end
 			pcall(vim.cmd, 'silent! checktime ' .. b)
 		end
 	end

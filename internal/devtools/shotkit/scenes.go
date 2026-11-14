@@ -201,16 +201,25 @@ func AIUntilDone(variant string) Scene {
 // scripted models: "running" with its two middle steps working,
 // "done" when the run finished.
 func AgentsPanel(variant string) Scene {
+	end := Pause(1200 * time.Millisecond)
+	if variant == "done" {
+		end.Until = aiDemoRunDone
+	}
 	return Scene{Name: "agents-panel-" + variant, Env: aiEnv,
-		Steps: WithEditor(Act("palette:ai-open-chat"), Act("agentsdemo:"+variant), Pause(1200*time.Millisecond))}
+		Steps: WithEditor(Act("palette:ai-open-chat"), Act("agentsdemo:"+variant), end)}
 }
+
+// aiDemoRunDone is on screen once the planned demo run finished all its
+// steps: a slow machine (CI on macOS, a coverage build) took longer than
+// a fixed pause, and the frame then showed the run half done.
+const aiDemoRunDone = "5 steps ·"
 
 // AIUsage is the AI: Usage screen (AU-4) after the planned diamond run
 // of AgentsPanel("done"): this run and this session, by model and by
 // agent (scripted models, an earlier run is in the session).
 func AIUsage() Scene {
 	return Scene{Name: "ai-usage", Env: aiEnv,
-		Steps: WithEditor(Act("palette:ai-open-chat"), Act("usagedemo:done"), Pause(1200*time.Millisecond))}
+		Steps: WithEditor(Act("palette:ai-open-chat"), Act("usagedemo:done"), Step{Wait: 1200 * time.Millisecond, Until: aiDemoRunDone})}
 }
 
 // AIProfile is the agent profile UI (U20 AP-5) with sample data:

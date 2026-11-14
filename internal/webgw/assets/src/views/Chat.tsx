@@ -243,7 +243,12 @@ export function ChatView() {
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
   }, []);
-  // New text keeps the view at the end while the reader is there.
+  // New text keeps the view at the end while the reader is there. The
+  // scroll waits for the next frame: reading scrollHeight lays the page
+  // out, and tokens come faster than frames, so one layout a frame, not
+  // one a token (it ran in the token's task and pushed its frame late).
+  const toEnd = useRef(0);
+  useEffect(() => () => cancelAnimationFrame(toEnd.current), []);
   useLayoutEffect(() => {
     const el = body.current;
     if (!el) return;
@@ -251,7 +256,12 @@ export function ChatView() {
       // Load older: what the reader saw stays where it was.
       el.scrollTop += el.scrollHeight - keep.current;
       keep.current = null;
-    } else if (stick.current && !list) el.scrollTop = el.scrollHeight;
+    } else if (stick.current && !list && !toEnd.current) {
+      toEnd.current = requestAnimationFrame(() => {
+        toEnd.current = 0;
+        if (stick.current) el.scrollTop = el.scrollHeight;
+      });
+    }
   });
 
   const older = () => {
