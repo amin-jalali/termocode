@@ -1,9 +1,10 @@
 package agents
 
 import (
-	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Choice is one numbered answer of the question an agent shows.
@@ -15,10 +16,10 @@ type Choice struct {
 
 // choiceRow is a menu row: an optional box border, an optional cursor
 // (❯ Claude Code, › Codex), "N." and the label.
-var choiceRow = regexp.MustCompile(`^\s*[│|]?\s*([❯›>])?\s*(\d{1,2})\.\s+(.*?)\s*[│|]?\s*$`)
+var choiceRow = lazyre.New(`^\s*[│|]?\s*([❯›>])?\s*(\d{1,2})\.\s+(.*?)\s*[│|]?\s*$`)
 
 // choiceHint is a key hint at the end of a label: "(esc)", "(y)".
-var choiceHint = regexp.MustCompile(`\s*\((?:esc|[a-z])\)$`)
+var choiceHint = lazyre.New(`\s*\((?:esc|[a-z])\)$`)
 
 // menuAgents are the agents whose questions are numbered menus.
 var menuAgents = map[string]bool{"claude": true, "codex": true}

@@ -4,11 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
@@ -33,8 +33,8 @@ func noOption(what, v string) error {
 }
 
 var (
-	bisectStepsRe = regexp.MustCompile(`roughly (\d+) steps?`)
-	bisectFirstRe = regexp.MustCompile(`(?m)^([0-9a-f]{40}) is the first bad commit`)
+	bisectStepsRe = lazyre.New(`roughly (\d+) steps?`)
+	bisectFirstRe = lazyre.New(`(?m)^([0-9a-f]{40}) is the first bad commit`)
 )
 
 // bisectRead fills the state from git's output and HEAD.

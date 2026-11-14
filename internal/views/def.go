@@ -3,9 +3,9 @@ package views
 import (
 	"errors"
 	"fmt"
-	"regexp"
 
 	"github.com/amin-jalali/termocode/internal/blocks"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // ErrInvalid wraps every refusal of a def or a spec. The message names
@@ -65,8 +65,8 @@ var (
 	// The layouts this package renders from rows. A view may allow other
 	// block kinds (diff, text, board); their Fetch builds the block itself.
 	rowLayouts = setOf(blocks.KindTable, blocks.KindList, blocks.KindCard, blocks.KindDetail)
-	idRe       = regexp.MustCompile(`^[a-z][a-z0-9_]*(\.[a-z0-9_\-]+)*$`)
-	fieldIDRe  = regexp.MustCompile(`^[a-z][a-z0-9_]{0,39}$`)
+	idRe       = lazyre.New(`^[a-z][a-z0-9_]*(\.[a-z0-9_\-]+)*$`)
+	fieldIDRe  = lazyre.New(`^[a-z][a-z0-9_]{0,39}$`)
 )
 
 func setOf(vs ...string) map[string]bool {

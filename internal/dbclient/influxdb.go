@@ -9,9 +9,10 @@ import (
 	"fmt"
 	"io"
 	"net/url"
-	"regexp"
 	"strings"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // InfluxDBSession is an InfluxQL and Flux console on InfluxDB (DBX-70),
@@ -63,7 +64,7 @@ func IsFlux(q string) bool {
 	return strings.Contains(t, "|>") || strings.HasPrefix(t, "from(") || strings.HasPrefix(t, "import ")
 }
 
-var fluxWrite = regexp.MustCompile(`(^|[^A-Za-z0-9_.])(to|wideTo|delete)\s*\(|\bsql\.to\s*\(|\bhttp\.post\s*\(|\bexperimental\.to\s*\(`)
+var fluxWrite = lazyre.New(`(^|[^A-Za-z0-9_.])(to|wideTo|delete)\s*\(|\bsql\.to\s*\(|\bhttp\.post\s*\(|\bexperimental\.to\s*\(`)
 
 // ClassifyInflux judges one query: InfluxQL SELECT (without INTO), SHOW
 // and EXPLAIN read, DELETE and DROP are DDL, the rest writes; Flux reads

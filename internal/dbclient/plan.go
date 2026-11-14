@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Plan is a query plan as indented lines: what the Plan view shows. The
@@ -664,6 +665,6 @@ func planTextTable(text string) string {
 }
 
 var (
-	sqliteTableRE = regexp.MustCompile(`^(?:SCAN|SEARCH)\s+(?:TABLE\s+)?([A-Za-z_][\w$]*)`)
-	onTableRE     = regexp.MustCompile(`\bon\s+([A-Za-z_][\w$]*(?:\.[A-Za-z_][\w$]*)?)`)
+	sqliteTableRE = lazyre.New(`^(?:SCAN|SEARCH)\s+(?:TABLE\s+)?([A-Za-z_][\w$]*)`)
+	onTableRE     = lazyre.New(`\bon\s+([A-Za-z_][\w$]*(?:\.[A-Za-z_][\w$]*)?)`)
 )

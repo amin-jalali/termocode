@@ -6,10 +6,10 @@ import (
 )
 
 // luaQuote returns s as a single-quoted Lua string literal.
-func luaQuote(s string) string {
-	r := strings.NewReplacer(`\`, `\\`, `'`, `\'`, "\n", `\n`)
-	return "'" + r.Replace(s) + "'"
-}
+func luaQuote(s string) string { return "'" + luaEscaper.Replace(s) + "'" }
+
+// luaEscaper is built once (on its first Replace), not per string.
+var luaEscaper = strings.NewReplacer(`\`, `\\`, `'`, `\'`, "\n", `\n`)
 
 func luaList(xs []string) string {
 	q := make([]string, len(xs))

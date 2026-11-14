@@ -2,12 +2,12 @@ package mcp
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/amin-jalali/termocode/internal/blocks"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Elicitation as a phone form (MOB-12): a form-mode question whose
@@ -21,7 +21,7 @@ import (
 // MaxFormValue caps one answer from the phone (bytes).
 const MaxFormValue = 1000
 
-var formIDOK = regexp.MustCompile(`^[A-Za-z0-9_.:\-]{1,64}$`)
+var formIDOK = lazyre.New(`^[A-Za-z0-9_.:\-]{1,64}$`)
 
 // FormOf is the form block of a form-mode question; ok is false when the
 // phone may not answer it (the laptop must).

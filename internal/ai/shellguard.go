@@ -3,8 +3,9 @@ package ai
 import (
 	"fmt"
 	"path"
-	"regexp"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // The AI uses termocode's tools, by construction (owner, 2026-11-09): a
@@ -36,7 +37,7 @@ var shellOwnRules = []shellOwnRule{
 
 // shellSplit splits a command line at ; & | newlines, $( and backticks,
 // so each part starts with the program it runs.
-var shellSplit = regexp.MustCompile("[;&|\\n`()]|\\$\\(")
+var shellSplit = lazyre.New("[;&|\\n`()]|\\$\\(")
 
 // shellPrefixes are words that run the next word as the program.
 var shellPrefixes = map[string]bool{"sudo": true, "env": true, "time": true, "exec": true, "nohup": true, "command": true, "nice": true, "doas": true, "xargs": true}

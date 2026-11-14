@@ -3,8 +3,9 @@ package ghci
 import (
 	"context"
 	"errors"
-	"regexp"
 	"strconv"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // GITX-23: close / reopen a pull request and re-run its failed checks.
@@ -20,7 +21,7 @@ func SetClosed(ctx context.Context, run Runner, dir string, number int, closed b
 }
 
 // runURL finds the workflow run id in a check link.
-var runURL = regexp.MustCompile(`/actions/runs/(\d+)(?:/|$)`)
+var runURL = lazyre.New(`/actions/runs/(\d+)(?:/|$)`)
 
 // FailedRunIDs lists the workflow runs of the failed checks, once each,
 // in the order of the checks. Checks from other CI services have none.

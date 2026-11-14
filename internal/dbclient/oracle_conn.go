@@ -8,11 +8,12 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 
 	go_ora "github.com/sijms/go-ora/v2"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Oracle connections (DBX-63): tnsnames.ora, wallets and the go-ora URL.
@@ -28,7 +29,7 @@ type TNSEntry struct {
 	TLS     bool // PROTOCOL = TCPS
 }
 
-var tnsKey = regexp.MustCompile(`(?i)\(\s*(HOST|PORT|SERVICE_NAME|SID|PROTOCOL)\s*=\s*([^()\s]+)\s*\)`)
+var tnsKey = lazyre.New(`(?i)\(\s*(HOST|PORT|SERVICE_NAME|SID|PROTOCOL)\s*=\s*([^()\s]+)\s*\)`)
 
 // ParseTNSNames reads the entries of a tnsnames.ora text. An entry whose
 // parentheses do not close is skipped; "A, B = (…)" gives two entries.

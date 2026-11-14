@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/blocks"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -127,8 +127,8 @@ func aiViewSpecArg(a map[string]any) (blocks.ViewSpec, error) {
 }
 
 var (
-	aiViewSQLRe  = regexp.MustCompile(`(?i)\bselect\b.+\bfrom\b|\binsert\s+into\b|\bupdate\s+\S+\s+set\b|\bdelete\s+from\b|\b(drop|alter|truncate)\s+(table|database|schema|index|view)\b|\bunion\s+(all\s+)?select\b|;`)
-	aiViewDiskRe = regexp.MustCompile(`^[A-Za-z]:[\\/]`)
+	aiViewSQLRe  = lazyre.New(`(?i)\bselect\b.+\bfrom\b|\binsert\s+into\b|\bupdate\s+\S+\s+set\b|\bdelete\s+from\b|\b(drop|alter|truncate)\s+(table|database|schema|index|view)\b|\bunion\s+(all\s+)?select\b|;`)
+	aiViewDiskRe = lazyre.New(`^[A-Za-z]:[\\/]`)
 )
 
 // aiViewSpecSafe refuses a spec that carries SQL, a path outside the

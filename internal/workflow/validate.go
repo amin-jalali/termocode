@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"math"
 	"path"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/amin-jalali/termocode/internal/jsonc"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/workflow/score"
 )
 
@@ -33,10 +33,10 @@ func Parse(path string, data []byte) (*File, []Problem, error) {
 }
 
 var (
-	idRe       = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,39}$`)
-	serverRe   = regexp.MustCompile(`^[A-Za-z0-9_-]{1,40}$`) // an mcp.json server name
-	timeRe     = regexp.MustCompile(`^([01][0-9]|2[0-3]):[0-5][0-9]$`)
-	itemPathRe = regexp.MustCompile(`^\$((\.[A-Za-z_][A-Za-z0-9_-]*)|(\[\*\])|(\[[0-9]{1,6}\]))*$`)
+	idRe       = lazyre.New(`^[a-z][a-z0-9_-]{0,39}$`)
+	serverRe   = lazyre.New(`^[A-Za-z0-9_-]{1,40}$`) // an mcp.json server name
+	timeRe     = lazyre.New(`^([01][0-9]|2[0-3]):[0-5][0-9]$`)
+	itemPathRe = lazyre.New(`^\$((\.[A-Za-z_][A-Za-z0-9_-]*)|(\[\*\])|(\[[0-9]{1,6}\]))*$`)
 )
 
 type checker struct {
@@ -291,7 +291,7 @@ func (c *checker) triggers(o *obj) []Trigger {
 	return out
 }
 
-var triggerRepoRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,99}/[A-Za-z0-9._-]{1,100}$`)
+var triggerRepoRe = lazyre.New(`^[A-Za-z0-9][A-Za-z0-9._-]{0,99}/[A-Za-z0-9._-]{1,100}$`)
 
 func (c *checker) vars(o *obj) map[string]any {
 	n := o.get("vars")

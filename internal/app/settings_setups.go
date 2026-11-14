@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -14,6 +13,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/picker"
 )
 
@@ -39,7 +39,7 @@ var setupFiles = map[string]string{
 }
 
 // setupNameRE is a setup name: it becomes a file name.
-var setupNameRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$`)
+var setupNameRE = lazyre.New(`^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$`)
 
 func init() {
 	registerGitx(gitxFeature{

@@ -3,8 +3,9 @@ package ai
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // ── Manual and auto project rules (CMP-82) ──────────────────────────────
@@ -36,7 +37,7 @@ func (r Rules) byMode(mode string) []ScopedRule {
 }
 
 // ruleMentionRe is "#name" at a word start.
-var ruleMentionRe = regexp.MustCompile(`(?:^|[^\p{L}\p{N}_#/&])#([A-Za-z0-9][A-Za-z0-9_-]*)`)
+var ruleMentionRe = lazyre.New(`(?:^|[^\p{L}\p{N}_#/&])#([A-Za-z0-9][A-Za-z0-9_-]*)`)
 
 // Mentioned is the manual and auto rules named in text as #name, in the
 // order of their first mention; unknown names are skipped.

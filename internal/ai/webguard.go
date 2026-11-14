@@ -2,7 +2,8 @@ package ai
 
 import (
 	"errors"
-	"regexp"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // The AI never opens the web panel (ADR 0020, web-easy): the palette ids
@@ -11,7 +12,7 @@ import (
 // Stop, status and help stay allowed.
 
 // webStartRe finds `termocode web` with the word after it, if any.
-var webStartRe = regexp.MustCompile("(?:^|[\\s;&|(`/])termocode\\s+web(?:$|[\\s;&|)`])\\s*(\\S*)")
+var webStartRe = lazyre.New("(?:^|[\\s;&|(`/])termocode\\s+web(?:$|[\\s;&|)`])\\s*(\\S*)")
 
 // ErrNoWebPanel is the refusal of a command that would open the web panel.
 var ErrNoWebPanel = errors.New("the web panel gives shell access from a browser; only the user opens it (Web: Open in Browser)")

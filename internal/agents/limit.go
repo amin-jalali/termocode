@@ -1,15 +1,16 @@
 package agents
 
 import (
-	"regexp"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // AGX-11: the usage-limit messages of the agents on their own screen
 // (samples in testdata/limit/). Only a line that starts with the CLI's
 // own wording counts, so a model answer that talks about limits does
 // not. The reset words are read by clistep.LimitReset.
-var limitTable = map[string][]*regexp.Regexp{
+var limitTable = map[string][]*lazyre.Regexp{
 	"claude": res(`(?i)^\W*(claude (ai )?usage limit reached|\d+-hour limit reached|weekly limit reached|opus limit reached|you've hit your (usage )?limit)`),
 	"codex":  res(`(?i)^\W*(you've hit your usage limit|usage limit (reached|exceeded))`),
 }
@@ -43,7 +44,7 @@ func IsPrompt(id string, lines []string) bool {
 	tail := bottom(lines)
 	rs := anyWaiting
 	if r, ok := table[id]; ok {
-		rs = append(append([]*regexp.Regexp(nil), r.waiting...), anyWaiting...)
+		rs = append(append([]*lazyre.Regexp(nil), r.waiting...), anyWaiting...)
 	}
 	for _, l := range tail {
 		for _, re := range rs {

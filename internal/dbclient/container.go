@@ -7,10 +7,11 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"regexp"
 	"strings"
 
 	"golang.org/x/crypto/ssh"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // ContainerRef is the container behind a connection on a remote engine
@@ -26,7 +27,7 @@ type ContainerRef struct {
 
 // containerName is a docker / podman container name: nothing a shell
 // reads specially, and no leading dash.
-var containerName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$`)
+var containerName = lazyre.New(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$`)
 
 // containerInspectFormat prints the state, then one "network ip" line
 // per network.

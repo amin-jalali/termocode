@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -14,6 +13,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/amin-jalali/termocode/internal/blocks"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Loc is the time zone of day values ("today", "2026-11-07") and of the
@@ -30,7 +30,7 @@ type val struct {
 	b      bool
 }
 
-var relRe = regexp.MustCompile(`^-?([0-9]{1,6})(m|h|d|w)$`)
+var relRe = lazyre.New(`^-?([0-9]{1,6})(m|h|d|w)$`)
 
 // parseValue parses a filter value for a field kind. now is Unix ms; it
 // only matters for relative times ("today", "-24h", "7d" = 7 days ago).
@@ -304,7 +304,7 @@ func orDash(s string) string {
 	return s
 }
 
-var rowIDRe = regexp.MustCompile(`^[A-Za-z0-9_.:\-]{1,64}$`)
+var rowIDRe = lazyre.New(`^[A-Za-z0-9_.:\-]{1,64}$`)
 
 // Filtered applies a resolved spec's filter and sort to rows, in place
 // order kept for equal keys. now is Unix ms (relative times).

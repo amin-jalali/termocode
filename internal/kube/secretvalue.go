@@ -4,16 +4,17 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
-	"regexp"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // secretKeyRE is what Kubernetes allows as a Secret data key; names are
 // DNS subdomains. Both are checked before they go into the template, so
 // nothing else can be printed.
 var (
-	secretKeyRE  = regexp.MustCompile(`^[-._a-zA-Z0-9]+$`)
-	secretNameRE = regexp.MustCompile(`^[a-z0-9]([-.a-z0-9]*[a-z0-9])?$`)
+	secretKeyRE  = lazyre.New(`^[-._a-zA-Z0-9]+$`)
+	secretNameRE = lazyre.New(`^[a-z0-9]([-.a-z0-9]*[a-z0-9])?$`)
 )
 
 // SecretValueCommand is the kubectl call SecretValue makes (for the card).

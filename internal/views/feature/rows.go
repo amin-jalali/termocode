@@ -1,11 +1,11 @@
 package feature
 
 import (
-	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/blocks"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/views"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
@@ -183,7 +183,7 @@ func TaskRows(ts webproto.TasksSnap) []views.Row {
 	return out
 }
 
-var dbFieldRe = regexp.MustCompile(`[^a-z0-9_]+`)
+var dbFieldRe = lazyre.New(`[^a-z0-9_]+`)
 
 // dbFieldID makes a field id from a column name: c_<lower snake>, cut to
 // the id cap, made unique with a number.

@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"os/exec"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/services"
 )
 
@@ -129,7 +129,7 @@ func (h Helm) captureScoped(parent context.Context, d time.Duration, allNS bool,
 
 // releaseName is helm's rule for a release name; it also keeps a name
 // from being read as a flag.
-var releaseName = regexp.MustCompile(`^[a-z0-9]([a-z0-9.-]{0,51}[a-z0-9])?$`)
+var releaseName = lazyre.New(`^[a-z0-9]([a-z0-9.-]{0,51}[a-z0-9])?$`)
 
 var errBadRelease = errors.New("not a helm release name")
 
@@ -255,7 +255,7 @@ func (h Helm) Values(ctx context.Context, name string, revision int) (string, er
 }
 
 // secretKey is a YAML key whose value is likely a secret.
-var secretKey = regexp.MustCompile(`(?i)(pass(word|wd)?|secret|token|api[_-]?key|private[_-]?key|credential|auth)`)
+var secretKey = lazyre.New(`(?i)(pass(word|wd)?|secret|token|api[_-]?key|private[_-]?key|credential|auth)`)
 
 // MaskValues replaces the value of every secret-looking YAML key with
 // dots; nested maps (a key with no value) are kept as they are.

@@ -10,9 +10,10 @@ package difforder
 
 import (
 	"path"
-	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // File is one changed file: its workspace-relative name and both texts
@@ -221,10 +222,10 @@ func isContract(base, ext, dirs string) bool {
 // constant or variable (column 0 only: a local variable says nothing
 // about other files). Group 1 is the defined name.
 var (
-	defRE = regexp.MustCompile(`^\s*(?:export\s+)?(?:default\s+)?(?:pub(?:\([a-z]+\))?\s+)?(?:public\s+|private\s+|protected\s+|internal\s+)?(?:static\s+|abstract\s+|final\s+|async\s+)*` +
+	defRE = lazyre.New(`^\s*(?:export\s+)?(?:default\s+)?(?:pub(?:\([a-z]+\))?\s+)?(?:public\s+|private\s+|protected\s+|internal\s+)?(?:static\s+|abstract\s+|final\s+|async\s+)*` +
 		`(?:func\s+(?:\([^)]*\)\s*)?|type\s+|def\s+|class\s+|interface\s+|struct\s+|enum\s+|trait\s+|fn\s+|function\s+|record\s+)` +
 		`([A-Za-z_][A-Za-z0-9_]*)`)
-	topRE = regexp.MustCompile(`^(?:export\s+)?(?:pub\s+)?(?:const|var|let|static)\s+([A-Za-z_][A-Za-z0-9_]*)`)
+	topRE = lazyre.New(`^(?:export\s+)?(?:pub\s+)?(?:const|var|let|static)\s+([A-Za-z_][A-Za-z0-9_]*)`)
 )
 
 // defName is the name a line defines ("" when none).

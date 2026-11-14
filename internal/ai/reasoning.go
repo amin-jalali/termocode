@@ -2,9 +2,10 @@ package ai
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Reasoning level (OMX-5): how hard the model thinks before it answers.
@@ -79,7 +80,7 @@ func reasoningOf(req Request, cfg Config) string {
 	return NormalizeReasoning(cfg.Reasoning)
 }
 
-var claudeVersionRe = regexp.MustCompile(`claude-(?:opus|sonnet|haiku|fable|mythos)-(\d+)(?:-(\d+))?`)
+var claudeVersionRe = lazyre.New(`claude-(?:opus|sonnet|haiku|fable|mythos)-(\d+)(?:-(\d+))?`)
 
 // claudeVersion is the major.minor of a Claude model id (ok=false when
 // the id does not say: a proxy's own name).
@@ -131,7 +132,7 @@ func addAnthropicReasoning(body map[string]any, model, level string) {
 	body["output_config"] = map[string]any{"effort": level}
 }
 
-var openAIReasoningModelRe = regexp.MustCompile(`^(?:openai/)?(?:o[1-9]|gpt-[5-9])`)
+var openAIReasoningModelRe = lazyre.New(`^(?:openai/)?(?:o[1-9]|gpt-[5-9])`)
 
 // openAIEffort maps a level onto OpenAI's low / medium / high.
 func openAIEffort(level string) string {

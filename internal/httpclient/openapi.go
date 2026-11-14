@@ -6,12 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 
 	yaml "go.yaml.in/yaml/v3"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // MaxOpenAPIBytes caps the spec file an import reads.
@@ -257,7 +258,7 @@ func (im *openAPIImporter) params(item, op map[string]any) []openAPIParam {
 	return out
 }
 
-var pathParamRe = regexp.MustCompile(`\{([^{}]+)\}`)
+var pathParamRe = lazyre.New(`\{([^{}]+)\}`)
 
 func (im *openAPIImporter) request(path, meth string, item, op map[string]any) string {
 	params := im.params(item, op)

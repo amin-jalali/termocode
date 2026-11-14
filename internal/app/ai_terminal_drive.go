@@ -12,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -189,7 +190,7 @@ func aiTermPromptKind(line string) string {
 	return ""
 }
 
-var aiTermSecretRe = regexp.MustCompile(`(?i)\b(password|passphrase|passcode|pin)\b.*:\s*$`)
+var aiTermSecretRe = lazyre.New(`(?i)\b(password|passphrase|passcode|pin)\b.*:\s*$`)
 
 // aiTermAsksSecret reports whether line is a password-like prompt.
 func aiTermAsksSecret(line string) bool {

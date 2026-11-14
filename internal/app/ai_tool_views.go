@@ -1,12 +1,12 @@
 package app
 
 import (
-	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/blocks"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Phone views of termocode's tools without a registry view (mobile plan,
@@ -132,7 +132,7 @@ func webFetchView(_ map[string]any, out string) *blocks.Block {
 	return ai.ViewDone(b)
 }
 
-var workflowCountsRe = regexp.MustCompile(`\(valid: (\d+) step\(s\), (\d+) write\(s\)`)
+var workflowCountsRe = lazyre.New(`\(valid: (\d+) step\(s\), (\d+) write\(s\)`)
 
 // workflowDraftView: a card of the saved workflow file (name, file, steps,
 // writes, trusted). Nothing ran; the card says so.
@@ -204,9 +204,9 @@ func raceStartView(args map[string]any, out string) *blocks.Block {
 }
 
 var (
-	testsCountsRe = regexp.MustCompile(`(\d+) passed, (\d+) failed, (\d+) skipped\.`)
-	testsFailRe   = regexp.MustCompile(`^- (.+?) \(([^()]*):(\d+)\)(?:: (.*))?$`)
-	testsPkgRe    = regexp.MustCompile(`^- (.+?) \(([^()]*)\): (.*)$`)
+	testsCountsRe = lazyre.New(`(\d+) passed, (\d+) failed, (\d+) skipped\.`)
+	testsFailRe   = lazyre.New(`^- (.+?) \(([^()]*):(\d+)\)(?:: (.*))?$`)
+	testsPkgRe    = lazyre.New(`^- (.+?) \(([^()]*)\): (.*)$`)
 )
 
 // testsResultsView: a status line when nothing failed (✓ passed, ◐ still

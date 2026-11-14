@@ -18,12 +18,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Task states.
@@ -106,7 +106,7 @@ func (s *Store) now() time.Time {
 	return time.Now()
 }
 
-var idRe = regexp.MustCompile(`^t[0-9]{8}-[0-9]{6}-[0-9a-f]{6}$`)
+var idRe = lazyre.New(`^t[0-9]{8}-[0-9]{6}-[0-9a-f]{6}$`)
 
 // ValidID reports a task id (never a path).
 func ValidID(id string) bool { return idRe.MatchString(id) }

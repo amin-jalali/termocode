@@ -2,9 +2,9 @@ package workflow
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/secrets"
 )
 
@@ -26,12 +26,12 @@ import (
 // (internal/mcp secretLiteralRe), with a minimum length, so words like
 // "task-list" do not match. A prefix may follow a digit or "_"
 // ("0sk-…", "key_ghp_…"), only not a letter; group 1 is that byte.
-var tokenRe = regexp.MustCompile(`(?i)(^|[^a-z])((ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|glpat-[A-Za-z0-9_-]{16,}|xox[pbas]-[A-Za-z0-9-]{10,}|sk-[A-Za-z0-9_-]{20,}|lin_api_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}\b|bearer\s+[A-Za-z0-9._~+/=-]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)`)
+var tokenRe = lazyre.New(`(?i)(^|[^a-z])((ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|glpat-[A-Za-z0-9_-]{16,}|xox[pbas]-[A-Za-z0-9-]{10,}|sk-[A-Za-z0-9_-]{20,}|lin_api_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}\b|bearer\s+[A-Za-z0-9._~+/=-]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)`)
 
 var (
-	refRe       = regexp.MustCompile(`\$\{\s*([A-Za-z]+)\s*:([^}]*)\}`)
-	secretRefRe = regexp.MustCompile(`\$\{\s*secret\s*:`)
-	envRefRe    = regexp.MustCompile(`(?i)\$\{\s*(env|dotenv)\s*:`)
+	refRe       = lazyre.New(`\$\{\s*([A-Za-z]+)\s*:([^}]*)\}`)
+	secretRefRe = lazyre.New(`\$\{\s*secret\s*:`)
+	envRefRe    = lazyre.New(`(?i)\$\{\s*(env|dotenv)\s*:`)
 )
 
 // hideTokens replaces every token-like literal in s.

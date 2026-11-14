@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/workflow/run"
 )
 
@@ -16,7 +16,7 @@ import (
 // ledger.Root of the workspace). It is the engine's RunFileWriter.
 type RunFiles struct{ Root string }
 
-var runIDRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
+var runIDRe = lazyre.New(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
 
 func (s RunFiles) path(id string) (string, error) {
 	if !runIDRe.MatchString(id) {

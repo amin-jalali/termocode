@@ -4,11 +4,11 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/search"
 )
 
@@ -99,7 +99,7 @@ type ruleFront struct {
 	body                  string
 }
 
-var ruleNameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,47}$`)
+var ruleNameRe = lazyre.New(`^[a-z0-9][a-z0-9_-]{0,47}$`)
 
 // ruleName is the #name of a rule: the front matter name when it is a
 // short lower-case word, else the file name without its extension

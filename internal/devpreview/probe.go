@@ -10,13 +10,13 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
 	"unicode/utf8"
 
 	"github.com/amin-jalali/termocode/internal/crash"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Check is what one probe of a target saw.
@@ -49,7 +49,7 @@ const ProbeTimeout = 2 * time.Second
 // maxBody is how much of the page a probe reads to find the title.
 const maxBody = 64 << 10
 
-var titleRe = regexp.MustCompile(`(?is)<title[^>]*>(.*?)</title>`)
+var titleRe = lazyre.New(`(?is)<title[^>]*>(.*?)</title>`)
 
 // errNotLocal: a probe or redirect left loopback.
 var errNotLocal = errors.New("not a local address")

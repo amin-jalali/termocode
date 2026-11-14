@@ -18,11 +18,11 @@ package tasklist
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/agentdag"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // MaxTasks is the most open tasks one list runs (a run has at most
@@ -51,11 +51,11 @@ type List struct {
 }
 
 var (
-	itemRe  = regexp.MustCompile(`^(\s*)(?:[-*+]|\d+[.)])\s+\[([ xX])\]\s*(.*)$`)
-	numRe   = regexp.MustCompile(`^(\d+(?:\.\d+)*)[.)]?\s+`)
-	tagRe   = regexp.MustCompile(`\((id|after)\s*:\s*([^)]*)\)`)
-	idRe    = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`)
-	fenceRe = regexp.MustCompile("^\\s*(```|~~~)")
+	itemRe  = lazyre.New(`^(\s*)(?:[-*+]|\d+[.)])\s+\[([ xX])\]\s*(.*)$`)
+	numRe   = lazyre.New(`^(\d+(?:\.\d+)*)[.)]?\s+`)
+	tagRe   = lazyre.New(`\((id|after)\s*:\s*([^)]*)\)`)
+	idRe    = lazyre.New(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`)
+	fenceRe = lazyre.New("^\\s*(```|~~~)")
 )
 
 type raw struct {

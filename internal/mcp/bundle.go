@@ -9,9 +9,10 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // MCP bundles (MCPX-31): a .mcpb file is a zip with manifest.json and
@@ -232,7 +233,7 @@ func extractOne(f *zip.File, target string, perm os.FileMode) error {
 	return out.Close()
 }
 
-var bundleRef = regexp.MustCompile(`\$\{([^}]*)\}`)
+var bundleRef = lazyre.New(`\$\{([^}]*)\}`)
 
 // Entry is EntryNamed without the name.
 func (b *Bundle) Entry(dir string, values map[string]string) (map[string]any, error) {

@@ -2,12 +2,12 @@ package app
 
 import (
 	"context"
-	"regexp"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/dbclient"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -24,7 +24,7 @@ const (
 	confirmKindDBSavepointRollback confirmKindEnum = 5382
 )
 
-var dbSavepointName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]{0,62}$`)
+var dbSavepointName = lazyre.New(`^[A-Za-z_][A-Za-z0-9_]{0,62}$`)
 
 // databaseSavepointKey is the session key with the open transaction of the
 // connection the user works on (the only open one when none is in view).

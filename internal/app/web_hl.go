@@ -1,10 +1,9 @@
 package app
 
 import (
-	"regexp"
-
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/webhl"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
@@ -97,7 +96,7 @@ type webLuaHlRes struct {
 }
 
 // webHlGroupName is what a capture name may look like on the wire.
-var webHlGroupName = regexp.MustCompile(`^[a-z0-9_.-]{1,48}$`)
+var webHlGroupName = lazyre.New(`^[a-z0-9_.-]{1,48}$`)
 
 // webOpBufHl reads the colours off Update: a first parse of a big file
 // takes a moment.

@@ -1,17 +1,17 @@
 package toast
 
 import (
-	"regexp"
 	"strings"
 
 	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Recognize file-operation errors without rearranging ordinary sentences:
 // the operation starts the text or follows one-word labels ("save: open
 // …"), as Go's path errors print. Keep the original Toast detail intact
 // for logs and other screens.
-var pathErrorText = regexp.MustCompile(`^((?:[^\s:]+: )*(?:open|stat|lstat|read|write|mkdir|chmod|chown|remove|unlink|rename|link|symlink|readdir) )(.+): ([^:\n]+)$`)
+var pathErrorText = lazyre.New(`^((?:[^\s:]+: )*(?:open|stat|lstat|read|write|mkdir|chmod|chown|remove|unlink|rename|link|symlink|readdir) )(.+): ([^:\n]+)$`)
 
 func errorDetailText(text string, width int) string {
 	parts := pathErrorText.FindStringSubmatch(text)

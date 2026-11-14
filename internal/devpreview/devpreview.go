@@ -11,9 +11,10 @@ package devpreview
 import (
 	"net"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Target is one local address worth previewing.
@@ -25,10 +26,10 @@ type Target struct {
 
 // urlRe finds a loopback http(s) address. The host list is closed on
 // purpose: a LAN or public address is not "the app on this machine".
-var urlRe = regexp.MustCompile(`(?i)\bhttps?://(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1?\])(?::\d{1,5})?(?:/[^\s"'<>\x60)\]]*)?`)
+var urlRe = lazyre.New(`(?i)\bhttps?://(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1?\])(?::\d{1,5})?(?:/[^\s"'<>\x60)\]]*)?`)
 
 // ansiRe matches CSI and OSC escape sequences (colors, links, titles).
-var ansiRe = regexp.MustCompile(`\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)`)
+var ansiRe = lazyre.New(`\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)`)
 
 // StripANSI drops terminal escape sequences, so a colored "Local:
 // http://localhost:5173/" still reads as one address.

@@ -4,18 +4,19 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
-	"regexp"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // CTX-39: helm repo add and chart install (writes: the app asks first,
 // the AI never runs them), and the Kustomize preview (read only).
 
 var (
-	repoName     = regexp.MustCompile(`^[a-z0-9]([a-z0-9_.-]{0,62})$`)
-	repoURL      = regexp.MustCompile(`^(https?|oci)://[^\s'"]+$`)
-	chartRef     = regexp.MustCompile(`^([a-z0-9][a-z0-9_.-]*/[a-z0-9][a-z0-9_.-]*|oci://[^\s'"]+)$`)
-	chartVersion = regexp.MustCompile(`^[A-Za-z0-9.+_~^<>=*-]{1,64}$`)
+	repoName     = lazyre.New(`^[a-z0-9]([a-z0-9_.-]{0,62})$`)
+	repoURL      = lazyre.New(`^(https?|oci)://[^\s'"]+$`)
+	chartRef     = lazyre.New(`^([a-z0-9][a-z0-9_.-]*/[a-z0-9][a-z0-9_.-]*|oci://[^\s'"]+)$`)
+	chartVersion = lazyre.New(`^[A-Za-z0-9.+_~^<>=*-]{1,64}$`)
 )
 
 // CheckRepo refuses a repo name or URL helm would misread.

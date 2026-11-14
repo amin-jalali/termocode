@@ -1,17 +1,18 @@
 package diagram
 
 import (
-	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/mattn/go-runewidth"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 var (
-	seqMsg  = regexp.MustCompile(`^(.+?)\s*(-->>|->>|-->|->|--x|-x|--\)|-\))\s*[+-]?\s*(.+?)\s*(?::(.*))?$`)
-	seqNote = regexp.MustCompile(`(?i)^note\s+(over|left of|right of)\s+([^:]+?)\s*:(.*)$`)
-	seqPart = regexp.MustCompile(`(?i)^(participant|actor)\s+(.+?)(?:\s+as\s+(.+))?$`)
+	seqMsg  = lazyre.New(`^(.+?)\s*(-->>|->>|-->|->|--x|-x|--\)|-\))\s*[+-]?\s*(.+?)\s*(?::(.*))?$`)
+	seqNote = lazyre.New(`(?i)^note\s+(over|left of|right of)\s+([^:]+?)\s*:(.*)$`)
+	seqPart = lazyre.New(`(?i)^(participant|actor)\s+(.+?)(?:\s+as\s+(.+))?$`)
 )
 
 type seqEvent struct {

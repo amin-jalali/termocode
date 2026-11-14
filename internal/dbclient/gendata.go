@@ -3,10 +3,11 @@ package dbclient
 import (
 	"fmt"
 	"math/rand/v2"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Test data generator (DBX-20): INSERT statements with made-up rows for
@@ -123,8 +124,8 @@ func genIsInt(t string) bool {
 }
 
 var (
-	genEnumRe = regexp.MustCompile(`^(?:enum|set)\((.*)\)$`)
-	genLenRe  = regexp.MustCompile(`\((\d+)\)`)
+	genEnumRe = lazyre.New(`^(?:enum|set)\((.*)\)$`)
+	genLenRe  = lazyre.New(`\((\d+)\)`)
 )
 
 var (

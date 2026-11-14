@@ -3,7 +3,6 @@ package app
 import (
 	"encoding/json"
 	"errors"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -11,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/dbclient"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -34,8 +34,8 @@ func dbEditValue(col string, v, old dbclient.Cell, check bool) dbclient.EditValu
 }
 
 var (
-	dbUUIDText = regexp.MustCompile(`^(?i)\{?[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}\}?$`)
-	dbTypeArgs = regexp.MustCompile(`\(.*\)`)
+	dbUUIDText = lazyre.New(`^(?i)\{?[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}\}?$`)
+	dbTypeArgs = lazyre.New(`\(.*\)`)
 )
 
 // dbCheckCellType says why value does not fit a column of type typ (nil:
