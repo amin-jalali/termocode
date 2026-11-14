@@ -5,6 +5,8 @@ import (
 	"testing"
 	"unicode/utf16"
 
+	"github.com/alecthomas/chroma/v2"
+
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -89,3 +91,53 @@ func TestHlChromaWindowColumnsCap(t *testing.T) {
 }
 
 func u16(s string) int { return len(utf16.Encode([]rune(s))) }
+
+// Each chroma token kind maps to the tree-sitter capture name the page
+// colours (the same names as nvim's highlight groups), and control-flow
+// keywords get their own group.
+func TestWebHlGroupOfMapsEveryKind(t *testing.T) {
+	for _, c := range []struct {
+		tt   chroma.TokenType
+		v    string
+		want string
+	}{
+		{chroma.CommentPreproc, "#include", "keyword.directive"},
+		{chroma.CommentSingle, "// x", "comment"},
+		{chroma.KeywordType, "int", "type.builtin"},
+		{chroma.KeywordConstant, "true", "constant.builtin"},
+		{chroma.KeywordNamespace, "import", "keyword.import"},
+		{chroma.Keyword, " if ", "keyword.conditional"},
+		{chroma.Keyword, "func", "keyword"},
+		{chroma.LiteralStringEscape, `\n`, "string.escape"},
+		{chroma.LiteralStringRegex, "/a/", "string.regexp"},
+		{chroma.LiteralStringSymbol, ":a", "string.special"},
+		{chroma.LiteralStringDouble, `"a"`, "string"},
+		{chroma.LiteralNumberInteger, "1", "number"},
+		{chroma.NameFunction, "f", "function"},
+		{chroma.NameBuiltin, "len", "function.builtin"},
+		{chroma.NameClass, "T", "type"},
+		{chroma.NameNamespace, "fmt", "module"},
+		{chroma.NameBuiltinPseudo, "self", "variable.builtin"},
+		{chroma.NameConstant, "Pi", "constant"},
+		{chroma.NameDecorator, "@x", "attribute"},
+		{chroma.NameTag, "div", "tag"},
+		{chroma.NameAttribute, "class", "tag.attribute"},
+		{chroma.NameLabel, "L", "label"},
+		{chroma.NameProperty, "p", "property"},
+		{chroma.NameVariable, "x", "variable"},
+		{chroma.OperatorWord, "and", "keyword.operator"},
+		{chroma.Operator, "+", "operator"},
+		{chroma.Punctuation, "(", "punctuation"},
+		{chroma.GenericHeading, "# h", "markup.heading"},
+		{chroma.GenericStrong, "**b**", "markup.strong"},
+		{chroma.GenericEmph, "*i*", "markup.italic"},
+		{chroma.GenericInserted, "+a", "diff.plus"},
+		{chroma.GenericDeleted, "-a", "diff.minus"},
+		{chroma.Error, "?", ""},
+		{chroma.Text, "x", ""},
+	} {
+		if got := webHlGroupOf(c.tt, c.v); got != c.want {
+			t.Errorf("%v %q: %q, want %q", c.tt, c.v, got, c.want)
+		}
+	}
+}
