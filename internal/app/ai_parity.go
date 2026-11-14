@@ -131,6 +131,7 @@ var aiAgentsNotForAI = map[string]string{
 	"acp-thread":                 "it starts an outside agent program: the user starts and ends it",
 	"agent-account-switch":       "AI provider, credentials and approvals stay with the user; it starts an outside agent as another of the user's accounts",
 	"agent-account-use":          "AI provider, credentials and approvals stay with the user; opens a picker or prompt that only the user can answer; use a typed tool",
+	"agent-swap-account":         "AI provider, credentials and approvals stay with the user; it replaces the sign-in file of an outside agent CLI",
 	"agent-auto-accept-toggle":   "AI provider, credentials and approvals stay with the user; it lets termocode answer an outside agent's permission prompts",
 	"agent-auto-continue-toggle": "AI provider, credentials and approvals stay with the user; it lets termocode type into an outside agent's tab",
 	"agent-chat-view":            "shows an outside agent's own session file; only the user opens it (owner decision D1)",
@@ -231,6 +232,7 @@ var aiAgentsNotForAI = map[string]string{
 	"chat.home":                  "the AI is the chat: it answers in this chat instead",
 	"chat.new":                   "the AI is the chat: it answers in this chat instead",
 	"chat.pin":                   "the page pins its own open chat; nothing changes on the laptop",
+	"chat.queue":                 "the phone lines up the user's own next messages; the AI answers in this chat and never writes the user's turn",
 	"chat.side":                  "the AI is the chat: it answers in this chat instead",
 	"chat.stop":                  "the AI is the chat: it answers in this chat instead (it ends its own turn by finishing its answer)",
 	"mcp-import-other":           "AI provider, credentials and approvals stay with the user (importing servers is the user's)",
@@ -433,6 +435,10 @@ var aiRestParity = map[string]string{
 
 // aiRestNotForAI are the rest of the GUI's actions the AI does not get.
 var aiRestNotForAI = map[string]string{
+	"buf.cursor":                    "the page's own caret, shown to the other pages; the AI has no caret",
+	"debug-sidecar-start":           "opens a card only the user answers; it starts a container",
+	"push.list":                     "the user's own list of push devices",
+	"push.remove":                   "the user removes one of their own push devices",
 	"app.watch_token":               "pairing, sign-in and the web panel's security stay with the user",
 	"clipboard-history":             "reads the user's clipboard history, which may hold passwords",
 	"control.ask":                   "pairing, sign-in and the web panel's security stay with the user",

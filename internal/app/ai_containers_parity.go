@@ -170,6 +170,7 @@ var aiContainersParity = map[string]string{
 
 // aiContainersNotForAI are the GUI actions the AI does not get, each with why.
 var aiContainersNotForAI = map[string]string{
+	"kubernetes-add-cluster": "the AI never edits the kubeconfig; only the person does, after a card with the diff",
 	// The user's own view settings: the tools list everything, in full.
 	"containers-sort":        "the sort order of the user's Containers view; containers_list lists every container",
 	"containers-toggle-size": "a column of the user's Containers view; containers_list and containers_inspect give the sizes",

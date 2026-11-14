@@ -154,6 +154,9 @@ var aiDBParity = map[string]string{
 
 // aiDBNotForAI are the GUI actions the AI does not get, each with why.
 var aiDBNotForAI = map[string]string{
+	"db-pause-run":      "it stops the output of a run the user started; only the user decides",
+	"db-tsqlt-run":      "it runs the user's test procedures after a card only the user answers; the AI runs SQL with db_query",
+	"db.export_parquet": "the page turns the rows it shows into a file for the user to save; db_data op export writes files for the AI",
 	// The AI is the chat: these ask the chat itself.
 	"db-ai-explain-query": "the AI is the chat: it explains a query when asked",
 	"db-ai-fix-error":     "the AI is the chat: it fixes a query error when asked",
