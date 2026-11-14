@@ -74,3 +74,16 @@ func TestLongWordStaysInsideTheCardAndButtonsMatch(t *testing.T) {
 		}
 	}
 }
+
+// A long path is cut after one of its slashes, not inside a name.
+func TestLongPathIsCutAfterASlash(t *testing.T) {
+	got := cutLongWords([]string{"/private/var/folders/h5/t85nd63d71x27_8gl5gw3l_w0000gn/T/TestUpdate/001/termocode.old"}, 40)
+	for _, piece := range got[:len(got)-1] {
+		if !strings.HasSuffix(piece, "/") || ansi.StringWidth(piece) > 40 {
+			t.Errorf("piece %q: want at most 40 cells, ending in /", piece)
+		}
+	}
+	if strings.Join(got, "") != "/private/var/folders/h5/t85nd63d71x27_8gl5gw3l_w0000gn/T/TestUpdate/001/termocode.old" {
+		t.Errorf("pieces %q lose text", got)
+	}
+}
