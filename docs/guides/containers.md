@@ -501,7 +501,7 @@ first time). Each entry has a `name`, a `view` (`containers`, `images`,
 
 ```json
 { "commands": [
-  { "name": "Top processes", "view": "containers", "key": "f",
+  { "name": "Top processes", "view": "containers", "key": "B",
     "argv": ["docker", "top", "{{id}}"] }
 ] }
 ```

@@ -30,7 +30,7 @@ const customCommandsTemplate = `{
     {
       "name": "Top processes",
       "view": "containers",
-      "key": "f",
+      "key": "B",
       "argv": ["docker", "top", "{{id}}"]
     },
     {
