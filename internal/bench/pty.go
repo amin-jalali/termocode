@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/spawn"
-	"github.com/charmbracelet/x/ansi"
 	"github.com/creack/pty"
 )
 
@@ -27,10 +26,12 @@ type Spec struct {
 }
 
 // Session is a program running in a PTY. All output is kept with its size
-// so tests can ask "how long until this text" and "how many bytes".
+// so tests can ask "how long until this text" and "how many bytes"; text is
+// matched on the screen the output draws (scr), as a user sees it.
 type Session struct {
 	mu    sync.Mutex
 	buf   []byte
+	scr   *screen
 	cond  chan struct{} // closed and replaced on every new output
 	ptmx  *os.File
 	cmd   interface{ Wait() error }
@@ -58,6 +59,8 @@ func Start(spec Spec) (*Session, error) {
 		return nil, err
 	}
 	s := &Session{ptmx: ptmx, cmd: cmd, pid: cmd.Process.Pid, cond: make(chan struct{}), exitc: make(chan struct{})}
+	var replies []byte // answers to terminal queries, sent after the lock
+	s.scr = newScreen(int(rows), int(cols), func(b []byte) { replies = append(replies, b...) })
 	s.wg.Go(func() {
 		tmp := make([]byte, 32*1024)
 		for {
@@ -65,10 +68,16 @@ func Start(spec Spec) (*Session, error) {
 			if n > 0 {
 				s.mu.Lock()
 				s.buf = append(s.buf, tmp[:n]...)
+				s.scr.Write(tmp[:n])
+				out := replies
+				replies = nil
 				old := s.cond
 				s.cond = make(chan struct{})
 				s.mu.Unlock()
 				close(old)
+				if len(out) > 0 {
+					_, _ = ptmx.Write(out) // the program waits for it; a closed PTY means it is gone
+				}
 			}
 			if err != nil {
 				if !errors.Is(err, io.EOF) {
@@ -98,40 +107,37 @@ func (s *Session) BytesOut() int {
 	return len(s.buf)
 }
 
-// Text is everything written so far, without escape sequences.
+// Text is the screen the output drew so far, one line per row.
 func (s *Session) Text() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return ansi.Strip(string(s.buf))
+	return s.scr.Text()
 }
 
 // Mark is the current output offset; pass it to WaitAfter.
 func (s *Session) Mark() int { return s.BytesOut() }
 
-// WaitAfter waits until match is true for the text written after mark. It
-// returns the time since the call.
-func (s *Session) WaitAfter(mark int, match func(text string) bool, timeout time.Duration) (time.Duration, error) {
+// WaitAfter waits until the program wrote something after mark (any time
+// when mark is 0) and match is true for the screen. It returns the time
+// since the call.
+func (s *Session) WaitAfter(mark int, match func(screen string) bool, timeout time.Duration) (time.Duration, error) {
 	start := time.Now()
 	deadline := time.After(timeout)
-	for {
+	look := func() (bool, chan struct{}) {
 		s.mu.Lock()
-		var tail string
-		if mark <= len(s.buf) {
-			tail = ansi.Strip(string(s.buf[mark:]))
-		}
-		c := s.cond
-		s.mu.Unlock()
-		if match(tail) {
+		defer s.mu.Unlock()
+		ok := (mark == 0 || len(s.buf) > mark) && match(s.scr.Text())
+		return ok, s.cond
+	}
+	for {
+		ok, c := look()
+		if ok {
 			return time.Since(start), nil
 		}
 		select {
 		case <-c:
 		case <-s.exitc:
-			// last look at the final output
-			s.mu.Lock()
-			tail = ansi.Strip(string(s.buf[min(mark, len(s.buf)):]))
-			s.mu.Unlock()
-			if match(tail) {
+			if ok, _ := look(); ok { // last look at the final screen
 				return time.Since(start), nil
 			}
 			return time.Since(start), errors.New("program exited before the screen matched")
@@ -141,22 +147,53 @@ func (s *Session) WaitAfter(mark int, match func(text string) bool, timeout time
 	}
 }
 
-// WaitForText waits for text anywhere in the output so far or later.
+// WaitForText waits for text on the screen now or later.
 func (s *Session) WaitForText(text string, timeout time.Duration) (time.Duration, error) {
 	return s.WaitAfter(0, func(t string) bool { return strings.Contains(t, text) }, timeout)
 }
 
-// TimeKey sends key and returns the time until want shows in the output
-// after it, plus the bytes the program wrote in the meantime (a frame size).
+// TimeKey sends key and returns the time until want shows on the screen at
+// a place it was not before the key (a "q" already on screen does not
+// count), plus the bytes the program wrote in the meantime (a frame size).
 func (s *Session) TimeKey(key []byte, want string, timeout time.Duration) (time.Duration, int, error) {
-	mark := s.Mark()
+	s.mu.Lock()
+	mark := len(s.buf)
+	before := matchSpots(s.scr.Text(), want)
+	s.mu.Unlock()
 	start := time.Now()
 	if err := s.Send(key); err != nil {
 		return 0, 0, err
 	}
-	_, err := s.WaitAfter(mark, func(t string) bool { return strings.Contains(t, want) }, timeout)
+	_, err := s.WaitAfter(mark, func(t string) bool {
+		for spot := range matchSpots(t, want) {
+			if !before[spot] {
+				return true
+			}
+		}
+		return false
+	}, timeout)
 	d := time.Since(start)
 	return d, s.BytesOut() - mark, err
+}
+
+// matchSpots is where want shows on the screen: row and byte offset of
+// every match.
+func matchSpots(scr, want string) map[[2]int]bool {
+	spots := map[[2]int]bool{}
+	if want == "" {
+		return spots
+	}
+	for row, line := range strings.Split(scr, "\n") {
+		for off := 0; ; {
+			i := strings.Index(line[off:], want)
+			if i < 0 {
+				break
+			}
+			spots[[2]int{row, off + i}] = true
+			off += i + 1
+		}
+	}
+	return spots
 }
 
 // Settle waits until the program has written nothing for quiet (or timeout)
