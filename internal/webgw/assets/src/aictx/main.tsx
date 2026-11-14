@@ -15,7 +15,10 @@ import { watchSends } from "./secret";
 import { askSide } from "./side";
 import { AS } from "./strings";
 
-export { exportText } from "./export";
+import { exportText, type Fmt } from "./export";
+import type { DBRowsView } from "../state/more";
+
+export { exportText };
 /** look is the desktop chat's look (look.tsx, lib/toolblocks.ts). */
 export { look } from "./look";
 export { pickMCP } from "./mcp";
@@ -128,4 +131,17 @@ export function grid(g: GridAt): void {
     if (col >= 0) it.column = r.columns[col];
   }
   H.openMenu(g.x, g.y, label(it), [{ label: H.t("ai.attach"), id: "ai-add", run: () => void add(it) }]);
+}
+
+/** exportMenu is a grid's Export menu at x, y (Export Result…, the
+ * grid's button): CSV, JSON and Markdown are written here and handed to
+ * save; Parquet asks the laptop (parquet, lib/parquet.ts). */
+export function exportMenu(x: number, y: number, r: DBRowsView, name: string, save: (b: Blob, name: string) => void, parquet: () => void): void {
+  const as = (f: Fmt) => () => save(new Blob([exportText(r, f)], { type: "text/plain" }), name + "." + f);
+  H.openMenu(x, y, H.t("dbv.export"), [
+    { label: "CSV", run: as("csv") },
+    { label: "JSON", run: as("json") },
+    { label: "Markdown", run: as("md") },
+    { label: "Parquet", run: parquet },
+  ]);
 }

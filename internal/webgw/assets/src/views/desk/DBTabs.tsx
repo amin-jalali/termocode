@@ -12,7 +12,6 @@
 // (what the grid shows: masked values stay masked).
 import { Fragment, h, type ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { Fmt } from "../../aictx/export";
 import { aiGrid, withAI } from "../../lib/aictx";
 import { mountDesk, setDesk, type DeskHandle } from "../../lib/deskeditor";
 import { sqlTab } from "../../lib/vtabs";
@@ -25,7 +24,6 @@ import { link, live } from "../../session";
 import { readDBRows, type DBCellView, type DBRowsView } from "../../state/more";
 import { t } from "../../strings";
 import { AskLaptop } from "../../ui/AskLaptop";
-import { openMenu } from "../../ui/ContextMenu";
 import { Cod } from "../../ui/icons";
 import { Act, Ask } from "../../ui/pane";
 import { Portal } from "../../ui/Portal";
@@ -54,13 +52,8 @@ function numeric(r: DBRowsView, j: number): boolean {
 /** exportMenu offers the formats under the button (or at x, y). */
 function exportMenu(e: MouseEvent | { x: number; y: number }, r: DBRowsView, name: string): void {
   const b = "currentTarget" in e ? (e.currentTarget as HTMLElement).getBoundingClientRect() : { left: e.x, bottom: e.y };
-  const save = (f: Fmt) => withAI((m) => saveBlob(new Blob([m.exportText(r, f)], { type: "text/plain" }), name + "." + f));
-  openMenu(b.left, b.bottom, t("dbv.export"), [
-    { label: "CSV", run: () => save("csv") },
-    { label: "JSON", run: () => save("json") },
-    { label: "Markdown", run: () => save("md") },
-    { label: "Parquet", run: () => saveParquet(r, name) },
-  ]);
+  // The menu and the text formats live in aictx.js (aictx/main.tsx), loaded on first use.
+  withAI((m) => m.exportMenu(b.left, b.bottom, r, name, saveBlob, () => saveParquet(r, name)));
 }
 
 /** exportNow is Export Result… of the command list (the open tab's grid). */

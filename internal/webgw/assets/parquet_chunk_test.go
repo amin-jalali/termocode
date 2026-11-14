@@ -33,7 +33,7 @@ func TestParquetChunkHoldsTheExport(t *testing.T) {
 	if !strings.Contains(wb, `import("/assets/parquet.js")`) {
 		t.Error("the workbench does not load /assets/parquet.js")
 	}
-	if !strings.Contains(wb, `"Parquet"`) {
+	if !strings.Contains(readBuilt(t, "aictx.js"), `"Parquet"`) { // the export menu lives in aictx.js (aictx/main.tsx)
 		t.Error("the export menu has no Parquet entry")
 	}
 	if strings.Contains(readBuilt(t, "index.html"), "parquet.js") {
