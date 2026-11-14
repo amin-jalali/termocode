@@ -99,7 +99,8 @@ func TestUpdateCardInstallAndRollback(t *testing.T) {
 	tm.Send(KeyEnter)
 	tm.WaitText("Install termocode", 30*time.Second)
 	tm.settle()
-	tm.ClickText("Install") // Cancel has the focus
+	tm.Send("\x1b[C") // Cancel has the focus: → Install (keys, as for Update above; a click missed on macOS)
+	tm.Send(KeyEnter)
 	waitUntil(t, "the new binary in place", 30*time.Second, func() bool {
 		b, _ := os.ReadFile(exe)
 		return string(b) == updNewBinary
