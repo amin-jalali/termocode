@@ -523,10 +523,16 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		m.menuOpen = false
 		return m, nil
 	case findbar.SearchMsg:
+		// Searches run as commands: one for an older query can come after
+		// a newer one (or after Enter). The bar's text is the query.
+		if m.findOpen && msg.Query != m.find.Query() {
+			return m, nil
+		}
 		m.applySearch(msg.Query)
 		return m, nil
 	case findbar.FindNextMsg:
 		if m.nvim != nil {
+			m.syncFindQuery() // Enter before the last key's search came back
 			_ = m.nvim.Command("silent! normal! n")
 			// Cursor moved → searchcount().current changes; refresh the
 			// indicator so "3/12" advances to "4/12" etc.
@@ -535,6 +541,7 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 	case findbar.FindPrevMsg:
 		if m.nvim != nil {
+			m.syncFindQuery()
 			_ = m.nvim.Command("silent! normal! N")
 			m.find.SetMatchCount(m.fetchMatchCount())
 		}
@@ -1580,7 +1587,16 @@ func (m *Model) applySearch(q string) {
 	pattern := m.findbarPattern(q)
 	escaped := strings.ReplaceAll(pattern, "'", "''")
 	_ = m.nvim.Command(fmt.Sprintf("silent! let @/ = '%s' | set hlsearch", escaped))
+	m.findApplied = pattern
 	m.find.SetMatchCount(m.fetchMatchCount())
+}
+
+// syncFindQuery searches the find bar's query now when its search has
+// not been applied yet.
+func (m *Model) syncFindQuery() {
+	if q := m.find.Query(); m.findOpen && q != "" && m.findbarPattern(q) != m.findApplied {
+		m.applySearch(q)
+	}
 }
 
 // getNvimSelection returns the current visual selection (text only) when
@@ -1972,6 +1988,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		var cmd tea.Cmd
 		if !m.findOpen {
 			m.find = findbar.New()
+			m.findApplied = ""
 			if sel := m.getNvimSelection(); sel != "" {
 				m.find.SetQuery(sel)
 				m.applySearch(sel)
@@ -1991,6 +2008,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		var cmd tea.Cmd
 		if !m.findOpen {
 			m.find = findbar.New()
+			m.findApplied = ""
 			if sel := m.getNvimSelection(); sel != "" {
 				m.find.SetQuery(sel)
 				m.applySearch(sel)

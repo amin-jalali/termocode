@@ -686,6 +686,7 @@ type Model struct {
 	menuPath    string
 	menuTabID   int
 	findOpen    bool
+	findApplied string // the find bar pattern last put in @/ (applySearch)
 	replaceOpen bool
 	confirmOpen bool
 	confirmKind confirmKindEnum
