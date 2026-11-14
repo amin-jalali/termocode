@@ -466,3 +466,17 @@ func TestCovDBEditCheckCellType(t *testing.T) {
 		t.Fatal("transAdded")
 	}
 }
+
+// A console result that reloads with other columns after a submit forgets
+// its edit target, so the key is looked up again for the new columns.
+func TestCovDBEditRefreshNewColumnsDropsTheTarget(t *testing.T) {
+	m, _ := dbeModel(t)
+	dbeOpen(t, m, "orders")
+	tab := m.dbConsole().curTab()
+	tab.run.tv = nil
+	tab.target = &dbEditTarget{table: "orders"}
+	m.onDBRefresh(dbRefreshMsg{tab: tab, run: tab.run, result: dbclient.Result{Columns: []dbclient.Column{{Name: "x"}}}})
+	if tab.target != nil {
+		t.Fatalf("the old target stayed for the new columns: %+v", tab.target)
+	}
+}
