@@ -955,10 +955,11 @@ func (m *Model) onDBRefresh(msg dbRefreshMsg) tea.Cmd {
 	res.Notices = append(append([]string(nil), t.notes...), res.Notices...)
 	t.notes = nil // said once, for this load
 	res.Elapsed = t.run.result.Elapsed
+	oldCols := len(t.run.result.Columns)
 	t.run.result = res
 	if t.target != nil && t.run.tv == nil {
 		// A console result keeps its target: same query, same columns.
-		if len(res.Columns) != len(msg.run.result.Columns) {
+		if len(res.Columns) != oldCols {
 			t.target = nil
 		}
 	}
