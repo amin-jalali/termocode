@@ -1,6 +1,7 @@
 package bench
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -34,6 +35,7 @@ func TestParseStatusReadsRSSAndSwitches(t *testing.T) {
 }
 
 func TestTreeFindsGrandchildren(t *testing.T) {
+	needProc(t)
 	cmd := spawn.Command("sh", "-c", "sleep 30 & wait")
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
@@ -53,6 +55,7 @@ func TestTreeFindsGrandchildren(t *testing.T) {
 }
 
 func TestTakeSumsMemoryOverTheTree(t *testing.T) {
+	needProc(t)
 	cmd := spawn.Command("sh", "-c", "sleep 30 & wait")
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
@@ -70,6 +73,7 @@ func TestTakeSumsMemoryOverTheTree(t *testing.T) {
 }
 
 func TestMeasureIdleOfASleepingProgramIsNearZero(t *testing.T) {
+	needProc(t)
 	cmd := spawn.Command("sleep", "30")
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
@@ -87,5 +91,14 @@ func TestIdleDeltaIgnoresProcessesThatExited(t *testing.T) {
 	id := idleFrom(a, b, time.Second, 100)
 	if id.CPUSeconds != 0 || id.WakeupsPerSec != 0 {
 		t.Fatalf("%+v: a fall must count as zero, not negative", id)
+	}
+}
+
+// needProc skips where there is no /proc (macOS): the collector reads
+// process stats from there, and the bench runs on Linux.
+func needProc(t *testing.T) {
+	t.Helper()
+	if _, err := os.Stat("/proc/self/stat"); err != nil {
+		t.Skip("no /proc here: the process collector is Linux only")
 	}
 }

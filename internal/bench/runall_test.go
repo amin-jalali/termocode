@@ -7,6 +7,7 @@ import (
 )
 
 func TestRunAllCollectsResultsIdleAndSkips(t *testing.T) {
+	needProc(t)
 	ghost := Editor{ID: "ghost", Name: "Ghost", Bins: []string{"definitely-not-installed-xyz"}}
 	var logs []string
 	d := RunAll(RunOpts{
