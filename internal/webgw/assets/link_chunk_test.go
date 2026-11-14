@@ -1,6 +1,7 @@
 package assets
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -30,4 +31,50 @@ func TestLinkChunkHoldsTheSheet(t *testing.T) {
 	if strings.Contains(readBuilt(t, "index.html"), "link.js") {
 		t.Error("index.html names link.js: the page loads it on the first tap")
 	}
+}
+
+// Spec (NEW-7): the port preview's own strings in link.js have Persian
+// texts too (cut once for the budget): the same keys and placeholders,
+// picked when the page is in Persian (<html lang="fa">).
+func TestLinkChunkSpeaksPersian(t *testing.T) {
+	src := readSrc(t, "src/link.ts")
+	en, fa := linkStrings(t, src, "FS"), linkStrings(t, src, "FA")
+	if len(en) == 0 {
+		t.Fatal("link.ts has no FS strings")
+	}
+	for k, v := range en {
+		f, ok := fa[k]
+		if !ok || f == "" {
+			t.Errorf("link.ts FA lacks %s", k)
+			continue
+		}
+		if strings.Contains(v, "{port}") != strings.Contains(f, "{port}") {
+			t.Errorf("link.ts FA %s does not keep {port}: %q", k, f)
+		}
+	}
+	if len(fa) != len(en) {
+		t.Errorf("FA has %d keys, FS %d", len(fa), len(en))
+	}
+	if !strings.Contains(src, `documentElement.lang === "fa"`) {
+		t.Error("link.ts does not pick Persian by the page's language")
+	}
+	if !strings.Contains(readBuilt(t, "link.js"), "رساندن درگاه") {
+		t.Error("link.js has no Persian Forward port")
+	}
+}
+
+// linkStrings reads the object `const name = { k: "v", ... };` of src.
+func linkStrings(t *testing.T, src, name string) map[string]string {
+	t.Helper()
+	i := strings.Index(src, "const "+name+" = {")
+	if i < 0 {
+		return nil
+	}
+	body := src[i:]
+	body = body[:strings.Index(body, "};")]
+	out := map[string]string{}
+	for _, m := range regexp.MustCompile(`(?m)^\s*(\w+): "([^"]*)",`).FindAllStringSubmatch(body, -1) {
+		out[m[1]] = m[2]
+	}
+	return out
 }
