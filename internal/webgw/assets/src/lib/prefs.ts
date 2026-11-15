@@ -42,6 +42,8 @@ export interface Prefs {
   motion: Motion;
   /** haptics: short buzzes on the phone (on by default; off means never). */
   haptics: boolean;
+  /** moreRecent: the More list's last opened views, newest first (RM-3). */
+  moreRecent: string[];
 }
 
 /** QUIET is the shape of Prefs.quiet. */
@@ -51,7 +53,7 @@ export const QUIET = /^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$/;
 export const ROW_MIN = 10;
 export const ROW_MAX = 24;
 
-const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false, keysHintDone: false, rowPx: 0, wakeLock: false, notify: false, keys: [], vim: false, phoneHome: "tabs", quiet: "", motion: "system", haptics: true };
+const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false, keysHintDone: false, rowPx: 0, wakeLock: false, notify: false, keys: [], vim: false, phoneHome: "tabs", quiet: "", motion: "system", haptics: true, moreRecent: [] };
 
 function rowSize(v: unknown): number {
   return typeof v === "number" && Number.isInteger(v) && v >= ROW_MIN && v <= ROW_MAX ? v : 0;
@@ -81,6 +83,7 @@ function load(): Prefs {
       quiet: typeof v.quiet === "string" && QUIET.test(v.quiet) ? v.quiet : "",
       motion: pick(v.motion, ["system", "reduce"], defaults.motion),
       haptics: v.haptics !== false,
+      moreRecent: Array.isArray(v.moreRecent) ? v.moreRecent.filter((x): x is string => typeof x === "string" && /^[a-z-]{1,20}$/.test(x)).slice(0, 4) : [],
     };
   } catch {
     return defaults;

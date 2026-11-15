@@ -6,6 +6,7 @@
 // whatever needs input opens its view. At most 8 actions a ring (the
 // marking-menu budget: positions become muscle memory).
 import type { h as preactH, render as preactRender, VNode } from "preact";
+import type { useState as preactUseState } from "preact/hooks";
 import type { ReadonlySignal } from "@preact/signals";
 import type { Meta } from "../../../../webproto/proto";
 import type { Category, Item } from "../../../../../web/packages/radial-menu/src/menu";
@@ -34,6 +35,10 @@ export interface RadialHost {
   /** starts editing a file (lib/live.ts editing) */
   edit(path: string): void;
   showOnLaptop(path: string): void;
+  /** the More list's recent views (lib/prefs.ts) */
+  prefs: ReadonlySignal<{ moreRecent: string[] }>;
+  setPref(k: "moreRecent", v: string[]): void;
+  useState: typeof preactUseState;
 }
 
 /** The radial's own words (English, like the phone Home's). */

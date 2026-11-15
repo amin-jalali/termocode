@@ -2,7 +2,7 @@
 // tasks (chat WEB-14, tree WEB-16, files WEB-18, terminal WEB-20, git
 // WEB-23); until then each shows its loading and empty states.
 import { Fragment, h, type ComponentChildren } from "preact";
-import { useEffect } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { prefs, setPref, type Direction, type Language, type Motion, type Theme } from "../lib/prefs";
 import { go, route } from "../lib/router";
 import { layout } from "../lib/layout";
@@ -34,6 +34,7 @@ import { FileView } from "./FileView";
 import { home as phone, homeFailed as phoneFailed, loadHome } from "../lib/lazy";
 import { TreeView } from "./Files";
 import { PhoneHost } from "./PhoneHost";
+import { loadRadial, radial, radialHost } from "../lib/radial";
 
 export { ChatView } from "./Chat";
 
@@ -115,6 +116,23 @@ function PhoneLazy({ tkey, name, draw }: { tkey: StringKey; name: string; draw: 
   );
 }
 
+/** MoreLinks is the More list (RM-3) from radial.js: search, Recent, the
+ * grouped views with their icons; a skeleton while it loads. */
+function MoreLinks() {
+  const m = radial.value;
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (!radial.peek()) loadRadial().catch(() => setFailed(true));
+  }, []);
+  if (m) return <m.MoreList host={radialHost} />;
+  if (!failed) return <SkeletonRows rows={8} mono={false} />;
+  return (
+    <Button kind="neutral" onClick={() => (setFailed(false), loadRadial().catch(() => setFailed(true)))}>
+      {t("retry")}
+    </Button>
+  );
+}
+
 /** OnOff is a switch drawn as a two-choice row (haptics). */
 type OnOff = "on" | "off";
 
@@ -169,79 +187,7 @@ export function MoreView() {
   return (
     <View tab="more" title={t("tab.more")}>
       <div class="more">
-        <nav class="more-links" aria-label={t("tab.more")}>
-          {layout.value === "phone" && (
-            // The phone's chat-first Home (MOB-4); its drawer says whether the page starts there.
-            <button type="button" class="more-link" data-sub="home" onClick={() => go({ tab: "home", rest: "", query: {} })}>
-              <span aria-hidden="true">✦ </span>
-              {t("key.home")}
-            </button>
-          )}
-          <button type="button" class="more-link" data-sub="search" onClick={() => go({ tab: "more", rest: "search", query: {} })}>
-            {t("more.search")}
-          </button>
-          <button type="button" class="more-link" data-sub="new-task" onClick={() => go({ tab: "more", rest: "new-task", query: {} })}>
-            {t("nt.title")}
-          </button>
-          <button type="button" class="more-link" data-sub="tasks" onClick={() => go({ tab: "more", rest: "tasks", query: {} })}>
-            {t("more.tasks")}
-          </button>
-          <button type="button" class="more-link" data-sub="runs" onClick={() => go({ tab: "more", rest: "runs", query: {} })}>
-            {t("more.runs")}
-          </button>
-          <button type="button" class="more-link" data-sub="workflows" onClick={() => go({ tab: "more", rest: "workflows", query: {} })}>
-            {t("more.workflows")}
-          </button>
-          <button type="button" class="more-link" data-sub="races" onClick={() => go({ tab: "more", rest: "races", query: {} })}>
-            {t("more.races")}
-          </button>
-          {layout.value !== "desktop" && (
-            <button type="button" class="more-link" data-sub="board" onClick={() => go({ tab: "more", rest: "board", query: {} })}>
-              {t("more.board")}
-            </button>
-          )}
-          <button type="button" class="more-link" data-sub="settings" onClick={() => go({ tab: "more", rest: "settings", query: {} })}>
-            {t("more.settings")}
-          </button>
-          <button type="button" class="more-link" data-sub="db" onClick={() => go({ tab: "more", rest: "db", query: {} })}>
-            {t("more.db")}
-          </button>
-          <button type="button" class="more-link" data-sub="containers" onClick={() => go({ tab: "more", rest: "containers", query: {} })}>
-            {t("more.containers")}
-          </button>
-          <button type="button" class="more-link" data-sub="itermoc" onClick={() => go({ tab: "more", rest: "itermoc", query: {} })}>
-            {t("im.title")}
-          </button>
-          <button type="button" class="more-link" data-sub="mcp" onClick={() => go({ tab: "more", rest: "mcp", query: {} })}>
-            {t("more.mcp")}
-          </button>
-          <button type="button" class="more-link" data-sub="debug" onClick={() => go({ tab: "more", rest: "debug", query: {} })}>
-            {t("act.run")}
-          </button>
-          <button type="button" class="more-link" data-sub="services" onClick={() => go({ tab: "more", rest: "services", query: {} })}>
-            {t("act.services")}
-          </button>
-          <button type="button" class="more-link" data-sub="kube" onClick={() => go({ tab: "more", rest: "kube", query: {} })}>
-            {t("act.kube")}
-          </button>
-          <button type="button" class="more-link" data-sub="testing" onClick={() => go({ tab: "more", rest: "testing", query: {} })}>
-            {t("act.testing")}
-          </button>
-          <button type="button" class="more-link more-tools" data-sub="tools" onClick={() => go({ tab: "more", rest: "tools", query: {} })}>
-            <span>
-              <span aria-hidden="true">☰ </span>
-              {t("tools.title")}
-            </span>
-          </button>
-          {layout.value !== "desktop" && (
-            <button type="button" class="more-link" data-sub="review" onClick={() => go({ tab: "more", rest: "review", query: {} })}>
-              {t("pill.review")}
-            </button>
-          )}
-          <button type="button" class="more-link" data-sub="projects" onClick={() => go({ tab: "more", rest: "projects", query: {} })}>
-            {t("ph.switch_title")}
-          </button>
-        </nav>
+        <MoreLinks />
         <section class="group" aria-labelledby="g-phone">
           <h2 class="group-title" id="g-phone">
             {t("more.this_phone")}
