@@ -150,15 +150,36 @@ type webTestRow struct {
 // webTestRows walks the tree in the order the laptop shows it. Rows
 // outside the workspace are left out.
 func (m *Model) webTestRows() []webTestRow {
+	var out []webTestRow
+	m.webTestWalk(func(r webTestRow) bool {
+		out = append(out, r)
+		return true
+	})
+	return out
+}
+
+// webTestWalk gives keep the rows in the laptop's order (rows outside
+// the workspace are left out) until keep says there is no more room;
+// the rest is only counted, not built, and the count returned.
+func (m *Model) webTestWalk(keep func(webTestRow) bool) (left int) {
 	st := m.testView
 	if st == nil || st.tree == nil {
-		return nil
+		return 0
 	}
 	debug := st.tree.FW == tests.FrameworkGo || st.tree.FW == tests.FrameworkPytest
-	var out []webTestRow
+	room := true
 	for _, p := range st.tree.Packages {
 		dir, ok := m.webRel(p.Dir)
 		if !ok {
+			continue
+		}
+		if !room {
+			left++
+			for _, f := range p.Files {
+				if _, ok := m.webRel(f.Path); ok {
+					left += 1 + len(f.Cases)
+				}
+			}
 			continue
 		}
 		pid := "p:" + dir
@@ -169,10 +190,14 @@ func (m *Model) webTestRows() []webTestRow {
 				pi.FailPath, pi.FailLine = rel, p.ErrLine
 			}
 		}
-		out = append(out, webTestRow{item: pi, pkg: p})
+		room = keep(webTestRow{item: pi, pkg: p})
 		for _, f := range p.Files {
 			rel, ok := m.webRel(f.Path)
 			if !ok {
+				continue
+			}
+			if !room {
+				left += 1 + len(f.Cases)
 				continue
 			}
 			fid := "f:" + rel
@@ -180,8 +205,12 @@ func (m *Model) webTestRows() []webTestRow {
 			if i := strings.LastIndexByte(rel, '/'); i >= 0 {
 				label = rel[i+1:]
 			}
-			out = append(out, webTestRow{item: webproto.TestItem{ID: fid, Kind: "file", Parent: pid, Label: webName(label), Path: rel, State: webTestSum(tests.CountFile(f))}, pkg: p, file: f})
-			for _, c := range f.Cases {
+			room = keep(webTestRow{item: webproto.TestItem{ID: fid, Kind: "file", Parent: pid, Label: webName(label), Path: rel, State: webTestSum(tests.CountFile(f))}, pkg: p, file: f})
+			for i, c := range f.Cases {
+				if !room {
+					left += len(f.Cases) - i
+					break
+				}
 				ci := webproto.TestItem{ID: "c:" + rel + "::" + c.Name, Kind: "case", Parent: fid, Label: webName(c.Name), Path: rel, Line: c.Line,
 					State: webTestState(c.Status), Ms: c.Duration.Milliseconds(), Debug: debug}
 				if c.Status == tests.StatusFailed {
@@ -190,11 +219,11 @@ func (m *Model) webTestRows() []webTestRow {
 						ci.FailPath, ci.FailLine = fr, c.FailLine
 					}
 				}
-				out = append(out, webTestRow{item: ci, pkg: p, file: f, c: c})
+				room = keep(webTestRow{item: ci, pkg: p, file: f, c: c})
 			}
 		}
 	}
-	return out
+	return left
 }
 
 // webClip cuts s to max bytes at a rune start.
@@ -240,13 +269,10 @@ func (m *Model) webTestsBuild() webproto.TestsSnap {
 			s.ElapsedMs, s.Live = webNow().Sub(st.started).Milliseconds(), true
 		}
 	}
-	for i, r := range m.webTestRows() {
-		if i == webproto.MaxTestItems {
-			s.More++
-			continue
-		}
+	s.More = m.webTestWalk(func(r webTestRow) bool {
 		s.Items = append(s.Items, r.item)
-	}
+		return len(s.Items) < webproto.MaxTestItems
+	})
 	return s
 }
 
