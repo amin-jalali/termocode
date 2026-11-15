@@ -95,3 +95,28 @@ func TestWebCtlReplyHasTailnetURL(t *testing.T) {
 		t.Fatalf("answer %s", l)
 	}
 }
+
+// Spec (LAN mode): web.open's answer says LAN mode, so the CLI names the
+// Wi-Fi, not the tailnet.
+func TestWebCtlReplySaysLAN(t *testing.T) {
+	r := newWebRig(t, nil)
+	r.m.webPanel = &webPanelState{up: true, port: 47443, url: "https://192.168.1.20:47443/", fp: "q2Hc0Vg8gkN0Hq9nD7oQ1yRj4wM5uY6tZ3xC2bA1aB0"}
+	c := r.dial(`{"t":"ctl"}`)
+	if _, err := c.c.Write([]byte(`{"t":"req","id":1,"op":"web.open","args":{"yes":true}}` + "\n")); err != nil {
+		t.Fatal(err)
+	}
+	var line string
+	r.pumpUntil("the answer", func() bool {
+		select {
+		case l := <-c.lines:
+			if strings.Contains(l, `"res"`) {
+				line = l
+			}
+		default:
+		}
+		return line != ""
+	})
+	if !strings.Contains(line, `"lan":true`) || !strings.Contains(line, `"url":"https://192.168.1.20:47443/"`) {
+		t.Fatalf("answer %s", line)
+	}
+}

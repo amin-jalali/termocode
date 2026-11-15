@@ -362,6 +362,18 @@ func TestWebStartNamesTheTailnetURL(t *testing.T) {
 	}
 }
 
+// Spec (LAN mode): in LAN mode `termocode web start` names the devices on
+// this Wi-Fi, not the tailnet.
+func TestWebStartLANNamesTheWiFi(t *testing.T) {
+	sessionEnv(t)
+	ws := shortTemp(t)
+	fakeWebHub(t, ws, `{"t":"res","id":1,"data":{"port":47443,"url":"https://192.168.1.20:47443/","lan":true}}`)
+	code, out, errs := runWebT(t, "start", "--yes", "--dir", ws)
+	if code != 0 || !strings.Contains(out, "https://192.168.1.20:47443/") || !strings.Contains(out, "Wi-Fi") || strings.Contains(out, "tailnet") {
+		t.Fatalf("exit %d out %q err %q", code, out, errs)
+	}
+}
+
 // Spec (WEB-32): --devices names the paired-device folder (pairing on).
 func TestWebGatewayDevicesDir(t *testing.T) {
 	sessionEnv(t)
