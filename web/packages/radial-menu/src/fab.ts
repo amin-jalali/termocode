@@ -287,6 +287,8 @@ export function mount(el: HTMLElement, opts: MountOptions): RadialFab {
     if (dragging) return drop();
     if (!cancelled && !p.moved) api.open();
   };
+  /** the open in progress comes from the keyboard (Enter on the button) */
+  let openByKey = false;
   button.addEventListener("pointerup", (e) => release(e, false));
   button.addEventListener("pointercancel", (e) => release(e, true));
   button.addEventListener("contextmenu", (e) => e.preventDefault());
@@ -294,7 +296,9 @@ export function mount(el: HTMLElement, opts: MountOptions): RadialFab {
     const e = ev as KeyboardEvent;
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
+      openByKey = true;
       api.open();
+      openByKey = false;
     }
   });
 
@@ -387,8 +391,9 @@ export function mount(el: HTMLElement, opts: MountOptions): RadialFab {
       button.setAttribute("aria-expanded", "true");
       breathe();
       o.onOpen?.();
-      // Focus the first action so a keyboard can go on from here.
-      (stage.querySelector?.(".rm-act") as HTMLElement | null)?.focus?.();
+      // A keyboard goes on from the first action. A tap focuses nothing:
+      // a focused wedge shows a ring the design does not have.
+      if (openByKey) (stage.querySelector?.(".rm-act") as HTMLElement | null)?.focus?.();
     },
     close() {
       menu?.requestClose();
