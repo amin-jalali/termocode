@@ -664,6 +664,12 @@ no card opens. So the agent never replaces code it did not see. A new
 chat starts with nothing read. Set `ai_write_needs_read` to `false` in
 config.json to turn this off.
 
+`read_file` gives the agent each line with its number (`12|text`) and
+the file's line count on top. A long file is read in parts of 2000 lines
+(`offset` and `limit` pick another part), and the end of a part says
+where to go on. `edit_file` works on the plain text: when the agent
+copies the numbers into it by mistake, they are taken off.
+
 The agent is told exactly what happened, for example *"The user accepted
 1 of 2 changes to main.go; only those were written. Rejected: change 2
 …"*. When you reject everything, nothing is written and the agent is told

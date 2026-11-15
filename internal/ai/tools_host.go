@@ -144,7 +144,7 @@ func hostRuns(w Workspace) map[string]func(context.Context, map[string]any) (str
 			if err != nil {
 				return "", err
 			}
-			return capOut(string(b), maxReadBytes), nil
+			return numberedRead(w.rel(abs), string(b), a)
 		},
 		"list_dir": func(ctx context.Context, a map[string]any) (string, error) {
 			abs, err := w.Resolve(p(a))

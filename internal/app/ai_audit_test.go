@@ -25,7 +25,7 @@ func TestAIAuditLog(t *testing.T) {
 	m.aiUndoTurn(-1)
 	lines := m.output.Lines(aiAuditChannel)
 	want := []string{
-		"14:03:22  read_file  path=a.txt  gate=auto  by=auto  → one (+9 lines)",
+		"14:03:22  read_file  path=a.txt  gate=auto  by=auto  → a.txt (10 lines) (+10 lines)",
 		"14:03:22  write_file  content=<10 lines, 49 B> path=a.txt  gate=review  by=user (review)  → The user accepted 1 of 2 changes to a.txt; only those were written. Rejected (NOT in the file): (+",
 		"14:03:22  git_commit  message=\"change it\"  gate=confirm  by=user denied  → declined by user",
 		"14:03:22  lsp_rename  character=1 line=1 path=a.txt  gate=invalid  by=refused  → error: new_name is required",
