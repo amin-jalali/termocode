@@ -22,6 +22,21 @@ func savedPath(out string) string {
 	return ""
 }
 
+// TestMain points the cache at a temp folder: a test that runs a long
+// command never saves its output in the real ~/.cache.
+func TestMain(m *testing.M) {
+	dir, err := os.MkdirTemp("", "termocode-ai-cache-")
+	if err != nil {
+		panic(err)
+	}
+	if err := os.Setenv("XDG_CACHE_HOME", dir); err != nil {
+		panic(err)
+	}
+	code := m.Run()
+	_ = os.RemoveAll(dir) // a test cleanup
+	os.Exit(code)
+}
+
 // cutCache points the termocode cache at a temp folder for one test.
 func cutCache(t *testing.T) string {
 	t.Helper()
