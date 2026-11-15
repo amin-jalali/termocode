@@ -118,7 +118,7 @@ test("F12 attaching re-expands a collapsed dock", () => {
 });
 
 test("F7 F8 dragging the handle shrinks the dock; release springs back", () => {
-  const r = rig();
+  const r = rig({}, 844, 844); // the 380 default (an upright phone's board follows its width, F2b)
   r.dock.attach(t(r));
   const root = part(r, "tk-dock");
   const handle = part(r, "tk-handle");
@@ -167,7 +167,7 @@ test("F10 pressing the dock never moves the focus", () => {
 });
 
 test("G1 G4 the suggestion strip takes 40px only with items", () => {
-  const r = rig();
+  const r = rig({}, 844, 844); // the 380 default (an upright phone's board follows its width, F2b)
   r.dock.attach(t(r));
   const s = part(r, "tk-sugg");
   ok(s.hidden);

@@ -181,7 +181,8 @@ look at what is under it; the keyboard button on that bar hides it. The
 globe button switches to the phone's own keyboard (for other languages
 and dictation) until you leave the field. Turn it off, or change its
 sound and vibration, in **This phone → Keyboard**. A phone gets a compact
-layout; a tablet gets the function row too.
+layout; a tablet gets the function row too. Held upright, the phone's
+keyboard is lower, so its keys keep the shape they have on its side.
 
 ### The radial menu and the More list
 

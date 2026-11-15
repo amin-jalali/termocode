@@ -5,6 +5,7 @@
 // one "Show keyboard" bar.
 import { mount, type MountOptions, type TactileKeyboard } from "./dom";
 import { setIcon } from "./icons";
+import { isNarrow, uprightHeight, wantsCompact } from "./layout";
 import { SuggestionBar } from "./suggestions";
 
 export interface DockOptions extends MountOptions {
@@ -100,6 +101,7 @@ export function mountDock(host: HTMLElement, opts: DockOptions): Dock {
   div("tk-collapsed-label", bar, "span").textContent = labels.show;
 
   let height = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, o.height ?? 380));
+  let chosen = o.height !== undefined; // the host set a height: kept as it is
   let attached: HTMLElement | null = null;
   let collapsed = false;
   let dragY = 0;
@@ -108,9 +110,16 @@ export function mountDock(host: HTMLElement, opts: DockOptions): Dock {
 
   const viewport = (): number => o.viewport?.() ?? (win?.visualViewport?.height || win?.innerHeight || 800);
   const suggestH = (): number => (suggestions.items.length ? SUGGEST_H : 0);
+  const boardWidth = (): number => kbHost.getBoundingClientRect().width || win?.innerWidth || 360;
   const kbHeight = (): number => {
-    const maxKb = Math.max(140, Math.min(MAX_HEIGHT, viewport() - MIN_EDITOR - HANDLE_H - suggestH()));
-    return Math.min(height, maxKb);
+    const vh = viewport();
+    const maxKb = Math.max(140, Math.min(MAX_HEIGHT, vh - MIN_EDITOR - HANDLE_H - suggestH()));
+    let h = height;
+    // a phone held upright: the height follows the width, so the keys
+    // look like the landscape ones scaled down, not tall and thin
+    const w = boardWidth();
+    if (!chosen && w < vh && isNarrow(w, wantsCompact(o.layout, win))) h = Math.min(h, uprightHeight(w));
+    return Math.min(h, maxKb);
   };
   const natural = (): number => HANDLE_H + suggestH() + kbHeight();
 
@@ -265,6 +274,7 @@ export function mountDock(host: HTMLElement, opts: DockOptions): Dock {
     toggleCollapsed: () => setCollapsed(!collapsed),
     setCollapsed,
     setHeight(h) {
+      chosen = true;
       height = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, h));
       layout();
     },
@@ -274,7 +284,10 @@ export function mountDock(host: HTMLElement, opts: DockOptions): Dock {
       o = { ...o, ...p };
       const { height: h, ...rest } = p;
       keyboard.setOptions(rest);
-      if (h !== undefined) height = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, h));
+      if (h !== undefined) {
+        chosen = true;
+        height = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, h));
+      }
       layout();
     },
     refit: layout,
