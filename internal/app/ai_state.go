@@ -270,6 +270,9 @@ type aiState struct {
 	chatCh      chan tea.Msg
 	act         aiActivity // the activity line (ai_activity.go)
 	attachments []aiAttachment
+	// toolGroups are the tool groups each chat loaded, by chat id
+	// (ai_tool_groups.go).
+	toolGroups map[string]*ai.LoadedGroups
 	// thinkOff: the user removed the input's think / ultrathink chip
 	// (OMX-5, ai_reasoning.go); the next send clears it.
 	thinkOff bool

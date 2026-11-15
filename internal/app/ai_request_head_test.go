@@ -24,8 +24,8 @@ import (
 // numbers: lower them when a change makes the head smaller, never raise
 // them.
 const (
-	aiHeadToolsBudget  = 179   // tool schemas sent
-	aiHeadTokensBudget = 35400 // estimated tokens of the system prompt and the tool schemas
+	aiHeadToolsBudget  = 15   // tool schemas sent
+	aiHeadTokensBudget = 5650 // estimated tokens of the system prompt and the tool schemas
 )
 
 // aiHead is the size of one request's head.
@@ -149,6 +149,11 @@ func TestAIRequestHeadReport(t *testing.T) {
 	t.Logf("chat request head: %d tools, schemas %d bytes (~%d tokens), system prompt %d bytes (~%d tokens), head ~%d tokens",
 		h.tools, h.schemaBytes, h.schemaTokens(), h.systemBytes, h.systemTokens(), h.tokens())
 	t.Logf("tools: %s", aiHeadToolNames(r1))
+	for _, tl := range r1.Tools {
+		if tl.Name == ai.ToolSearchTool {
+			t.Logf("tool_search: %s", tl.Description)
+		}
+	}
 	sys1, sys2 := r1.Messages[0].Content, r2.Messages[0].Content
 	t.Logf("system prompt same in turn 2: %v; tool list same: %v", sys1 == sys2, aiHeadToolNames(r1) == aiHeadToolNames(r2))
 	for _, l := range aiLinesOnlyIn(sys1, sys2) {
