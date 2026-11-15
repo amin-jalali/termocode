@@ -122,11 +122,13 @@ func TestAgentStepCapAndUnknownTool(t *testing.T) {
 	}
 }
 
-// Spec: the step limit is 25 (like Cursor), and when the agent hits it
-// the last text says so plainly and offers to continue.
+// Spec: the step limit is 100 (keep going and the stall, budget and
+// repeat brakes end a turn that runs away), and when the agent hits it
+// the last text says so plainly and offers to continue; the turn's Done
+// event says it hit the limit.
 func TestAgentStepLimitSaysSoAndOffersContinue(t *testing.T) {
-	if DefaultMaxSteps != 25 {
-		t.Errorf("DefaultMaxSteps = %d, want 25", DefaultMaxSteps)
+	if DefaultMaxSteps != 100 {
+		t.Errorf("DefaultMaxSteps = %d, want 100", DefaultMaxSteps)
 	}
 	loop := Chunk{ToolCalls: []ToolCall{{ID: "z", Name: "nope"}}}
 	p := &scripted{tools: true, replies: []Chunk{loop, loop, loop, loop}}
@@ -139,6 +141,20 @@ func TestAgentStepLimitSaysSoAndOffersContinue(t *testing.T) {
 	}
 	if !strings.Contains(last, "step limit (3 tool steps)") || !strings.Contains(last, `"continue"`) {
 		t.Errorf("limit message %q", last)
+	}
+}
+
+func TestAgentDoneSaysWhetherTheStepLimitStoppedIt(t *testing.T) {
+	loop := Chunk{ToolCalls: []ToolCall{{ID: "z", Name: "nope"}}}
+	p := &scripted{tools: true, replies: []Chunk{loop, loop}}
+	evs, _ := collectEvents(&Agent{Provider: p, Native: true, MaxSteps: 2}, nil)
+	if e := evs[len(evs)-1]; e.Kind != EventDone || !e.StepLimit {
+		t.Fatalf("last event %+v, want Done with StepLimit", e)
+	}
+	p = &scripted{tools: true, replies: []Chunk{loop, {Delta: "finished"}}}
+	evs, _ = collectEvents(&Agent{Provider: p, Native: true, MaxSteps: 2}, nil)
+	if e := evs[len(evs)-1]; e.Kind != EventDone || e.StepLimit {
+		t.Fatalf("last event %+v, want Done without StepLimit", e)
 	}
 }
 
