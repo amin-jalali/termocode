@@ -70,7 +70,8 @@ func radialCat(p *Page, id string) {
 func radialItem(p *Page, id string) (float64, float64) {
 	p.T.Helper()
 	i := Eval[int](p, `[...document.querySelectorAll(".rm-overlay .rm-item")].findIndex((e) => e.dataset.id === "`+id+`")`)
-	n := Eval[int](p, `document.querySelectorAll(".rm-overlay .rm-item").length`)
+	// the outer ring has at least six wedges (empty ones too)
+	n := Eval[int](p, `+(document.querySelector(".rm-overlay .rm-outer")?.dataset.slots || document.querySelectorAll(".rm-overlay .rm-item").length)`)
 	if i < 0 {
 		p.T.Fatalf("no action %s", id)
 	}

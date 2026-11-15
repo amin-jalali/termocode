@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=480, initial-scale=1">
+<title>Radial menu — the design's state</title>
+<link rel="stylesheet" href="../src/radial-menu.css">
+<style>
+  html, body { margin: 0; overflow: hidden; }
+  /* the rings box (the svg) is 480 px at 0,0: the stage's 18 px padding is off screen */
+  #menu { position: absolute; left: -18px; top: -18px; width: 516px; height: 516px; }
+</style>
+</head>
+<body>
+<div id="menu"></div>
+<script type="module" src="design.js"></script>
+</body>
+</html>

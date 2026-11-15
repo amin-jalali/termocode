@@ -48,11 +48,11 @@ test("G16 hit test: hub, closed menu, both rings, the gaps", () => {
   eq(hitTest(300, 300 - 170, true, 6, 0), null, "an empty ring");
 });
 
-test("G17 G18 the box: at most 480, 12 from each edge; the rings' reach", () => {
-  eq(stageSide(390, 844), 366, "phone");
+test("G17 G18 the box: at most 480, its disc 12 from each edge; the disc's reach", () => {
+  eq(stageSide(390, 844), 480, "phone: the design's size");
   eq(stageSide(1024, 768), 480, "tablet");
-  eq(stageSide(844, 390), 366, "landscape phone");
-  near(ringRadius(480), (220 / 600) * 444);
+  eq(stageSide(844, 390), 480, "landscape phone");
+  near(ringRadius(480), (232 / 600) * 444);
 });
 
 test("G19 G20 the menu opens on the button and moves in only as far as the rings need", () => {
@@ -60,7 +60,7 @@ test("G19 G20 the menu opens on the button and moves in only as far as the rings
   eq([free.cx, free.cy], [500, 380], "room around it: centred on the button");
   near(free.ox, 0.5);
   const corner = placeMenu([390 - 48, 844 - 44], 390, 844, { top: 20, right: 0, bottom: 34, left: 0 });
-  const rr = ringRadius(366);
+  const rr = ringRadius(stageSide(390, 844));
   near(corner.cx, 390 - 12 - rr, 1e-9, "kept inside on the right");
   near(corner.cy, 844 - 34 - 12 - rr, 1e-9, "kept above the home bar");
   ok(corner.ox > 0.5 && corner.oy > 0.5, "it grows from the button's corner");
