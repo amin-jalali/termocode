@@ -362,6 +362,40 @@ func capOut(s string, n int) string {
 	return s[:n] + fmt.Sprintf("\n… [truncated, %d more bytes]", len(s)-n)
 }
 
+// capHeadTail keeps about n bytes of a command's output: a quarter from
+// the start and the rest from the end, where test failures, build errors
+// and the summary are. It cuts on line breaks and says how many lines
+// (or bytes, for one long line) are cut in the middle.
+func capHeadTail(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	headN := n / 4
+	tailN := n - headN
+	h := s[:headN]
+	if j := strings.LastIndexByte(h, '\n'); j >= 0 {
+		h = h[:j+1]
+	}
+	for len(h) > 0 && !validCut(h) {
+		h = h[:len(h)-1]
+	}
+	t := s[len(s)-tailN:]
+	if j := strings.IndexByte(t, '\n'); j >= 0 && j < len(t)-1 {
+		t = t[j+1:]
+	}
+	for len(t) > 0 && t[0]&0xC0 == 0x80 { // not in the middle of a UTF-8 rune
+		t = t[1:]
+	}
+	mid := s[len(h) : len(s)-len(t)]
+	if lines := strings.Count(mid, "\n"); lines > 0 {
+		if !strings.HasSuffix(h, "\n") && h != "" {
+			h += "\n"
+		}
+		return fmt.Sprintf("%s… %d lines cut …\n%s", h, lines, t)
+	}
+	return fmt.Sprintf("%s\n… %d bytes cut …\n%s", h, len(mid), t)
+}
+
 // WorkspaceTools returns the filesystem / search / git / run tools — the
 // app adds editor-backed (LSP) tools on top. A workspace on another host
 // (w.FS set) gets the same tools, run through that host.
@@ -836,7 +870,7 @@ func runCmd(ctx context.Context, dir string, timeout time.Duration, name string,
 	cmd.Dir = dir
 	cmd.Env = NonInteractiveEnv(os.Environ()) // OMX-10: no pager, no password prompt
 	out, err := cmd.CombinedOutput()
-	s := capOut(string(out), maxOutBytes)
+	s := capHeadTail(string(out), maxOutBytes)
 	if ctx.Err() == context.DeadlineExceeded {
 		return s + "\n[timed out]", nil
 	}
