@@ -83,7 +83,8 @@ func (s *aiState) aiDeferTurnTools(tools []ai.Tool, native bool, preload []strin
 	}
 	loaded := s.aiTurnToolGroups()
 	loaded.Load(preload...)
-	return ai.DeferToolGroups(tools, aiCoreTools, aiDeferGroups, loaded)
+	ab := aiAbilityStates(s.settings.Abilities, aiWorkspaceRoot(), preload) // ai_abilities.go
+	return ai.DeferToolGroupsWith(tools, aiCoreTools, aiDeferGroups, loaded, ai.GroupPolicy{State: ab.state, Enable: ab.enable})
 }
 
 // aiAttachGroups are the tool groups the attachments call for: a

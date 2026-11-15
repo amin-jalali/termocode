@@ -41,6 +41,10 @@ type Settings struct {
 	// a chat request the core tools and loads the rest by group; "off"
 	// sends every tool. Edited by hand.
 	ToolGroups string `json:"ai_tool_groups,omitempty"`
+	// Abilities is ai_abilities: a tool group's state by group name, "on",
+	// "demand" or "off" (tool_groups.go). A group not named here is on
+	// demand, or off when termocode finds nothing it could work on.
+	Abilities map[string]string `json:"ai_abilities,omitempty"`
 	// EditReview is "review" (default: the agent's file changes open as a
 	// diff to accept or reject) or "auto" (they are written after the
 	// confirm dialog, or at once when fileWrite is auto-approved).
@@ -505,6 +509,11 @@ func SaveSettings(path string, s Settings) error {
 			merged["ai_auto_approve"] = s.AutoApprove
 		} else {
 			delete(merged, "ai_auto_approve")
+		}
+		if len(s.Abilities) > 0 {
+			merged["ai_abilities"] = s.Abilities
+		} else {
+			delete(merged, "ai_abilities")
 		}
 		if s.MaxSteps > 0 {
 			merged["ai_max_steps"] = s.MaxSteps
