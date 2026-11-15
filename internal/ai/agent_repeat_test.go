@@ -98,3 +98,12 @@ func TestAgentRepeatLimitCountsOnlyARun(t *testing.T) {
 		t.Fatalf("off: tool ran %d times, want 5", runs)
 	}
 }
+
+func TestAgentRepeatStopIsOnTheDoneEvent(t *testing.T) {
+	runs := 0
+	p := &scripted{tools: true, replies: []Chunk{peekCall("1", "a"), peekCall("2", "a"), peekCall("3", "a")}}
+	evs, _ := collectEvents(&Agent{Provider: p, Native: true, Tools: []Tool{countTool(&runs)}, RepeatLimit: 2}, nil)
+	if e := evs[len(evs)-1]; e.Kind != EventDone || !e.RepeatStop {
+		t.Fatalf("last event %+v, want Done with RepeatStop", e)
+	}
+}

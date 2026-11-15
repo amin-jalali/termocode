@@ -254,3 +254,18 @@ func TestAIRepeatCallLimitSetting(t *testing.T) {
 		t.Fatalf("no stop note:\n%s", got)
 	}
 }
+
+// A turn the repeat brake stopped is not pushed on, even with open
+// todos: the AI is stuck and the user decides.
+func TestAIKeepGoingStopsAfterARepeatStop(t *testing.T) {
+	look := ai.Chunk{ToolCalls: []ai.ToolCall{{ID: "l", Name: "todo_read", Args: map[string]any{}}}}
+	m, _ := keepGoingModel(t, todoCall("1", [2]string{"a", "pending"}), look, look, look, ai.Chunk{Delta: "never"})
+	m.ai.settings.RepeatCallLimit = 2
+	runAIChain(t, &m, "do a")
+	if n := len(aiUserTexts(m.ai)); n != 1 {
+		t.Fatalf("%d user messages, want 1: %q", n, aiUserTexts(m.ai))
+	}
+	if got := aiTranscriptText(&m, 80); !strings.Contains(got, "same call") {
+		t.Fatalf("no stop note:\n%s", got)
+	}
+}
