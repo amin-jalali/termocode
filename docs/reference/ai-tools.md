@@ -3896,6 +3896,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai_max_steps` | never | AI provider, credentials and approvals stay with the user |
 | `ai_memory_recall` | never | AI provider, credentials and approvals stay with the user |
 | `ai_model` | never | AI provider, credentials and approvals stay with the user |
+| `ai_model_family` | never | AI provider, credentials and approvals stay with the user |
 | `ai_models` | never | AI provider, credentials and approvals stay with the user |
 | `ai_next_edit` | confirm (settings) |   |
 | `ai_parallel_max` | never | AI provider, credentials and approvals stay with the user |

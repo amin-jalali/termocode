@@ -368,7 +368,8 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	ch := make(chan tea.Msg, 64)
 
 	call := newAIIDECaller(gen, ch)
-	tools := m.aiGuardWrites(aiFilterTools(m.aiChatTools(root, call), step.Tools), root) // write_file reads first
+	fam := ai.ModelFamily(s.settings.ModelFamily, slot.cfg.Model)                                            // a few prompt lines (and a small model's tools) per family
+	tools := aiFamilyTools(fam, m.aiGuardWrites(aiFilterTools(m.aiChatTools(root, call), step.Tools), root)) // write_file reads first
 	if len(rules.Scoped) > 0 && aiRulesTrust(rules) == aiTrustUse {
 		tools = aiRulesOnRead(tools, root, rules, s.rulesInjector())
 	}
@@ -377,10 +378,10 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		tools, autoRules = append(tools, rt...), aiRulesAutoPrompt(rules)
 	}
 	native := slot.p.SupportsTools()
-	base := aiWithToolGuide(m.aiChatBasePrompt(root, rules, memBlock), tools, false) + autoRules + aiStepSystem(step.System)
+	base := aiWithToolGuideFor(m.aiChatBasePrompt(root, rules, memBlock), tools, false, fam) + autoRules + aiStepSystem(step.System)
 	form := aiNativeFor(slot.cfg.Kind, native)
-	history := m.aiChatTurnHistory(ai.SystemPrompt(base, tools, native), native, slot.cfg.Kind) // earlier turns' tool results too
-	mcpTools := m.aiMCPTurn(gen, ch)                                                            // MCP servers' tools, built on the goroutine
+	history := m.aiChatTurnHistory(aiFamilySystem(fam, ai.SystemPrompt(base, tools, native)), native, slot.cfg.Kind) // earlier turns' tool results too
+	mcpTools := m.aiMCPTurn(gen, ch)                                                                                 // MCP servers' tools, built on the goroutine
 	// "@server:uri" words: MCP resources read on the goroutine (MCPX-12).
 	mentions := m.aiMCPMentions(gen, ch, text, ai.SupportsImages(slot.p))
 	// "@chat:", "@symbol:", "@diagnostics", "@diff", "@changes", "@url:"

@@ -295,6 +295,7 @@ func (m *Model) aiBgStart(prof ai.Profile, run agentdag.Run, task string, by ai.
 	think := s.turnThink // the turn's think keyword raises its steps too
 	reasoning := s.reasoningFunc(think)
 	maxSteps, repeat := s.settings.MaxSteps, s.settings.RepeatCallLimit
+	famSet := s.settings.ModelFamily // ai_model_family
 	mail := &s.bgMail
 	total := len(run.Nodes)
 	index := map[string]int{}
@@ -327,9 +328,10 @@ func (m *Model) aiBgStart(prof ai.Profile, run agentdag.Run, task string, by ai.
 				return nil, nil, fmt.Errorf("model slot %q is not set up", n.Slot)
 			}
 			n = aiCategoryNode(n, cats)
-			ts := aiFilterTools(tools, n.Tools)
+			fam := ai.ModelFamily(famSet, sl.cfg.Model)
+			ts := aiFamilyTools(fam, aiFilterTools(tools, n.Tools))
 			native := sl.p.SupportsTools()
-			sys := ai.SystemPrompt(aiWithToolGuide(base, ts, false)+aiStepPrompt(n, index[n.ID], total)+aiCategoryPrompt(n, cats, escalate != "" && n.Slot != catSlots[escalate])+aiBgStepNote, ts, native)
+			sys := aiFamilySystem(fam, ai.SystemPrompt(aiWithToolGuideFor(base, ts, false, fam)+aiStepPrompt(n, index[n.ID], total)+aiCategoryPrompt(n, cats, escalate != "" && n.Slot != catSlots[escalate])+aiBgStepNote, ts, native))
 			k := aiBgStepKey(run.ID, n.ID)
 			mail.openKey(k)
 			// No Confirm: a background step never asks; a tool that would
