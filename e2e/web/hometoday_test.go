@@ -85,6 +85,7 @@ func TestHomeTodayMyWorkAndShortcuts(t *testing.T) {
 	if Eval[bool](p, `!!`+homeView+`.querySelector(".home-foot .home-chips")`) {
 		t.Error("the box's foot still carries the chip strip on an empty Home")
 	}
+	shotTo(t, p, "home-today")
 	// A long press on a row offers it to the AI (the action sheet).
 	Eval[bool](p, homeView+`.querySelectorAll('.home-sec[aria-label="My work"] .home-row')[1].dispatchEvent(new MouseEvent("contextmenu", {bubbles: true, cancelable: true}))`)
 	p.WaitJS(`[...document.querySelectorAll(".sheet button")].some((b) => b.textContent.includes("Add to message"))`)
