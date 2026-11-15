@@ -4,7 +4,7 @@
 import { Engine, type Clock, type KeyEvent, type MediaAction } from "./engine";
 import { makeTick, webClick, webVibrate } from "./feedback";
 import { setIcon, type Glyph } from "./icons";
-import { autoCompact, defaultHeight, type Placed } from "./layout";
+import { defaultHeight, isNarrow, wantsCompact, type Placed } from "./layout";
 
 /** Colours of the board; the accent usually comes from the page theme. */
 export interface Theme {
@@ -121,9 +121,7 @@ export function mount(host: HTMLElement, opts: MountOptions): TactileKeyboard {
   }
 
   function wantCompact(): boolean {
-    if (o.layout === "compact") return true;
-    if (o.layout === "full" || !win) return false;
-    return autoCompact(win.innerWidth, win.innerHeight);
+    return wantsCompact(o.layout, win);
   }
 
   function relayout(): void {
@@ -131,6 +129,7 @@ export function mount(host: HTMLElement, opts: MountOptions): TactileKeyboard {
     height = o.height ?? defaultHeight(w);
     root.style.height = `${height}px`;
     engine.layout(w, height, wantCompact());
+    root.classList.toggle("tk-narrow", isNarrow(w, engine.compact));
     build();
   }
 
@@ -138,6 +137,25 @@ export function mount(host: HTMLElement, opts: MountOptions): TactileKeyboard {
     keyEls = engine.placed.map((p) => keyEl(p));
     (keysLayer as unknown as { replaceChildren(...n: HTMLElement[]): void }).replaceChildren(...keyEls);
     paint();
+  }
+
+  // emWidth is a label's width in em in the board's font (a canvas
+  // measure, cached), with a little room to spare; without a canvas, a
+  // generous 0.62 em a letter.
+  const ems = new Map<string, number>();
+  let ctx: CanvasRenderingContext2D | null | undefined;
+  function emWidth(text: string): number {
+    let v = ems.get(text);
+    if (v !== undefined) return v;
+    if (ctx === undefined) {
+      const c = doc.createElement("canvas") as HTMLCanvasElement;
+      ctx = typeof c.getContext === "function" ? c.getContext("2d") : null;
+      if (ctx) ctx.font = `400 100px ${(win?.getComputedStyle?.(root).fontFamily) || "system-ui, sans-serif"}`;
+    }
+    const m = ctx?.measureText(text).width;
+    v = m ? (m / 100) * 1.08 : text.length * 0.62;
+    ems.set(text, v);
+    return v;
   }
 
   function icon(parent: HTMLElement, g: Glyph, cls: string, size?: number): void {
@@ -181,7 +199,11 @@ export function mount(host: HTMLElement, opts: MountOptions): TactileKeyboard {
     } else if (def.kind !== "space") {
       const core = el("span", "tk-legend tk-core", face);
       if (def.icon) icon(core, def.icon, "tk-icon", p.funcRow ? ICON_SIZE.func : ICON_SIZE.other);
-      if (def.label) el("span", "tk-label", core).textContent = def.label;
+      if (def.label) {
+        const l = el("span", "tk-label", core);
+        l.textContent = def.label;
+        l.style.setProperty("--tk-em", emWidth(def.label).toFixed(3)); // the upright board fits it to one line
+      }
     }
     if (def.fnum) el("span", "tk-fnum", face).textContent = def.fnum;
     if (def.led) el("span", "tk-led", face);

@@ -84,6 +84,18 @@
   line-height: 1.2;
 }
 .tk-func .tk-label { font-size: 9.5px; }
+/* a phone held upright: each word label on one line, as big as its
+   keycap allows (--tk-em: its width in em), the hugging labels closer
+   to the edge, the arrow halves' glyphs inside their short caps */
+.tk-narrow .tk-label {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  letter-spacing: 0;
+  font-size: min(11px, calc(100cqw / var(--tk-em, 4)));
+}
+.tk-narrow .tk-hug-l .tk-face { padding-left: 3px; }
+.tk-narrow .tk-hug-r .tk-face { padding-right: 3px; }
+.tk-narrow .tk-arrowStack .tk-icon { font-size: min(13px, 85cqh); }
 .tk-icon { display: inline-flex; color: var(--tk-fg-fn); font-size: var(--tk-icon, 13px); }
 .tk-arrowStack .tk-icon { color: var(--tk-fg-label); }
 .tk-icon svg { display: block; }

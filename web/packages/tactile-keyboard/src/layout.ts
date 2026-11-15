@@ -201,3 +201,36 @@ export const TABLET_BREAKPOINT = 720;
 export function autoCompact(width: number, height: number): boolean {
   return Math.min(width, height) < TABLET_BREAKPOINT;
 }
+
+/** wantsCompact resolves a layout option: "auto" (or none) asks the window. */
+export function wantsCompact(layout: "compact" | "full" | "auto" | undefined, win?: { innerWidth: number; innerHeight: number }): boolean {
+  if (layout === "compact") return true;
+  if (layout === "full" || !win) return false;
+  return autoCompact(win.innerWidth, win.innerHeight);
+}
+
+/** A compact board narrower than this is a phone held upright (a phone
+ * on its side is 568 px wide or more). */
+export const NARROW_MAX = 540;
+
+/** isNarrow: the compact board of a phone held upright. Its word labels
+ * shrink to one line (.tk-narrow) and its height follows its width. */
+export function isNarrow(width: number, compact: boolean): boolean {
+  return compact && width < NARROW_MAX;
+}
+
+/** A 1-unit key's width per height on the upright board. In landscape it
+ * is about 1.33; upright the keys are a quarter of that narrower, so half
+ * of it keeps them looking like the landscape keys scaled down while
+ * they stay tall enough to hit. */
+export const UPRIGHT_ASPECT = 0.7;
+
+/** uprightHeight is the compact board's height at width that gives its
+ * 1-unit keys UPRIGHT_ASPECT (the same math as placeKeys). */
+export function uprightHeight(width: number): number {
+  const rows = DELL_LAYOUT.slice(1);
+  const num = rows[0]; // the number row: the widest count of keys
+  const gap = 1.5;
+  const unitW = (width - 2 * PAD - gap * (num.length - 1)) / num.reduce((a, k) => a + k.flex, 0);
+  return 2 * PAD + rows.length * (unitW / UPRIGHT_ASPECT) + gap * (rows.length - 1);
+}

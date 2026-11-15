@@ -35,7 +35,11 @@ a hide button and a "Show keyboard" bar, a system-keyboard button
 (`onSystemKeyboard`, for other languages and dictation), the suggestion
 strip (`dock.suggestions.show(items, onAccept)`), and a safe-area filler.
 The keyboard is 380 px high by default (220…540) and never leaves less
-than 140 px of the page above it. A real hardware key on the attached
+than 140 px of the page above it. On a phone held upright (a compact
+board under 540 px wide, narrower than the page is high) the default
+follows the width instead (`uprightHeight`): a 1-unit key is 0.7 as wide
+as high, half the landscape shape, and word labels shrink to one line
+(`.tk-narrow`). A height the host sets is kept. A real hardware key on the attached
 surface collapses the dock (an external keyboard is in use).
 `threeFingerToggle(el, dock)` makes a three-finger tap toggle it.
 
