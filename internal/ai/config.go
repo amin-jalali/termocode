@@ -81,6 +81,13 @@ type Settings struct {
 	// loop.max_rounds / budget_usd.
 	UntilDoneRounds    int      `json:"ai_until_done_rounds,omitempty"`
 	UntilDoneBudgetUSD *float64 `json:"ai_until_done_budget_usd,omitempty"`
+	// KeepGoing is ai_keep_going (nil: on): a chat turn that ends with
+	// open todos sends the next "keep going" message by itself, unless
+	// the chat turned it off (AI: Toggle Keep Going). KeepGoingTurns is
+	// ai_keep_going_turns (0: DefaultKeepGoingTurns), the most pushes
+	// after one message of the user. Edited by hand.
+	KeepGoing      *bool `json:"ai_keep_going,omitempty"`
+	KeepGoingTurns int   `json:"ai_keep_going_turns,omitempty"`
 	// DayBudgetUSD (nil or 0: none) is a daily spend line the Runs page
 	// draws today's spend against. It stops nothing; edited by hand.
 	DayBudgetUSD *float64 `json:"ai_day_budget_usd,omitempty"`
@@ -169,6 +176,25 @@ func CheckUntilDoneBudget(usd float64) error {
 		return fmt.Errorf("ai_until_done_budget_usd must be a dollar amount above 0, or 0 for no budget (it is %v)", usd)
 	}
 	return nil
+}
+
+// DefaultKeepGoingTurns is the default of ai_keep_going_turns and
+// MaxKeepGoingTurns its top.
+const (
+	DefaultKeepGoingTurns = 10
+	MaxKeepGoingTurns     = 50
+)
+
+// KeepGoingOn is ai_keep_going: on unless set to false.
+func (s Settings) KeepGoingOn() bool { return s.KeepGoing == nil || *s.KeepGoing }
+
+// KeepGoingLimit is the effective ai_keep_going_turns: a value out of 1
+// to MaxKeepGoingTurns is the default.
+func (s Settings) KeepGoingLimit() int {
+	if s.KeepGoingTurns < 1 || s.KeepGoingTurns > MaxKeepGoingTurns {
+		return DefaultKeepGoingTurns
+	}
+	return s.KeepGoingTurns
 }
 
 // UntilDone is the effective rounds and budget of "work until done"

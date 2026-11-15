@@ -26,6 +26,7 @@ func TestAITodoWriteKeepsTheListAndShowsACard(t *testing.T) {
 	}}
 	s.provider = p
 	s.cfg = ai.Config{Kind: ai.KindOllama, Model: "fake-1"}
+	s.conv.KeepGoingOff = true // one turn: the card, not the keep-going chain
 	runAITurn(t, &m, "fix it")
 	if len(s.conv.Todos) != 3 || s.conv.Todos[1].Status != ai.TodoActive {
 		t.Fatalf("todos %+v", s.conv.Todos)

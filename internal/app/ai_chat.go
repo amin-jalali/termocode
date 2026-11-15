@@ -770,7 +770,11 @@ func (m *Model) onAIChatDone(msg aiChatDoneMsg) tea.Cmd {
 			more = m.aiKeepGoingNext() // OMX-7: open todos, keep going on
 		}
 	}
-	return tea.Batch(cmd, mem, m.notifyOS("AI run ended"), queued, more, m.aiShipOnChatDone()) // OMX-15: ship mode
+	var notice tea.Cmd
+	if !s.streaming { // a stop hook or keep going sent the next turn: the run goes on
+		notice = m.notifyOS("AI run ended")
+	}
+	return tea.Batch(cmd, mem, notice, queued, more, m.aiShipOnChatDone()) // OMX-15: ship mode
 }
 
 // persistAIState stores the open chat id + scroll in session.json.

@@ -3890,6 +3890,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai_image_model` | never | AI provider, credentials and approvals stay with the user |
 | `ai_inline` | confirm (settings) |   |
 | `ai_inline_model` | never | AI provider, credentials and approvals stay with the user |
+| `ai_keep_going` | never | AI provider, credentials and approvals stay with the user |
+| `ai_keep_going_turns` | never | AI provider, credentials and approvals stay with the user |
 | `ai_max_steps` | never | AI provider, credentials and approvals stay with the user |
 | `ai_memory_recall` | never | AI provider, credentials and approvals stay with the user |
 | `ai_model` | never | AI provider, credentials and approvals stay with the user |
