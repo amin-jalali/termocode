@@ -13,7 +13,6 @@ import (
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/chromedp"
-	"github.com/chromedp/chromedp/kb"
 )
 
 // The floating radial menu (RM-2) on a touch phone and a touch tablet:
@@ -204,6 +203,6 @@ func TestRadialHidesUnderSheets(t *testing.T) {
 	p.Do(chromedp.TapXY(x, y))
 	p.WaitJS(`document.querySelector(".sheet-layer")`)
 	p.WaitJS(`getComputedStyle(document.querySelector(".rm-root")).display === "none"`)
-	p.Key(kb.Escape)
+	p.TapJS(ButtonByText("Cancel"))
 	p.WaitJS(`!document.querySelector(".sheet-layer") && getComputedStyle(document.querySelector(".rm-root")).display !== "none"`)
 }
