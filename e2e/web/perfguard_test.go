@@ -198,3 +198,32 @@ func TestPerfGuardPhoneTreeLaysOutOnlyWhatIsInView(t *testing.T) {
 		t.Errorf("opening the folder took a %d ms task at 4x CPU (budget %d ms)", sp.MaxLong(), budget)
 	}
 }
+
+// wireNextFile is what opening another file may take over the wire once
+// the editor was loaded: no editor code again. The page is sent with
+// no-store, so every file opened in a new editor frame fetched the whole
+// editor again (1.2 MB, 200 ms on a 50 Mbit/s Wi-Fi).
+const wireNextFile = 64 << 10
+
+func TestPerfGuardNextFileFetchesNoEditor(t *testing.T) {
+	s := StartServer(t)
+	p := NewPage(t, s, Desktop)
+	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+	r := StartPerf(p)
+	c := p.Login("c-wire-next")
+	openBufAs(t, p, c, 2, "a.go", nil, "package a")
+	p.WaitJS(deskDoc + `?.querySelector(".view-lines .view-line")`)
+	drain(c, 3*time.Second) // the user reads a while
+	since := time.Now()
+	sp := r.Measure("open a second file", func() {
+		openBufAs(t, p, c, 3, "b.go", nil, "package b")
+		p.WaitJS(`document.querySelector(".ed-tab.is-on .ed-tab-name")?.textContent === "b.go"`)
+		p.WaitJS(`[...document.querySelectorAll(".desk-editor")].some((f) => f.contentDocument?.querySelector(".view-lines")?.textContent.replace(/\u00a0/g, " ").includes("package b"))`)
+	})
+	t.Log(sp)
+	n, urls := r.Fetched(since)
+	t.Logf("second file open: %d B over the wire", n)
+	if n > wireNextFile {
+		t.Errorf("opening a second file took %d B over the wire, budget %d B: %v", n, wireNextFile, urls)
+	}
+}
