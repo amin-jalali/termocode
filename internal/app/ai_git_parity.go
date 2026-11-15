@@ -54,6 +54,7 @@ var aiGitParity = map[string]string{
 	"git-branch":           "git_branch op list + git_checkout",
 	"git.branches":         "git_branch op list",
 	"git.checkout":         "git_checkout",
+	"git.branch_create":    "git_branch op create",
 	"git-branch-from":      "git_branch op create",
 	"git-branch-rename":    "git_branch op rename",
 	"git-branch-delete":    "git_branch op delete / delete_remote (the user types the name)",

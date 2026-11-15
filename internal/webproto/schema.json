@@ -3858,6 +3858,20 @@
       "phase": "v2"
     },
     {
+      "op": "git.branch_create",
+      "args": "GitBranchCreateArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "ci.fix_prompt",
       "args": "EmptyArgs",
       "result": "CIFixPrompt",
@@ -10806,6 +10820,18 @@
         "behind"
       ],
       "additionalProperties": true
+    },
+    "GitBranchCreateArgs": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
     },
     "GitBranches": {
       "type": "object",

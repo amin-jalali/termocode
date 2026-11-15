@@ -6,6 +6,7 @@
 import "./gitphone.css";
 import type { GitHost } from "./api";
 import { readGit } from "../state/git";
+import { Branches } from "./Branches";
 import { Changes } from "./Changes";
 import { cleanMessage, CommitSheet } from "./CommitSheet";
 import { History } from "./History";
@@ -59,7 +60,7 @@ export function GitPage() {
         />
       )}
       {r.query.show && <H.ShowSheet hash={r.query.show} onClose={() => H.go({ tab: "git", rest: "", query: r.query.view ? { view: r.query.view } : {} })} />}
-      {r.query.sheet === "remote" && g.repo && <H.RemoteSheet branch={g.branch.name} ahead={g.branch.ahead} behind={g.branch.behind} changed={g.files.length} onDone={close} />}
+      {r.query.sheet === "remote" && g.repo && <Branches g={g} onClose={close} />}
       {discard && (
         <H.AskLaptop cls="discard" label={H.t("git.discard")} text={H.t("git.discard_body", { path: discard })} send={() => H.link.request("git.discard", { paths: [discard] })} onDone={() => setDiscard(null)} />
       )}

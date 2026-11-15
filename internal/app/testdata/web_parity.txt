@@ -200,6 +200,7 @@ web	format-document	cmd:formatDocument
 web	git-ai-commit-msg	op:git.ai_message
 web	git-blame	cmd:gitBlame
 web	git-branch	op:git.branches
+web	git-branch-from	op:git.branch_create
 web	git-ci	op:ci.status
 web	git-ci-fix	op:ci.fix_prompt
 web	git-clone	cmd:gitClone
@@ -665,7 +666,6 @@ missing	git-blame-commit	Git|S
 missing	git-blame-options	Git|S
 missing	git-block-history	Git|S
 missing	git-branch-delete	Git|S
-missing	git-branch-from	Git|S
 missing	git-branch-rename	Git|S
 missing	git-cherry-pick-branch	Git|S
 missing	git-clean-untracked	Git|S

@@ -3,7 +3,7 @@
 // for this page; the page draws the files through it here: its filter,
 // its group (state, the default, or folder), its sort and its limit.
 // Pure: no imports of the page.
-import type { GitFile, Side } from "../state/git";
+import type { GitCommit, GitFile, Side } from "../state/git";
 import type { ViewSpec } from "../home/viewspec";
 
 // The view id, joined so it does not read as a string key.
@@ -55,8 +55,16 @@ function cell(f: GitFile, field: string): string {
   return "";
 }
 
-function holds(f: GitFile, c: NonNullable<ViewSpec["filter"]>[number]): boolean {
-  const v = cell(f, c.field), want = c.value ?? "";
+type Cond = NonNullable<ViewSpec["filter"]>[number];
+
+function holds(f: GitFile, c: Cond): boolean {
+  return holdsValue(cell(f, c.field), c);
+}
+
+/** holdsValue says whether a row's value v meets a filter condition. */
+function holdsValue(v: string, c: Cond): boolean {
+  const want = c.value ?? "";
+  const n = Number(v), w = Number(want);
   switch (c.op) {
     case "eq":
       return v === want;
@@ -72,9 +80,48 @@ function holds(f: GitFile, c: NonNullable<ViewSpec["filter"]>[number]): boolean 
       return v === "";
     case "not_empty":
       return v !== "";
-    default:
-      return true; // an order on text: the laptop would refuse it; show all
+    case "gt":
+      return n > w;
+    case "lt":
+      return n < w;
+    case "ge":
+      return n >= w;
+    case "le":
+      return n <= w;
   }
+  return true;
+}
+
+// The log view id, joined so it does not read as a string key.
+export const LOG_VIEW = ["git", "log"].join(".");
+
+function logCell(c: GitCommit, field: string): string {
+  switch (field) {
+    case "subject":
+      return c.subject;
+    case "hash":
+      return c.hash;
+    case "author":
+      return c.author;
+    case "when":
+      return String(c.when);
+    case "unpushed":
+      return String(c.unpushed);
+  }
+  return "";
+}
+
+/** logRows draws the log through a git.log spec: its filter, sort and
+ * limit, and how many the limit hides (newest first by default). */
+export function logRows(log: GitCommit[], spec: ViewSpec | null): { rows: GitCommit[]; hidden: number } {
+  let rows = log.filter((c) => (spec?.filter ?? []).every((f) => holdsValue(logCell(c, f.field), f)));
+  const sort = spec?.sort?.[0];
+  if (sort) {
+    const num = sort.field === "when";
+    rows = [...rows].sort((a, b) => (num ? a.when - b.when : logCell(a, sort.field).localeCompare(logCell(b, sort.field))) * (sort.desc ? -1 : 1));
+  }
+  const limit = spec?.limit ?? 0;
+  return limit > 0 && rows.length > limit ? { rows: rows.slice(0, limit), hidden: rows.length - limit } : { rows, hidden: 0 };
 }
 
 /** Section is one group of rows: a side of the index, or a folder. */
@@ -139,10 +186,13 @@ export function describe(spec: ViewSpec): string[] {
   const out: string[] = [];
   for (const c of spec.filter ?? []) {
     if (c.field === "path" && (c.op === "contains" || c.op === "starts") && c.value) out.push(c.op === "starts" ? c.value + "…" : "only *" + c.value + (c.value.startsWith(".") ? "" : "*"));
+    else if (c.field === "unpushed" && c.op === "eq") out.push(c.value === "true" ? "not pushed" : "pushed");
     else if (c.op === "eq" || c.op === "ne") out.push(`${c.field} ${c.op === "eq" ? "=" : "≠"} ${c.value ?? ""}`);
     else if (c.op === "in") out.push(`${c.field}: ${(c.in ?? []).join(", ")}`);
   }
   if (spec.group === "path") out.push("by folder");
+  const so = spec.sort?.[0];
+  if (so) out.push("by " + (so.field === "when" ? "date" : so.field));
   if (spec.limit) out.push(`max ${spec.limit}`);
   return out;
 }

@@ -918,6 +918,10 @@ export interface WebForwardArgs {
   port: number;
 }
 
+export interface GitBranchCreateArgs {
+  name: string;
+}
+
 export interface GitLinesArgs {
   path: string;
   from: number;
@@ -4315,6 +4319,7 @@ export interface OpArgs {
   "db.secret": DBSecretArgs;
   "db.export_parquet": DBExportArgs;
   "web.forward": WebForwardArgs;
+  "git.branch_create": GitBranchCreateArgs;
   "ci.fix_prompt": EmptyArgs;
   "git.stage_lines": GitLinesArgs;
   "git.unstage_lines": GitLinesArgs;
@@ -4655,6 +4660,7 @@ export interface OpResult {
   "db.secret": DBDone;
   "db.export_parquet": DBExported;
   "web.forward": AskRef;
+  "git.branch_create": AskRef;
   "ci.fix_prompt": CIFixPrompt;
   "git.discard_lines": AskRef;
   "git.discard_hunk": AskRef;

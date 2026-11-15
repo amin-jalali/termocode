@@ -24,6 +24,8 @@ const PATHS: Record<string, string> = {
   plus: "M12 5v14M5 12h14",
   up: "M18 15l-6-6-6 6",
   share: "M12 3v12M8 7l4-4 4 4M5 13v7h14v-7",
+  downarrow: "M12 5v14M6 13l6 6 6-6",
+  uparrow: "M12 19V5M6 11l6-6 6 6",
 };
 
 /** Icon is a line icon (24 grid) at size px. */

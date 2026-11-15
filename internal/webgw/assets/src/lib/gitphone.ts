@@ -16,9 +16,9 @@ import { Sheet } from "../ui/Sheet";
 import { View } from "../views/View";
 import { DiffSheet } from "../views/git/DiffSheet";
 import { gitFailed } from "../views/git/errors";
-import { RemoteSheet } from "../views/git/RemoteSheet";
 import { ShowSheet } from "../views/git/ShowSheet";
 import { stageFile } from "../views/git/GitView";
+import { copyText } from "./clip";
 import { setDraft } from "./drafts";
 import { haptic } from "./haptic";
 import { go, goTab, route } from "./router";
@@ -51,11 +51,12 @@ const host = (): GitHost => ({
   tn,
   toast,
   addRef,
-  draft: (text) => {
+  draft: (text, stay) => {
     const c = readChat(store.topic("chat").peek()?.data);
     if (c) setDraft(c.id, text);
-    goTab("chat");
+    if (!stay) goTab("chat");
   },
+  copy: copyText,
   failed: gitFailed,
   haptic: () => haptic(),
   stage: stageFile,
@@ -64,7 +65,6 @@ const host = (): GitHost => ({
   AskLaptop,
   DiffSheet,
   ShowSheet,
-  RemoteSheet,
 });
 
 /** loadGitPhone loads gitphone.js once (again after a failure). */

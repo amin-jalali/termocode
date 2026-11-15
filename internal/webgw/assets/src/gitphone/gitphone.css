@@ -90,9 +90,32 @@
 .gp-ask { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; min-height: var(--tap); padding: 0 14px; border-radius: 22px; border: 1px solid var(--ai); color: var(--ai); font-size: 14px; }
 .gp-ask-commit { padding: 4px var(--gutter) var(--s4); }
 
-/* history */
+/* history (07 E) */
 .gp-log { margin: 10px 14px; }
-.gp-commit-row { padding: 8px 12px; }
+.gp-commit-row { padding: 8px 12px; gap: 10px; min-height: 56px; }
+.gp-commit-row.is-unpushed { background: color-mix(in srgb, var(--blue) 9%, var(--bg-panel)); }
+.gp-dot { flex: none; width: 13px; height: 13px; border-radius: 7px; border: 2px solid var(--blue); }
+.is-unpushed .gp-dot { border-color: var(--amber); }
+.gp-tag { flex: none; font-size: 11.5px; padding: 2px 7px; border-radius: 9px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-2); white-space: nowrap; }
+.gp-find { display: flex; align-items: center; gap: 8px; height: 40px; margin: 10px 14px 8px; padding: 0 12px; border-radius: 10px; background: var(--bg-2); color: var(--muted); }
+.gp-find input { flex: 1; min-width: 0; height: 100%; border: 0; background: transparent; color: var(--text); font: inherit; font-size: 15px; }
+.gp-find input:focus { outline: none; }
+.gp-find:focus-within { box-shadow: 0 0 0 2px var(--focus); }
+
+/* branches sheet (07 A-D) */
+.gp-br { display: flex; flex-direction: column; }
+.gp-br-seg { margin: 0 14px 10px; }
+.gp-br-list { margin: 0 14px; }
+.gp-br-row, .gp-br-new { padding: 6px 12px 6px 8px; gap: 8px; min-height: 52px; }
+.gp-br-tick { flex: none; width: 24px; display: flex; justify-content: center; color: var(--blue); }
+.gp-mono { font-family: var(--font-mono); font-size: 14.5px; }
+.gp-sans { font-family: var(--font-sans); font-size: 12px; }
+.gp-br-new .gp-name { color: var(--blue); }
+.gp-br-new .gp-br-tick { color: var(--blue); }
+.gp-br-acts { display: flex; gap: 8px; padding: 12px 14px 4px; }
+.gp-btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: var(--tap); border-radius: 22px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text); font-size: 15px; font-weight: 600; }
+.gp-btn:disabled { opacity: 0.5; }
+.gp-br-note { text-align: center; padding-bottom: var(--s4); }
 .gp-menu:focus { outline: none; }
 
 /* commit sheet (06) */
