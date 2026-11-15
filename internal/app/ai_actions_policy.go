@@ -924,6 +924,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_context_windows":    aiNever(aiNoAIConfig),
 	"ai_models":             aiNever(aiNoAIConfig),
 	"ai_prompt_cache":       aiNever(aiNoAIConfig),
+	"ai_tool_groups":        aiNever(aiNoAIConfig),
 	"ai_reasoning":          aiNever(aiNoAIConfig),
 	"ai_fallback":           aiNever(aiNoAIConfig),
 	"ai_router":             aiNever(aiNoAIConfig),

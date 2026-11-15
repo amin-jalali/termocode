@@ -1044,6 +1044,26 @@ arguments and its rule.
 To skip the question for one kind, run **AI: Agent Auto-Approve…** and turn
 on *fileWrite*, *git*, *run*, *ide* or *settings*. Turn on only what you trust.
 
+### Tool groups (small, fast requests)
+
+Every tool's description is sent with every request, and the chat has
+well over a hundred tools. So a request sends only the core tools: read,
+list, search and glob, edit, write and create files, `run_command`,
+`git_status`, `git_diff`, diagnostics, `tests_run`, `todo_write`,
+`agent_run_start`, `skill_load`, and one more, `tool_search`.
+
+The other tools wait in named groups: `files`, `git`, `db`, `containers`,
+`kube`, `services`, `terminal`, `tests`, `debug`, `code`, `ide`, `http`,
+`web`, `agents`, `workflows`, `views`, `chat` and `termocode`. The AI
+calls `tool_search` with a group name (or with keywords) when it needs
+one. That group's tools come with the next step and stay for the rest of
+the chat. A tool the AI calls by its name runs at once and loads its group
+too. When you attach a database card, the `db` group is there from the
+first request.
+
+The same approval rules apply to every tool, loaded or not. To send every
+tool on every request again, set `"ai_tool_groups": "off"` in config.json.
+
 ### Autopilot and approval rules
 
 termocode rates every change the agent wants to make as **low**, **medium**

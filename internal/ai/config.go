@@ -37,6 +37,10 @@ type Settings struct {
 	// negative value: off): the same tool call this many times in a row
 	// is not run. Edited by hand.
 	RepeatCallLimit int `json:"ai_repeat_call_limit,omitempty"`
+	// ToolGroups is ai_tool_groups (tool_groups.go): "on" ("" too) sends
+	// a chat request the core tools and loads the rest by group; "off"
+	// sends every tool. Edited by hand.
+	ToolGroups string `json:"ai_tool_groups,omitempty"`
 	// EditReview is "review" (default: the agent's file changes open as a
 	// diff to accept or reject) or "auto" (they are written after the
 	// confirm dialog, or at once when fileWrite is auto-approved).

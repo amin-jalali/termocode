@@ -345,6 +345,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	}
 	memBlock, lessons := m.aiMemoryTurn(root, text) // OM-2: before the attachments are taken
 	chips := s.attachChips()
+	preload := aiAttachGroups(s.attachments) // their tool groups load first
 	ctxText, images := s.takeAttachments()
 	if blk := aiRulesMentionBlock(rules, text, s.rulesInjector()); blk != "" { // CMP-82: #name rules
 		ctxText = strings.TrimLeft(ctxText+"\n\n"+blk, "\n")
@@ -381,6 +382,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	base := aiWithToolGuideFor(m.aiChatBasePrompt(root, rules, memBlock), tools, false, fam) + autoRules + aiStepSystem(step.System)
 	form := aiNativeFor(slot.cfg.Kind, native)
 	history := m.aiChatTurnHistory(aiFamilySystem(fam, ai.SystemPrompt(base, tools, native)), native, slot.cfg.Kind) // earlier turns' tool results too
+	sent := s.aiDeferTurnTools(tools, native, preload)                                                               // the prompt above names every tool: it stays the same as groups load
 	mcpTools := m.aiMCPTurn(gen, ch)                                                                                 // MCP servers' tools, built on the goroutine
 	// "@server:uri" words: MCP resources read on the goroutine (MCPX-12).
 	mentions := m.aiMCPMentions(gen, ch, text, ai.SupportsImages(slot.p))
@@ -407,7 +409,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	}
 	agent := &ai.Agent{
 		Provider:    slot.p,
-		Tools:       m.aiRecallTurn(root, text).wrap(aiWithHookList(root, hooks, tools, out)), // OMX-12, OMX-18
+		Tools:       m.aiRecallTurn(root, text).wrap(aiWithHookList(root, hooks, sent, out)), // OMX-12, OMX-18
 		Native:      native,
 		AutoApprove: auto,
 		Policy:      s.aiApprovalPolicy(),       // CMP-61 (ai_autopilot.go)
