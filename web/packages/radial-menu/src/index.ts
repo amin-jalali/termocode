@@ -6,7 +6,7 @@ export { mount, type MountOptions, type RadialFab } from "./fab";
 export { RadialMenu, SAVED, STRINGS, type Category, type Clock, type Item, type MenuOptions, type Strings, type Theme } from "./menu";
 export * from "./geometry";
 export { DUR, SLOP, BLOOM_WINDOW, cubic, softBack, menuIn, easeOutBack, entranceFrame, ringsFrame, petalFrame, sparkFrame, collapseFrame, pulseFrame, breathFrame, breathAt, holdScale, flashScale, springAt } from "./motion";
-export { ICONS, iconSVG } from "./icons";
+export { ICONS, iconNodes, iconSVG } from "./icons";
 export { SAMPLE, SAMPLE_FAVORITES } from "./sample";
 
 /** mountMenu draws the menu inline in el (the design's own page: closed

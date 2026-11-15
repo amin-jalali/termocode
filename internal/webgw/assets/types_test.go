@@ -234,6 +234,15 @@ func loadSources(t *testing.T) (map[string]string, map[string]string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The page's own packages (web/packages/<name>/src), as src/ sees them.
+	pkgs, _ := filepath.Glob("../../../web/packages/*/src/*.ts")
+	for _, p := range pkgs {
+		b, err := os.ReadFile(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		files[filepath.ToSlash(p)] = string(b)
+	}
 
 	var lock struct {
 		Packages []struct {

@@ -24,6 +24,7 @@ import { ViewerBar } from "./ui/ViewerBar";
 import { TitleBar } from "./ui/TitleBar";
 import { desk, deskFailed, home, homeFailed, homeHosted, loadDesk, loadHome } from "./lib/lazy";
 import { soloBuf } from "./lib/popout";
+import { useRadial } from "./lib/radial";
 import { ChatView, FilesView, GitView, MoreView, TermView } from "./views/views";
 
 effect(() => {
@@ -142,6 +143,7 @@ export function App() {
   // desktop draws that page in the tablet layout (its tabs lead back).
   const l = layout.value === "desktop" && r.tab === "more" && r.rest.startsWith("projects/") ? "tablet" : layout.value;
   const solo = soloBuf(r);
+  useRadial(l !== "desktop" && solo === null); // the floating radial menu (RM-2), touch only
   if (solo !== null) return <Solo buf={solo} />;
   if (l === "desktop") {
     // The desktop is the workbench: the TUI's layout, the status bar at

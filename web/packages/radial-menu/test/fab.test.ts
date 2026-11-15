@@ -71,8 +71,9 @@ test("S16 P4 the button: 64 px in the bottom-right corner, a labelled button", (
   eq(btn(r).getAttribute("aria-label"), "Radial menu");
   eq(btn(r).getAttribute("aria-expanded"), "false");
   eq(btn(r).style.getPropertyValue("width"), "64px");
-  ok(btn(r).innerHTML.includes(">menu</text>"), "the closed hub's label");
-  ok(btn(r).innerHTML.includes("#0C0C11"), "the dark disc");
+  ok(btn(r).all((e) => e.tagName === "TEXT" && e.textContent === "menu").length === 1, "the closed hub's label");
+  ok(btn(r).byClass("rm-fab-disc").length === 1, "the dark disc");
+  eq(btn(r).all((e) => e.innerHTML !== "" || e.attrs.has("style")).length, 0, "Trusted Types: no markup, no style attributes");
   ok(btn(r).classList.contains("rm-in"), "M13 the little entrance");
   const notch = rig({}, 390, 844);
   notch.ins.bottom = 34;
@@ -155,7 +156,7 @@ test("M16 the pick-up ring and the lift show only while dragging", () => {
   ok(!btn(r).classList.contains("rm-dragging"), "not yet");
   r.clock.tick(220);
   ok(btn(r).classList.contains("rm-dragging"));
-  ok(btn(r).innerHTML.includes("rm-fab-spin"), "three arcs that spin");
+  eq(btn(r).byClass("rm-fab-spin")[0]?.children.length, 3, "three arcs that spin");
   btn(r).dispatchEvent(pointer("pointerup", x, y, 9));
   ok(!btn(r).classList.contains("rm-dragging"));
   ok(!r.fab.isOpen, "the release after a pick-up does not open");
@@ -244,4 +245,12 @@ test("destroy takes everything off the page", () => {
   r.fab.destroy();
   eq(r.host.children.length, 0);
   eq(r.clock.pending() >= 0, true);
+});
+
+test("extraInsets keeps the button above the page's own bottom bar", () => {
+  const r = rig({ extraInsets: () => ({ bottom: 56 }) });
+  eq(r.fab.position, [752, 600 - 56 - 12 - 32]);
+  drag(r, 0, 300);
+  r.clock.tick(500);
+  eq(r.fab.position[1], 600 - 56 - 12 - 32, "a drop is kept above it too");
 });
