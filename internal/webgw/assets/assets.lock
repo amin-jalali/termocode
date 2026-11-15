@@ -19,7 +19,7 @@ fonts/nf-powerline.woff2 sha384-dy+2FQMRiPODrEHw2cbFr4wK5XiPhoZfUFC6GTizk3TGJlR7
 fonts/nf-seti.woff2 sha384-SIRO07PrKQGKqZz8AqBLr5pTSfSdjHR93D+woV27NzC1QnmdQf6bYcCBljfRiMZh 41628
 gitphone.css sha384-pUytozMATfTA1SBrVWSxWuZEyXABvdmjyGUkPK/uGTIgO2h3lzBa6JZDtlTtnzqc 12269
 gitphone.js sha384-9fp/OJz+Eqr0yGWv0oBaVlpQyNkKCzun80G37gEUngS+1tL0+theqyeJ043qEJMA 35991
-home.js sha384-VxhQmOZDVgoP24uxYIu/azE/VIdMMarrvmLJGEltQTU3rMVbhrleXVFJfen14y/E 148374
+home.js sha384-FCFBEx+ct4JwRF1qrHwcKk6IUteKSRlUZ/qeQwsPOKxt/IRVd3pZID9LugmdsILb 148365
 icon-maskable.svg sha384-jsUQFC456bVobLxEI3ZKbp9mW6SjO1Joa3U86iXD66qm+YF+smRbvNGYVLvYMqOf 201
 icon.svg sha384-1i6/INXc16ryIXQB25IUE2qoPWGgij99HXLf1+5KcACYRgURj9eQzm/tcozbgZjh 210
 icons/codicon.ttf sha384-ydwWqX1+Wu2d6/YNWz288+ntV4SOp+lwtNI+XWqY3797m8eIMAmbNR5P9SCqdB5N 125828
@@ -52,6 +52,6 @@ relay.js sha384-JgRWe4uCf08CNCV5lk8dlowzqcc/OozC1no+zm9YJEo25frxG8bkHY2dHlMB+rZ5
 strings-fa.js sha384-2V0ugMcSmLWeeR7SuouQHW/2QmkHeAwKx07qmKcC48CobvP+PQL2AN/QMjU6WSNG 105374
 tactile.css sha384-HAxB9JbV/+N+uVbyDWWynicu4Z9LU7Bj2CCVycK699IjnFtGwSK3DFfgX+2wby8l 6339
 tactile.js sha384-ACq6aS/5MZ71If5x1wClcshfz1WPEAD01bn+Lqt9s+Zp9PdP5Z0XYkai+qpljIag 28967
-term.css sha384-ffFgWwA3QH+NzJ3oBtCKjvDoObSyVZU3pj3QJ1ab4/MvdN7LuXoc+yVJ8z+/K+WN 5059
+term.css sha384-H0qpGg0FZ1PL2ein2R8yRpFdADcHnRYO5/WzsLSwJqtmsjLcaVZ6LlZ72qpKiRJ9 5059
 term.js sha384-d/vaU4Zk86RcnMcJ8UmrJrBIfU3XHmHqgBx7ac7xPJevM7O2Umm/sLfTmImtm1eg 350879
 workbench.js sha384-C8BzfbnWkyYSycbjkq1tADxwjFQg2gOM9aqPBffxNoJ3ONtcS0MuajGP1lrZQr6b 267374

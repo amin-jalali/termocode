@@ -5,7 +5,7 @@
 .term-pill button.chip, .term-pills button.pterm-new { height: 30px; min-height: 30px; padding: 0 10px; gap: 4px; border: 0; border-radius: 15px; background: var(--bg-2); font: 13px var(--font-mono); color: var(--text); }
 .term-pill.is-on button.chip { padding-inline-end: 28px; background: var(--sel); }
 .pterm-ic, .term-pill .term-chip-n { color: var(--muted); }
-.pterm-close { position: absolute; inset-inline-end: 4px; width: 22px; height: 22px; border: 0; border-radius: 11px; background: none; color: var(--muted); font-size: 15px; }
+.pterm-close { position: absolute; inset-inline-end: 3px; width: 24px; height: 24px; border: 0; border-radius: 12px; background: none; color: var(--muted); font-size: 15px; }
 .term-pills button.pterm-new { min-width: 34px; font-size: 16px; }
 .pterm-strip .pterm-more { min-height: 40px; color: var(--blue); font-size: 20px; }
 .pterm-ai { padding: 6px 10px; border-top: 1px solid var(--border); background: var(--bg); }

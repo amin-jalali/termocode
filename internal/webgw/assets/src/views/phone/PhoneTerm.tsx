@@ -79,14 +79,15 @@ const name = (x: TermItem | undefined): string => (x ? x.task || x.title : t("ta
 
 /** Strip is the shells as one slim line of pills (›_ name, number, ×
  * on the shown one) with + among them and ⋯ at the end (About, Show on
- * the laptop, Close). */
+ * the laptop, Close). The pills are a group of buttons, the shown one
+ * pressed: a tab list may hold only tabs, and × and + are buttons. */
 function Strip({ terms, cur, controller, more, ring }: { terms: TermItem[]; cur: number | undefined; controller: boolean; more: (() => void) | null; ring: boolean }) {
   return (
     <div class="pterm-strip">
-      <div class="term-chips term-pills" role="tablist" aria-label={t("tab.term")}>
+      <div class="term-chips term-pills" role="group" aria-label={t("tab.term")}>
         {terms.map((x, i) => (
           <span key={x.buf} class={`term-chip term-pill${x.buf === cur ? " is-on" : ""}`} data-buf={x.buf}>
-            <Chip tab on={x.buf === cur} dot={x.busy ? "busy" : x.exited ? "warn" : undefined} onClick={() => showTerm(x.buf)}>
+            <Chip on={x.buf === cur} dot={x.busy ? "busy" : x.exited ? "warn" : undefined} onClick={() => showTerm(x.buf)}>
               <span class="pterm-ic" aria-hidden="true">
                 ›_
               </span>
