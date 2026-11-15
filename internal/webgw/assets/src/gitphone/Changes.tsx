@@ -21,26 +21,47 @@ const TITLES: Record<Side, "git.conflicts" | "git.staged" | "git.changes" | "git
   untracked: "git.untracked",
 };
 
-/** resetKey is the saved view Reset put aside (its id and save time), for
- * as long as the page is open: a newer save shows again. */
-let resetKey = "";
+/** resetKeys are the saved views Reset put aside (id and save time), by
+ * view, for as long as the page is open: a newer save shows again. */
+const resetKeys = new Map<string, string>();
 
-/** usePageView is the page's saved view (view.list, ev views_saved), and
- * a Reset of it on this phone (until a newer save). */
-function usePageView(ready: boolean): [PageView | null, () => void] {
+/** usePageView is the page's saved view of viewID (view.list, ev
+ * views_saved), and a Reset of it on this phone (until a newer save). */
+export function usePageView(ready: boolean, viewID: string): [PageView | null, () => void] {
   const [v, setV] = H.useState<PageView | null>(null);
-  const [reset, setReset] = H.useState(resetKey);
+  const [reset, setReset] = H.useState(resetKeys.get(viewID) ?? "");
   // Asked once the git topic is here (after its sub), and heard again
   // on every save anywhere.
   H.useEffect(() => {
     if (!ready) return;
-    const read = (d: unknown) => setV(pickView(d, STATUS_VIEW));
+    const read = (d: unknown) => setV(pickView(d, viewID));
     H.link.request("view.list").then(read, () => undefined);
     return H.link.onEvent((kind, d) => kind === "views_saved" && read(d));
   }, [ready]);
   const key = v ? `${v.id}@${v.saved}` : "";
-  const drop = () => setReset((resetKey = key));
+  const drop = () => (resetKeys.set(viewID, key), setReset(key));
   return [v && reset !== key ? v : null, drop];
+}
+
+/** ViewBanner says a saved view shapes the list: "Made by AI:" (or your
+ * view), its name and what it does, with Edit and Reset. */
+export function ViewBanner({ view, onEdit, onReset }: { view: PageView; onEdit?: () => void; onReset: () => void }) {
+  return (
+    <div class={`gp-aiv${view.by === "ai" ? " is-ai" : ""}`} role="note">
+      {view.by === "ai" && <Icon n="spark" size={14} />}
+      <span class="gp-aiv-t">
+        <b>{s(view.by === "ai" ? "ai_made" : "view_by")}</b> {[view.name, ...describe(view.spec)].join(" · ")}
+      </span>
+      {onEdit && (
+        <button type="button" class="gp-link" data-act="view-edit" onClick={onEdit}>
+          {s("edit")}
+        </button>
+      )}
+      <button type="button" class="gp-link" data-act="view-reset" onClick={onReset}>
+        {s("reset")}
+      </button>
+    </div>
+  );
 }
 
 export function stageAll(paths: string[], on: boolean): void {
@@ -69,7 +90,7 @@ export function Changes({
   const [chip, setChip] = H.useState<Side | "all">("all");
   const [menu, setMenu] = H.useState<{ at: At; title: string; items: MenuItem[] } | null>(null);
   const [tune, setTune] = H.useState(false);
-  const [view, resetView] = usePageView(!g.loading);
+  const [view, resetView] = usePageView(!g.loading, STATUS_VIEW);
   const [own, setOwn] = H.useState<ViewSpec | null>(null);
   const spec = own ?? view?.spec ?? null;
   const titles = { conflicts: H.t(TITLES.conflicts), staged: H.t(TITLES.staged), changes: H.t(TITLES.changes), untracked: H.t(TITLES.untracked) };
@@ -109,20 +130,7 @@ export function Changes({
             {H.t("git.op", { op: g.op })}
           </div>
         )}
-        {view && !own && (
-          <div class={`gp-aiv${view.by === "ai" ? " is-ai" : ""}`} role="note">
-            {view.by === "ai" && <Icon n="spark" size={14} />}
-            <span class="gp-aiv-t">
-              <b>{s(view.by === "ai" ? "ai_made" : "view_by")}</b> {[view.name, ...describe(view.spec)].join(" · ")}
-            </span>
-            <button type="button" class="gp-link" data-act="view-edit" onClick={() => setTune(true)}>
-              {s("edit")}
-            </button>
-            <button type="button" class="gp-link" data-act="view-reset" onClick={resetView}>
-              {s("reset")}
-            </button>
-          </div>
-        )}
+        {view && !own && <ViewBanner view={view} onEdit={() => setTune(true)} onReset={resetView} />}
         {chips.length > 1 && (
           <div class="gp-chips" role="toolbar" aria-label={H.t("tab.git")}>
             {(["all", ...chips] as const).map((c) => (

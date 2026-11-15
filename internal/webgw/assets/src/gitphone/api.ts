@@ -15,7 +15,6 @@ import type { ToastAction } from "../lib/toasts";
 import type { View as PView } from "../views/View";
 import type { AskLaptop as PAskLaptop } from "../ui/AskLaptop";
 import type { ShowSheet as PShowSheet } from "../views/git/ShowSheet";
-import type { RemoteSheet as PRemoteSheet } from "../views/git/RemoteSheet";
 import type { DiffSheet as PDiffSheet } from "../views/git/DiffSheet";
 import type { Sheet as PSheet } from "../ui/Sheet";
 
@@ -37,8 +36,11 @@ export interface GitHost {
   toast(kind: "ok" | "info" | "warn" | "error", title: string, detail?: string, action?: ToastAction): number;
   /** addRef puts a reference into the chat's composer (lib/tochat.ts). */
   addRef(r: ChatRef, title?: string): AddResult;
-  /** draft puts text into the open chat's box and opens the chat. */
-  draft(text: string): void;
+  /** draft puts text into the open chat's box and opens the chat (stay:
+   * the page stays, a toast says it is there). */
+  draft(text: string, stay?: boolean): void;
+  /** copy puts text on the clipboard (lib/clip.ts). */
+  copy(text: string): void;
   /** failed shows a failed git request (views/git/errors.ts). */
   failed(e: unknown): void;
   /** haptic is one short tap (lib/haptic.ts: the Haptics switch holds). */
@@ -50,5 +52,4 @@ export interface GitHost {
   AskLaptop: typeof PAskLaptop;
   DiffSheet: typeof PDiffSheet;
   ShowSheet: typeof PShowSheet;
-  RemoteSheet: typeof PRemoteSheet;
 }
