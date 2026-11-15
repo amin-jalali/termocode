@@ -255,6 +255,9 @@ type Workspace struct {
 	Exec services.Exec
 	// HostLabel names that host in tool results ("api-1").
 	HostLabel string
+	// out keeps the full output of a cut command (tools_cutsave.go);
+	// WorkspaceTools sets it.
+	out *outStore
 }
 
 // ErrOutsideWorkspace is returned for paths escaping the root.
@@ -366,9 +369,16 @@ func capOut(s string, n int) string {
 // the start and the rest from the end, where test failures, build errors
 // and the summary are. It cuts on line breaks and says how many lines
 // (or bytes, for one long line) are cut in the middle.
-func capHeadTail(s string, n int) string {
+func capHeadTail(s string, n int) string { return capHeadTailNote(s, n, "") }
+
+// capHeadTailNote is capHeadTail whose note also names saved, the file
+// with the full output, and which lines of it are cut.
+func capHeadTailNote(s string, n int, saved string) string {
 	if len(s) <= n {
 		return s
+	}
+	if saved != "" { // the longer note takes from the kept text, not on top
+		n = max(n/2, n-len(saved)-96)
 	}
 	headN := n / 4
 	tailN := n - headN
@@ -391,7 +401,15 @@ func capHeadTail(s string, n int) string {
 		if !strings.HasSuffix(h, "\n") && h != "" {
 			h += "\n"
 		}
+		if saved != "" {
+			first := strings.Count(h, "\n") + 1
+			return fmt.Sprintf("%s… %d lines cut … (lines %d-%d) full output: %s (read_file with offset)\n%s",
+				h, lines, first, first+lines-1, saved, t)
+		}
 		return fmt.Sprintf("%s… %d lines cut …\n%s", h, lines, t)
+	}
+	if saved != "" {
+		return fmt.Sprintf("%s\n… %d bytes cut … full output: %s (read_file with offset)\n%s", h, len(mid), saved, t)
 	}
 	return fmt.Sprintf("%s\n… %d bytes cut …\n%s", h, len(mid), t)
 }
@@ -400,6 +418,7 @@ func capHeadTail(s string, n int) string {
 // app adds editor-backed (LSP) tools on top. A workspace on another host
 // (w.FS set) gets the same tools, run through that host.
 func WorkspaceTools(w Workspace) []Tool {
+	w = withOutStore(w)
 	tools := localWorkspaceTools(w)
 	if w.FS != nil {
 		return onHost(w, tools)
@@ -419,7 +438,7 @@ func localWorkspaceTools(w Workspace) []Tool {
 			Run: func(_ context.Context, a map[string]any) (string, error) {
 				abs, err := w.Resolve(path(a))
 				if err != nil {
-					return "", err
+					return readOutsideOrSaved(path(a), a, err) // a saved command output, read only
 				}
 				if SecretFile(abs) {
 					return "", errSecretFile(w.rel(abs))
@@ -814,7 +833,7 @@ func localWorkspaceTools(w Workspace) []Tool {
 				if StartsWebPanel(ArgString(a, "command")) {
 					return "", ErrNoWebPanel
 				}
-				return runCmd(ctx, w.Root, t, "sh", "-c", ArgString(a, "command"))
+				return runCmdCap(ctx, w.Root, t, w.capRun, "sh", "-c", ArgString(a, "command"))
 			},
 		},
 	}
@@ -864,13 +883,19 @@ func NonInteractiveEnv(env []string) []string {
 }
 
 func runCmd(ctx context.Context, dir string, timeout time.Duration, name string, args ...string) (string, error) {
+	return runCmdCap(ctx, dir, timeout, func(s string) string { return capHeadTail(s, maxOutBytes) }, name, args...)
+}
+
+// runCmdCap is runCmd whose output is cut by capf (run_command saves a
+// cut output in full: Workspace.capRun).
+func runCmdCap(ctx context.Context, dir string, timeout time.Duration, capf func(string) string, name string, args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	cmd := spawn.CommandContext(ctx, name, args...)
 	cmd.Dir = dir
 	cmd.Env = NonInteractiveEnv(os.Environ()) // OMX-10: no pager, no password prompt
 	out, err := cmd.CombinedOutput()
-	s := capHeadTail(string(out), maxOutBytes)
+	s := capf(string(out))
 	if ctx.Err() == context.DeadlineExceeded {
 		return s + "\n[timed out]", nil
 	}
