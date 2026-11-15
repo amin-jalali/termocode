@@ -183,7 +183,14 @@ type StoredStep struct {
 	// Worktree is the git worktree the step ran in (G-WT; nil: the
 	// user's tree).
 	Worktree *StoredWorktree `json:"worktree,omitempty"`
+	// Blocks are the visual blocks of the step's tool calls (MOB-10, as
+	// StoredMessage.Block of a tool line), the newest MaxStepBlocks.
+	Blocks []blocks.Block `json:"blocks,omitempty"`
 }
+
+// MaxStepBlocks is how many tool blocks a step keeps (webproto
+// MaxMsgBlocks).
+const MaxStepBlocks = 8
 
 // Conversation is one persisted chat. Port of mobocode's chat_store.dart,
 // but one JSON file per chat under ai/chats/ so a write never rewrites

@@ -17,6 +17,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/agentrun"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/blocks"
 	"github.com/amin-jalali/termocode/internal/clistep"
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/confirm"
@@ -651,6 +652,12 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 			m.aiAuditResult(ev.AI)
 			if n := len(st.Tools); n > 0 {
 				st.Tools[n-1] += " → " + aiShortResult(ev.AI.Detail)
+			}
+			if b := ev.AI.View; b != nil { // the call's card (a db_connections list) stays on the step
+				st.Blocks = append(st.Blocks, *b)
+				if n := len(st.Blocks); n > ai.MaxStepBlocks {
+					st.Blocks = append([]blocks.Block(nil), st.Blocks[n-ai.MaxStepBlocks:]...)
+				}
 			}
 		}
 	case agentrun.NodeAI:
