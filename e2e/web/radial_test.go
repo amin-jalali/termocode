@@ -205,6 +205,6 @@ func TestRadialHidesUnderSheets(t *testing.T) {
 	p.Do(chromedp.TapXY(x, y))
 	p.WaitJS(`document.querySelector(".sheet-layer")`)
 	p.WaitJS(`getComputedStyle(document.querySelector(".rm-root")).display === "none"`)
-	p.TapJS(ButtonByText("Cancel"))
+	p.TapJS(`document.querySelector(".sheet-layer [data-act=\"close\"]")`) // the Branches sheet's ✕
 	p.WaitJS(`!document.querySelector(".sheet-layer") && getComputedStyle(document.querySelector(".rm-root")).display !== "none"`)
 }
