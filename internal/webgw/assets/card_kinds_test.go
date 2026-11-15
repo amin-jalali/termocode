@@ -54,7 +54,11 @@ func TestCardKnowsEveryKind(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(views), `rest: "workflows"`) || !strings.Contains(string(views), "<WorkflowsView />") {
+	list, err := os.ReadFile("src/radial/morelist.ts") // the More list's rows (RM-3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(list), `["workflows", "more.workflows",`) || !strings.Contains(string(views), "<WorkflowsView />") {
 		t.Error("the More page does not reach the Workflows page")
 	}
 }

@@ -52,7 +52,7 @@ func phoneRoutes(t *testing.T) (tabs, subs []string) {
 // neither fails here.
 func TestEveryPhoneViewIsReachable(t *testing.T) {
 	tabs, subs := phoneRoutes(t)
-	list, err := os.ReadFile("src/home/MoreList.tsx")
+	list, err := os.ReadFile("src/radial/morelist.ts")
 	if err != nil {
 		t.Fatalf("the More list: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestEveryPhoneViewIsReachable(t *testing.T) {
 	}
 	for _, s := range subs {
 		if !rows[s] {
-			t.Errorf("#/more/%s is not a row of the More list (src/home/MoreList.tsx)", s)
+			t.Errorf("#/more/%s is not a row of the More list (src/radial/morelist.ts)", s)
 		}
 	}
 	for _, tab := range tabs {
