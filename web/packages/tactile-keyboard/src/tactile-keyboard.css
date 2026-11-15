@@ -74,12 +74,13 @@
 .tk-stack .tk-main { font-size: min(13px, 36cqh); }
 .tk-left .tk-face { justify-content: flex-start; padding-left: 7px; }
 .tk-left .tk-stack { align-items: flex-start; }
-.tk-core { display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 0; }
+.tk-core { display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 0; max-width: 100%; }
 .tk-label {
   font-size: 11px;
   letter-spacing: 0.2px;
   color: var(--tk-fg-label);
-  overflow-wrap: anywhere; /* narrow phone caps wrap, as in the original */
+  min-width: 0;
+  overflow-wrap: break-word; /* a word too long for a narrow phone cap wraps, as in the original */
   line-height: 1.2;
 }
 .tk-func .tk-label { font-size: 9.5px; }
