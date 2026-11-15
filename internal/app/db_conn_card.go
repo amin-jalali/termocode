@@ -101,7 +101,12 @@ func dbCardItem(i int, r dbCardRow) blocks.BlockItem {
 	}
 	sub := []string{}
 	if _, detail, ok := strings.Cut(r.status, ": "); ok && kind != dbStatusReady {
-		sub = append(sub, detail)
+		if kind == dbStatusMissing {
+			_, detail, _ = strings.Cut(detail, ", ") // the badge names the field
+		}
+		if detail != "" {
+			sub = append(sub, detail)
+		}
 	}
 	if r.target != "" {
 		sub = append(sub, r.target)

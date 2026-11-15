@@ -594,6 +594,9 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 		case ai.StoredTool:
 			out = append(out, selPlain(aiCleanText(msg.Text), theme.TextDim, i)...)
 			out = append(out, s.aiToolDetailLines(i, width)...) // MCPX-33
+			if aiIsDBCard(msg.Block) {                          // the database card (ai_db_card_tui.go)
+				out = append(out, aiDBCardLines(msg.Block, width)...)
+			}
 		case ai.StoredError:
 			out = append(out, selPlain("⚠ "+aiCleanText(msg.Text), theme.DiagError, i)...)
 		case ai.StoredNote: // OMX-7
@@ -1552,6 +1555,8 @@ func (m *Model) onAIButton(id string) tea.Cmd {
 		return m.answerAIMemoryAsk("on")
 	case id == "memask-notnow":
 		return m.answerAIMemoryAsk("notnow")
+	case strings.HasPrefix(id, dbCardButton): // a database card's row or button
+		return m.onAIDBCardButton(id)
 	case strings.HasPrefix(id, "tooldetail:"): // MCPX-33: open / close an MCP call's details
 		m.aiS().aiToggleToolDetail(id)
 		return nil
