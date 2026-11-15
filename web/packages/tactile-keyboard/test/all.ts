@@ -3,6 +3,7 @@
 // with node.
 import "./layout.test";
 import "./engine.test";
+import "./dom.test";
 import { run } from "./t";
 
 void run();
