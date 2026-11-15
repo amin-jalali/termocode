@@ -15,7 +15,9 @@ const budgetNow = 14 << 10
 // files do not carry it.
 func TestNowChunkHoldsNow(t *testing.T) {
 	js, page := readBuilt(t, "now.js"), readPage(t)
-	for _, want := range []string{"Your turn", "All clear.", "Why this?", `"now.act"`, `"now.rules"`, "See all"} {
+	for _, want := range []string{"Your turn", "All clear.", "Why this?", `"now.act"`, `"now.rules"`, "See all",
+		// The Review page (Now + Review part 3) is in now.js too.
+		`"review.get"`, `"review.act"`, "Approve & next", "Merge waits for green."} {
 		if !strings.Contains(js, want) {
 			t.Errorf("now.js lacks %q", want)
 		}
