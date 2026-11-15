@@ -239,6 +239,17 @@ test("keyboard: Enter on the button opens; Escape on the overlay closes", () => 
   ok(r.fab.menu?.closing);
 });
 
+test("look: a tap opens the menu with no focus ring on a wedge (the design has none); Enter puts the focus on the first action", () => {
+  const r = rig({ favorites: ["push"] });
+  tapFab(r);
+  const acts = () => r.host.byClass("rm-act");
+  ok(acts().length > 0);
+  eq(acts().filter((e) => e.focused).length, 0, "a touch open focuses nothing");
+  const k = rig({ favorites: ["push"] });
+  btn(k).dispatchEvent({ type: "keydown", key: "Enter" });
+  ok(k.host.byClass("rm-act")[0].focused, "a keyboard goes on from the first action");
+});
+
 test("destroy takes everything off the page", () => {
   const r = rig();
   tapFab(r);
