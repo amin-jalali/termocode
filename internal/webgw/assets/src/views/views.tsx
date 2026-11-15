@@ -17,7 +17,7 @@ import { RunsView } from "./more/RunsView";
 import { WorkflowsView } from "./more/WorkflowsView";
 import { RacesView } from "./more/RacesView";
 import { BoardRoute } from "./more/BoardRoute";
-import { SettingsView } from "./more/SettingsView";
+import { loadPages, pages, pagesFailed, type Pages } from "../lib/pages";
 import { AgentsView } from "./AgentsView";
 import { ItermocView } from "./ItermocView";
 import { MCPView } from "./more/MCPView";
@@ -33,6 +33,7 @@ import { SubView } from "./more/SubView";
 import { FileView } from "./FileView";
 import { home as phone, homeFailed as phoneFailed, loadHome } from "../lib/lazy";
 import { TreeView } from "./Files";
+import { GitView as DeskGitView } from "./git/GitView";
 import { PhoneHost } from "./PhoneHost";
 import { loadRadial, radial, radialHost } from "../lib/radial";
 
@@ -49,7 +50,11 @@ export function TermView() {
   return <PhoneLazy tkey="tab.term" name="term" draw={(m) => <m.PhoneTermView />} />;
 }
 
-export { GitView } from "./git/GitView";
+/** GitView is the Git tab: the phone's pages from home.js and
+ * gitphone.js, the tablet's and the desktop's own view. */
+export function GitView() {
+  return layout.value === "phone" ? <PhoneLazy tkey="tab.git" name="git" draw={(m) => <m.GitPhoneView />} /> : <DeskGitView />;
+}
 
 /** ToolsView is the "All tools" menu (MOBUX-5), from the phone chunk
  * (home.js since the merge), loaded on first open. */
@@ -116,6 +121,26 @@ function PhoneLazy({ tkey, name, draw }: { tkey: StringKey; name: string; draw: 
   );
 }
 
+/** PageLazy is a tool page from pages.js (UI pages), loaded on first use. */
+function PageLazy({ tkey, name, draw }: { tkey: StringKey; name: string; draw: (m: Pages) => ComponentChildren }) {
+  const m = pages.value;
+  useEffect(() => {
+    if (!m) loadPages().catch(() => undefined);
+  }, [m]);
+  if (m) return <>{draw(m)}</>;
+  return (
+    <SubView title={t(tkey)} name={name}>
+      {pagesFailed.value ? (
+        <button type="button" class="btn btn-neutral" onClick={() => loadPages().catch(() => undefined)}>
+          {t("retry")}
+        </button>
+      ) : (
+        <SkeletonRows rows={8} mono={false} />
+      )}
+    </SubView>
+  );
+}
+
 /** MoreLinks is the More list (RM-3) from radial.js: search, Recent, the
  * grouped views with their icons; a skeleton while it loads. */
 function MoreLinks() {
@@ -147,14 +172,14 @@ export function MoreView() {
   if (sub === "workflows") return <WorkflowsView />;
   if (sub === "races") return <RacesView />;
   if (sub === "board") return <BoardRoute />;
-  if (sub === "settings") return <SettingsView />;
+  if (sub === "settings") return <PageLazy tkey="more.settings" name="settings" draw={(m) => <m.SettingsPage />} />;
   if (sub === "mcp") return <MCPView />;
   if (sub === "agents") return <AgentsView />;
   if (sub === "itermoc") return <ItermocView />;
   if (sub === "containers") return <PhoneLazy tkey="more.containers" name="containers" draw={(m) => <m.ContainersView />} />;
   if (sub === "db" || sub.startsWith("db/")) return <PhoneLazy tkey="more.db" name="db" draw={(m) => <m.DBView rest={sub} />} />;
   if (sub === "testing") return <TestingView />;
-  if (sub === "debug") return <DebugView />;
+  if (sub === "debug") return layout.value === "desktop" ? <DebugView /> : <PageLazy tkey="act.run" name="debug" draw={(m) => <m.DebugPage />} />;
   if (sub === "services") return <ServicesView />;
   if (sub === "kube") return <KubeView />;
   if (sub === "phone" && layout.value !== "desktop") return <PhoneHost />;

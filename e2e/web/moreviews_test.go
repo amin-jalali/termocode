@@ -28,38 +28,27 @@ func openMoreSub(t *testing.T, vp Viewport, sub, topic string) (*Page, *HubConn)
 	return p, c
 }
 
-// Settings list the laptop's values by group, read only: a changed value
-// shows its default, there is no field and no button that changes one.
-func TestSettingsReadOnly(t *testing.T) {
+// Settings (UI page 10) follow the laptop's list on a phone and a
+// tablet: a row per setting in its group's card, a value is text (never
+// HTML), a new list replaces the rows, and nothing scrolls sideways.
+func TestSettingsRowsFollowTheLaptop(t *testing.T) {
 	for _, vp := range RowViews {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openMoreSub(t, vp, "settings", "settings")
 			c.Send(t, Snap("settings", 1, webproto.SettingsSnap{Items: []webproto.SettingItem{
 				{Key: "theme", Group: "Appearance", Type: "string", Value: "one-dark", Default: "vscode-dark-plus", Description: "Color theme ID."},
 				{Key: "tab_size", Group: "Editor", Type: "int", Value: "4", Default: "4"},
-				{Key: "word_wrap", Group: "Editor", Type: "bool", Value: "<b>true</b>", Default: "false"},
+				{Key: "ai_model", Group: "AI", Type: "string", Value: "<b>x</b>", Default: ""},
 			}}))
-			p.WaitJS(`document.querySelectorAll(".kv-row").length === 3`)
-			if n := Eval[int](p, `document.querySelectorAll(".settings .group-title").length`); n != 2 {
+			p.WaitJS(`document.querySelectorAll(".pg-row").length === 3`)
+			if n := Eval[int](p, `document.querySelectorAll(".pg-sec").length`); n != 3 {
 				t.Errorf("%d groups", n)
 			}
-			if v := p.Text(`.kv-row[data-key="theme"] .kv-value`); v != "one-dark" {
-				t.Errorf("theme value %q", v)
-			}
-			if d := p.Text(`.kv-row[data-key="theme"] .kv-def`); d != "default vscode-dark-plus" {
-				t.Errorf("theme default %q", d)
-			}
-			if n := Eval[int](p, `document.querySelectorAll('.kv-row[data-key="tab_size"] .kv-def').length`); n != 0 {
-				t.Error("an unchanged value shows its default")
-			}
-			if n := Eval[int](p, `document.querySelectorAll(".settings b, .settings input, .settings select, .settings textarea, .settings .btn").length`); n != 0 {
-				t.Fatalf("%d fields, buttons or HTML on the settings page", n)
-			}
-			if !strings.Contains(p.Text(".settings-note"), "Read only") {
-				t.Errorf("note %q", p.Text(".settings-note"))
+			if v := p.Text(`.pg-row[data-key="ai_model"] .r`); v != "<b>x</b>" {
+				t.Errorf("value %q", v)
 			}
 			c.Send(t, Delta("settings", 2, webproto.SettingsSnap{Items: []webproto.SettingItem{{Key: "tab_size", Group: "Editor", Type: "int", Value: "8", Default: "4"}}}))
-			p.WaitJS(`document.querySelectorAll(".kv-row").length === 1`)
+			p.WaitJS(`document.querySelectorAll(".pg-row").length === 1 && document.querySelector('.pg-row[data-key="tab_size"] .r').textContent === "8"`)
 			p.noOverflow("settings")
 		})
 	}

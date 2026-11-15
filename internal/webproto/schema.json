@@ -5088,6 +5088,20 @@
       "phase": "v2"
     },
     {
+      "op": "settings.set",
+      "args": "SettingsSetArgs",
+      "result": "SettingItem",
+      "role": "controller",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "ai.auto_approve",
       "args": "EmptyArgs",
       "result": "AutoApprove",
@@ -16927,6 +16941,12 @@
     "SettingItem": {
       "type": "object",
       "properties": {
+        "choices": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "default": {
           "type": "string"
         },
@@ -16960,6 +16980,22 @@
         "default"
       ],
       "additionalProperties": true
+    },
+    "SettingsSetArgs": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ],
+      "additionalProperties": false
     },
     "SettingsSnap": {
       "type": "object",
