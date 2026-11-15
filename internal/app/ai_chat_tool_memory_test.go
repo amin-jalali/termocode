@@ -65,7 +65,7 @@ func TestAIChatKeepsToolResultsAcrossTurns(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	m.ai.conv = *saved
+	m.ai.conv = saved
 	if res, _ := toolResultIn(m.aiChatTurnHistory("sys", true, m.ai.cfg.Kind), "c1"); !strings.Contains(res, "marker-7781") {
 		t.Errorf("after a reload the history misses the tool result %q", res)
 	}
