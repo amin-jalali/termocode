@@ -27,4 +27,6 @@ export const AS = {
   "look.run_view": "Run view",
   "look.wait": "Waiting for you: {what}",
   "look.wait_open": "Answer",
+  "dbcard.open": "Open {name} in Databases",
+  "dbcard.chat": "+ Chat",
 } as const;

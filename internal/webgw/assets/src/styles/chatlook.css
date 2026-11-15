@@ -54,3 +54,17 @@
 .runv-facts { color: var(--wb-desc); font-size: 12px; font-variant-numeric: tabular-nums; }
 .runv-out { margin: 4px 0 0; overflow-wrap: anywhere; }
 .run-view .step-error { margin: 4px 0 0; color: var(--wb-err); }
+/* The database card on the desktop: the workbench's size and colours. */
+.chatcol .dbcard { margin: 4px 0 8px; border-color: var(--wb-panel-border); border-radius: 4px; font-size: 12px; }
+.chatcol .dbcard-title { padding: 4px 8px; color: var(--wb-desc); font-size: 11px; }
+.chatcol .dbcard-row { padding: 4px 8px 6px; border-color: var(--wb-panel-border); }
+.chatcol .dbcard-head { min-height: 22px; }
+.chatcol .dbcard-head:hover .dbcard-name { text-decoration: underline; }
+.chatcol :is(.dbcard-badge, .dbcard-sub) { color: var(--wb-desc); font-size: 11px; }
+.chatcol .is-bad > .dbcard-head :is(.dbcard-shape, .dbcard-badge) { color: var(--wb-err); }
+.chatcol .is-warn > .dbcard-head :is(.dbcard-shape, .dbcard-badge) { color: var(--wb-warn); }
+.chatcol .is-ok > .dbcard-head :is(.dbcard-shape, .dbcard-badge) { color: var(--wb-ok); }
+.chatcol .dbcard-acts { gap: 4px; }
+.chatcol .dbcard-act { min-height: 22px; padding: 0 8px; border-color: var(--wb-panel-border); border-radius: 3px; font-size: 11px; }
+.chatcol .dbcard-act:hover { background: var(--wb-toolbar-hover); }
+.chatcol .dbcard-act.is-fix { border-color: var(--wb-warn); }
