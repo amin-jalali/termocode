@@ -77,16 +77,16 @@ func (f *fakeCodexBin) read(t *testing.T, name string, n int) string {
 	return string(b)
 }
 
-func gptProfile(model string) ai.Profile {
+func resumeProfile(model string) ai.Profile {
 	return ai.Profile{Name: "gpt", Title: "GPT", Source: ai.ProfileSourceUser,
 		Steps: []ai.ProfileStep{{ID: "answer", Title: "Answer", CLI: ai.CLICodex, Model: model,
 			Tools: agentdag.ToolRule{Preset: agentdag.PresetNone}}}}
 }
 
-func gptChatModel(t *testing.T) *Model {
+func resumeChatModel(t *testing.T) *Model {
 	t.Helper()
 	m, _ := cliRunModel(t)
-	m.ai.profFake = []ai.Profile{gptProfile("")}
+	m.ai.profFake = []ai.Profile{resumeProfile("")}
 	m.ai.reloadProfiles()
 	m.ai.profile = "gpt"
 	m.output = newOutputStore()
@@ -105,7 +105,7 @@ func twoTurns(t *testing.T, m *Model) {
 	}
 }
 
-func hasArgs(argv string, seq ...string) bool {
+func argvHas(argv string, seq ...string) bool {
 	return strings.Contains("\n"+argv, "\n"+strings.Join(seq, "\n")+"\n")
 }
 
@@ -114,7 +114,7 @@ func hasArgs(argv string, seq ...string) bool {
 // "them" is.
 func TestAICLIStepResumesChatSession(t *testing.T) {
 	f := newFakeCodexBin(t)
-	m := gptChatModel(t)
+	m := resumeChatModel(t)
 	twoTurns(t, m)
 	if n := f.calls(t); n != 2 {
 		t.Fatalf("codex ran %d times, want 2", n)
@@ -122,7 +122,7 @@ func TestAICLIStepResumesChatSession(t *testing.T) {
 	if a := f.read(t, "argv", 1); strings.Contains(a, "resume") {
 		t.Errorf("turn 1 resumed:\n%s", a)
 	}
-	if a := f.read(t, "argv", 2); !hasArgs(a, "resume", "thread-1", "-") {
+	if a := f.read(t, "argv", 2); !argvHas(a, "resume", "thread-1", "-") {
 		t.Errorf("turn 2 does not resume thread-1:\n%s", a)
 	}
 	if in := f.read(t, "stdin", 2); !strings.Contains(in, "show them") {
@@ -135,7 +135,7 @@ func TestAICLIStepResumesChatSession(t *testing.T) {
 func TestAICLIStepResumeFailsCarriesTranscript(t *testing.T) {
 	f := newFakeCodexBin(t)
 	t.Setenv("FAKE_RESUME_FAIL", "1")
-	m := gptChatModel(t)
+	m := resumeChatModel(t)
 	twoTurns(t, m)
 	if n := f.calls(t); n != 3 {
 		t.Fatalf("codex ran %d times, want 3 (turn 1, the failed resume, the new session)", n)
@@ -153,13 +153,13 @@ func TestAICLIStepTranscriptWithoutSession(t *testing.T) {
 	for _, name := range []string{"off", "model changed"} {
 		t.Run(name, func(t *testing.T) {
 			f := newFakeCodexBin(t)
-			m := gptChatModel(t)
+			m := resumeChatModel(t)
 			if name == "off" {
 				m.ai.settings.CLIResume = "off"
 			}
 			driveAIChat(t, m, m.sendAIChat("how many commits?"), nil)
 			if name == "model changed" {
-				m.ai.profFake = []ai.Profile{gptProfile("gpt-5-codex")}
+				m.ai.profFake = []ai.Profile{resumeProfile("gpt-5-codex")}
 				m.ai.reloadProfiles()
 			}
 			driveAIChat(t, m, m.sendAIChat("show them"), nil)
