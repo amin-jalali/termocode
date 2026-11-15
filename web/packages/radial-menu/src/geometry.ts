@@ -151,7 +151,7 @@ export function placeMenu(anchor: Pt | null, w: number, h: number, ins: Insets =
   const rr = ringRadius(side);
   const ax = anchor ? anchor[0] : w / 2;
   const ay = anchor ? anchor[1] : h / 2;
-  const cx = clamp(ax, MARGIN + rr, w - MARGIN - rr);
+  const cx = clamp(ax, ins.left + MARGIN + rr, w - ins.right - MARGIN - rr);
   const cy = clamp(ay, ins.top + MARGIN + rr, h - ins.bottom - MARGIN - rr);
   const left = cx - side / 2, top = cy - side / 2;
   return { left, top, side, cx, cy, ox: clamp((ax - left) / side, 0, 1), oy: clamp((ay - top) / side, 0, 1) };
@@ -179,13 +179,13 @@ export const FAB_MARGIN = 12;
 /** defaultFab is the button's centre in a w × h layer. */
 export function defaultFab(w: number, h: number, ins: Insets = NO_INSETS, size = FAB_SIZE): Pt {
   const r = size / 2;
-  return [w - FAB_RIGHT - r, h - ins.bottom - FAB_BOTTOM - r];
+  return [w - ins.right - FAB_RIGHT - r, h - ins.bottom - FAB_BOTTOM - r];
 }
 
 /** clampFab is the nearest centre that keeps the button fully on screen. */
 export function clampFab(p: Pt, w: number, h: number, ins: Insets = NO_INSETS, size = FAB_SIZE): Pt {
   const r = size / 2, m = FAB_MARGIN;
-  return [clamp(p[0], m + r, w - m - r), clamp(p[1], ins.top + m + r, h - ins.bottom - m - r)];
+  return [clamp(p[0], ins.left + m + r, w - ins.right - m - r), clamp(p[1], ins.top + m + r, h - ins.bottom - m - r)];
 }
 
 /** The details card: 14 px from the press, at least 8 px from any edge. */
