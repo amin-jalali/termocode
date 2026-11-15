@@ -10,6 +10,7 @@ import { mount } from "../../../../web/packages/radial-menu/src/fab";
 import { categories, DEFAULT_FAVORITES, type RadialHost } from "./radial/actions";
 
 export type { RadialHost } from "./radial/actions";
+export { MoreList } from "./radial/morelist";
 
 // The favourites and the button's spot: no secret, this device only.
 const FAVS = "termocode.radial.favorites";
