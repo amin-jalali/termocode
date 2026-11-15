@@ -19,7 +19,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 
 | Tool | Gate | MCP server | What it does |
 | --- | --- | --- | --- |
-| [`read_file`](#read_file) | auto | yes | Read a file and return its contents. |
+| [`read_file`](#read_file) | auto | yes | Read a file. |
 | [`list_dir`](#list_dir) | auto | yes | List the entries of a directory. |
 | [`search`](#search) | auto | yes | Search the workspace for text: a literal pattern, or a regular expression with regex=true; glob limits the files ("*.go", "src/**", "!*_test.go"; comma-separated). |
 | [`glob`](#glob) | auto | yes | Find files by name pattern ("**/*_test.go", "src/*.ts"; comma-separated, a leading ! drops files). |
@@ -216,7 +216,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 
 ### read_file
 
-Read a file and return its contents.
+Read a file. Each line comes as N|text (N is the line number; it is not part of the file: never copy it into edit_file). The first line names the file and its line count. A long file is read in parts: offset (first line, from 1) and limit (number of lines, default 2000); the end says how to read on.
 
 **Gate:** auto
 
@@ -225,6 +225,8 @@ Read a file and return its contents.
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `path` | string | yes | file path, relative to the workspace |
+| `limit` | integer |   | how many lines to read (default 2000) |
+| `offset` | integer |   | first line to read, from 1 (default 1) |
 
 ### list_dir
 

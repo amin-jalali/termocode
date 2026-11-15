@@ -413,8 +413,8 @@ func localWorkspaceTools(w Workspace) []Tool {
 	return []Tool{
 		{
 			ReadOnly: true,
-			Name:     "read_file", Description: "Read a file and return its contents.",
-			Params: map[string]any{"path": strParam("file path, relative to the workspace")}, Required: []string{"path"},
+			Name:     "read_file", Description: readFileDescription,
+			Params: readFileParams(), Required: []string{"path"},
 			Describe: func(a map[string]any) string { return "Read " + path(a) },
 			Run: func(_ context.Context, a map[string]any) (string, error) {
 				abs, err := w.Resolve(path(a))
@@ -428,7 +428,7 @@ func localWorkspaceTools(w Workspace) []Tool {
 				if err != nil {
 					return "", err
 				}
-				return capOut(string(b), maxReadBytes), nil
+				return numberedRead(w.rel(abs), string(b), a)
 			},
 		},
 		{

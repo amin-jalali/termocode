@@ -25,6 +25,19 @@ func ApplyEdit(text, oldText, newText string, all bool) (string, error) {
 		text = strings.ReplaceAll(text, "\r\n", "\n")
 	}
 	n := strings.Count(text, oldText)
+	if n == 0 { // read_file's "N|" numbers copied by the model
+		if plain, ok := stripLineNumbers(oldText); ok {
+			if strings.Count(text, plain) == 0 {
+				return "", errCopiedNumbers
+			}
+			if plainNew, ok := stripLineNumbers(newText); ok {
+				newText = plainNew
+			} else if strings.Contains(newText, "\n") && hasNumberedLine(newText) {
+				return "", errCopiedNumbers
+			}
+			oldText, n = plain, strings.Count(text, plain)
+		}
+	}
 	switch {
 	case n == 0:
 		return "", errors.New("old_text was not found: the file is not what you think. read the file again and copy the text exactly (spaces and tabs too)")

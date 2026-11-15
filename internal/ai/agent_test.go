@@ -61,7 +61,7 @@ func TestAgentTextProtocolRunsReadTool(t *testing.T) {
 		if e.Kind == EventText {
 			text.WriteString(e.Text)
 		}
-		if e.Kind == EventToolResult && e.Detail == "hello file" {
+		if e.Kind == EventToolResult && e.Detail == "a.txt (1 line)\n1|hello file\n" {
 			sawResult = true
 		}
 	}
@@ -207,7 +207,7 @@ func TestWorkspaceResolveAndRun(t *testing.T) {
 	if err != nil || !strings.Contains(out, "hi") || !strings.Contains(out, "exit status 3") {
 		t.Fatalf("run: %q %v", out, err)
 	}
-	if !strings.Contains(ToolsPromptSpec(tools), `read_file {"path": string}`) {
+	if !strings.Contains(ToolsPromptSpec(tools), `read_file {"limit"?: integer, "offset"?: integer, "path": string}`) {
 		t.Errorf("prompt spec:\n%s", ToolsPromptSpec(tools))
 	}
 	del, _ := FindTool(tools, "delete")
