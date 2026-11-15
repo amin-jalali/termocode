@@ -138,11 +138,13 @@ function ensureDock(host: Host): Dock {
 
 /** mark tells the page's layout the dock's height (--tk-dock-h) and that
  * it is up (html.tk-on: the terminal's extra-keys row and the bottom tabs
- * hide, the keyboard has those keys). */
+ * hide, the keyboard has those keys), or that a surface has the system
+ * keyboard (html.tk-sys: the key bar's ⌨ key shows, toTactile). */
 function mark(): void {
   const on = !!dock && !!dock.attached && !dock.collapsed;
   const root = document.documentElement;
   root.classList.toggle("tk-on", on);
+  root.classList.toggle("tk-sys", !!system);
   root.classList.toggle("tk-off", !!dock?.attached && !!dock.collapsed);
   root.style.setProperty("--tk-dock-h", `${dock?.attached ? (box?.offsetHeight ?? 0) : 0}px`);
 }
@@ -158,13 +160,30 @@ function toSystem(): void {
   el.focus(); // inside the tap: the system keyboard opens
 }
 
+/** toTactile is the way back from the system keyboard (the key bar's ⌨
+ * key, tapped without taking the focus): the surface gets inputmode none,
+ * and a blur + focus closes the system keyboard and docks this one. */
+export function toTactile(): void {
+  const el = system;
+  if (!el || cur?.el !== el) return;
+  system = undefined;
+  cur.mode("none");
+  el.blur();
+  el.focus();
+}
+
 const focused = (el: HTMLElement): boolean => (el.getRootNode() as Document | ShadowRoot).activeElement === el;
 
 /** bind gives el (the surface's focus target) the Tactile keyboard while
  * it has focus. Returns unbind. */
 export function bind(el: HTMLElement, spec: Sink | EditorSpec, host: Host): () => void {
   const sink = "editor" in spec ? editorSink(spec) : spec;
-  const mode = (m: "none" | "text"): void => (sink.inputMode ? sink.inputMode(m) : el.setAttribute("inputmode", m));
+  // The attribute is set at once (inside the tap) even when the surface
+  // keeps it itself: the focus that follows opens the right keyboard.
+  const mode = (m: "none" | "text"): void => {
+    sink.inputMode?.(m);
+    el.setAttribute("inputmode", m);
+  };
   const off3 = threeFingerToggle(el, { toggleCollapsed: () => (dock?.toggleCollapsed(), mark()) });
   const onFocus = (): void => {
     if (system === el) return;

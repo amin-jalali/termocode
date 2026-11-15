@@ -23,7 +23,7 @@ import { go, route } from "../../lib/router";
 import { rowPx, usePinch } from "../../lib/rowfont";
 import { dropOlder, loadingOlder, loadOlder, older, stitch } from "../../lib/term";
 import { colorsOn, dropColors, paintLine, termColors, wantColors } from "../../lib/termcolors";
-import { tactile } from "../../lib/tactile";
+import { tactile, toTactile } from "../../lib/tactile";
 import { useWakeLock } from "../../lib/wakelock";
 import { loadTerm, type TermModule } from "../../lib/xterm";
 import { barKeys } from "../../lib/keys";
@@ -314,6 +314,10 @@ function KeyBar({ buf, off }: { buf: number; off: boolean }) {
   const keep = (e: Event) => e.preventDefault();
   return (
     <div class={`composer term-input pterm-keys${off ? " is-off" : ""}`}>
+      {/* tactile.css shows it, pinned before the keys, while the system keyboard is up. */}
+      <button type="button" class="key key-tk" hidden aria-label={t("key.tk")} title={t("key.tk")} onPointerDown={keep} onMouseDown={keep} onClick={toTactile}>
+        ⌨
+      </button>
       <div class="keybar" role="toolbar" aria-label={t("tab.term")}>
         {!live.value && <span class="chip keybar-off">{t("offline.input")}</span>}
         {barKeys(prefs.value.keys).map((id) => {

@@ -7,14 +7,18 @@ import { kbPrefs } from "./tactileprefs";
 
 type Mod = typeof TactileModule;
 let mod: Promise<Mod> | undefined;
+let got: Mod | undefined;
 
 function load(): Promise<Mod> {
   const l = document.createElement("link");
   l.rel = "stylesheet";
   l.href = "/assets/tactile.css";
   document.head.append(l);
-  return import("/assets/tactile.js");
+  return import("/assets/tactile.js").then((m: Mod) => (got = m));
 }
+
+/** toTactile: the key bar's ⌨ key, back from the system keyboard. */
+export const toTactile = (): void => got?.toTactile();
 
 /** tactile binds el; the returned function unbinds it. */
 export function tactile(el: HTMLElement, sink: TactileModule.Sink | TactileModule.EditorSpec): () => void {

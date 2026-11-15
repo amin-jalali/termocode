@@ -174,7 +174,7 @@ func TestTactileKeyboardBackFromTheSystemKeyboard(t *testing.T) {
 	p.GoTab("term")
 	c.Subs(t, "terms")
 	showTerm(t, p, c, termSnap(3, 0, 80, "$ "), termItem(3, "zsh", false, true))
-	back := `document.querySelector('[data-view="term"] .keybar .key-tk')`
+	back := `document.querySelector('[data-view="term"] .pterm-keys > .key-tk')`
 	p.TapJS(termView + `.querySelector(".pterm-x .xterm-screen")`)
 	p.WaitJS(tkDock + ` && !` + tkDock + `.hidden`)
 	if Eval[bool](p, `!!`+back+`?.offsetHeight`) {
@@ -182,9 +182,11 @@ func TestTactileKeyboardBackFromTheSystemKeyboard(t *testing.T) {
 	}
 	p.TapJS(`document.querySelector(".tk-system")`)
 	p.WaitJS(tkDock + `.hidden && ` + xtermInput + `.getAttribute("inputmode") === "text"`)
+	shotTo(t, p, "tactile-system-keyboard")
 	p.WaitJS(`!!` + back + `?.offsetHeight`)
-	if !Eval[bool](p, `document.querySelector('[data-view="term"] .keybar').firstElementChild === `+back) {
-		t.Error("the ⌨ key is not the first key of the bar")
+	// First in the row, pinned before the keys that scroll.
+	if !Eval[bool](p, back+`.getBoundingClientRect().right <= document.querySelector('[data-view="term"] .keybar').getBoundingClientRect().left + 1 && `+back+`.offsetHeight >= 44`) {
+		t.Error("the ⌨ key is not first in the key row (or under 44 px)")
 	}
 	if got := Eval[string](p, back+`.getAttribute("aria-label") + "|" + `+back+`.title`); got != "Code keyboard|Code keyboard" {
 		t.Errorf("the ⌨ key's label and title are %q", got)
@@ -194,6 +196,7 @@ func TestTactileKeyboardBackFromTheSystemKeyboard(t *testing.T) {
 	if !Eval[bool](p, `document.activeElement === `+xtermInput) {
 		t.Error("the ⌨ key took the focus from the terminal")
 	}
+	shotTo(t, p, "tactile-back")
 	if Eval[bool](p, `!!`+back+`?.offsetHeight`) {
 		t.Error("the ⌨ key still shows with the Tactile keyboard back")
 	}

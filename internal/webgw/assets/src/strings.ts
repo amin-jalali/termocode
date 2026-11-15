@@ -273,6 +273,7 @@ export const S = {
   "key.interrupt.label": "Interrupt",
   "key.edit": "⋯",
   "key.edit.label": "Edit keys",
+  "key.tk": "Code keyboard",
   "key.home": "Home",
   "key.end": "End",
   "key.pgup": "PgUp",
