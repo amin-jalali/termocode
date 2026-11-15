@@ -891,7 +891,9 @@ are off too (`GIT_EDITOR=:`, `EDITOR=:`, `VISUAL=`,
 or a merge keeps its message instead of waiting for an editor. Package
 tools never ask (`DEBIAN_FRONTEND=noninteractive`, `npm_config_yes=true`,
 `PIP_NO_INPUT=1`, `HOMEBREW_NO_AUTO_UPDATE=1`), nor does Git Credential
-Manager (`GCM_INTERACTIVE=never`). The
+Manager (`GCM_INTERACTIVE=never`). A long output (over 16 KB) keeps
+its first quarter and its end, where test failures and build errors
+are, with a "… N lines cut …" note in the middle. The
 agent's system prompt also says today's date, your OS and your shell.
 
 When a turn gets near the model's context window, big tool results are

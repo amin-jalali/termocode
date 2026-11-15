@@ -80,12 +80,12 @@ func (w Workspace) hostRun(ctx context.Context, timeout time.Duration, argv ...s
 	full = append(full, argv...)
 	out, stderr, code, err := w.Exec.Capture(ctx, w.Root, full...)
 	if ctx.Err() == context.DeadlineExceeded {
-		return capOut(out+stderr, maxOutBytes) + "\n[timed out]", nil
+		return capHeadTail(out+stderr, maxOutBytes) + "\n[timed out]", nil
 	}
 	if err != nil {
 		return "", err
 	}
-	s := capOut(out+stderr, maxOutBytes)
+	s := capHeadTail(out+stderr, maxOutBytes)
 	if code != 0 {
 		return fmt.Sprintf("%s\n[exit status %d]", s, code), nil
 	}

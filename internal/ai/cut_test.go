@@ -73,7 +73,7 @@ func TestRunCommandKeepsTheEnd(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(out, "ok 1\n") || !strings.Contains(out, "FAIL: boom at the end\n[exit status 3]") ||
+	if !strings.HasPrefix(out, "ok 1\n") || !strings.Contains(out, "FAIL: boom at the end\n") || !strings.HasSuffix(out, "[exit status 3]") ||
 		!strings.Contains(out, "lines cut …") || len(out) > maxOutBytes+200 {
 		t.Fatalf("len %d: %q … %q", len(out), out[:30], out[len(out)-80:])
 	}
@@ -87,7 +87,7 @@ func TestHostRunKeepsTheEnd(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(out, "line 1\n") || !strings.Contains(out, "FAIL at the end\n[exit status 1]") || !strings.Contains(out, "lines cut …") {
+	if !strings.HasPrefix(out, "line 1\n") || !strings.Contains(out, "FAIL at the end\n") || !strings.HasSuffix(out, "[exit status 1]") || !strings.Contains(out, "lines cut …") {
 		t.Fatalf("%q … %q", out[:30], out[len(out)-60:])
 	}
 }
