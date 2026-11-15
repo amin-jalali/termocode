@@ -13,9 +13,11 @@ interface Rig {
   collapses: boolean[];
 }
 
-function rig(o: Partial<DockOptions> = {}, vh = 844): Rig {
+function rig(o: Partial<DockOptions> = {}, vh = 844, w = 390): Rig {
   const r = { win: new FakeWindow(), host: new FakeElement("div"), target: new FakeElement("textarea"), sys: 0, collapses: [] as boolean[] } as Rig;
-  r.host.rect = { left: 0, top: 0, width: 390, height: 0 };
+  r.host.rect = { left: 0, top: 0, width: w, height: 0 };
+  r.win.innerWidth = w;
+  r.win.innerHeight = vh;
   r.dock = mountDock(r.host as unknown as HTMLElement, {
     onKey: () => undefined,
     doc: new FakeDocument() as unknown as Document,
@@ -46,7 +48,7 @@ test("F1 the dock shows on attach and hides on detach of the same target", () =>
 });
 
 test("F2 F3 height 380 by default, clamp 220..540, capped by the viewport", () => {
-  const r = rig();
+  const r = rig({}, 844, 844);
   r.dock.attach(t(r));
   eq(r.dock.kbHeight, 380);
   eq(r.dock.keyboard.height, 380);
@@ -60,6 +62,36 @@ test("F2 F3 height 380 by default, clamp 220..540, capped by the viewport", () =
   const tiny = rig({}, 200);
   tiny.dock.attach(t(tiny));
   eq(tiny.dock.kbHeight, 140, "never below 140");
+});
+
+// w / h of the A key on the dock's board.
+const aspectA = (r: Rig): number => {
+  const a = r.dock.keyboard.engine.placed.find((k) => k.def.main === "A")!;
+  return a.w / a.h;
+};
+
+test("F2b a phone held upright: the keys look like the landscape ones, scaled down", () => {
+  const land = rig({}, 390, 844);
+  land.dock.attach(t(land));
+  eq(land.dock.kbHeight, 390 - 140 - 26, "landscape keeps its height");
+  const la = aspectA(land);
+  near(la, 1.334, 0.01, "landscape A key");
+  ok(!part(land, "tk-kb").classList.contains("tk-narrow"), "landscape is not narrow");
+  const up = rig({}, 664, 390);
+  up.dock.attach(t(up));
+  const ua = aspectA(up);
+  ok(ua >= la / 2 && ua <= la, `upright A key ${ua.toFixed(2)} wide per high, want ${(la / 2).toFixed(2)}..${la.toFixed(2)}`);
+  ok(up.dock.kbHeight < 380 && up.dock.kbHeight >= 160, `upright board ${up.dock.kbHeight}`);
+  eq(up.dock.keyboard.height, up.dock.kbHeight);
+  ok(part(up, "tk-kb").classList.contains("tk-narrow"), "the upright board is narrow (labels fit one line)");
+  const tall = rig({}, 844, 390);
+  tall.dock.attach(t(tall));
+  eq(tall.dock.kbHeight, up.dock.kbHeight, "the same keys on a taller phone");
+  const set = rig({ height: 300 }, 664, 390);
+  set.dock.attach(t(set));
+  eq(set.dock.kbHeight, 300, "a height the host asks for is kept");
+  up.dock.setHeight(260);
+  eq(up.dock.kbHeight, 260, "and one set later");
 });
 
 test("F4 F5 F6 handle hides; collapsed bar shows it again", () => {
