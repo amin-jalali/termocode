@@ -1075,6 +1075,37 @@ export interface ContainerLogsArgs {
   lines?: number;
 }
 
+export interface NowActArgs {
+  do: "done" | "later" | "mute" | "undo";
+  id?: string;
+  ws?: string;
+  when?: string;
+  repo?: boolean;
+}
+
+export interface NowRulesArgs {
+  setup?: NowAnswers;
+  skip?: boolean;
+  rules?: NowRule[];
+}
+
+export interface NowAnswers {
+  top: string[];
+  from: string[];
+  show: number;
+  hide_bots: boolean;
+}
+
+export interface NowRule {
+  id: string;
+  name: string;
+  sentence: string;
+  signal?: string;
+  level: number;
+  on: boolean;
+  count: number;
+}
+
 export interface PairAnswerArgs {
   role?: "viewer" | "control";
 }
@@ -2151,6 +2182,7 @@ export interface InboxSnap {
   items: InboxItem[];
   counts: InboxCounts;
   more?: number;
+  now?: NowInfo;
 }
 
 export interface InboxItem {
@@ -2164,6 +2196,16 @@ export interface InboxItem {
   since: number;
   state: "needs_you" | "working" | "failed" | "done";
   can?: string[];
+  turn?: "me" | "others" | "none";
+  waiting?: string[];
+  why?: string;
+  why_at?: number;
+  rule?: string;
+  level?: number;
+  signal?: string;
+  source?: string;
+  due?: number;
+  head?: string;
 }
 
 export interface InboxCounts {
@@ -2171,6 +2213,16 @@ export interface InboxCounts {
   working: number;
   failed: number;
   done: number;
+}
+
+export interface NowInfo {
+  setup: boolean;
+  show: number;
+  top?: string[];
+  from?: string[];
+  hide_bots?: boolean;
+  rules: NowRule[];
+  hidden?: number;
 }
 
 export interface ProjectsSnap {
@@ -3762,6 +3814,11 @@ export interface ContainerLogs {
   truncated?: boolean;
 }
 
+export interface NowActResult {
+  id: string;
+  until?: number;
+}
+
 export interface PairLink {
   link: string;
   qr: string;
@@ -4377,6 +4434,8 @@ export interface OpArgs {
   "containers.restart": ContainerArgs;
   "containers.stop": ContainerArgs;
   "containers.remove": ContainerArgs;
+  "now.act": NowActArgs;
+  "now.rules": NowRulesArgs;
   "web.pair_open": EmptyArgs;
   "web.pair_close": EmptyArgs;
   "web.pair_answer": PairAnswerArgs;
@@ -4715,6 +4774,8 @@ export interface OpResult {
   "containers.restart": ContainerDone;
   "containers.stop": AskRef;
   "containers.remove": AskRef;
+  "now.act": NowActResult;
+  "now.rules": NowInfo;
   "web.pair_open": PairLink;
   "web.devices": WebDeviceList;
   "web.device_remove": AskRef;

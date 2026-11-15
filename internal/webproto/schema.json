@@ -4684,6 +4684,34 @@
       "phase": "v2"
     },
     {
+      "op": "now.act",
+      "args": "NowActArgs",
+      "result": "NowActResult",
+      "role": "controller",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 2048,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "now.rules",
+      "args": "NowRulesArgs",
+      "result": "NowInfo",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "web.pair_open",
       "args": "EmptyArgs",
       "result": "PairLink",
@@ -12845,6 +12873,12 @@
         "chat": {
           "type": "string"
         },
+        "due": {
+          "type": "integer"
+        },
+        "head": {
+          "type": "string"
+        },
         "id": {
           "type": "string"
         },
@@ -12862,11 +12896,23 @@
         "lane": {
           "type": "string"
         },
+        "level": {
+          "type": "integer"
+        },
         "ref": {
+          "type": "string"
+        },
+        "rule": {
+          "type": "string"
+        },
+        "signal": {
           "type": "string"
         },
         "since": {
           "type": "integer"
+        },
+        "source": {
+          "type": "string"
         },
         "state": {
           "enum": [
@@ -12878,6 +12924,25 @@
         },
         "title": {
           "type": "string"
+        },
+        "turn": {
+          "enum": [
+            "me",
+            "others",
+            "none"
+          ]
+        },
+        "waiting": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "why": {
+          "type": "string"
+        },
+        "why_at": {
+          "type": "integer"
         },
         "ws": {
           "type": "string"
@@ -12907,6 +12972,9 @@
         },
         "more": {
           "type": "integer"
+        },
+        "now": {
+          "$ref": "#/defs/NowInfo"
         }
       },
       "required": [
@@ -14719,6 +14787,175 @@
         "name"
       ],
       "additionalProperties": true
+    },
+    "NowActArgs": {
+      "type": "object",
+      "properties": {
+        "do": {
+          "enum": [
+            "done",
+            "later",
+            "mute",
+            "undo"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "repo": {
+          "type": "boolean"
+        },
+        "when": {
+          "type": "string"
+        },
+        "ws": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "do"
+      ],
+      "additionalProperties": false
+    },
+    "NowActResult": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "until": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": true
+    },
+    "NowAnswers": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "hide_bots": {
+          "type": "boolean"
+        },
+        "show": {
+          "type": "integer"
+        },
+        "top": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "top",
+        "from",
+        "show",
+        "hide_bots"
+      ],
+      "additionalProperties": false
+    },
+    "NowInfo": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "hidden": {
+          "type": "integer"
+        },
+        "hide_bots": {
+          "type": "boolean"
+        },
+        "rules": {
+          "items": {
+            "$ref": "#/defs/NowRule"
+          },
+          "type": "array"
+        },
+        "setup": {
+          "type": "boolean"
+        },
+        "show": {
+          "type": "integer"
+        },
+        "top": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "setup",
+        "show",
+        "rules"
+      ],
+      "additionalProperties": true
+    },
+    "NowRule": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "level": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "on": {
+          "type": "boolean"
+        },
+        "sentence": {
+          "type": "string"
+        },
+        "signal": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "sentence",
+        "level",
+        "on",
+        "count"
+      ],
+      "additionalProperties": false
+    },
+    "NowRulesArgs": {
+      "type": "object",
+      "properties": {
+        "rules": {
+          "items": {
+            "$ref": "#/defs/NowRule"
+          },
+          "type": "array"
+        },
+        "setup": {
+          "$ref": "#/defs/NowAnswers"
+        },
+        "skip": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
     },
     "Open": {
       "type": "object",

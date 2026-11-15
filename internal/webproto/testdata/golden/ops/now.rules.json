@@ -1,0 +1,1 @@
+{"t":"req","id":91,"op":"now.rules","args":{"setup":{"top":["agent","ci_red","review"],"from":["github","agents","ci"],"show":5,"hide_bots":true}}}

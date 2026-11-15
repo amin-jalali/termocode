@@ -14,12 +14,87 @@
         ],
         "id": "task:build",
         "kind": "task",
+        "level": 4,
         "ref": "build",
         "since": 1699999940000,
         "state": "working",
-        "title": "build"
+        "title": "build",
+        "turn": "none",
+        "why": "Running",
+        "why_at": 1699999940000
       }
-    ]
+    ],
+    "now": {
+      "from": [
+        "github",
+        "linear",
+        "agents",
+        "ci"
+      ],
+      "hide_bots": true,
+      "rules": [
+        {
+          "count": 0,
+          "id": "agents",
+          "level": 1,
+          "name": "Agents",
+          "on": true,
+          "sentence": "An agent waits for my OK",
+          "signal": "agent"
+        },
+        {
+          "count": 0,
+          "id": "redci",
+          "level": 1,
+          "name": "Red CI",
+          "on": true,
+          "sentence": "CI fails on my branch",
+          "signal": "ci_red"
+        },
+        {
+          "count": 0,
+          "id": "reviews",
+          "level": 2,
+          "name": "Reviews",
+          "on": true,
+          "sentence": "Someone asks me to review",
+          "signal": "review"
+        },
+        {
+          "count": 0,
+          "id": "due",
+          "level": 2,
+          "name": "Due today",
+          "on": true,
+          "sentence": "Tracker task due today or late",
+          "signal": "due"
+        },
+        {
+          "count": 0,
+          "id": "nobots",
+          "level": 0,
+          "name": "No bots",
+          "on": true,
+          "sentence": "Bots never take my turn"
+        },
+        {
+          "count": 0,
+          "id": "mentions",
+          "level": 3,
+          "name": "Mentions",
+          "on": false,
+          "sentence": "Someone @-mentions me",
+          "signal": "mention"
+        }
+      ],
+      "setup": false,
+      "show": 5,
+      "top": [
+        "agent",
+        "ci_red",
+        "review"
+      ]
+    }
   },
   "deltas": [
     {
@@ -36,12 +111,87 @@
           ],
           "id": "task:build",
           "kind": "task",
+          "level": 4,
           "ref": "build",
           "since": 1699999940000,
           "state": "done",
-          "title": "build"
+          "title": "build",
+          "turn": "none",
+          "why": "Done",
+          "why_at": 1699999940000
         }
-      ]
+      ],
+      "now": {
+        "from": [
+          "github",
+          "linear",
+          "agents",
+          "ci"
+        ],
+        "hide_bots": true,
+        "rules": [
+          {
+            "count": 0,
+            "id": "agents",
+            "level": 1,
+            "name": "Agents",
+            "on": true,
+            "sentence": "An agent waits for my OK",
+            "signal": "agent"
+          },
+          {
+            "count": 0,
+            "id": "redci",
+            "level": 1,
+            "name": "Red CI",
+            "on": true,
+            "sentence": "CI fails on my branch",
+            "signal": "ci_red"
+          },
+          {
+            "count": 0,
+            "id": "reviews",
+            "level": 2,
+            "name": "Reviews",
+            "on": true,
+            "sentence": "Someone asks me to review",
+            "signal": "review"
+          },
+          {
+            "count": 0,
+            "id": "due",
+            "level": 2,
+            "name": "Due today",
+            "on": true,
+            "sentence": "Tracker task due today or late",
+            "signal": "due"
+          },
+          {
+            "count": 0,
+            "id": "nobots",
+            "level": 0,
+            "name": "No bots",
+            "on": true,
+            "sentence": "Bots never take my turn"
+          },
+          {
+            "count": 0,
+            "id": "mentions",
+            "level": 3,
+            "name": "Mentions",
+            "on": false,
+            "sentence": "Someone @-mentions me",
+            "signal": "mention"
+          }
+        ],
+        "setup": false,
+        "show": 5,
+        "top": [
+          "agent",
+          "ci_red",
+          "review"
+        ]
+      }
     }
   ],
   "snapn": {
@@ -55,7 +205,11 @@
         "state": "done",
         "can": [
           "run"
-        ]
+        ],
+        "turn": "none",
+        "why": "Done",
+        "why_at": 1699999940000,
+        "level": 4
       }
     ],
     "counts": {
@@ -63,6 +217,77 @@
       "working": 0,
       "failed": 0,
       "done": 1
+    },
+    "now": {
+      "setup": false,
+      "show": 5,
+      "top": [
+        "agent",
+        "ci_red",
+        "review"
+      ],
+      "from": [
+        "github",
+        "linear",
+        "agents",
+        "ci"
+      ],
+      "hide_bots": true,
+      "rules": [
+        {
+          "id": "agents",
+          "name": "Agents",
+          "sentence": "An agent waits for my OK",
+          "signal": "agent",
+          "level": 1,
+          "on": true,
+          "count": 0
+        },
+        {
+          "id": "redci",
+          "name": "Red CI",
+          "sentence": "CI fails on my branch",
+          "signal": "ci_red",
+          "level": 1,
+          "on": true,
+          "count": 0
+        },
+        {
+          "id": "reviews",
+          "name": "Reviews",
+          "sentence": "Someone asks me to review",
+          "signal": "review",
+          "level": 2,
+          "on": true,
+          "count": 0
+        },
+        {
+          "id": "due",
+          "name": "Due today",
+          "sentence": "Tracker task due today or late",
+          "signal": "due",
+          "level": 2,
+          "on": true,
+          "count": 0
+        },
+        {
+          "id": "nobots",
+          "name": "No bots",
+          "sentence": "Bots never take my turn",
+          "level": 0,
+          "on": true,
+          "count": 0
+        },
+        {
+          "id": "mentions",
+          "name": "Mentions",
+          "sentence": "Someone @-mentions me",
+          "signal": "mention",
+          "level": 3,
+          "on": false,
+          "count": 0
+        }
+      ]
     }
   }
 }

@@ -126,7 +126,16 @@ func (s *Store) SetRules(rules []Rule) error {
 	return s.saveLocked()
 }
 
-// Done marks id done at at.
+// DoneKey is the key Done keeps for it: its id, and the commit when it is
+// about one (a new commit brings it back).
+func DoneKey(it Item) string {
+	if it.Head != "" {
+		return it.ID + "@" + it.Head
+	}
+	return it.ID
+}
+
+// Done marks id (see DoneKey) done at at.
 func (s *Store) Done(id string, at time.Time) error { return s.set("done", id, at.UnixMilli()) }
 
 // Later hides id until until.
@@ -231,7 +240,7 @@ func (s *Store) Hidden(it Item, now time.Time) bool {
 }
 
 func (s *Store) hiddenLocked(it Item, now time.Time) bool {
-	if d, ok := s.st.Done[it.ID]; ok {
+	if d, ok := s.st.Done[DoneKey(it)]; ok {
 		when := it.WhyAt
 		if when.IsZero() {
 			when = it.Since

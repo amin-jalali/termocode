@@ -11,6 +11,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/ghci"
+	"github.com/amin-jalali/termocode/internal/now"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -99,8 +100,9 @@ func (m *Model) webInboxBuild() webproto.InboxSnap {
 	root, _ := m.rootDir()
 	home, _ := os.UserHomeDir()
 	items := m.webInboxItems(webInboxPaths{root: root, home: home})
+	items, info := m.nowPlace(items)
 	sort.SliceStable(items, func(i, j int) bool { return items[i].Since > items[j].Since })
-	s := webproto.InboxSnap{Items: []webproto.InboxItem{}}
+	s := webproto.InboxSnap{Items: []webproto.InboxItem{}, Now: info}
 	for _, it := range items {
 		s.Counts.Add(it.State)
 		if len(s.Items) == webproto.MaxInbox {
@@ -146,12 +148,16 @@ func (m *Model) webInboxItems(p webInboxPaths) []webproto.InboxItem {
 	add := func(it webproto.InboxItem) {
 		it.ID = it.Kind + ":" + it.Ref
 		it.Title = p.title(it.Title)
+		if it.WhyAt == 0 {
+			it.WhyAt = it.Since
+		}
 		out = append(out, it)
 	}
 	if m.web != nil {
 		for _, r := range m.webCards(&m.web.cards, false) {
 			c := r.card
 			it := webproto.InboxItem{Kind: webproto.InboxCard, Ref: c.ID, Title: c.Title, Since: c.Since, State: webproto.InboxNeedsYou}
+			nowAgentWaits(&it)
 			if !c.ReadOnly {
 				it.Can = []string{"answer"}
 			}
@@ -164,8 +170,10 @@ func (m *Model) webInboxItems(p webInboxPaths) []webproto.InboxItem {
 			if st == "" {
 				continue
 			}
-			add(webproto.InboxItem{Kind: webproto.InboxRun, Ref: r.Key, Title: r.Title, Chat: p.title(r.Chat), Since: r.Started,
-				State: st, Can: append([]string(nil), r.Can...)})
+			it := webproto.InboxItem{Kind: webproto.InboxRun, Ref: r.Key, Title: r.Title, Chat: p.title(r.Chat), Since: r.Started,
+				State: st, Can: append([]string(nil), r.Can...)}
+			nowByState(&it, "Run failed")
+			add(it)
 		}
 	}
 	if m.wt != nil && m.wt.loaded {
@@ -178,7 +186,12 @@ func (m *Model) webInboxItems(p webInboxPaths) []webproto.InboxItem {
 			if w.Agent != "" {
 				title = w.Agent + " · " + w.Title
 			}
-			add(webproto.InboxItem{Kind: webproto.InboxLane, Ref: w.ID, Title: title, Lane: w.ID, Since: w.LastSeen, State: st})
+			it := webproto.InboxItem{Kind: webproto.InboxLane, Ref: w.ID, Title: title, Lane: w.ID, Since: w.LastSeen, State: st}
+			nowByState(&it, "")
+			if st == webproto.InboxDone {
+				nowTurn(&it, now.TurnMe, now.SigReview, "Done · review it")
+			}
+			add(it)
 		}
 	}
 	if m.wfx != nil {
@@ -192,12 +205,16 @@ func (m *Model) webInboxItems(p webInboxPaths) []webproto.InboxItem {
 				}
 			case "paused":
 				it.State = webproto.InboxNeedsYou
+				nowTurn(&it, now.TurnMe, now.SigAgent, "Paused")
 			case "failed", "interrupted":
 				it.State = webproto.InboxFailed
 			case "done", "cancelled":
 				it.State = webproto.InboxDone
 			default:
 				continue
+			}
+			if it.Turn == "" {
+				nowByState(&it, "Failed")
 			}
 			add(it)
 		}
@@ -219,6 +236,7 @@ func (m *Model) webInboxItems(p webInboxPaths) []webproto.InboxItem {
 			default:
 				it.State, it.Can = webproto.InboxDone, []string{"run"}
 			}
+			nowByState(&it, "Task failed")
 			add(it)
 		}
 	}
@@ -226,7 +244,9 @@ func (m *Model) webInboxItems(p webInboxPaths) []webproto.InboxItem {
 		st := map[ghci.State]string{ghci.StatePending: webproto.InboxWorking, ghci.StateFail: webproto.InboxFailed,
 			ghci.StatePass: webproto.InboxDone}[w.snap.State()]
 		if st != "" {
-			add(webproto.InboxItem{Kind: webproto.InboxCI, Ref: webName(w.branch), Title: "CI · " + w.branch, State: st})
+			it := webproto.InboxItem{Kind: webproto.InboxCI, Ref: webName(w.branch), Title: "CI · " + w.branch, State: st, Head: webName(w.snap.HeadSHA)}
+			nowCI(&it)
+			add(it)
 		}
 	}
 	return out

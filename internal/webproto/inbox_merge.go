@@ -68,6 +68,10 @@ func MergeInbox(home string, parts []InboxPart) InboxSnap {
 			continue
 		}
 		addCounts(&out.Counts, p.Snap.Counts)
+		if out.Now == nil && p.Snap.Now != nil {
+			n := *p.Snap.Now
+			out.Now = &n
+		}
 		out.More += max(p.Snap.More, 0)
 		for _, it := range p.Snap.Items {
 			if !inboxItemOK(it) {
