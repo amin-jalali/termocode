@@ -218,8 +218,9 @@ func loadFolderRules(root, realRoot string, bytes *int) []ScopedRule {
 type folderRulesList struct {
 	files   []string
 	ok      bool
-	at      time.Time // when the last walk ended
+	at      time.Time // when the last walk ended (zero: the first walk runs)
 	walking bool
+	first   chan struct{} // closed when the first walk ended
 }
 
 var folderRules = struct {
@@ -238,34 +239,58 @@ func folderRulesWalk(root string) ([]string, bool) {
 	return files, err == nil
 }
 
+// folderRulesRun walks root for l and keeps what it found (lock not held).
+func folderRulesRun(root string, l *folderRulesList) {
+	f, ok := folderRulesWalk(root)
+	folderRules.Lock()
+	defer folderRules.Unlock()
+	l.files, l.ok, l.at, l.walking = f, ok, time.Now(), false
+	if l.first != nil {
+		close(l.first)
+		l.first = nil
+	}
+}
+
+// folderRulesNew starts the first list of root (lock held).
+func folderRulesNew(root string) *folderRulesList {
+	l := &folderRulesList{walking: true, first: make(chan struct{})}
+	folderRules.by[root] = l
+	return l
+}
+
+// WarmProjectRules starts the first walk for the folders' rules files of
+// root in the background (the chat opened: a turn may come), so the
+// first turn does not walk on the UI thread. Nothing when it ran already.
+func WarmProjectRules(root string) {
+	folderRules.Lock()
+	defer folderRules.Unlock()
+	if folderRules.by[root] != nil {
+		return
+	}
+	l := folderRulesNew(root)
+	crash.Go("finding the folders' rules files", func() { folderRulesRun(root, l) })
+}
+
 // folderRulesFiles is the folder rules files of root: the last walk's
 // list (a fresh walk starts in the background when it is old), or a walk
-// now for the first turn.
+// now for the first turn (or the end of the first walk that runs).
 func folderRulesFiles(root string) []string {
 	folderRules.Lock()
 	l := folderRules.by[root]
 	if l == nil {
+		l = folderRulesNew(root)
 		folderRules.Unlock()
-		files, ok := folderRulesWalk(root)
+		folderRulesRun(root, l)
 		folderRules.Lock()
-		if folderRules.by[root] == nil {
-			folderRules.by[root] = &folderRulesList{files: files, ok: ok, at: time.Now()}
-		}
+	} else if first := l.first; first != nil {
 		folderRules.Unlock()
-		if !ok {
-			return nil
-		}
-		return files
+		<-first // the warm walk runs: its list, not none
+		folderRules.Lock()
 	}
 	files, ok := l.files, l.ok
 	if !l.walking && time.Since(l.at) >= folderRulesAgain {
 		l.walking = true
-		crash.Go("finding the folders' rules files", func() {
-			f, fok := folderRulesWalk(root)
-			folderRules.Lock()
-			l.files, l.ok, l.at, l.walking = f, fok, time.Now(), false
-			folderRules.Unlock()
-		})
+		crash.Go("finding the folders' rules files", func() { folderRulesRun(root, l) })
 	}
 	folderRules.Unlock()
 	if !ok {

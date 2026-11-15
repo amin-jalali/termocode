@@ -71,6 +71,7 @@ func webChatSnapshot(m *Model, _ string) (any, error) {
 	if m.web == nil {
 		return m.webChatBuild(&webChatPub{}), nil
 	}
+	ai.WarmProjectRules(aiWorkspaceRoot()) // a send may come: its rules walk runs now, off the UI thread
 	return m.webChatBuild(&m.web.chat), nil
 }
 
