@@ -1,8 +1,11 @@
 package app
 
 import (
+	"context"
+	"io"
 	"os/exec"
 	"strings"
+	"sync"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -102,4 +105,74 @@ func ctrFind[T any](t *testing.T, msgs []tea.Msg) T {
 	var zero T
 	t.Fatalf("no %T in %#v", zero, msgs)
 	return zero
+}
+
+// ctrExec is a scripted services.Exec: the first rule whose key is a
+// prefix of the argv after the binary answers; anything else prints
+// nothing and exits 0. It logs every call.
+type ctrExec struct {
+	mu    sync.Mutex
+	rules []ctrRule
+	calls []string
+}
+
+type ctrRule struct {
+	prefix, out, errText string
+	code                 int
+}
+
+func (x *ctrExec) on(prefix, out string) {
+	x.rules = append(x.rules, ctrRule{prefix: prefix, out: out})
+}
+func (x *ctrExec) fail(prefix, errText string) {
+	x.rules = append([]ctrRule{{prefix: prefix, errText: errText, code: 1}}, x.rules...)
+}
+func (x *ctrExec) count(prefix string) (n int) {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	for _, c := range x.calls {
+		if strings.HasPrefix(c, prefix) {
+			n++
+		}
+	}
+	return n
+}
+
+func (x *ctrExec) answer(argv []string) (string, string, int) {
+	args := strings.Join(argv[1:], " ")
+	x.mu.Lock()
+	x.calls = append(x.calls, args)
+	x.mu.Unlock()
+	for _, r := range x.rules {
+		if strings.HasPrefix(args, r.prefix) {
+			return r.out, r.errText, r.code
+		}
+	}
+	return "", "", 0
+}
+
+func (x *ctrExec) Capture(_ context.Context, _ string, argv ...string) (string, string, int, error) {
+	o, e, c := x.answer(argv)
+	return o, e, c, nil
+}
+
+func (x *ctrExec) CaptureInput(_ context.Context, _ string, _ []byte, argv ...string) (string, string, int, error) {
+	o, e, c := x.answer(argv)
+	return o, e, c, nil
+}
+
+func (x *ctrExec) Stream(_ context.Context, _ string, argv ...string) (io.ReadCloser, func(), error) {
+	o, _, _ := x.answer(argv)
+	return io.NopCloser(strings.NewReader(o)), func() {}, nil
+}
+
+// ctrScripted points the engine (and the host exec) at a new ctrExec.
+func ctrScripted(t *testing.T, m *Model) *ctrExec {
+	t.Helper()
+	x := &ctrExec{}
+	m.services.containerEngine.X = x
+	old := servicesExec
+	servicesExec = x
+	t.Cleanup(func() { servicesExec = old })
+	return x
 }
