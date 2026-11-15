@@ -41,6 +41,17 @@ const S = {
   view_name: "Git changes",
   folder_root: "Top folder",
   menu_close: "Close the menu",
+  commit_title: "Commit changes",
+  msg_ph: "Commit message\n\nAdd an optional description",
+  staged_one: "1 staged file: {names}",
+  staged_files: "{n} staged files: {names}",
+  and_more: "and {n} more",
+  write: "Write it for me",
+  rewrite: "Rewrite",
+  writing: "Writing…",
+  amend: "Amend last commit…",
+  amend_msg: "Put the staged changes into the last commit, with the message “{subject}”?",
+  amend_keep: "Put the staged changes into the last commit, with its message?",
 } as const;
 
 export type GKey = keyof typeof S;

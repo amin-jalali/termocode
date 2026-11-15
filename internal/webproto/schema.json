@@ -2241,6 +2241,21 @@
       "phase": "v2"
     },
     {
+      "op": "git.ai_message",
+      "args": "EmptyArgs",
+      "result": "GitAIMessage",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 2000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "counted",
+      "phase": "v2"
+    },
+    {
       "op": "git.peek",
       "args": "GitPeekArgs",
       "result": "GitPeek",
@@ -10684,6 +10699,18 @@
       "required": [
         "port",
         "mode"
+      ],
+      "additionalProperties": true
+    },
+    "GitAIMessage": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "message"
       ],
       "additionalProperties": true
     },

@@ -94,3 +94,20 @@
 .gp-log { margin: 10px 14px; }
 .gp-commit-row { padding: 8px 12px; }
 .gp-menu:focus { outline: none; }
+
+/* commit sheet (06) */
+.gp-cs { display: flex; flex-direction: column; }
+.gp-cs-h { display: flex; align-items: center; gap: 4px; padding: 0 14px 8px 4px; border-bottom: 1px solid var(--border); }
+.gp-x { color: var(--muted); }
+.gp-cs-t { font-size: 17px; font-weight: 700; }
+.gp-cs-msg { margin: 12px 14px 0; min-height: 84px; resize: none; border: 0; background: transparent; color: var(--text); font-family: var(--font-mono); font-size: 14px; line-height: 1.5; }
+.gp-cs-msg:focus { outline: none; }
+.gp-cs-msg::placeholder { color: var(--muted); }
+.gp-cs-files { font-size: 12px; color: var(--muted); padding: 8px 14px; }
+.gp-cs-acts { display: flex; gap: 8px; align-items: center; padding: 6px 14px var(--s4); }
+.gp-cs-ai { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 0 12px; border-radius: 18px; border: 1px solid var(--ai); color: var(--ai); background: color-mix(in srgb, var(--ai) 7%, var(--bg-panel)); font-size: 13px; white-space: nowrap; position: relative; }
+.gp-cs-ai::before, .gp-cs-br::before, .gp-cs-go::before { content: ""; position: absolute; inset: -4px 0; }
+.gp-cs-ai:disabled { opacity: 0.55; }
+.gp-cs-br { display: inline-flex; align-items: center; gap: 6px; height: 38px; max-width: 34vw; padding: 0 12px; border-radius: 8px; background: var(--text); color: var(--bg); font-family: var(--font-mono); font-size: 14px; font-weight: 600; position: relative; }
+.gp-cs-go { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; border-radius: 8px; background: var(--green); color: var(--bg-panel); font-size: 15px; font-weight: 600; white-space: nowrap; position: relative; }
+.gp-cs-go:disabled { opacity: 0.55; }
