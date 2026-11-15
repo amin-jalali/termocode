@@ -33,7 +33,7 @@ func TestMoreListGroupsSearchRecent(t *testing.T) {
 			// the search box filters the rows
 			p.Tap(".more-find")
 			p.Key("kube")
-			p.WaitJS(`[...document.querySelectorAll(".more-link")].map((b) => b.dataset.sub).join() === "kube"`)
+			p.WaitJS(`[...document.querySelectorAll(".more-list .more-link")].map((b) => b.dataset.sub).join() === "kube"`)
 			Eval[int](p, `(() => { const i = document.querySelector(".more-find"); i.value = ""; i.dispatchEvent(new Event("input", {bubbles: true})); return 1; })()`)
 			p.WaitJS(`document.querySelectorAll(".more-group").length >= 4`)
 			// a visited view comes first, under Recent
