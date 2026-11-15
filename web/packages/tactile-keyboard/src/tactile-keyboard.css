@@ -1,0 +1,127 @@
+/* Tactile Code keyboard. The keycap look is fixed dark, like a real
+   keyboard (the original design is locked); only the accent follows the
+   page theme (--tk-accent). Numbers mirror the original Flutter widget. */
+.tk-kb {
+  --tk-accent: #007acc;
+  --tk-deck: #272729;
+  --tk-face: #4c4c50;
+  --tk-face-down: #3e3e43;
+  --tk-well: #09090a;
+  --tk-fg: #e8e8e8;
+  --tk-fg-dim: #bdbdbd;
+  --tk-fg-label: #dadada;
+  --tk-fg-fn: #d0d0d0;
+  --tk-g: 0;
+  --tk-tx: 0;
+  --tk-ty: 0;
+  position: relative;
+  overflow: hidden;
+  background: var(--tk-deck);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-weight: 400;
+  line-height: 1.05;
+}
+.tk-keys, .tk-glow { position: absolute; inset: 0; }
+.tk-glow { pointer-events: none; }
+
+/* one keycap: a dark recessed well, the backlight rim, the raised face */
+.tk-key {
+  position: absolute;
+  box-sizing: border-box;
+  transition: transform 50ms ease-out;
+  --tk-pt: clamp(0px, calc((0.5 - var(--tk-ty) * 2.2) * 1px), 4px);
+  --tk-pb: clamp(1px, calc((3.4 + var(--tk-ty) * 2.2) * 1px), 6px);
+  --tk-pl: clamp(0.4px, calc((2.2 + var(--tk-px, 0) * 2.4 + var(--tk-tx) * 1.5) * 1px), 5.5px);
+  --tk-pr: clamp(0.4px, calc((2.2 - var(--tk-px, 0) * 2.4 - var(--tk-tx) * 1.5) * 1px), 5.5px);
+}
+.tk-key.is-down { transform: scale(0.95); }
+.tk-well, .tk-rim { position: absolute; inset: 1px; border-radius: 7px; }
+.tk-well { background: var(--tk-well); }
+.tk-rim {
+  opacity: 0;
+  background: linear-gradient(to bottom right, rgba(234, 242, 255, calc(0.98 * var(--tk-g))), rgba(92, 156, 255, calc(0.35 * var(--tk-g))));
+}
+.tk-lit .tk-rim { opacity: 1; }
+.tk-lit .is-down .tk-rim { opacity: 0; }
+.tk-face {
+  position: absolute;
+  top: calc(1px + var(--tk-pt));
+  bottom: calc(1px + var(--tk-pb));
+  left: calc(1px + var(--tk-pl));
+  right: calc(1px + var(--tk-pr));
+  border-radius: 5px;
+  background: var(--tk-face);
+  transition: background-color 50ms ease-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  container-type: size;
+}
+.is-down .tk-face { background: var(--tk-face-down); }
+.is-armed .tk-face { box-shadow: inset 0 0 0 1.5px var(--tk-accent); }
+.is-armed .tk-label { color: var(--tk-accent); }
+
+/* legends */
+.tk-main { font-size: min(13px, 40cqh); color: var(--tk-fg); }
+.tk-stack { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
+.tk-up { font-size: min(11px, 30cqh); color: var(--tk-fg-dim); }
+.tk-stack .tk-main { font-size: min(13px, 36cqh); }
+.tk-left .tk-face { justify-content: flex-start; padding-left: 7px; }
+.tk-left .tk-stack { align-items: flex-start; }
+.tk-core { display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 0; }
+.tk-label {
+  font-size: 11px;
+  letter-spacing: 0.2px;
+  color: var(--tk-fg-label);
+  overflow-wrap: anywhere; /* narrow phone caps wrap, as in the original */
+  line-height: 1.2;
+}
+.tk-func .tk-label { font-size: 9.5px; }
+.tk-icon { display: inline-flex; color: var(--tk-fg-fn); font-size: var(--tk-icon, 13px); }
+.tk-arrowStack .tk-icon { color: var(--tk-fg-label); }
+.tk-icon svg { display: block; }
+.tk-ai { color: var(--tk-accent); }
+.tk-hug-l .tk-face { justify-content: flex-start; padding-left: 7px; text-align: left; }
+.tk-hug-r .tk-face { justify-content: flex-end; padding-right: 7px; text-align: right; }
+.tk-fnum { position: absolute; right: 2px; bottom: 1px; font-size: 7px; color: #8d8d8d; line-height: 1; }
+.tk-led { position: absolute; top: 4px; right: 5px; width: 3.5px; height: 3.5px; border-radius: 50%; background: #555; }
+.tk-led.is-on { background: #eaf4ff; box-shadow: 0 0 5px 0.5px #9fd0ff; }
+.tk-sec { position: absolute; right: 4px; bottom: 2px; font-size: 9px; color: #909090; display: inline-flex; }
+.tk-lit .tk-legend { text-shadow: 0 0 calc(7px * var(--tk-g)) rgba(214, 232, 255, var(--tk-g)); }
+.tk-lit .tk-legend svg { filter: drop-shadow(0 0 calc(3.5px * var(--tk-g)) rgba(214, 232, 255, var(--tk-g))); }
+
+/* reactive backlight: a soft additive glow under each finger */
+.tk-glow-spot {
+  position: absolute;
+  width: 172px;
+  height: 172px;
+  margin: -86px 0 0 -86px;
+  border-radius: 50%;
+  background: radial-gradient(circle closest-side, rgba(42, 147, 214, var(--tk-core)), rgba(42, 147, 214, 0));
+  mix-blend-mode: plus-lighter;
+}
+
+.tk-pad-badge {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--tk-accent) 22%, transparent);
+  color: var(--tk-accent);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  pointer-events: none;
+}
+.tk-pad-badge svg { width: 11px; height: 11px; }
+.tk-pad-badge[hidden] { display: none; }
