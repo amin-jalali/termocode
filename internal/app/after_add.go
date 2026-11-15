@@ -38,7 +38,12 @@ var afterAddRules []afteradd.Rule
 // afterAddRunOp runs a suggestion's action (a test seam).
 var afterAddRunOp = afterAddRunOpReal
 
-func afterAddRunOpReal(m *Model, op, _ string) tea.Cmd { return m.dispatchPaletteAction(op) }
+func afterAddRunOpReal(m *Model, op, arg string) tea.Cmd {
+	if cmd, ok := m.afterAddRunInternal(op, arg); ok { // the engine's own ops (after_add_ssh.go)
+		return cmd
+	}
+	return m.dispatchPaletteAction(op)
+}
 
 // afterAddState is the engine and the cards waiting to be answered: the
 // first is the open one (when shown), the rest wait for it.
@@ -88,6 +93,11 @@ func (m *Model) afterAdd(ev afteradd.Event) tea.Cmd {
 func (m *Model) onAfterAdd(msg afterAddMsg) tea.Cmd {
 	s := msg.res.Suggestion
 	if s == nil {
+		if msg.res.Event.Kind == afterAddKindSSHScan { // the user asked for this scan: say it is done
+			var t tea.Cmd
+			m.toast, t = m.toast.PushDetail(toast.Info, "Scanned "+msg.res.Event.Item+": nothing to add", afterAddFindingLines(msg.res.Findings))
+			return t
+		}
 		return nil
 	}
 	st := m.afterAddState()
@@ -123,6 +133,15 @@ func (m *Model) afterAddShowNext() tea.Cmd {
 	m.openAfterAddCard(st.cards[0])
 	st.shown = true
 	return nil
+}
+
+// afterAddFindingLines is the findings, one per line.
+func afterAddFindingLines(fs []afteradd.Finding) string {
+	var b []string
+	for _, f := range fs {
+		b = append(b, f.Text)
+	}
+	return ai.Redact(strings.Join(b, "\n"))
 }
 
 // afterAddBody is the card's text: the findings, one per line, then what

@@ -826,6 +826,19 @@ not read the files. A new context is not used until you press `Enter` on it.
 after a card; `default`, the machine default and the context this session
 uses cannot be removed.
 
+After a new `ssh://` context is created, one card asks once: **Scan this
+server? (read-only)**. It lists the exact commands first: `docker ps`,
+`ss -ltnH`, `systemctl list-units` (running services), a look for k3s and
+a kubeconfig, and a search for compose files and `.env` files under
+`/srv`, `/opt` and home. Of `.env` files it reads the names only, never a
+value. Nothing else runs, and nothing runs before **Scan**; ssh runs with
+`BatchMode`, so it never asks for a password. A second card says what was
+found and offers one step: a database (a database container, or port
+5432, 3306, 6379 or 27017 open) → **Add DB connection (ssh tunnel)**;
+else containers → **Open Containers**; else Kubernetes → **Open
+Kubernetes**. Nothing found: a short note. **Not now** is remembered for
+that server.
+
 | Key | Action |
 |---|---|
 | `Enter` / `l` / double-click | use the context **in this session only** |
