@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/agentrun"
 	"github.com/amin-jalali/termocode/internal/ai"
 )
 
@@ -151,7 +152,7 @@ func aiKeepGoingText(open int) string {
 		verb = "is"
 	}
 	return fmt.Sprintf("Keep going: %d todo%s %s still open. Work on the next one and update the list with todo_write. "+
-		"If you are blocked or need me, say so and stop.", open, plural(open), verb)
+		"If you are blocked or need me, say so and stop. "+agentrun.DoneAudit, open, plural(open), verb)
 }
 
 // aiStepLimitPush is the push after a turn that hit the step limit
