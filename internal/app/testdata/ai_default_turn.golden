@@ -20,7 +20,33 @@
   {
     "role": "user",
     "text": "what files are here?",
-    "context": "Attached a.txt:\n```\nhello\n```"
+    "context": "Attached a.txt:\n```\nhello\n```",
+    "native": [
+      {
+        "role": "assistant",
+        "content": "Let me look.",
+        "calls": [
+          {
+            "id": "c1",
+            "name": "list_dir",
+            "args": {
+              "path": "."
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "content": "a.txt\n",
+        "call_id": "c1",
+        "tool": "list_dir"
+      },
+      {
+        "role": "assistant",
+        "content": "There is **one** file:\n\n- `a.txt`\n\n```go\nfunc main() {}\n```"
+      }
+    ],
+    "native_for": "ollama tools"
   },
   {
     "role": "assistant",
