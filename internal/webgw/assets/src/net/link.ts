@@ -8,6 +8,7 @@ import type { Meta, ServerMsg } from "../../../../webproto/proto";
 import { decodeServerMsg, PROTOCOL_VERSION, ProtoError, SUBPROTOCOL } from "../proto/guard";
 import { has } from "../state/dict";
 import type { Store } from "../state/store";
+import { signInOver } from "./auth";
 import { backoff } from "./backoff";
 
 export type LinkState = "connecting" | "online" | "offline" | "final";
@@ -17,6 +18,9 @@ export type LinkState = "connecting" | "online" | "offline" | "final";
 const FINAL_CODES: ReadonlySet<number> = new Set([
   1000, 1003, 1008, 1009, 4001, 4002, 4003, 4004, 4005, 4006, 4007, 4009, 4010, 4011, 4012,
 ]);
+
+/** SIGNED_OUT maps a /ws/check refusal to the close code it stands for. */
+const SIGNED_OUT: Readonly<Record<string, number>> = { signed_out: 4001, expired: 4002, revoked: 4003 };
 
 /** ROLE_CHANGED is the close code of a role change: reconnect at once. */
 const ROLE_CHANGED = 4013;
@@ -232,8 +236,10 @@ export class Link {
       return;
     }
     this.ws = ws;
+    let opened = false;
     ws.onopen = () => {
       if (ws !== this.ws) return;
+      opened = true;
       const seqs = this.deps.store.seqs();
       this.send({
         t: "hello",
@@ -258,8 +264,19 @@ export class Link {
     };
     ws.onclose = (ev: CloseEvent) => {
       if (ws !== this.ws) return;
-      this.down(this.byeCode ?? ev.code);
+      if (opened || this.byeCode !== null) return this.down(this.byeCode ?? ev.code);
+      // Refused before it opened: the browser hides the gateway's status
+      // (1006, as for a dropped network). Ask whether the sign-in is over
+      // (a kill switch, then a new start); else retry as for a drop.
+      void this.check(token).then((code) => ws === this.ws && this.down(code ?? ev.code));
     };
+  }
+
+  /** check asks /ws/check about token: the close code of a sign-in that
+   * is over, or null (live, or no answer). */
+  private async check(token: string): Promise<number | null> {
+    const why = await signInOver(token);
+    return why === null ? null : has(SIGNED_OUT, why) ? SIGNED_OUT[why] : 4001;
   }
 
   private handle(msg: ServerMsg): void {

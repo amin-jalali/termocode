@@ -72,6 +72,21 @@ export function forgetToken(): void {
   }
 }
 
+/** signInOver asks the gateway (POST /ws/check) whether token can still
+ * connect, after its WebSocket was refused before it opened (the browser
+ * hides why). It gives the reason the sign-in is over (signed_out,
+ * expired, revoked), or null: live, or no answer (a network drop). */
+export async function signInOver(token: string): Promise<string | null> {
+  try {
+    const res = await fetch("/ws/check", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) });
+    if (res.status !== 401) return null;
+    const why = ((await res.json()) as { error?: unknown }).error;
+    return typeof why === "string" ? why : "signed_out";
+  } catch {
+    return null;
+  }
+}
+
 /** redeem trades the launch secret for a session token and keeps it. */
 export async function redeem(secret: string): Promise<string> {
   let res: Response;

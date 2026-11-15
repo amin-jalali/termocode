@@ -47,6 +47,7 @@ const (
 	EvPushWake      EventKind = "push_wake"      // a wake was posted to a phone's push endpoint (OK, Code, Summary: its host)
 	EvProject       EventKind = "project"        // a project hub of a browser ended (Summary: its ws key; Why: why)
 	EvSwitch        EventKind = "switch"         // a browser opened another session's hub (Device; Summary: its ws key)
+	EvReject        EventKind = "reject"         // a /ws attempt refused before the upgrade (Why: the rule; Code: the HTTP status)
 )
 
 // AllEventKinds lists every kind, for tests and docs.
@@ -55,7 +56,7 @@ var AllEventKinds = []EventKind{
 	EvConnect, EvDisconnect, EvProtoError, EvOriginBlocked, EvHostBlocked,
 	EvIdleStop, EvMaxStop, EvKillSwitch, EvOp, EvFunnelStop, EvServeGone,
 	EvPairStart, EvPairOK, EvPairFail, EvRevoke, EvLoginOK, EvLoginFail, EvRole,
-	EvPushWake, EvProject, EvSwitch,
+	EvPushWake, EvProject, EvSwitch, EvReject,
 }
 
 // Event is one audit line. It has no field for a secret, a token, a
