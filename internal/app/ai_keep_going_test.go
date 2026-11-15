@@ -239,3 +239,18 @@ func TestAIKeepGoingContinuesAtTheStepLimit(t *testing.T) {
 		t.Fatalf("%d user messages with keep going off", n)
 	}
 }
+
+// ai_repeat_call_limit reaches the chat's agent: the same call again
+// and again ends the turn.
+func TestAIRepeatCallLimitSetting(t *testing.T) {
+	look := ai.Chunk{ToolCalls: []ai.ToolCall{{ID: "l", Name: "todo_read", Args: map[string]any{}}}}
+	m, p := keepGoingModel(t, look, look, look, ai.Chunk{Delta: "never"})
+	m.ai.settings.RepeatCallLimit = 2
+	runAIChain(t, &m, "look")
+	if n := len(p.requests()); n != 3 {
+		t.Fatalf("%d model requests, want 3", n)
+	}
+	if got := aiTranscriptText(&m, 80); !strings.Contains(got, "Stopped") {
+		t.Fatalf("no stop note:\n%s", got)
+	}
+}
