@@ -186,6 +186,12 @@ type StoredStep struct {
 	// Blocks are the visual blocks of the step's tool calls (MOB-10, as
 	// StoredMessage.Block of a tool line), the newest MaxStepBlocks.
 	Blocks []blocks.Block `json:"blocks,omitempty"`
+	// CLISession is the CLI's own session id of this step's last run
+	// (Codex's thread id, Claude Code's session_id; "": none) and
+	// CLISessionKey what it ran with (CLI, model, profile): the chat's
+	// next turn resumes the session while the key is the same.
+	CLISession    string `json:"cli_session,omitempty"`
+	CLISessionKey string `json:"cli_session_key,omitempty"`
 }
 
 // MaxStepBlocks is how many tool blocks a step keeps (webproto

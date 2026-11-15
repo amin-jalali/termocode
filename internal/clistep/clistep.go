@@ -73,6 +73,25 @@ type Spec struct {
 	// developer_instructions (its own skills list off), Claude Code with
 	// --append-system-prompt. It is plain text, never a secret.
 	Instructions string
+	// Resume (optional) is the CLI's session id of an earlier run that
+	// this one goes on in (a chat's next turn): Codex `exec … resume <id>`,
+	// Claude Code --resume <id>. An id that is not ValidSession is left
+	// out (a new session).
+	Resume string
+}
+
+// ValidSession reports whether id is safe as a session id argument:
+// 1-128 letters, digits, '-' and '_', not starting with '-'.
+func ValidSession(id string) bool {
+	if id == "" || len(id) > 128 || id[0] == '-' {
+		return false
+	}
+	for _, r := range id {
+		if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9') && r != '-' && r != '_' {
+			return false
+		}
+	}
+	return true
 }
 
 // codexEffort is Codex's model_reasoning_effort for a level ("": none).
@@ -158,6 +177,10 @@ type Result struct {
 	Text  string    // the final answer
 	Usage *ai.Usage // the token counts the CLI reported (nil: none)
 	Files []string  // files the CLI changed, relative to Dir when inside it
+	// Session is the CLI's session id of this run (Codex's thread id,
+	// Claude Code's session_id; "": it gave none). A later run resumes it
+	// with Spec.Resume.
+	Session string
 }
 
 // Bin is the program of a CLI.
@@ -180,6 +203,9 @@ func Args(s Spec) []string {
 		}
 		if t := strings.TrimSpace(s.Instructions); t != "" {
 			out = append(out, "--append-system-prompt="+t) // one arg: a text that starts with "-" stays the value
+		}
+		if ValidSession(s.Resume) {
+			out = append(out, "--resume", s.Resume)
 		}
 		return append(out, mcpArgs(s)...)
 	case ai.CLICodex:
@@ -212,7 +238,13 @@ func Args(s Spec) []string {
 			out = append(out, "-c", "developer_instructions="+jsonText(t), "-c", "skills.include_instructions=false")
 		}
 		out = append(out, mcpArgs(s)...)
-		return append(out, "-C", s.Dir, "-")
+		out = append(out, "-C", s.Dir)
+		if ValidSession(s.Resume) {
+			// exec's own options stay before the subcommand; the prompt
+			// is still stdin ("-")
+			out = append(out, "resume", s.Resume)
+		}
+		return append(out, "-")
 	}
 	return nil
 }
@@ -349,7 +381,7 @@ func Run(ctx context.Context, s Spec, prompt string, emit func(ai.Event)) (Resul
 	case runCtx.Err() != nil:
 		return Result{}, fmt.Errorf("%s timed out after %s and was stopped", title, timeout.Round(time.Second))
 	}
-	res := Result{Text: strings.TrimSpace(p.final), Usage: p.usage, Files: p.files}
+	res := Result{Text: strings.TrimSpace(p.final), Usage: p.usage, Files: p.files, Session: p.session}
 	if p.limit != "" || (p.failed != "" && isLimit(p.failed)) {
 		msg := p.limit
 		if msg == "" {
