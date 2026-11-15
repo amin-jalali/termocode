@@ -193,7 +193,11 @@ func TestRadialClearOfBars(t *testing.T) {
 // A sheet over the page hides the button (it would sit on the sheet's
 // buttons); it comes back when the sheet closes.
 func TestRadialHidesUnderSheets(t *testing.T) {
-	p, _ := openRadial(t, Phone)
+	p, c := openRadial(t, Phone)
+	p.GoTab("git")
+	c.WaitSub(t, "git")
+	c.Send(t, Snap("git", 1, gitSnap()))
+	p.WaitJS(`document.querySelector(".head-remote")`)
 	tapRadial(p)
 	radialCat(p, "git")
 	x, y := radialItem(p, "git-branch")
