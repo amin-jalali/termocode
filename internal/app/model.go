@@ -14,6 +14,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/agentlog"
 	"github.com/amin-jalali/termocode/internal/agentusage"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/now"
 	"github.com/amin-jalali/termocode/internal/anim"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/connectcard"
@@ -920,6 +921,9 @@ type Model struct {
 	agentMCPTipped   map[string]bool
 	// afterAddS is the after-add engine and its waiting cards (after_add.go).
 	afterAddS *afterAddState
+	// nowS is the user's Now choices: rules, Done / Later / Mute
+	// (web_now.go); made on first use.
+	nowS *now.Store
 	// mcpServeErr: why the listener did not start ("" when it did or was
 	// not asked to); the status screen shows it (mcp_serve_status.go).
 	mcpServeErr string

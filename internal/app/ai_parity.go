@@ -436,6 +436,8 @@ var aiRestParity = map[string]string{
 
 // aiRestNotForAI are the rest of the GUI's actions the AI does not get.
 var aiRestNotForAI = map[string]string{
+	"now.act":                       "the user's own Now list: done, later and mute are the user's choices, never the AI's",
+	"now.rules":                     "the user's own priority rules: what goes on top is the user's choice",
 	"buf.cursor":                    "the page's own caret, shown to the other pages; the AI has no caret",
 	"debug-sidecar-start":           "opens a card only the user answers; it starts a container",
 	"push.list":                     "the user's own list of push devices",
