@@ -1729,6 +1729,7 @@ func (m *Model) onDBConnect(msg dbConnectMsg) tea.Cmd {
 				s.touch()
 				return cmd
 			}
+			dbNoteConnErr(msg.id, n.problem, dbIsTunnelErr(msg.err)) // db_connections' status
 		}
 		if c, ok := s.connection(msg.id); ok && c.Driver == "sqlite" && (strings.Contains(strings.ToLower(msg.err.Error()), "sqlite3 is not installed") || strings.Contains(strings.ToLower(msg.err.Error()), "too old")) {
 			n.problem = ""
@@ -1770,6 +1771,7 @@ func (m *Model) onDBConnect(msg dbConnectMsg) tea.Cmd {
 		return m.databaseExpand(msg.id)
 	}
 	s.passwords[msg.id] = msg.password
+	dbClearConnErr(msg.id)
 	if msg.tunnel != nil {
 		s.setTunnel(msg.id, msg.tunnel)
 	}
@@ -2037,8 +2039,10 @@ func (m *Model) onDBTest(msg dbTestMsg) tea.Cmd {
 			if cmd, ok := m.databaseTunnelError(msg.err, msg.conn.ID, dbThenTest); ok {
 				return cmd
 			}
+			dbNoteConnErr(msg.conn.ID, dbConnErrorText(msg.conn, msg.err), dbIsTunnelErr(msg.err))
 			return m.pushToastDetail(toast.Errr, "Connection test failed · "+sanitizeDBText(dbConnName(msg.conn)), dbConnErrorText(msg.conn, msg.err))
 		}
+		dbClearConnErr(msg.conn.ID)
 		detail := sanitizeDBText(dbConnName(msg.conn))
 		if msg.via != "" {
 			detail += " · through " + sanitizeDBText(msg.via)
