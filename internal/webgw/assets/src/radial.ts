@@ -1,7 +1,7 @@
 // radial.js: the floating radial menu (the package in
 // web/packages/radial-menu, RM-2) with termocode's own actions, built
-// alone with its stylesheet (radial.css). The page loads both with one
-// dynamic import (lib/radial.ts) on a touch phone or tablet only, so the
+// alone with its stylesheet (radial.css). The page loads it with its one
+// dynamic import, in lib/radial.ts, on a touch phone or tablet only, so the
 // page's first files and the desktop never carry it. It imports no value
 // of the page: the page gives it its ops (radial/actions.ts RadialHost).
 // The favourites and the button's spot stay on this device.
@@ -11,6 +11,7 @@ import { categories, DEFAULT_FAVORITES, type RadialHost } from "./radial/actions
 
 export type { RadialHost } from "./radial/actions";
 
+// The favourites and the button's spot: no secret, this device only.
 const FAVS = "termocode.radial.favorites";
 const POS = "termocode.radial.position";
 

@@ -99,7 +99,7 @@ for (const c of phone) {
 }
 for (const f of DEFAULT_FAVORITES) item(phone, f);
 const tablet = categories(host, "tablet").flatMap((c) => c.items).map((i) => i.id);
-if (tablet.includes("view.home") || tablet.includes("ai.review")) fail("a tablet has the phone's Home or review");
+if (tablet.includes("view-home") || tablet.includes("ai-review")) fail("a tablet has the phone's Home or review");
 console.log("rings ok", ids.size);
 `, nil)
 	if !strings.Contains(out, "rings ok") {
@@ -116,28 +116,28 @@ func TestRadialActionsCallThePagesOps(t *testing.T) {
 	out := runJS(t, radialHarness+`
 const cs = categories(host, "phone");
 const want = (id, w) => { item(cs, id).run(); const got = take(); if (got !== JSON.stringify(w)) fail(id + ": " + got + " want " + JSON.stringify(w)); };
-want("view.term", [["go", "term/"]]);
-want("tools.db", [["go", "more/db"]]);
-want("run.tests", [["go", "more/testing"]]);
-want("git.push", [["ask", "git.remote", "git.push_q:main"], ["req", "git.push"]]);
-want("git.pull", [["ask", "git.remote", "git.pull_q:main"], ["req", "git.pull"]]);
-want("git.stash", [["ask", "git.remote", "git.stash_q"], ["req", "git.stash"]]);
-want("git.branch", [["go", "git/?sheet=remote"]]);
-want("ai.new", [["newChat"]]);
-want("run.newterm", [["newTerm"]]);
-want("edit.ask", [["toast", RS.noFile]]);
+want("view-term", [["go", "term/"]]);
+want("tools-db", [["go", "more/db"]]);
+want("run-tests", [["go", "more/testing"]]);
+want("git-push", [["ask", "git.remote", "git.push_q:main"], ["req", "git.push"]]);
+want("git-pull", [["ask", "git.remote", "git.pull_q:main"], ["req", "git.pull"]]);
+want("git-stash", [["ask", "git.remote", "git.stash_q"], ["req", "git.stash"]]);
+want("git-branch", [["go", "git/?sheet=remote"]]);
+want("ai-new", [["newChat"]]);
+want("run-newterm", [["newTerm"]]);
+want("edit-ask", [["toast", RS.noFile]]);
 host.route.value = { tab: "files", rest: "cmd/main.go", query: {} };
-want("edit.ask", [["ref", "file:cmd/main.go"], ["go", "chat/"]]);
-want("edit.edit", [["edit", "cmd/main.go"]]);
-want("edit.laptop", [["laptop", "cmd/main.go"]]);
+want("edit-ask", [["ref", "file:cmd/main.go"], ["go", "chat/"]]);
+want("edit-edit", [["edit", "cmd/main.go"]]);
+want("edit-laptop", [["laptop", "cmd/main.go"]]);
 host.git = () => ({ repo: false, branch: { name: "" }, files: [] });
-want("git.push", [["go", "git/?sheet=remote"]]);
+want("git-push", [["go", "git/?sheet=remote"]]);
 host.link.meta.value = { role: "viewer" };
-want("git.pull", [["toast", RS.viewOnly]]);
-want("view.git", [["go", "git/"]]);
+want("git-pull", [["toast", RS.viewOnly]]);
+want("view-git", [["go", "git/"]]);
 host.link.meta.value = { role: "controller" };
 host.live.value = false;
-want("ai.new", [["toast", RS.offline]]);
+want("ai-new", [["toast", RS.offline]]);
 console.log("ops ok");
 `, nil)
 	if !strings.Contains(out, "ops ok") {

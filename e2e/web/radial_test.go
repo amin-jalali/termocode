@@ -118,13 +118,13 @@ func TestRadialOpensViews(t *testing.T) {
 				t.Errorf("the catcher dims the page: %s", bg)
 			}
 			radialCat(p, "view")
-			x, y := radialItem(p, "view.term")
+			x, y := radialItem(p, "view-term")
 			p.Do(chromedp.TapXY(x, y))
 			p.WaitJS(`location.hash.startsWith("#/term")`)
 			p.WaitJS(`!document.querySelector(".rm-overlay") && !document.querySelector(".rm-fab").hidden`)
 			tapRadial(p)
 			radialCat(p, "tools")
-			x, y = radialItem(p, "tools.settings")
+			x, y = radialItem(p, "tools-settings")
 			p.Do(chromedp.TapXY(x, y))
 			p.WaitJS(`location.hash === "#/more/settings"`)
 			if probs := p.Problems(); len(probs) > 0 {
@@ -139,7 +139,7 @@ func TestRadialNewChat(t *testing.T) {
 	p, c := openRadial(t, Phone)
 	tapRadial(p)
 	radialCat(p, "ai")
-	x, y := radialItem(p, "ai.new")
+	x, y := radialItem(p, "ai-new")
 	p.Do(chromedp.TapXY(x, y))
 	expectReq(t, c, "chat.new")
 	tapRadial(p)
@@ -153,18 +153,18 @@ func TestRadialFavoriteStays(t *testing.T) {
 	p, _ := openRadial(t, Phone)
 	tapRadial(p)
 	radialCat(p, "tools")
-	x, y := radialItem(p, "tools.kube")
+	x, y := radialItem(p, "tools-kube")
 	p.Do(touchHold(x, y, 700*time.Millisecond))
 	p.WaitJS(`document.querySelector(".rm-tip:not([hidden]) .rm-tip-title")?.textContent === "kubernetes"`)
 	p.Tap(".rm-tip-fav")
 	p.WaitJS(`document.querySelector(".rm-tip-fav").textContent.includes("favorited")`)
-	if got := Eval[string](p, `localStorage.getItem("termocode.radial.favorites")`); !strings.Contains(got, "tools.kube") {
+	if got := Eval[string](p, `localStorage.getItem("termocode.radial.favorites")`); !strings.Contains(got, "tools-kube") {
 		t.Fatalf("favourites kept as %q", got)
 	}
 	p.Reload()
 	p.WaitJS(`document.querySelector(".rm-fab")`)
 	tapRadial(p)
-	p.WaitJS(`[...document.querySelectorAll(".rm-overlay .rm-item")].some((e) => e.dataset.id === "tools.kube")`)
+	p.WaitJS(`[...document.querySelectorAll(".rm-overlay .rm-item")].some((e) => e.dataset.id === "tools-kube")`)
 }
 
 // A desktop never loads the radial.

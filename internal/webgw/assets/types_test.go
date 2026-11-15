@@ -221,6 +221,15 @@ func loadSources(t *testing.T) (map[string]string, map[string]string) {
 	// src/x/y.ts imports "../../../../webproto/proto": that is
 	// internal/webproto/proto.d.ts seen from internal/webgw/assets/src.
 	files[path.Join("src", "../../../webproto/proto.d.ts")] = string(proto)
+	// The page's own packages (web/packages/<name>/src), as src/ sees them.
+	pkgs, _ := filepath.Glob("../../../web/packages/*/src/*.ts")
+	for _, p := range pkgs {
+		b, err := os.ReadFile(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		files[filepath.ToSlash(p)] = string(b)
+	}
 
 	var lock struct {
 		Packages []struct {

@@ -30,7 +30,27 @@ const (
 	// phone (MOBUX-20) and the Home (MOB-4). Only a phone loads it, when
 	// one opens; the desktop never does.
 	budgetHome = 48 << 10
+	// budgetTerm is the terminal engine (term.js and term.css: xterm.js,
+	// its fit addon and the glue), a lazy chunk only an open terminal
+	// loads: 91,513 B when it came, plus a small margin. Budget raise
+	// approved by owner 2026-11-15 for xterm.js chunk.
+	budgetTerm = 93_000
 )
+
+// The terminal engine is its own lazy chunk: within its budget, and
+// neither the page's first files nor the workbench carry it.
+func TestPerfGuardTermChunkSize(t *testing.T) {
+	got := gzSize(t, "term.js") + gzSize(t, "term.css")
+	t.Logf("gzipped: term.js + term.css %d B (loaded when a terminal opens)", got)
+	if got > budgetTerm {
+		t.Errorf("term.js + term.css is %d B gzipped, budget %d B", got, budgetTerm)
+	}
+	for _, name := range []string{"index.html", "app.js", "workbench.js", "home.js"} {
+		if strings.Contains(readBuilt(t, name), "xterm-helper-textarea") {
+			t.Errorf("%s carries the terminal engine; only term.js may", name)
+		}
+	}
+}
 
 func gzSize(t *testing.T, name string) int {
 	t.Helper()

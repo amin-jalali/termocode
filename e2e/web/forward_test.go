@@ -99,7 +99,7 @@ func TestTermRowLocalhostLink(t *testing.T) {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openTerm(t, vp)
 			showTerm(t, p, c, termSnap(3, 0, 80, "$ npm run dev", "  Local:   http://localhost:3000/"), termItem(3, "zsh", false, true))
-			row := `[...document.querySelectorAll('[data-view="term"] .trow')].find((r) => r.textContent.includes("Local:"))`
+			row := `[...document.querySelectorAll('[data-view="term"] .trow, [data-view="term"] .xterm-rows > div')].find((r) => r.textContent.includes("Local:"))`
 			if vp.Mobile {
 				p.press(row, rowMenu)
 			} else {

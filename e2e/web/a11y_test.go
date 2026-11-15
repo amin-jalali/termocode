@@ -288,9 +288,9 @@ func TestAxeViewsWithContent(t *testing.T) {
 				c.WaitSub(t, "terms")
 				showTerm(t, p, c, termSnap(3, 0, 80, "$ ls", "a b c"), termItem(3, "zsh", false, true))
 				if vp.Mobile {
-					p.press(`document.querySelector('[data-view="term"] .trow')`, `document.querySelector(".row-menu")`)
+					p.press(`document.querySelector('[data-view="term"] .trow, [data-view="term"] .xterm-rows > div')`, `document.querySelector(".row-menu")`)
 				} else {
-					Eval[bool](p, `(document.querySelector('[data-view="term"] .trow').dispatchEvent(new MouseEvent("contextmenu", {bubbles: true, cancelable: true})), true)`)
+					Eval[bool](p, `(document.querySelector('[data-view="term"] .trow, [data-view="term"] .xterm-rows > div').dispatchEvent(new MouseEvent("contextmenu", {bubbles: true, cancelable: true})), true)`)
 				}
 				p.WaitJS(`document.querySelector(".row-menu")`)
 				p.axe(src, "row menu")
@@ -299,7 +299,7 @@ func TestAxeViewsWithContent(t *testing.T) {
 				if vp.Mobile {
 					p.TapJS(`document.querySelector('[data-view="term"] .key-paste')`)
 				} else { // the desktop's row menu
-					Eval[bool](p, `(document.querySelector('[data-view="term"] .trow').dispatchEvent(new MouseEvent("contextmenu", {bubbles: true, cancelable: true})), true)`)
+					Eval[bool](p, `(document.querySelector('[data-view="term"] .trow, [data-view="term"] .xterm-rows > div').dispatchEvent(new MouseEvent("contextmenu", {bubbles: true, cancelable: true})), true)`)
 					p.TapJS(`[...document.querySelectorAll(".row-menu-item")].find((b) => b.textContent.endsWith("…"))`) // Paste…
 				}
 				p.WaitJS(`document.querySelector(".paste")`)

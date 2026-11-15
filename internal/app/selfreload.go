@@ -27,8 +27,10 @@ import (
 // the same path with the same arguments, environment and folder: same
 // pid, same terminal, the same web port and browser sessions. While an
 // AI turn, an agent, a workflow run or a dialog is busy it waits; the
-// status chip ("⬆ new build") and one toast say so, and Reload Now /
-// Later are palette commands (also on a controller page).
+// status chip ("⬆ new build"), one toast and a line in errors.log say
+// so, and Reload Now / Later are palette commands (also on a controller
+// page). A dialog or page card nobody answers holds it
+// selfReloadUnattended at most.
 
 // selfReloadDeps are what the reload reaches outside (tests swap them).
 type selfReloadDeps struct {
@@ -75,6 +77,52 @@ type selfReloadState struct {
 	ready   selfwatch.Build // ID "" while no new build is on disk
 	later   string          // the build id Later was chosen for
 	toasted string          // the build id the toast was shown for
+	// waitFor/waitWhy/waitFrom: the build that waits, why, and since
+	// when (the log line is written once per build and reason).
+	waitFor, waitWhy string
+	waitFrom         time.Time
+}
+
+// selfReloadUnattended is how long a dialog or a page card may hold a
+// new build back with no key or click: a serve session has no screen,
+// and a card left open on the laptop is not work. Real work (an AI turn,
+// an agent, a workflow run, a command in a terminal tab, an update
+// download) holds it as long as it runs.
+const selfReloadUnattended = 10 * time.Minute
+
+// selfReloadNow is the reload's clock (a seam for tests).
+var selfReloadNow = time.Now
+
+// Reasons of selfReloadBusy that are only something on show.
+const (
+	reloadWhyDialog = "a dialog is open"
+	reloadWhyCard   = "a card waits on a page"
+)
+
+// selfReloadHold says whether the wait for why goes on; it logs the wait
+// once per build and reason, and why it stops waiting on a dialog.
+func (m *Model) selfReloadHold(why string) bool {
+	s := m.selfReload
+	now := selfReloadNow()
+	if s.waitFor != s.ready.ID {
+		s.waitFor, s.waitWhy, s.waitFrom = s.ready.ID, "", now
+	}
+	if s.waitWhy != why {
+		s.waitWhy = why
+		recordError("[reload] new build " + s.ready.Version + " waits: " + why)
+	}
+	if why != reloadWhyDialog && why != reloadWhyCard {
+		return true
+	}
+	from := s.waitFrom
+	if in := m.recapS().lastInput; in.After(from) {
+		from = in
+	}
+	if now.Sub(from) < selfReloadUnattended {
+		return true
+	}
+	recordError("[reload] " + why + ", nobody answered for " + selfReloadUnattended.String() + ": reloading into " + s.ready.Version)
+	return false
 }
 
 type (
@@ -95,7 +143,7 @@ func init() {
 		Default: "true for dev builds, false for releases",
 		Desc: "When the termocode program file is replaced by a new build (you rebuilt it), reload into it at the next idle moment, " +
 			"as Reload Window does: unsaved text, the session and the web panel's browser sessions are kept. " +
-			"It waits while an AI turn, an agent or a dialog is busy. Dev builds: on; releases: off."})
+			"It waits while an AI turn, an agent or a command in a terminal tab runs, and while a dialog is open (10 minutes at most with no key or click). Dev builds: on; releases: off."})
 }
 
 // devBuild reports whether v is a developer build: "dev", a "+dirty"
@@ -206,7 +254,7 @@ func (m *Model) handleSelfReloadMsg(msg tea.Msg) (tea.Cmd, bool) {
 		if s.later == s.ready.ID {
 			return next, true
 		}
-		if why := m.selfReloadBusy(); why != "" {
+		if why := m.selfReloadBusy(); why != "" && m.selfReloadHold(why) {
 			return tea.Batch(m.selfReloadToast(why), next), true
 		}
 		return tea.Batch(m.execReload(), next), true
@@ -258,10 +306,10 @@ func (m *Model) selfReloadBusy() string {
 	}
 	if m.confirmOpen || m.promptOpen || m.pickerOpen || m.settingsModalOpen || m.connectOpen || m.addAIOpen ||
 		m.profileFormOpen || m.importOpen || m.actionsOpen || m.menuOpen {
-		return "a dialog is open"
+		return reloadWhyDialog
 	}
 	if m.web != nil && (len(m.web.asks.line) > 0 || m.web.asks.shown != nil || len(m.web.asks.here) > 0) {
-		return "a card waits on a page"
+		return reloadWhyCard
 	}
 	return ""
 }
@@ -328,7 +376,7 @@ func (m *Model) openSelfReloadCard() tea.Cmd {
 		return nil
 	}
 	body := "termocode " + b.Version + " was built. Reload into it now? Unsaved text, the session and the web panel are kept, as on Reload Window."
-	if why := m.selfReloadBusy(); why != "" && why != "a dialog is open" {
+	if why := m.selfReloadBusy(); why != "" && why != reloadWhyDialog {
 		body += " Now " + why + ": it stops."
 	}
 	m.confirm = confirm.New("New build ready", body, []confirm.Button{

@@ -26,24 +26,30 @@ func TestTermColours(t *testing.T) {
 				"styles": []map[string]any{{"fg": "#00ff00", "b": true}, {"fg": "#000001"}, {"fg": "#ffffff", "bg": "#aa0000"}},
 				"spans":  [][]int{{0, 0, 1, 0}, {1, 8, 10, 1}, {2, 0, 2, 2}, {3, 0, 4, 1}},
 			})})
-			p.WaitJS(termView + `.querySelector(".tc")`)
-			first := Eval[[]string](p, `(() => { const e = `+termView+`.querySelector(".term-rows .trow .tc"); const s = getComputedStyle(e); return [e.textContent, s.color, s.fontWeight]; })()`)
+			// The desktop paints runs (.tc) in its rows; the phone's terminal
+			// engine paints its cells by class (xterm-fg-N, xterm-bg-N).
+			rows, tc := `.term-rows .trow`, `.tc`
+			if vp.Mobile {
+				rows, tc = `.xterm-rows > div`, `[class*="xterm-fg-"], [class*="xterm-bg-"]`
+			}
+			p.WaitJS(termView + `.querySelector(` + jsq(rows+" :is("+tc+")") + `)`)
+			first := Eval[[]string](p, `(() => { const e = `+termView+`.querySelector(`+jsq(rows+" :is("+tc+")")+`); const s = getComputedStyle(e); return [e.textContent, s.color, s.fontWeight]; })()`)
 			if first[0] != "$" || first[1] != "rgb(0, 255, 0)" || first[2] != "700" {
 				t.Errorf("first run %v", first)
 			}
 			// The joined line: the end of the wrapped row and the start of the next.
-			runs := Eval[[]string](p, `[...`+termView+`.querySelectorAll(".term-rows .trow")[1].querySelectorAll(".tc")].map((e) => e.textContent + "|" + getComputedStyle(e).backgroundColor)`)
+			runs := Eval[[]string](p, `[...`+termView+`.querySelectorAll(`+jsq(rows)+`)[1].querySelectorAll(`+jsq(tc)+`)].map((e) => e.textContent + "|" + getComputedStyle(e).backgroundColor)`)
 			if strings.Join(runs, ",") != "aa|rgba(0, 0, 0, 0),bb|rgb(170, 0, 0)" {
 				t.Errorf("joined line runs %v", runs)
 			}
 			// A near-black colour on a dark page is lifted until it reads.
-			dark := Eval[string](p, `getComputedStyle(`+termView+`.querySelectorAll(".term-rows .trow")[2].querySelector(".tc")).color`)
+			dark := Eval[string](p, `getComputedStyle(`+termView+`.querySelectorAll(`+jsq(rows)+`)[2].querySelector(`+jsq(tc)+`)).color`)
 			if dark == "rgb(0, 0, 1)" {
 				t.Error("an unreadable colour went to the page as it was")
 			}
 			// New output: the changed row is plain at once; the page asks again.
 			c.Send(t, Delta("term:3", 2, map[string]any{"kind": "lines", "first": 3, "last": 4, "lines": []string{"next"}, "tick": 4}))
-			p.WaitJS(`!` + termView + `.querySelectorAll(".term-rows .trow")[2].querySelector(".tc")`)
+			p.WaitJS(`!` + termView + `.querySelectorAll(` + jsq(rows) + `)[2].querySelector(` + jsq(tc) + `)`)
 			expectReq(t, c, "term.colors")
 			if probs := p.Problems(); len(probs) > 0 {
 				t.Errorf("problems: %v", probs)
