@@ -3,6 +3,7 @@
 package app
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -269,4 +270,53 @@ func TestTestsReplayGolden(t *testing.T) {
 	})
 	webReplayCheck(t, h.topics["tests"], c)
 	webReplayGolden(t, webReplayPath("tests", "run_results"), c)
+}
+
+// webTestBigTree is a tree of 300 packages, 10 files each and 15 tests a
+// file: 48 300 rows (a big repo).
+func webTestBigTree(t *testing.T, m *Model) int {
+	t.Helper()
+	dir := t.TempDir()
+	m.ws = workspace.Workspace{Root: dir}
+	tr := &tests.Tree{Root: dir, FW: tests.FrameworkGo}
+	rows := 0
+	for p := range 300 {
+		pk := &tests.Package{Name: fmt.Sprintf("example.com/m/p%d", p), Dir: filepath.Join(dir, fmt.Sprintf("p%d", p))}
+		rows++
+		for f := range 10 {
+			fl := &tests.File{Path: filepath.Join(pk.Dir, fmt.Sprintf("f%d_test.go", f))}
+			rows++
+			for c := range 15 {
+				fl.Cases = append(fl.Cases, &tests.Case{Name: fmt.Sprintf("TestCase%d", c), File: fl.Path, Line: c + 1})
+				rows++
+			}
+			pk.Files = append(pk.Files, fl)
+		}
+		tr.Packages = append(tr.Packages, pk)
+	}
+	m.testView = newTestsState()
+	m.testView.tree = tr
+	m.testView.discovered = true
+	return rows
+}
+
+// Perf guard (web perf): the tests topic is built on the UI thread after
+// every Update whose test books changed (a discovery, each line of a
+// run). It holds at most MaxTestItems rows and only counts the rest: a
+// big repo's 48 300 rows were all built and sent (the cap counted one),
+// 75 ms on the UI thread for the termocode repo itself.
+func TestPerfGuardTestsTopicCapsItsRows(t *testing.T) {
+	m := aiTestModel(t)
+	rows := webTestBigTree(t, &m)
+	s := m.webTestsBuild()
+	if len(s.Items) != webproto.MaxTestItems || s.More != rows-webproto.MaxTestItems {
+		t.Fatalf("the topic holds %d rows and says %d more, want %d and %d", len(s.Items), s.More, webproto.MaxTestItems, rows-webproto.MaxTestItems)
+	}
+	if got := s.Items[len(s.Items)-1]; got.Kind == "" || got.ID == "" {
+		t.Errorf("the last row %+v", got)
+	}
+	const maxAllocs = 11000 // measured 8 317 (was 51 652): the 5 000 rows sent, the rest only counted
+	if n := testing.AllocsPerRun(3, func() { m.webTestsBuild() }); n > maxAllocs {
+		t.Errorf("building the tests topic made %.0f allocations, budget %d", n, maxAllocs)
+	}
 }
