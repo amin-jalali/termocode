@@ -10,7 +10,7 @@ import { useEffect, useState } from "preact/hooks";
 import type { AIHost, AIItem, GridAt } from "../aictx/api";
 import type * as AICtx from "../aictx/main";
 import { link, store } from "../session";
-import { hostCtrs, hosts, loadHosts } from "../state/hosts";
+import { hostCtrs, hosts, loadHosts, openNext } from "../state/hosts";
 import { addStrings, t } from "../strings";
 import { menu, openMenu } from "../ui/ContextMenu";
 import { Sheet } from "../ui/Sheet";
@@ -22,11 +22,14 @@ import { asked, later } from "./asks";
 import { look } from "./toolblocks";
 import { pinned } from "../views/Chat";
 import { ctrList } from "../views/desk/DeskContainers";
+import { openConfig } from "../views/desk/DeskDB";
 import { conns, loadConns, tables } from "../views/desk/dbstate";
+import { go } from "./router";
+import { sqlTab } from "./vtabs";
 import { addAttach, attaches } from "./attach";
 import { getDraft, setDraft } from "./drafts";
 import { toast } from "./toasts";
-import { quick, setPanes } from "./workbench";
+import { quick, setPanes, showFile } from "./workbench";
 
 type Mod = typeof AICtx;
 
@@ -64,6 +67,16 @@ const host = (): AIHost => ({
   aiSnap,
   asked,
   later,
+  // The chat's database card (aictx/dbcard.tsx): Databases on the
+  // connection (DeskDB opens openNext once listed), its query tab, its
+  // file for a fix; + Chat adds the connection as an item.
+  dbOpen: (conn, what) => {
+    if (what === "query") return showFile(sqlTab(conn));
+    openNext.value = conn;
+    go({ tab: "more", rest: "db", query: {} });
+    if (what === "fix") openConfig();
+  },
+  dbChat: (conn) => void withAI((m) => m.add({ item: "db_conn", conn })),
 });
 
 let loading: Promise<Mod> | null = null;

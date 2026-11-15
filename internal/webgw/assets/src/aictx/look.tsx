@@ -15,6 +15,7 @@ import type { ChatLook } from "../lib/toolblocks";
 import type { VNode } from "preact";
 import { readChat } from "../state/chat";
 import { Fragment, H, h } from "./jsx";
+import { DBCards } from "./dbcard";
 import { Picker } from "./picker";
 import { Strip } from "./runview";
 
@@ -156,6 +157,7 @@ function answer(m: ChatMsg, body: VNode): VNode {
           ))}
         </div>
       )}
+      {!run && m.steps?.length === 1 && <DBCards list={m.steps[0].blocks} />}
       {m.wait && <Wait w={m.wait} />}
       {body}
       {run ? null : m.streaming ? <Thinking from={m.meta?.started_ms} /> : <Meta m={m} />}
@@ -170,6 +172,7 @@ export const look: ChatLook = {
     ) : (
       <div class="msg msg-tool" data-i={m.i}>
         <Tool line={m.text ?? ""} done={!m.wait} />
+        <DBCards list={m.blocks} />
         {m.wait && <Wait w={m.wait} />}
       </div>
     ),

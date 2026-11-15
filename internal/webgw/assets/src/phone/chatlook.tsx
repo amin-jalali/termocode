@@ -17,7 +17,9 @@ import { AS } from "../aictx/strings";
 import { aiSnap } from "../lib/ai";
 import { asked, later } from "../lib/asks";
 import { layout } from "../lib/layout";
-import { goTab } from "../lib/router";
+import { go, goTab } from "../lib/router";
+import { addRef } from "../lib/tochat";
+import { toast } from "../lib/toasts";
 import { look } from "../lib/toolblocks";
 import { link, store } from "../session";
 import { addStrings, t } from "../strings";
@@ -137,6 +139,11 @@ const host = {
   asked,
   later,
   openMenu: (_x: number, _y: number, label: string, items: MenuItems) => (menu.value = { label, items }),
+  toast: (kind: "ok" | "info" | "warn", text: string) => void toast(kind, text),
+  // The chat's database card: the Databases page of the connection
+  // (its tables, what it needs first, its query); + Chat a row chip.
+  dbOpen: (conn: string) => go({ tab: "more", rest: "db/" + encodeURIComponent(conn), query: {} }),
+  dbChat: (_conn: string, ref: string, title: string) => void addRef({ kind: "block", id: ref }, title),
   phone: true,
 } as Partial<AIHost> as AIHost;
 

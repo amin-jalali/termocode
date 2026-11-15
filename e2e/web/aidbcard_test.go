@@ -79,7 +79,6 @@ func TestAIDBCardDrawsTheTrueState(t *testing.T) {
 	for _, vp := range []Viewport{phoneSmall, Desktop} {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, _ := openChat(t, vp, dbCardChat())
-			dbCardShot(t, p, vp.Name+"-before", `document.querySelector('[data-view="chat"] .msg-ai')`)
 			p.WaitJS(dbCard + `?.querySelectorAll(".dbcard-row").length === 3`)
 			for id, badge := range map[string]string{"baaytonadb": "unreachable", "baaytona-db-1": "ready", "rentcar-db-1": "missing password"} {
 				if got := Eval[string](p, dbCardRow(id)+`.querySelector(".dbcard-badge")?.textContent ?? ""`); got != badge {

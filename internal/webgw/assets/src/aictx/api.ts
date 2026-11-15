@@ -116,6 +116,11 @@ export interface AIHost {
    * these parts too: a tap opens what a tooltip shows, a run opens in a
    * full-screen sheet, a list opens as a sheet (openMenu). */
   phone?: boolean;
+  /** dbOpen opens the Databases view on a connection (open, the
+   * query of it, its fix: the place that sets a missing field); dbChat
+   * puts a database card's row (block/item) into the next message. */
+  dbOpen?(conn: string, what: "open" | "query" | "fix"): void;
+  dbChat?(conn: string, ref: string, title: string): void;
   /** Fragment is Preact's own (the phone's host). */
   Fragment?: (p: { children?: ComponentChildren }) => PJSX.Element;
 }
