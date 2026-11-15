@@ -45,7 +45,9 @@ func nowTurn(it *webproto.InboxItem, turn, signal, why string) {
 }
 
 // nowAgentWaits: an agent waits for the user's OK.
-func nowAgentWaits(it *webproto.InboxItem) { nowTurn(it, now.TurnMe, now.SigAgent, "Waits for your OK") }
+func nowAgentWaits(it *webproto.InboxItem) {
+	nowTurn(it, now.TurnMe, now.SigAgent, "Waits for your OK")
+}
 
 // nowByState sets the turn from the inbox state: needs you is an agent
 // waiting, failed is the user's move (failed: its reason), working and
