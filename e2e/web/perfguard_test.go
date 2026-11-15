@@ -193,7 +193,7 @@ func TestPerfGuardPhoneTreeLaysOutOnlyWhatIsInView(t *testing.T) {
 	if !Eval[bool](p, treeRow("dir000")+`.checkVisibility({contentVisibilityAuto: true})`) {
 		t.Fatal("a row in view is not drawn")
 	}
-	const budget = 400 // ms of the longest task at 4x
+	const budget = 260 // ms of the longest task at 4x (measured 197, was 467)
 	if sp.MaxLong() > budget {
 		t.Errorf("opening the folder took a %d ms task at 4x CPU (budget %d ms)", sp.MaxLong(), budget)
 	}
