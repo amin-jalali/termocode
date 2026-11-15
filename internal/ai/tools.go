@@ -767,7 +767,8 @@ func localWorkspaceTools(w Workspace) []Tool {
 		{
 			Name: "run_command", Description: "Run a shell command HIDDEN in the workspace root and return its captured output " +
 				"(one-shot: build, test, grep, …; 2 min limit). For a command the user wants to see, an interactive one or " +
-				"a long-running one (dev server, watcher), use terminal_send instead.",
+				"a long-running one (dev server, watcher), use terminal_send instead. It has no terminal and no stdin: " +
+				"full-screen programs (vim, nano, less, top, htop) cannot work there; use batch forms (cat, top -bn1, git commit -m).",
 			Params: map[string]any{"command": strParam("shell command")}, Required: []string{"command"},
 			Mutating: true, Class: ClassRun,
 			Describe: func(a map[string]any) string { return "Run: " + ArgString(a, "command") },
@@ -797,8 +798,16 @@ func firstLine(s string) string { return strings.SplitN(strings.TrimSpace(s), "\
 // runCmd runs a command with a timeout and returns combined output plus
 // the exit status (as text, not an error, so the model can read it).
 // nonInteractive are the variables a hidden command runs with (OMX-10):
-// it has no terminal and no stdin, so a pager or a prompt would hang.
-var nonInteractive = []string{"PAGER=cat", "GIT_PAGER=cat", "GIT_TERMINAL_PROMPT=0", "CI=1"}
+// it has no terminal and no stdin, so a pager, an editor or a prompt
+// would hang until the time limit. The editors are ":" (git keeps its
+// default message), package managers answer yes, credential helpers and
+// brew never ask or update.
+var nonInteractive = []string{
+	"PAGER=cat", "GIT_PAGER=cat", "GIT_TERMINAL_PROMPT=0", "CI=1",
+	"GIT_EDITOR=:", "EDITOR=:", "VISUAL=", "GIT_SEQUENCE_EDITOR=:", "GIT_MERGE_AUTOEDIT=no",
+	"DEBIAN_FRONTEND=noninteractive", "npm_config_yes=true", "PIP_NO_INPUT=1",
+	"HOMEBREW_NO_AUTO_UPDATE=1", "GCM_INTERACTIVE=never",
+}
 
 // NonInteractiveEnv is env with the nonInteractive variables set (they
 // replace the user's values).

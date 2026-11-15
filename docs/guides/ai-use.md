@@ -885,7 +885,13 @@ for a quick command it uses the hidden **run** tool.
 
 The hidden **run** tool has no terminal and no input. It runs with
 `PAGER=cat`, `GIT_PAGER=cat`, `GIT_TERMINAL_PROMPT=0` and `CI=1`, so a
-pager, a git password prompt or a "watch" mode never hangs it. The
+pager, a git password prompt or a "watch" mode never hangs it. Editors
+are off too (`GIT_EDITOR=:`, `EDITOR=:`, `VISUAL=`,
+`GIT_SEQUENCE_EDITOR=:`, `GIT_MERGE_AUTOEDIT=no`): a `git commit --amend`
+or a merge keeps its message instead of waiting for an editor. Package
+tools never ask (`DEBIAN_FRONTEND=noninteractive`, `npm_config_yes=true`,
+`PIP_NO_INPUT=1`, `HOMEBREW_NO_AUTO_UPDATE=1`), nor does Git Credential
+Manager (`GCM_INTERACTIVE=never`). The
 agent's system prompt also says today's date, your OS and your shell.
 
 When a turn gets near the model's context window, big tool results are
