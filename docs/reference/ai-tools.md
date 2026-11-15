@@ -426,7 +426,7 @@ No arguments.
 
 ### run_command
 
-Run a shell command HIDDEN in the workspace root and return its captured output (one-shot: build, test, grep, …; 2 min limit). For a command the user wants to see, an interactive one or a long-running one (dev server, watcher), use terminal_send instead.
+Run a shell command HIDDEN in the workspace root and return its captured output (one-shot: build, test, grep, …; 2 min limit). For a command the user wants to see, an interactive one or a long-running one (dev server, watcher), use terminal_send instead. It has no terminal and no stdin: full-screen programs (vim, nano, less, top, htop) cannot work there; use batch forms (cat, top -bn1, git commit -m).
 
 **Gate:** confirm (run)
 
