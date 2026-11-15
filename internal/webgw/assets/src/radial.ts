@@ -10,13 +10,14 @@ import { mount } from "../../../../web/packages/radial-menu/src/fab";
 import { categories, DEFAULT_FAVORITES, type RadialHost } from "./radial/actions";
 
 export type { RadialHost } from "./radial/actions";
-export { MoreList } from "./radial/morelist";
+import { MoreList as List } from "./radial/morelist";
+import "./radial/morelist.css";
 
 // The favourites and the button's spot: no secret, this device only.
 const FAVS = "termocode.radial.favorites";
 const POS = "termocode.radial.position";
 
-function read<T>(key: string, ok: (v: unknown) => v is T): T | null {
+export function read<T>(key: string, ok: (v: unknown) => v is T): T | null {
   try {
     const v: unknown = JSON.parse(localStorage.getItem(key) ?? "null");
     return ok(v) ? v : null;
@@ -25,7 +26,7 @@ function read<T>(key: string, ok: (v: unknown) => v is T): T | null {
   }
 }
 
-function write(key: string, v: unknown): void {
+export function write(key: string, v: unknown): void {
   try {
     localStorage.setItem(key, JSON.stringify(v));
   } catch {
@@ -33,7 +34,7 @@ function write(key: string, v: unknown): void {
   }
 }
 
-const isIds = (v: unknown): v is string[] => Array.isArray(v) && v.length <= 8 && v.every((x) => typeof x === "string" && x.length < 64);
+export const isIds = (v: unknown): v is string[] => Array.isArray(v) && v.length <= 8 && v.every((x) => typeof x === "string" && x.length < 64);
 const isPt = (v: unknown): v is [number, number] => Array.isArray(v) && v.length === 2 && v.every((x) => typeof x === "number" && Number.isFinite(x));
 
 /** reserve is the room the page keeps for itself: at the bottom the
@@ -73,6 +74,13 @@ function linkSheet(): Promise<void> {
     };
     document.head.appendChild(l);
   }));
+}
+
+/** MoreList is the More list (RM-3); it links radial.css, which holds
+ * its look, on a phone without the radial too. */
+export function MoreList(p: { host: RadialHost }) {
+  linkSheet().catch(() => undefined);
+  return List(p);
 }
 
 /** init puts the floating button on the page once its stylesheet is in;

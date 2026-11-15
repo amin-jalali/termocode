@@ -58,7 +58,7 @@
 .term-chip .chip { gap: var(--s2); max-width: 12rem; min-height: 32px; }
 .pterm-body { display: flex; flex-direction: column; padding: 0; overflow: hidden; background: var(--bg-panel); }
 .pterm { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.pterm-x { flex: 1; min-height: 0; padding: 2px 0 0 4px; font-family: "termocode symbols", var(--font-mono); -webkit-touch-callout: none; }
+.pterm-x { flex: 1; min-height: 0; min-width: 0; overflow: hidden;padding: 2px 0 0 4px; font-family: "termocode symbols", var(--font-mono); -webkit-touch-callout: none; }
 .pterm-x .xterm { height: 100%; }
 .pterm-x .xterm .xterm-viewport { background-color: var(--bg-panel); }
 .pterm-keys { padding-block: var(--s1); }

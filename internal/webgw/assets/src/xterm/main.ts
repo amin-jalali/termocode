@@ -234,10 +234,25 @@ export function open(el: HTMLElement, o: XOpts): XTerm {
   const refit = () => {
     if (el.clientWidth > 0 && el.clientHeight > 0) fit.fit();
   };
+  // The page settles after a turn, the keyboard, a font or the engine's
+  // stylesheet comes: fit again once the next frames are drawn, so the
+  // cells always fill the area (an early fit keeps a stale size).
+  let raf = 0;
+  const later = () => {
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => (refit(), (raf = requestAnimationFrame(refit))));
+  };
   if (typeof ResizeObserver !== "undefined") {
-    ro = new ResizeObserver(refit);
+    ro = new ResizeObserver(later);
     ro.observe(el);
   }
+  const vv = el.ownerDocument.defaultView?.visualViewport;
+  vv?.addEventListener("resize", later);
+  addEventListener("resize", later);
+  addEventListener("orientationchange", later);
+  addEventListener("pageshow", later);
+  void el.ownerDocument.fonts?.ready.then(later);
+  for (const l of el.ownerDocument.querySelectorAll<HTMLLinkElement>("link[data-xterm]")) l.addEventListener("load", later);
   refit();
 
   let prev: { row: number; enc: string }[] = [];
@@ -351,6 +366,11 @@ export function open(el: HTMLElement, o: XOpts): XTerm {
     },
     dispose: () => {
       ro?.disconnect();
+      cancelAnimationFrame(raf);
+      vv?.removeEventListener("resize", later);
+      removeEventListener("resize", later);
+      removeEventListener("orientationchange", later);
+      removeEventListener("pageshow", later);
       el.removeEventListener("paste", onPaste, true);
       el.removeEventListener("touchstart", onStart, true);
       el.removeEventListener("touchmove", onMove, true);

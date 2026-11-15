@@ -179,8 +179,10 @@ PgUp and PgDn. Drag the spacebar to move the cursor. Backspace and the
 arrows repeat when you hold them. Pull the bar above the keyboard down to
 look at what is under it; the keyboard button on that bar hides it. The
 globe button switches to the phone's own keyboard (for other languages
-and dictation) until you leave the field. Turn it off, or change its
-sound and vibration, in **This phone → Keyboard**. A phone gets a compact
+and dictation) until you leave the field. In the terminal, the ⌨ key at
+the start of the key row brings termocode's keyboard back in one tap.
+Turn it off, or change its sound and vibration, in **This phone →
+Keyboard**. A phone gets a compact
 layout; a tablet gets the function row too. Held upright, the phone's
 keyboard is lower, so its keys keep the shape they have on its side,
 and backspace shows ⌫.

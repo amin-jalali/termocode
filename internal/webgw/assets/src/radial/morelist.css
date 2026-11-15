@@ -1,0 +1,30 @@
+/* The More list (RM-3, design sheet 09): grouped cards, a colour tile on
+   each row, Pinned first; its row menu and Edit Pinned sheet. */
+.more-list { display: flex; flex-direction: column; gap: 14px; }
+.more-findbox { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border-radius: 10px; background: var(--bg-2); color: var(--muted); }
+.more-find { flex: 1; min-width: 0; height: 100%; border: 0; background: none; color: var(--text); font: inherit; outline: none; }
+.more-gh { display: flex; align-items: center; margin: 0 2px 6px; }
+.more-gh .group-title { flex: 1; font: 700 16px var(--font-sans); color: var(--text); text-transform: none; letter-spacing: 0; }
+.more-gmenu { width: 36px; height: 28px; color: var(--muted); font-size: 18px; }
+.more-card { border-radius: 12px; background: var(--bg-panel); }
+.more-card .more-link, .more-edit-row { gap: 10px; min-height: 44px; padding: 7px 12px; font-weight: 500; }
+.more-card .more-link::after { content: "›"; font-size: 20px; }
+.more-lb { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.more-n { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.more-n.is-bad { color: var(--red); }
+.more-tile { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 7px; color: var(--bg); background: var(--muted); }
+.t-g { background: var(--green); } .t-a { background: var(--amber); } .t-r { background: var(--red); } .t-b { background: var(--blue); } .t-p { background: var(--ai); }
+.more-scrim { background: var(--scrim); }
+.more-menu { margin: auto 16px; min-width: 240px; border-radius: 14px; overflow: hidden; background: var(--bg-float); border: 1px solid var(--border); box-shadow: var(--shadow-float); }
+.more-mt { padding: 9px 14px 7px; font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.more-menu button { display: block; width: 100%; min-height: 44px; padding: 0 14px; text-align: start; border-top: 1px solid var(--border); }
+.more-menu .is-ai { color: var(--ai); font-weight: 600; }
+.more-sheet { width: 100%; max-width: 40rem; padding-bottom: calc(10px + env(safe-area-inset-bottom)); border-radius: 14px 14px 0 0; background: var(--bg-panel); }
+.more-sh { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.more-sh b { flex: 1; font-size: 17px; }
+.more-shx { width: 32px; height: 32px; color: var(--muted); }
+.more-done { min-height: 36px; color: var(--blue); font-weight: 600; }
+.more-edit-row { display: flex; align-items: center; border-bottom: 1px solid var(--border); }
+.more-x { width: 28px; height: 32px; color: var(--red); }
+.more-grip { display: grid; place-items: center; width: 36px; height: 36px; color: var(--dim); touch-action: none; }
+.more-hint { padding: 10px 16px 0; font-size: 12px; color: var(--muted); }
