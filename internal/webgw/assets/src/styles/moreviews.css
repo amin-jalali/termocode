@@ -18,10 +18,11 @@
 .kv-def, .kv-desc { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: var(--fs-hint); }
 .kv-def { font-family: var(--font-mono); }
 
-.mcp-state { display: flex; align-items: center; gap: var(--s2); font-weight: 600; }
-.mcp-dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--dim); flex: none; }
+.mcp-about, .mcp-none { margin: 0; color: var(--muted); }
+.mcp-state { margin: 0; font-weight: 600; }
+.mcp-dot { display: inline-block; width: 0.6rem; height: 0.6rem; margin-inline-end: var(--s2); border-radius: 50%; background: var(--dim); }
 .mcp-state.is-on .mcp-dot { background: var(--green); }
-.mcp-why { color: var(--amber); }
+.mcp-why { font-weight: 400; color: var(--text-2); }
 .mcp-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
 .mcp-list > li { padding: var(--s2) var(--s3); min-height: var(--tap); display: flex; flex-direction: column; justify-content: center; }
 .mcp-list > li + li { border-top: 1px solid var(--border); }
