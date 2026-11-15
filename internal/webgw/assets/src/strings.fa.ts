@@ -302,6 +302,7 @@ export const FA: Record<TranslatedKey, string> = {
   "key.interrupt.label": "قطع",
   "key.edit": "⋯",
   "key.edit.label": "ویرایش کلیدها",
+  "key.tk": "صفحه‌کلید کد",
   "key.home": "Home",
   "key.end": "End",
   "key.pgup": "PgUp",
