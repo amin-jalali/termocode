@@ -205,7 +205,24 @@ export function Home() {
     if (!el) return;
     const onScroll = () => (stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM_PX);
     el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
+    // The keyboard (window and visual viewport resize, after
+    // lib/viewport.ts set the height) or a taller box makes the stream
+    // shorter: a reader at its end stays there, the newest message right
+    // above the box.
+    const keep = () => {
+      if (stick.current) el.scrollTop = el.scrollHeight;
+    };
+    const vv = window.visualViewport;
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(keep);
+    ro?.observe(el);
+    addEventListener("resize", keep);
+    vv?.addEventListener("resize", keep);
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      removeEventListener("resize", keep);
+      vv?.removeEventListener("resize", keep);
+      ro?.disconnect();
+    };
   }, []);
   H.useLayoutEffect(() => {
     const el = body.current;

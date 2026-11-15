@@ -1,6 +1,8 @@
 /* The phone's Home (MOB-4): top bar, stream, quick blocks, chip row and
    box. Phone layout only; every target is 44 px; tones come with a shape. */
-.layout-home { display: flex; flex-direction: column; height: 100dvh; }
+/* The Home follows the visual viewport too (lib/viewport.ts, as the
+   shell): with the iOS keyboard up its box sits right above it. */
+.layout-home { display: flex; flex-direction: column; height: 100dvh; height: var(--vvh, 100dvh); }
 .main-home { flex: 1; min-height: 0; display: flex; }
 .home { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--bg); color: var(--text); }
 .home-top { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 4px 0 16px; border-bottom: 1px solid var(--border); }
@@ -11,6 +13,9 @@
 .home-menu { min-width: 44px; min-height: 44px; font-size: 22px; background: none; border: 0; color: var(--text); border-radius: 8px; }
 .home-menu:focus-visible, .home-row:focus-visible, .home-chip:focus-visible, .home-block-close:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .home-stream { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 12px 8px; display: flex; flex-direction: column; gap: 10px; overscroll-behavior: contain; }
+/* A long stream scrolls; its items keep their height (a block, whose
+   overflow is hidden, shrank to an empty line). */
+.home-stream > * { flex-shrink: 0; }
 .home-hello { color: var(--muted); margin: auto 0 0; padding: 8px 4px; }
 .home-hello .star { color: var(--ai); }
 /* The empty state (MOBUX-4): hello, three cards, pinned views below. */
