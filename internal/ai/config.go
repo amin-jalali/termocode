@@ -130,7 +130,15 @@ type Settings struct {
 	Autopilot     string         `json:"ai_autopilot,omitempty"`
 	ApprovalRules []ApprovalRule `json:"ai_approval_rules,omitempty"`
 	Guardian      string         `json:"ai_guardian,omitempty"`
+	// CLIResume is ai_cli_resume: "off" starts a new CLI session on every
+	// chat turn of a Codex / Claude Code step (the recent turns go in the
+	// prompt instead); default: the next turn resumes the step's session.
+	// Edited by hand.
+	CLIResume string `json:"ai_cli_resume,omitempty"`
 }
+
+// CLIResumeOn reports ai_cli_resume (on unless "off").
+func (s Settings) CLIResumeOn() bool { return s.CLIResume != "off" }
 
 // TeamMode reports ai_team_mode (off unless true).
 func (s Settings) TeamMode() bool { return s.Team != nil && *s.Team }

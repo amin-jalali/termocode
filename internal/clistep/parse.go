@@ -25,6 +25,7 @@ type parser struct {
 	resetAt time.Time // when the limit resets (from the event)
 	done    bool      // the end event came
 	model   string
+	session string // the CLI's session / thread id
 
 	texts int               // text blocks streamed so far
 	tools map[string]string // tool id → tool name (Claude Code)
@@ -102,10 +103,11 @@ func lineCount(s string) string {
 // ── Claude Code: claude -p --output-format stream-json --verbose ──────────
 
 type claudeEvent struct {
-	Type    string `json:"type"`
-	Subtype string `json:"subtype"`
-	Model   string `json:"model"`
-	Message struct {
+	Type      string `json:"type"`
+	SessionID string `json:"session_id"`
+	Subtype   string `json:"subtype"`
+	Model     string `json:"model"`
+	Message   struct {
 		Model   string            `json:"model"`
 		Content []json.RawMessage `json:"content"`
 	} `json:"message"`
@@ -144,6 +146,9 @@ func (p *parser) claude(b []byte) {
 	var e claudeEvent
 	if json.Unmarshal(b, &e) != nil {
 		return
+	}
+	if ValidSession(e.SessionID) {
+		p.session = e.SessionID
 	}
 	switch e.Type {
 	case "system":
@@ -266,9 +271,10 @@ func blockText(raw json.RawMessage) string {
 // ── Codex: codex exec --json ──────────────────────────────────────────────
 
 type codexEvent struct {
-	Type    string `json:"type"`
-	Message string `json:"message"`
-	Error   *struct {
+	Type     string `json:"type"`
+	ThreadID string `json:"thread_id"`
+	Message  string `json:"message"`
+	Error    *struct {
 		Message string `json:"message"`
 	} `json:"error"`
 	Item *struct {
@@ -301,6 +307,10 @@ func (p *parser) codex(b []byte) {
 		return
 	}
 	switch e.Type {
+	case "thread.started":
+		if ValidSession(e.ThreadID) {
+			p.session = e.ThreadID
+		}
 	case "error":
 		p.failed = e.Message
 	case "turn.failed":
