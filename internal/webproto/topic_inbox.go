@@ -31,6 +31,7 @@ const (
 	InboxTask     = "task"
 	InboxCI       = "ci"
 	InboxRace     = "race"
+	InboxPR       = "pr" // a pull request that asks for the user's review
 )
 
 // Inbox item states, in the order the phone groups them.
@@ -67,7 +68,7 @@ type InboxCounts struct {
 type InboxItem struct {
 	ID    string   `json:"id"`
 	WS    string   `json:"ws,omitempty"`
-	Kind  string   `json:"kind" enum:"card|run|lane|workflow|task|ci|race"`
+	Kind  string   `json:"kind" enum:"card|run|lane|workflow|task|ci|race|pr"`
 	Ref   string   `json:"ref"`
 	Title string   `json:"title"`
 	Lane  string   `json:"lane,omitempty"`
@@ -92,6 +93,7 @@ type InboxItem struct {
 	Source  string   `json:"source,omitempty"`
 	Due     int64    `json:"due,omitempty"`
 	Head    string   `json:"head,omitempty"`
+	Bot     bool     `json:"bot,omitempty"` // a bot made it: it never takes a turn
 }
 
 // NowInfo is the user's Now setup: whether the first-run questions were

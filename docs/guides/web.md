@@ -414,6 +414,29 @@ what runs.
   (`now.json` in the config folder), Done for 30 days.
 - The ✦ button shows how many things are your turn.
 
+### Review a pull request from Now
+
+A pull request that asks for your review is on your turn ("sara asked
+you", rule Reviews); a bot's never is. Tap it for **Review**, one
+pull request in one fixed order:
+
+- the risk band ("Medium risk · 1 of 3"), the question it answers and
+  its task (ENG-231), the solution in one line;
+- the changes, main change first, the rest folded ("Rest: test,
+  config");
+- **Proof**: one row per check with the commit it ran on. A check that
+  ran on older code says "old code" with **Run again**; a red one has
+  ✦ **Fix** and **Log**; a skipped one says "not run", never passed;
+- the risks (path rules: sign-in and secrets, migrations, network code,
+  CI; and size) and one short suggestion.
+
+**Approve & next** (key `a`) opens the next one at once and sends the
+approval after 4 seconds, so **Undo** can still stop it. It approves
+only the commit you saw: when new code came in, the laptop does not
+send it and says "New code came in. You saw 3f2a1c9. Now it is 7d40b21."
+**Skip** (`s`), **Comment** (`c`) and **Open** (`o`) are next to it.
+Approve is not merge: merging stays your own step.
+
 ### A sign-in code as well (optional)
 
 For a second step after the passkey, run **Web: Set Up Sign-in Code…**.

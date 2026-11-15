@@ -5012,6 +5012,50 @@
       "phase": "v2"
     },
     {
+      "op": "review.list",
+      "args": "EmptyArgs",
+      "result": "ReviewQueue",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "review.get",
+      "args": "PRNumberArgs",
+      "result": "ReviewSnap",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "review.act",
+      "args": "ReviewActArgs",
+      "result": "ReviewActResult",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 24576,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "containers.servers",
       "args": "EmptyArgs",
       "result": "ServersList",
@@ -12864,6 +12908,9 @@
     "InboxItem": {
       "type": "object",
       "properties": {
+        "bot": {
+          "type": "boolean"
+        },
         "can": {
           "items": {
             "type": "string"
@@ -12890,7 +12937,8 @@
             "workflow",
             "task",
             "ci",
-            "race"
+            "race",
+            "pr"
           ]
         },
         "lane": {
@@ -16472,6 +16520,102 @@
       ],
       "additionalProperties": true
     },
+    "ReviewActArgs": {
+      "type": "object",
+      "properties": {
+        "do": {
+          "enum": [
+            "approve",
+            "comment"
+          ]
+        },
+        "head": {
+          "type": "string"
+        },
+        "number": {
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "number",
+        "head",
+        "do"
+      ],
+      "additionalProperties": false
+    },
+    "ReviewActResult": {
+      "type": "object",
+      "properties": {
+        "head": {
+          "type": "string"
+        },
+        "number": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "number",
+        "head"
+      ],
+      "additionalProperties": true
+    },
+    "ReviewDiffLine": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "ctx",
+            "add",
+            "del"
+          ]
+        },
+        "n": {
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "n",
+        "kind",
+        "text"
+      ],
+      "additionalProperties": true
+    },
+    "ReviewGroup": {
+      "type": "object",
+      "properties": {
+        "add": {
+          "type": "integer"
+        },
+        "del": {
+          "type": "integer"
+        },
+        "files": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "main": {
+          "type": "boolean"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "files",
+        "add",
+        "del"
+      ],
+      "additionalProperties": true
+    },
     "ReviewNote": {
       "type": "object",
       "properties": {
@@ -16498,6 +16642,215 @@
         "text"
       ],
       "additionalProperties": false
+    },
+    "ReviewProof": {
+      "type": "object",
+      "properties": {
+        "again": {
+          "type": "boolean"
+        },
+        "fix": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "sha": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "ok",
+            "fail",
+            "running",
+            "stale",
+            "notrun"
+          ]
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "ReviewQueue": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/ReviewQueued"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
+    "ReviewQueued": {
+      "type": "object",
+      "properties": {
+        "author": {
+          "type": "string"
+        },
+        "bot": {
+          "type": "boolean"
+        },
+        "draft": {
+          "type": "boolean"
+        },
+        "number": {
+          "type": "integer"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "number",
+        "title",
+        "author"
+      ],
+      "additionalProperties": true
+    },
+    "ReviewRisk": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "level",
+        "reasons"
+      ],
+      "additionalProperties": true
+    },
+    "ReviewSnap": {
+      "type": "object",
+      "properties": {
+        "add": {
+          "type": "integer"
+        },
+        "agent": {
+          "type": "string"
+        },
+        "approved": {
+          "type": "boolean"
+        },
+        "author": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "del": {
+          "type": "integer"
+        },
+        "diff": {
+          "items": {
+            "$ref": "#/defs/ReviewDiffLine"
+          },
+          "type": "array"
+        },
+        "files": {
+          "type": "integer"
+        },
+        "groups": {
+          "items": {
+            "$ref": "#/defs/ReviewGroup"
+          },
+          "type": "array"
+        },
+        "head": {
+          "type": "string"
+        },
+        "number": {
+          "type": "integer"
+        },
+        "proof": {
+          "items": {
+            "$ref": "#/defs/ReviewProof"
+          },
+          "type": "array"
+        },
+        "question": {
+          "type": "string"
+        },
+        "risk": {
+          "$ref": "#/defs/ReviewRisk"
+        },
+        "solution": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "OPEN",
+            "CLOSED",
+            "MERGED"
+          ]
+        },
+        "suggestion": {
+          "$ref": "#/defs/ReviewSuggestion"
+        },
+        "task": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "number",
+        "title",
+        "author",
+        "url",
+        "head",
+        "branch",
+        "add",
+        "del",
+        "files",
+        "solution",
+        "groups",
+        "proof",
+        "risk",
+        "suggestion",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "ReviewSuggestion": {
+      "type": "object",
+      "properties": {
+        "notes": {
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "additionalProperties": true
     },
     "RunItem": {
       "type": "object",

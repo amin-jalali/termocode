@@ -118,7 +118,7 @@ func inboxItemOK(it InboxItem) bool {
 		return false
 	}
 	switch it.Kind {
-	case InboxCard, InboxRun, InboxLane, InboxWorkflow, InboxTask, InboxCI, InboxRace:
+	case InboxCard, InboxRun, InboxLane, InboxWorkflow, InboxTask, InboxCI, InboxRace, InboxPR:
 	default:
 		return false
 	}

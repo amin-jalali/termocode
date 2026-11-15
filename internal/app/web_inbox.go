@@ -240,6 +240,9 @@ func (m *Model) webInboxItems(p webInboxPaths) []webproto.InboxItem {
 			add(it)
 		}
 	}
+	for _, it := range m.nowAskItems() {
+		add(it)
+	}
 	if w := m.ci; w != nil && w.loaded && w.err == nil && w.branch != "" {
 		st := map[ghci.State]string{ghci.StatePending: webproto.InboxWorking, ghci.StateFail: webproto.InboxFailed,
 			ghci.StatePass: webproto.InboxDone}[w.snap.State()]

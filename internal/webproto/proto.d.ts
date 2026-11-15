@@ -1173,6 +1173,13 @@ export interface ReviewNote {
   text: string;
 }
 
+export interface ReviewActArgs {
+  number: number;
+  head: string;
+  do: "approve" | "comment";
+  text?: string;
+}
+
 export interface AddServerArgs {
   name: string;
   host: string;
@@ -2188,7 +2195,7 @@ export interface InboxSnap {
 export interface InboxItem {
   id: string;
   ws?: string;
-  kind: "card" | "run" | "lane" | "workflow" | "task" | "ci" | "race";
+  kind: "card" | "run" | "lane" | "workflow" | "task" | "ci" | "race" | "pr";
   ref: string;
   title: string;
   lane?: string;
@@ -2206,6 +2213,7 @@ export interface InboxItem {
   source?: string;
   due?: number;
   head?: string;
+  bot?: boolean;
 }
 
 export interface InboxCounts {
@@ -3967,6 +3975,79 @@ export interface PushItem {
   this?: boolean;
 }
 
+export interface ReviewQueue {
+  items: ReviewQueued[];
+}
+
+export interface ReviewQueued {
+  number: number;
+  title: string;
+  author: string;
+  bot?: boolean;
+  draft?: boolean;
+}
+
+export interface ReviewSnap {
+  number: number;
+  title: string;
+  author: string;
+  url: string;
+  head: string;
+  branch: string;
+  add: number;
+  del: number;
+  files: number;
+  question?: string;
+  task?: string;
+  solution: string;
+  groups: ReviewGroup[];
+  proof: ReviewProof[];
+  risk: ReviewRisk;
+  suggestion: ReviewSuggestion;
+  agent?: string;
+  state: "OPEN" | "CLOSED" | "MERGED";
+  approved?: boolean;
+  diff?: ReviewDiffLine[];
+}
+
+export interface ReviewGroup {
+  title: string;
+  files: string[];
+  add: number;
+  del: number;
+  main?: boolean;
+}
+
+export interface ReviewProof {
+  name: string;
+  state: "ok" | "fail" | "running" | "stale" | "notrun";
+  sha?: string;
+  url?: string;
+  fix?: boolean;
+  again?: boolean;
+}
+
+export interface ReviewRisk {
+  level: "low" | "medium" | "high";
+  reasons: string[];
+}
+
+export interface ReviewSuggestion {
+  text: string;
+  notes?: number;
+}
+
+export interface ReviewDiffLine {
+  n: number;
+  kind: "ctx" | "add" | "del";
+  text: string;
+}
+
+export interface ReviewActResult {
+  number: number;
+  head: string;
+}
+
 export interface ServersList {
   engine: string;
   hosts: ServerHost[];
@@ -4457,6 +4538,9 @@ export interface OpArgs {
   "push.remove": PushRemoveArgs;
   "push.unsubscribe": PushUnsubscribeArgs;
   "ai.worktree_notes": AIWorktreeNotesArgs;
+  "review.list": EmptyArgs;
+  "review.get": PRNumberArgs;
+  "review.act": ReviewActArgs;
   "containers.servers": EmptyArgs;
   "containers.server": ContextArgs;
   "containers.add_server": AddServerArgs;
@@ -4794,6 +4878,9 @@ export interface OpResult {
   "push.remove": PushList;
   "push.unsubscribe": PushState;
   "ai.worktree_notes": ChatRef;
+  "review.list": ReviewQueue;
+  "review.get": ReviewSnap;
+  "review.act": ReviewActResult;
   "containers.servers": ServersList;
   "containers.server": ServerContainers;
   "containers.add_server": HostDone;

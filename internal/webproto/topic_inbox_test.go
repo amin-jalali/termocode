@@ -30,7 +30,7 @@ func TestInboxTopicDefined(t *testing.T) {
 	ts := string(b)
 	for _, want := range []string{
 		`  "inbox": { snap: InboxSnap; delta: InboxSnap };`,
-		`  kind: "card" | "run" | "lane" | "workflow" | "task" | "ci" | "race";`,
+		`  kind: "card" | "run" | "lane" | "workflow" | "task" | "ci" | "race" | "pr";`,
 		`  state: "needs_you" | "working" | "failed" | "done";`,
 		`  counts: InboxCounts;`,
 	} {

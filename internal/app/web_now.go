@@ -86,7 +86,7 @@ func nowCI(it *webproto.InboxItem) {
 // nowItem is the model's view of an inbox item.
 func nowItem(it webproto.InboxItem) now.Item {
 	x := now.Item{ID: it.ID, Kind: it.Kind, Source: it.Source, Title: it.Title, Turn: it.Turn, Waiting: it.Waiting,
-		Signal: it.Signal, Head: it.Head, Why: it.Why}
+		Signal: it.Signal, Head: it.Head, Why: it.Why, Bot: it.Bot}
 	if it.Since > 0 {
 		x.Since = time.UnixMilli(it.Since)
 	}
@@ -121,6 +121,9 @@ func (m *Model) nowPlace(items []webproto.InboxItem) ([]webproto.InboxItem, *web
 		now.Place(&x, prefs)
 		it := byID[x.ID]
 		it.Turn, it.Why, it.Rule, it.Level = x.Turn, x.Why, x.Rule, x.Level
+		if x.Rule == now.RuleNoBots {
+			it.Why = "From a bot"
+		}
 		if !x.WhyAt.IsZero() {
 			it.WhyAt = x.WhyAt.UnixMilli()
 		}

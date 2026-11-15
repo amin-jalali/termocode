@@ -317,3 +317,22 @@ func NextPoll(s Snapshot, err error, sincePush time.Duration) time.Duration {
 	}
 	return SlowPoll
 }
+
+// BranchRuns reads the newest workflow runs of branch, newest first, of
+// every commit (`gh run list`): a review shows a workflow that ran only
+// on an older commit as stale.
+func BranchRuns(ctx context.Context, run Runner, dir, branch string) ([]Run, error) {
+	if branch == "" || strings.HasPrefix(branch, "-") {
+		return nil, nil
+	}
+	out, errOut, err := run(ctx, dir, "run", "list", "--branch", branch, "--limit", "30",
+		"--json", "databaseId,workflowName,displayTitle,status,conclusion,headSha,url")
+	if err != nil {
+		return nil, classify(err, errOut)
+	}
+	var runs []Run
+	if err := json.Unmarshal([]byte(out), &runs); err != nil {
+		return nil, fmt.Errorf("gh run list: %w", err)
+	}
+	return runs, nil
+}

@@ -14,6 +14,8 @@ import type { InboxItem, NowInfo, NowRule } from "../../../../webproto/proto";
 import { Fragment, H, h, setHost, type NowHost } from "./jsx";
 import { age, ruleName, sections, summary, type Sections } from "./state";
 import { DEFAULTS, s, SOURCES, type NowKey } from "./strings";
+import { draft, fail, go, Head, initKit, req, say, Toast } from "./kit";
+import { Review } from "./review";
 
 type El = h.JSX.Element;
 type Open = (id: string) => void;
@@ -22,59 +24,13 @@ type Open = (id: string) => void;
  * back Now. */
 export function init(host: NowHost): typeof Now {
   setHost(host);
-  note = host.signal<Note | null>(null);
+  initKit();
   const l = document.createElement("link");
   l.rel = "stylesheet";
   l.href = "/assets/now.css";
   document.head.append(l);
   return Now;
 }
-
-const req = (op: string, args: unknown) => H.link.request(op as never, args as never) as Promise<unknown>;
-
-/** Note is the one toast Now shows: what was done, with Undo (5 s). */
-interface Note {
-  text: string;
-  bad?: boolean;
-  undo?: () => void;
-}
-let note: { value: Note | null } = { value: null };
-let noteTimer: ReturnType<typeof setTimeout> | undefined;
-function say(text: string, undo?: () => void, bad?: boolean): void {
-  clearTimeout(noteTimer);
-  note.value = { text, undo, bad };
-  noteTimer = setTimeout(() => (note.value = null), 5000);
-}
-const fail = (e: unknown) => say(H.errText(e), undefined, true);
-
-function Toast() {
-  const n = note.value;
-  if (!n) return null;
-  return (
-    <div class="toasts now-toasts" role="status" aria-live="polite">
-      <div class={"toast sev-" + (n.bad ? "error" : "ok")}>
-        <div class="toast-body">
-          <div class="toast-title" dir="auto">
-            {n.text}
-          </div>
-        </div>
-        {n.undo && (
-          <button
-            type="button"
-            class="toast-act"
-            onClick={() => {
-              n.undo?.();
-              note.value = null;
-            }}
-          >
-            {s("undo")}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-const go = (rest: string) => H.go({ tab: "home", rest, query: {} });
 
 function read(): { items: InboxItem[]; info: NowInfo | null } {
   const d = H.store.topic("inbox").value?.data as { items?: InboxItem[]; now?: NowInfo } | undefined;
@@ -94,14 +50,13 @@ function act(x: InboxItem, what: "done" | "later" | "mute", when?: string): void
 
 /** fix puts the fix in the Home's box: nothing is sent until the user sends it. */
 function fix(x: InboxItem): void {
-  const c = H.readChat(H.store.topic("chat").peek()?.data);
-  if (c) H.setDraft(c.id, s("fix_text", { name: x.ref }));
-  go("");
+  draft(s("fix_text", { name: x.ref }));
 }
 
-const KIND: Record<string, NowKey> = { card: "agent", run: "agent_run", lane: "agent", workflow: "workflow", task: "task", ci: "ci", race: "race" };
+const KIND: Record<string, NowKey> = { card: "agent", run: "agent_run", lane: "agent", workflow: "workflow", task: "task", ci: "ci", race: "race", pr: "pr" };
 
 function tile(x: InboxItem): [string, string] {
+  if (x.kind === "pr") return ["g", "⎇"];
   if (x.kind === "ci" || x.kind === "task") return x.state === "failed" ? ["r", "✗"] : ["b", "▶"];
   return ["ai", "✦"];
 }
@@ -356,6 +311,8 @@ function Home({ open }: { open: Open }) {
   const sec = sections(items, c.now);
   const sum = summary(sec);
   H.useEffect(() => badge(sum.need), [sum.need]);
+  // The laptop learns the pull requests that ask for a review here.
+  H.useEffect(() => void req("review.list", {}).catch(() => undefined), []);
   // A new item on the user's turn: one quiet line, no popup.
   const fresh = seen ? sec.turn.find((x) => !seen?.has(x.id)) : undefined;
   H.useEffect(() => {
@@ -395,22 +352,6 @@ function Home({ open }: { open: Open }) {
       {sec.running.length > 0 && <Sec id="running" title={s("running")} n={sec.running.length} items={sec.running} c={c} />}
       {sheet}
     </div>
-  );
-}
-
-function Head({ title, back, gear }: { title: string; back: string; gear?: boolean }) {
-  return (
-    <header class="now-head">
-      <button type="button" class="now-back" aria-label={s("back")} onClick={() => go(back)}>
-        ‹
-      </button>
-      <h1>{title}</h1>
-      {gear && (
-        <button type="button" class="now-gear" aria-label={s("settings")} onClick={() => go("now/rules")}>
-          ⚙
-        </button>
-      )}
-    </header>
   );
 }
 
@@ -579,7 +520,8 @@ function openItem(id: string): void {
   const i = id.indexOf(":");
   const kind = id.slice(0, i), ref = id.slice(i + 1);
   const more: Record<string, string> = { run: "runs", task: "tasks", workflow: "workflows", lane: "agents", race: "agents" };
-  if (kind === "card") H.go({ ...H.route.peek(), rest: "", card: ref });
+  if (kind === "pr") go("review/" + ref);
+  else if (kind === "card") H.go({ ...H.route.peek(), rest: "", card: ref });
   else if (kind === "ci") H.goTab("git");
   else if (more[kind]) H.go({ tab: "more", rest: more[kind], query: {} });
 }
@@ -593,6 +535,7 @@ export function Now({ n }: { n: number }) {
     if (r.rest === "now/rules") page = <Rules />;
     else if (r.rest === "now/setup") page = <SetupPage />;
     else if (r.rest === "now") page = <All open={open} tab={r.query.tab ?? "turn"} />;
+    else if (r.rest.startsWith("review/")) page = <Review n={Number(r.rest.slice(7)) || 0} />;
     else if (!n) page = <Home open={open} />;
   }
   return (
