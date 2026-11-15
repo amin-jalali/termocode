@@ -108,7 +108,3 @@
 .lane-new {
   min-height: var(--tap);
 }
-/* The More list (RM-3): small groups, an icon on each row. */
-.more-group { margin-bottom: var(--s4); }
-.more-link .more-ic { flex: none; margin-inline-end: var(--s3); color: var(--muted); }
-.more-lb { flex: 1; }
