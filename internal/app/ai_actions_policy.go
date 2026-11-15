@@ -917,6 +917,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_base_url":           aiNever(aiNoAIConfig),
 	"ai_auto_approve":       aiNever(aiNoAIConfig),
 	"ai_max_steps":          aiNever(aiNoAIConfig),
+	"ai_repeat_call_limit":  aiNever(aiNoAIConfig),
 	"ai_edit_review":        aiNever(aiNoAIConfig),
 	"ai_review_order":       aiNever(aiNoAIConfig),
 	"ai_prices":             aiNever(aiNoAIConfig),

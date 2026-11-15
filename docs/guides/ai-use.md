@@ -1070,6 +1070,12 @@ The agent stops after 100 tool steps per message and says so. With keep
 going on (the default) it goes on by itself; else send "continue". Change
 the limit with `ai_max_steps` in `config.json`.
 
+When the agent makes the same tool call (same tool, same arguments) 4
+times in a row, termocode does not run it: the AI is told to try another
+way, and the chat shows **Same call 4 times in a row: not run**. If it
+makes the same call once more, the turn stops with a note. Change the
+count with `ai_repeat_call_limit` (a negative value turns it off).
+
 ## Project rules file
 
 A project can tell the AI how to work in it: put the rules in `AGENTS.md`,

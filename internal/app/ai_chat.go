@@ -384,8 +384,9 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		Tools:       m.aiRecallTurn(root, text).wrap(aiWithHookList(root, hooks, tools, out)), // OMX-12, OMX-18
 		Native:      native,
 		AutoApprove: auto,
-		Policy:      s.aiApprovalPolicy(), // CMP-61 (ai_autopilot.go)
-		MaxSteps:    s.settings.MaxSteps,  // 0: ai.DefaultMaxSteps
+		Policy:      s.aiApprovalPolicy(),       // CMP-61 (ai_autopilot.go)
+		MaxSteps:    s.settings.MaxSteps,        // 0: ai.DefaultMaxSteps
+		RepeatLimit: s.settings.RepeatCallLimit, // 0: ai.DefaultRepeatLimit
 		BeforeCalls: aiBeforeCalls(root, call),
 		Confirm:     aiChatConfirmFunc(gen, ch, auto, ""),
 		Reasoning:   s.reasoningFor(slotName, slot.cfg, s.turnThink),

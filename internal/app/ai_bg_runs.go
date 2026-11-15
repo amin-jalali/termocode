@@ -294,7 +294,7 @@ func (m *Model) aiBgStart(prof ai.Profile, run agentdag.Run, task string, by ai.
 	pricing := ai.NewPricing(s.settings.Prices)
 	think := s.turnThink // the turn's think keyword raises its steps too
 	reasoning := s.reasoningFunc(think)
-	maxSteps := s.settings.MaxSteps
+	maxSteps, repeat := s.settings.MaxSteps, s.settings.RepeatCallLimit
 	mail := &s.bgMail
 	total := len(run.Nodes)
 	index := map[string]int{}
@@ -334,7 +334,7 @@ func (m *Model) aiBgStart(prof ai.Profile, run agentdag.Run, task string, by ai.
 			mail.openKey(k)
 			// No Confirm: a background step never asks; a tool that would
 			// ask is declined (its tools are read-only anyway).
-			return &ai.Agent{Provider: aiWithTemp(sl.p, aiCategoryTemp(n, cats)), Tools: ts, Native: native, MaxSteps: maxSteps, Inbox: mail.inbox(k),
+			return &ai.Agent{Provider: aiWithTemp(sl.p, aiCategoryTemp(n, cats)), Tools: ts, Native: native, MaxSteps: maxSteps, RepeatLimit: repeat, Inbox: mail.inbox(k),
 					Reasoning: aiCategoryReasoning(n, cats, reasoning(n.Slot, sl.cfg), think)},
 				[]ai.Message{{Role: ai.RoleSystem, Content: sys}, {Role: ai.RoleUser, Content: input}}, nil
 		},

@@ -42,7 +42,7 @@ func (m *Model) wfxAIEnv() aistep.Env {
 		slots[ai.SlotMain] = sl
 	}
 	pricing := ai.NewPricing(s.settings.Prices)
-	maxSteps := s.settings.MaxSteps
+	maxSteps, repeat := s.settings.MaxSteps, s.settings.RepeatCallLimit
 	return aistep.Env{
 		Base: agentrun.Options{
 			StallAfter: s.settings.StepStall(),
@@ -59,7 +59,7 @@ func (m *Model) wfxAIEnv() aistep.Env {
 					return nil, nil, fmt.Errorf("model slot %q is not set up (Itermoc → AI Providers)", slot)
 				}
 				sys := "You are termocode's AI, running one step of a workflow. Do the task and answer with the result as text."
-				return &ai.Agent{Provider: sl.p, Native: sl.p.SupportsTools(), MaxSteps: maxSteps},
+				return &ai.Agent{Provider: sl.p, Native: sl.p.SupportsTools(), MaxSteps: maxSteps, RepeatLimit: repeat},
 					[]ai.Message{{Role: ai.RoleSystem, Content: sys}, {Role: ai.RoleUser, Content: input}}, nil
 			},
 		},
