@@ -367,6 +367,10 @@ export const SP = {
   "tools.v.itermoc": "The laptop's AI setup",
   "tools.v.mcpserver": "termocode as a server for outside agents",
   "ph.pinned": "pinned",
+  // The Term page (page-designs 01-term)
+  "ph.term.more": "More for this shell",
+  "ph.term.laptop": "Show on the laptop",
+  "ph.term.close_n": "Close {name}",
 } as const;
 
 addStrings(SP);

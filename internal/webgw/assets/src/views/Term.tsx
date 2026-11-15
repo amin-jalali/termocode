@@ -34,7 +34,7 @@ function setAsRows(buf: number, on: boolean): void {
 }
 
 /** showOnLaptop shows the shell's tab on the laptop. */
-function showOnLaptop(buf: number): void {
+export function showOnLaptop(buf: number): void {
   link.request("term.show_on_laptop", { buf }).then(
     () => toast("ok", t("laptop.shown")),
     (e: unknown) => {

@@ -2,6 +2,7 @@ package webproto
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 )
 
@@ -31,7 +32,7 @@ import (
 //
 // Label is the chip's text the page showed; the laptop may shorten it.
 type Attach struct {
-	Kind  string `json:"kind" enum:"task|ptask|issue|pr|file|lines|diff|worktree|run|race|workflow|card|resource|block|project|view|item"`
+	Kind  string `json:"kind" enum:"task|ptask|issue|pr|file|lines|diff|worktree|run|race|workflow|card|resource|block|project|view|item|term"`
 	ID    string `json:"id,omitempty"`
 	Path  string `json:"path,omitempty"`
 	From  int    `json:"from,omitempty"`
@@ -60,12 +61,15 @@ const (
 	AttachProject  = "project"
 	AttachView     = "view"
 	AttachItem     = "item"
+	// AttachTerm is lines of a shell: ID its buffer, From..To its rows
+	// (from 1), read off the laptop's terminal and redacted there.
+	AttachTerm = "term"
 )
 
 // AttachKinds lists the kinds in the order of the enum.
 func AttachKinds() []string {
 	return []string{AttachTask, AttachPTask, AttachIssue, AttachPR, AttachFile, AttachLines, AttachDiff, AttachWorktree,
-		AttachRun, AttachRace, AttachWorkflow, AttachCard, AttachResource, AttachBlock, AttachProject, AttachView, AttachItem}
+		AttachRun, AttachRace, AttachWorkflow, AttachCard, AttachResource, AttachBlock, AttachProject, AttachView, AttachItem, AttachTerm}
 }
 
 // Limits of attaches (plan §3.3). The byte caps are for what the laptop
@@ -144,6 +148,10 @@ func (a *Attach) check() error {
 		}
 		if _, err := ParseItemSpec(a.Spec); err != nil {
 			return err
+		}
+	case AttachTerm:
+		if n, err := strconv.Atoi(a.ID); err != nil || n < 1 || strconv.Itoa(n) != a.ID || !noPath || a.Spec != "" || a.From < 1 || a.To < a.From || a.To-a.From >= MaxAttachLines {
+			return invalid("bad term attach")
 		}
 	case AttachTask:
 		if !validName(a.ID, MaxLabel) || !noPath || !noLines || a.Spec != "" {

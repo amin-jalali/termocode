@@ -245,7 +245,7 @@ export const S = {
   "term.input": "Type a command…",
   "term.paste.title": "Paste here, then Send",
   "term.paste.many": "Send {n} lines?",
-  "term.copy_row": "Copy this row",
+  "term.close": "Close this shell…",
   "term.copy_all": "Copy all rows",
   "term.paste": "Paste…",
   "term.keep_on": "Keep screen on while it runs",

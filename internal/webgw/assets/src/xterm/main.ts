@@ -14,6 +14,7 @@
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
+import "./pterm.css";
 
 /** XTheme is the engine's colours (its ITheme, the part the page sets). */
 export interface XTheme {
@@ -69,6 +70,9 @@ export interface XTerm {
   toEnd(): void;
   /** lineAt is the text of the line shown at a page y (a long press). */
   lineAt(clientY: number): string;
+  /** pick is the first and last index (in show's lines) of the selected
+   * lines, else of the line at a page y. */
+  pick(clientY: number): [number, number];
   selection(): string;
   /** text is every line the terminal holds. */
   text(): string;
@@ -311,6 +315,13 @@ export function open(el: HTMLElement, o: XOpts): XTerm {
     term.write("", () => (keepY >= 0 ? term.scrollToLine(keepY) : term.scrollToBottom()));
   };
 
+  /** rowAt is the buffer row shown at a page y. */
+  const rowAt = (clientY: number) => {
+    const r = (el.querySelector(".xterm-screen") ?? el).getBoundingClientRect();
+    const y = Math.floor(((clientY - r.top) / Math.max(1, r.height)) * term.rows);
+    return term.buffer.active.viewportY + Math.max(0, Math.min(term.rows - 1, y));
+  };
+
   const lineText = (y: number) => {
     const b = term.buffer.active;
     let top = y;
@@ -339,11 +350,16 @@ export function open(el: HTMLElement, o: XOpts): XTerm {
     fit: refit,
     atEnd,
     toEnd: () => term.scrollToBottom(),
-    lineAt: (clientY) => {
-      const screen = el.querySelector(".xterm-screen") ?? el;
-      const r = screen.getBoundingClientRect();
-      const y = Math.floor(((clientY - r.top) / Math.max(1, r.height)) * term.rows);
-      return lineText(term.buffer.active.viewportY + Math.max(0, Math.min(term.rows - 1, y)));
+    lineAt: (clientY) => lineText(rowAt(clientY)),
+    pick: (clientY) => {
+      // The shown lines (show's) under the selection, else under the finger.
+      const s = term.getSelectionPosition();
+      const at = (y: number) => {
+        let k = 0;
+        starts.forEach((v, i) => v !== undefined && v <= y && (k = i));
+        return k;
+      };
+      return s ? [at(s.start.y), at(s.end.y)] : [at(rowAt(clientY)), at(rowAt(clientY))];
     },
     selection: () => term.getSelection(),
     text: () => {

@@ -237,7 +237,7 @@ func TestRowFontButtons(t *testing.T) {
 				row = `[data-view="term"] .xterm-rows` // the phone's terminal engine
 			}
 			def := Eval[float64](p, fmt.Sprintf(rowFontJS, row))
-			p.Tap(`[data-view="term"] .term-info-btn, .wb-panel .term-info-btn`) // the desktop has it in the panel title
+			tapAbout(p)
 			p.Tap(`.font-size .font-bigger`)
 			p.WaitJS(fmt.Sprintf(rowFontJS, row) + fmt.Sprintf(" === %f + 1", def))
 			if got := p.Text(`.font-size .font-now`); got != fmt.Sprintf("%.0f px", def+1) {
@@ -302,7 +302,11 @@ func TestTermRowMenu(t *testing.T) {
 			}
 			open()
 			p.WaitJS(rowMenu + `.contains(document.activeElement)`) // focus moves into the menu
-			p.TapJS(ButtonByText("Copy this row"))
+			one := "Copy this row"
+			if vp.Mobile {
+				one = "Copy 1 line" // the phone's Term page (page-designs 01-term)
+			}
+			p.TapJS(ButtonByText(one))
 			p.WaitJS(`window.__copied === "a b c" && !` + rowMenu)
 			open()
 			p.TapJS(ButtonByText("Copy all rows"))
@@ -364,7 +368,7 @@ func TestWakeLockWhileARunStreams(t *testing.T) {
 	showTerm(t, p, c, termSnap(3, 0, 80, "$ go test ./..."), termItem(3, "zsh", true, true))
 	p.Holds(`window.__held === 0`, 300*time.Millisecond)
 
-	p.Tap(`[data-view="term"] .term-info-btn, .wb-panel .term-info-btn`) // the desktop has it in the panel title
+	tapAbout(p)
 	p.TapJS(`[...document.querySelectorAll(".term-about .chip")].find((b) => b.textContent.includes("Keep screen on"))`)
 	p.WaitJS(`window.__held === 1 && window.__locks[0] === "request screen"`)
 	if !Eval[bool](p, `JSON.parse(localStorage.getItem("termocode.prefs.v1")).wakeLock === true`) {
@@ -396,7 +400,7 @@ func TestRefocusAfterReturn(t *testing.T) {
 	p.WaitJS(`document.activeElement === ` + xtermInput)
 
 	p.setHidden(true)
-	Eval[bool](p, `document.querySelector('[data-view="term"] .term-info-btn').focus() || true`)
+	Eval[bool](p, `document.querySelector('[data-view="term"] .pterm-more').focus() || true`)
 	p.setHidden(false)
-	p.Holds(`document.activeElement === document.querySelector('[data-view="term"] .term-info-btn')`, 200*time.Millisecond)
+	p.Holds(`document.activeElement === document.querySelector('[data-view="term"] .pterm-more')`, 200*time.Millisecond)
 }

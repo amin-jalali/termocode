@@ -65,7 +65,7 @@ func TestTermColoursNotShownAndOff(t *testing.T) {
 	showTerm(t, p, c, termSnap(3, 0, 10, "$ ls"), termItem(3, "zsh", false, true))
 	r := expectReq(t, c, "term.colors")
 	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(map[string]any{"tick": 3, "shown": false, "styles": []any{}, "spans": [][]int{}})})
-	p.TapJS(termView + `.querySelector(".term-info-btn")`)
+	tapAbout(p)
 	p.WaitJS(`document.querySelector(".term-colors-note")?.textContent === "Colours show for the rows on the laptop's screen, best effort."`)
 	p.TapJS(`[...document.querySelectorAll(".term-toggles .chip")].find((b) => b.textContent.includes("Colours"))`)
 	c.Send(t, Delta("term:3", 2, map[string]any{"kind": "lines", "first": 1, "last": 1, "lines": []string{"more"}, "tick": 4}))
