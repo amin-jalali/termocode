@@ -4,6 +4,8 @@
 import "./layout.test";
 import "./engine.test";
 import "./dom.test";
+import "./dock.test";
+import "./text.test";
 import { run } from "./t";
 
 void run();
