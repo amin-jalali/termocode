@@ -238,6 +238,23 @@ function Rows({ buf, item, canType, onEnd }: { buf: number; item: TermItem | und
   useEffect(() => {
     if (xt.current && host.current) xt.current.setLook(look(host.current));
   }, [px, ready]);
+  // The page's theme changes (the system's, the laptop's colours): the
+  // terminal takes the new background at once, never a stale box.
+  useEffect(() => {
+    if (!ready) return;
+    let bg = cssVar("--bg-panel", "");
+    const again = () => {
+      const now = cssVar("--bg-panel", "");
+      if (now === bg || !xt.current || !host.current) return;
+      bg = now;
+      xt.current.setLook(look(host.current));
+    };
+    const mo = new MutationObserver(again);
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ["style", "class", "data-theme"] });
+    const mq = matchMedia("(prefers-color-scheme: dark)");
+    mq.addEventListener("change", again);
+    return () => (mo.disconnect(), mq.removeEventListener("change", again));
+  }, [ready]);
   useLongPress(host, () => setMenu(xt.current?.lineAt(lastY.current) ?? ""));
 
   if (!snap) {
