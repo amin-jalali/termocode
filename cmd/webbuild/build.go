@@ -133,6 +133,13 @@ var queueChunk = page{Name: "queue", Entry: "queue/main.tsx"}
 // the page, so neither app.js nor workbench.js carries it.
 var termChunk = page{Name: "term", Entry: "xterm/main.ts"}
 
+// tactileChunk is the Tactile Code on-screen keyboard (tactile.js and
+// tactile.css): the package in web/packages/tactile-keyboard, built alone.
+// The page loads it with its one dynamic import (lib/tactile.ts) on a
+// touch device with the keyboard on, links tactile.css then, and gives it
+// nothing: it imports no value of the page.
+var tactileChunk = page{Name: "tactile", Entry: "tactile/main.ts"}
+
 // radialChunk is the floating radial menu (radial.js and radial.css): the
 // package in web/packages/radial-menu with termocode's actions, built
 // alone. The page loads it with its one dynamic import (lib/radial.ts)
@@ -153,7 +160,7 @@ var deskChunk = page{Name: "desk", Entry: "desk.ts", CSSOnly: true}
 var relayPage = page{Name: "relay", Entry: "relay/main.ts", Template: "relay/relay.html", HTML: "relay.html"}
 
 // chunkPaths are the only dynamic imports a page may make.
-var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true, "/assets/" + workbenchChunk.Name + ".js": true, "/assets/" + homeChunk.Name + ".js": true, "/assets/" + linkChunk.Name + ".js": true, "/assets/" + persianChunk.Name + ".js": true, "/assets/" + monacoVim.Name + ".js": true, "/assets/" + deviceChunk.Name + ".js": true, "/assets/" + aictxChunk.Name + ".js": true, "/assets/" + pickerChunk.Name + ".js": true, "/assets/" + coeditChunk.Name + ".js": true, "/assets/" + parquetChunk.Name + ".js": true, "/assets/" + queueChunk.Name + ".js": true, "/assets/" + termChunk.Name + ".js": true, "/assets/" + radialChunk.Name + ".js": true}
+var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true, "/assets/" + workbenchChunk.Name + ".js": true, "/assets/" + homeChunk.Name + ".js": true, "/assets/" + linkChunk.Name + ".js": true, "/assets/" + persianChunk.Name + ".js": true, "/assets/" + monacoVim.Name + ".js": true, "/assets/" + deviceChunk.Name + ".js": true, "/assets/" + aictxChunk.Name + ".js": true, "/assets/" + pickerChunk.Name + ".js": true, "/assets/" + coeditChunk.Name + ".js": true, "/assets/" + parquetChunk.Name + ".js": true, "/assets/" + queueChunk.Name + ".js": true, "/assets/" + termChunk.Name + ".js": true, "/assets/" + tactileChunk.Name + ".js": true, "/assets/" + radialChunk.Name + ".js": true}
 
 // kitPage is the component kit (WEB-UX-1). It is always built, so CI keeps
 // it fresh, but only a webdev build embeds and serves it.
@@ -183,7 +190,7 @@ func Build(dir string) (map[string][]byte, error) {
 	if err := copyServed(vendorDir, pkgs, out); err != nil {
 		return nil, err
 	}
-	for _, p := range []page{deskChunk, appPage, relayPage, editorChunk, persianChunk, deviceChunk, aictxChunk, pickerChunk, linkChunk, coeditChunk, parquetChunk, queueChunk, termChunk, radialChunk, monacoAMD, monacoVim, monacoFrame, kitPage} {
+	for _, p := range []page{deskChunk, appPage, relayPage, editorChunk, persianChunk, deviceChunk, aictxChunk, pickerChunk, linkChunk, coeditChunk, parquetChunk, queueChunk, termChunk, tactileChunk, radialChunk, monacoAMD, monacoVim, monacoFrame, kitPage} {
 		if p.Name != appPage.Name {
 			if _, err := os.Stat(filepath.Join(abs, "src", p.Entry)); errors.Is(err, os.ErrNotExist) {
 				continue // a folder without the kit or the editor (test fixtures)

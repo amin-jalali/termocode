@@ -55,6 +55,17 @@ export interface EditorHandle {
   canUndo(): boolean;
   canRedo(): boolean;
   focus(): void;
+  /** input is the element that takes the focus and the typing (the
+   * Tactile keyboard binds it). The desktop editor has none of these four. */
+  input?(): HTMLElement;
+  /** caret is the caret's offset in text(). */
+  caret?(): number;
+  /** type deletes del characters before the caret, inserts text and
+   * moves the caret back by back (inside a pair, into a snippet). */
+  type?(text: string, del?: number, back?: number): void;
+  /** key runs a key as if typed: the editor's own keys (Esc, Tab,
+   * Ctrl+Z…), else moves, deletes or inserts it (on-screen keyboards). */
+  key?(k: { key: string; ctrl: boolean; alt: boolean; shift: boolean }): void;
   destroy(): void;
 }
 
