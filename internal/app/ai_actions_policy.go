@@ -941,6 +941,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_step_escalate":      aiNever(aiNoAIConfig),
 	"ai_plan_review_rounds": aiNever(aiNoAIConfig),
 	"ai_plan_file":          aiNever(aiNoAIConfig),
+	"ai_write_needs_read":   aiNever(aiNoAIConfig),
 	"ai_step_stall_minutes": aiNever(aiNoAIConfig),
 	"ai_team_mode":          aiNever(aiNoAIConfig),
 	"ai_computer_use":       aiNever(aiNoAIConfig + "; the AI never turns on its own desktop control"),

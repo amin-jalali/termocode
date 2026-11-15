@@ -36,6 +36,7 @@ func TestAIChatTurnGuardsUnreadWrites(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := m.aiS()
+	s.settings.WriteNeedsRead = nil // the default: on
 	s.conv = ai.NewConversation()
 	turn := func() []ai.Tool { return m.aiGuardWrites(ai.WorkspaceTools(ai.Workspace{Root: dir}), dir) }
 	write := map[string]any{"path": "a.txt", "content": "two\n"}
@@ -59,5 +60,33 @@ func TestAIChatTurnGuardsUnreadWrites(t *testing.T) {
 	s.settings.WriteNeedsRead = &off
 	if err := aiGuardCall(t, turn(), "write_file", write); err != nil {
 		t.Fatalf("guard off: %v", err)
+	}
+}
+
+// A real chat turn: the model's write_file on a file it never read gets
+// the refusal as its tool result (no card) and the file stays; after a
+// read_file the same write goes through.
+func TestAIChatTurnRefusesUnreadWrite(t *testing.T) {
+	write := map[string]any{"path": "a.txt", "content": "two\n"}
+	p := &scriptedAIProvider{replies: []ai.Chunk{
+		toolCall("write_file", write),
+		toolCall("read_file", map[string]any{"path": "a.txt"}),
+		toolCall("write_file", write),
+	}}
+	m, dir := aiIDETestModel(t, p)
+	m.ai.settings.WriteNeedsRead = nil
+	m.ai.settings.AutoApprove = ai.ToolClasses
+	m.ai.settings.EditReview = ai.EditReviewAuto
+	path := filepath.Join(dir, "a.txt")
+	if err := os.WriteFile(path, []byte("one\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	driveAIChat(t, m, m.sendAIChat("change a.txt"), nil)
+	res := p.toolResults()
+	if len(res) != 3 || !strings.Contains(res[0], "read it first") || !strings.Contains(res[0], "edit_file") {
+		t.Fatalf("tool results = %q", res)
+	}
+	if got := readFile(path); got != "two\n" {
+		t.Fatalf("a.txt = %q (results %q)", got, res)
 	}
 }

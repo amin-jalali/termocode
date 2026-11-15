@@ -74,6 +74,8 @@ func aiTestModelB(tb testing.TB) *Model {
 	}
 	m := &Model{w: 120, h: 40, debounce: debounce.New(), ai: newAIState(), actionsWidth: defaultActionsWidth}
 	m.ai.settings.PlanApproval = ai.PlanApprovalAuto
+	off := false // the write guard has its own tests (ai_write_guard_test.go)
+	m.ai.settings.WriteNeedsRead = &off
 	return m
 }
 

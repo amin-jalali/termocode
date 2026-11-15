@@ -343,7 +343,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	ch := make(chan tea.Msg, 64)
 
 	call := newAIIDECaller(gen, ch)
-	tools := aiFilterTools(m.aiChatTools(root, call), step.Tools)
+	tools := m.aiGuardWrites(aiFilterTools(m.aiChatTools(root, call), step.Tools), root) // write_file reads first
 	if len(rules.Scoped) > 0 && aiRulesTrust(rules) == aiTrustUse {
 		tools = aiRulesOnRead(tools, root, rules, s.rulesInjector())
 	}

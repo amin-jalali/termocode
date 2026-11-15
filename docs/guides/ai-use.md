@@ -654,6 +654,13 @@ until you decide (at most 30 minutes; **Stop** ends the wait at once).
 There is no extra "AI wants to" question for them: the review is the
 question.
 
+`write_file` replaces a whole file. On a file that already exists, it
+works only after the chat has read that file (`read_file`) or written it;
+otherwise the agent is told to read it first or to use `edit_file`, and
+no card opens. So the agent never replaces code it did not see. A new
+chat starts with nothing read. Set `ai_write_needs_read` to `false` in
+config.json to turn this off.
+
 The agent is told exactly what happened, for example *"The user accepted
 1 of 2 changes to main.go; only those were written. Rejected: change 2
 …"*. When you reject everything, nothing is written and the agent is told

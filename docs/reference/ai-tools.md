@@ -3913,6 +3913,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai_web_fetch` | never | AI provider, credentials and approvals stay with the user; the AI never turns on its own web access |
 | `ai_web_search` | never | AI provider, credentials and approvals stay with the user; the AI never turns on its own web access |
 | `ai_worktrees` | never | AI provider, credentials and approvals stay with the user |
+| `ai_write_needs_read` | never | AI provider, credentials and approvals stay with the user |
 | `animations` | confirm (settings) |   |
 | `auto_reconnect` | confirm (settings) |   |
 | `auto_save` | confirm (settings) |   |
