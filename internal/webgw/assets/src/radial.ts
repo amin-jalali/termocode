@@ -36,13 +36,14 @@ const isIds = (v: unknown): v is string[] => Array.isArray(v) && v.length <= 8 &
 const isPt = (v: unknown): v is [number, number] => Array.isArray(v) && v.length === 2 && v.every((x) => typeof x === "number" && Number.isFinite(x));
 
 /** reserve is the room the page keeps for itself: at the bottom the
- * tab bar, a composer, the terminal's key bar, the Home's box or the
+ * tab bar, a composer, the terminal's key bar and Follow chip, the
+ * attention pill, the Home's box or the
  * Tactile keyboard, whichever reaches highest; at a side the tablet's
  * rail (on the right in a right-to-left page). */
 function reserve(): { bottom: number; left: number; right: number } {
   const vh = innerHeight, vw = innerWidth;
   let top = vh, left = 0, right = 0;
-  for (const el of document.querySelectorAll(".tabbar, .composer, .keybar, .home-foot, .tk-dock")) {
+  for (const el of document.querySelectorAll(".tabbar, .composer, .keybar, .term-follow, .pill-wrap, .home-foot, .tk-dock")) {
     const r = el.getBoundingClientRect();
     if (r.height > 0 && r.top > vh / 2) top = Math.min(top, r.top);
   }
