@@ -50,10 +50,11 @@ func TestAIMemoryOffByDefaultNoPromptBlock(t *testing.T) {
 	}
 }
 
-// Spec: with memory on, the lesson about the open file is in the system
-// prompt (after the rules block); with two lessons both fit the newest-3
-// rule, so the unrelated one is there too, after it. The user message
-// says "memory: 2 lessons".
+// Spec: with memory on, the lesson about the open file goes with the
+// turn's user message (the system prompt stays the same from turn to
+// turn); with two lessons both fit the newest-3 rule, so the unrelated
+// one is there too, after it. The rules stay in the system prompt. The
+// user message says "memory: 2 lessons".
 func TestAIMemoryLessonsInPrompt(t *testing.T) {
 	m, rec, dir := aiRulesModel(t, "Rule one.\n")
 	_ = os.WriteFile(filepath.Join(dir, "a.go"), []byte("package a\n"), 0o644)
@@ -66,12 +67,13 @@ func TestAIMemoryLessonsInPrompt(t *testing.T) {
 	}
 	trustAIRules(t, m, "hello")
 	sys := rec.reqs[0].Messages[0].Content
-	i, j, r := strings.Index(sys, "a.go is generated: Edit gen.go instead of a.go."), strings.Index(sys, "Unrelated note"), strings.Index(sys, "Project rules")
-	if i < 0 || j < i || r < 0 || i < r || !strings.Contains(sys, "Lessons you wrote in earlier sessions in this repository") {
-		t.Fatalf("prompt order rules %d, path lesson %d, other %d:\n%s", r, i, j, sys)
+	user := lastUserContent(rec.reqs[0])
+	i, j := strings.Index(user, "a.go is generated: Edit gen.go instead of a.go."), strings.Index(user, "Unrelated note")
+	if i < 0 || j < i || !strings.Contains(user, "Lessons you wrote in earlier sessions in this repository") {
+		t.Fatalf("user message order path lesson %d, other %d:\n%s", i, j, user)
 	}
-	if strings.Contains(lastUserContent(rec.reqs[0]), "gen.go") {
-		t.Error("lessons leaked into the user message")
+	if !strings.Contains(sys, "Project rules") || strings.Contains(sys, "gen.go") {
+		t.Errorf("system prompt lacks the rules or holds a lesson:\n%s", sys)
 	}
 	if got := m.ai.conv.Messages[0].Lessons; got != 2 {
 		t.Errorf("lessons on the user message %d", got)
@@ -88,9 +90,9 @@ func TestAIMemoryPromptRedacted(t *testing.T) {
 	seedAILessons(t, dir, aiTestLesson("2026-10-24", "Token", "use sk-proj-ABCDEFGHIJKLMNOP1234 for tests"))
 	setAIMemory("on")
 	driveAIChat(t, m, m.sendAIChat("hello"), nil)
-	sys := rec.reqs[0].Messages[0].Content
-	if strings.Contains(sys, "sk-proj-ABCDEFGHIJKLMNOP1234") || !strings.Contains(sys, "[REDACTED]") {
-		t.Errorf("prompt:\n%s", sys)
+	user := lastUserContent(rec.reqs[0])
+	if strings.Contains(user, "sk-proj-ABCDEFGHIJKLMNOP1234") || !strings.Contains(user, "[REDACTED]") {
+		t.Errorf("user message:\n%s", user)
 	}
 	if got := aiTranscriptText(m, 100); !strings.Contains(got, "memory: 1 lesson") {
 		t.Errorf("transcript lacks the memory line:\n%s", got)

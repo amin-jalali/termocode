@@ -25,7 +25,7 @@ import (
 // them.
 const (
 	aiHeadToolsBudget  = 15   // tool schemas sent
-	aiHeadTokensBudget = 5650 // estimated tokens of the system prompt and the tool schemas
+	aiHeadTokensBudget = 5590 // estimated tokens of the system prompt and the tool schemas
 )
 
 // aiHead is the size of one request's head.
