@@ -97,7 +97,7 @@ test("S1 S9 S17 tap opens on the button, an outside tap sucks it in, and it open
   const cx = parseFloat(stage.style.getPropertyValue("left")) + side / 2;
   const cy = parseFloat(stage.style.getPropertyValue("top")) + side / 2;
   ok(cx <= 752 && cy <= 556, "moved in only as the rings need");
-  near(cx, 800 - 12 - (220 / 600) * 444, 1e-6);
+  near(cx, 800 - 12 - (232 / 600) * 444, 1e-6); // the whole disc 12 px inside
   overlay.dispatchEvent(pointer("pointerdown", 20, 20, 3));
   overlay.dispatchEvent(pointer("pointerup", 20, 20, 3));
   ok(r.fab.menu?.closing, "the suck-in");

@@ -1,18 +1,22 @@
 /* @termocode/radial-menu: the mobocode radial menu (float_button design,
-   radial_menu.dart). Every number here is the design's own; see README. */
+   mobocode-radial-v6.html, final_blue.png). Every number here is the
+   design's own; see README. The palette is fixed and dark: the menu never
+   takes a colour from the page (its light theme shows nothing through). */
 .rm-root,
 .rm-inline {
   --rm-accent: #007acc;
   --rm-accent-dim: #0e639c;
-  --rm-ink2: #bebec8;
+  --rm-ink2: #9a9aa4;
   --rm-dim: #6a6a75;
-  --rm-line: #3e3e4a;
+  --rm-line: #272730;
   --rm-font: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --rm-z: 60;
+  color-scheme: dark;
 }
 .rm-root {
   position: fixed;
   inset: 0;
+  overflow: hidden; /* the 480 px box may reach past a phone's edges */
   z-index: var(--rm-z);
   pointer-events: none; /* the empty layer lets every touch through */
   font-family: var(--rm-font);
@@ -159,22 +163,27 @@
 .rm-inline.rm-stage {
   position: relative;
 }
-/* the accent glow over the dark page (no square box, no border) */
-.rm-glow {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(0, 122, 204, 0.07), rgba(0, 122, 204, 0) 70%);
-  pointer-events: none;
-}
 .rm-collapse {
   position: absolute;
   inset: 0;
 }
 .rm-entrance {
   position: absolute;
+  container-type: size; /* cqw: the design's px scale with the drawing (444 px = 100cqw) */
+}
+/* The design's stage, round: one dark disc (r 232 of 600) under the rings
+   with the stage's gradient, its faint blue glow and its big drop shadow
+   (0 40px 90px -30px #000 at 444 px). */
+.rm-disc {
+  position: absolute;
+  inset: 11.3333%;
+  border-radius: 50%;
+  background: radial-gradient(58.7% 58.7% at 50% 45.8%, rgba(0, 122, 204, 0.07), transparent 70%), radial-gradient(97.9% 90.9% at 50% 44.4%, #15151d 0%, #0c0c11 68%, #08080c 100%);
+  box-shadow: 0 9.009cqw 20.27cqw -6.757cqw #000, inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  pointer-events: none;
 }
 .rm-svg {
+  position: relative; /* over the disc */
   display: block;
   width: 100%;
   height: 100%;
@@ -197,10 +206,10 @@
   filter: drop-shadow(0 0 6px rgba(0, 122, 204, 0.25));
 }
 .rm-item {
-  color: #dddee6;
+  color: #c5c6cd;
 }
 .rm-item.rm-hot {
-  color: #f4f8fa;
+  color: #eaf2f5;
 }
 .rm-act {
   stroke: var(--rm-line);
@@ -210,8 +219,13 @@
   touch-action: none;
   -webkit-touch-callout: none;
 }
+.rm-slot {
+  stroke: var(--rm-line);
+  stroke-width: 1;
+  pointer-events: none;
+}
 .rm-item.rm-hot .rm-act {
-  stroke: #5a5a68;
+  stroke: #34343f;
 }
 .rm-item.rm-flash .rm-act {
   stroke: var(--rm-accent-dim);
@@ -255,14 +269,14 @@
   font-family: var(--rm-font);
   font-size: 17px;
   font-weight: 800;
-  letter-spacing: 2.7px;
+  letter-spacing: .16em;
 }
 .rm-csub {
   fill: var(--rm-dim);
   font-family: var(--rm-font);
   font-size: 8.5px;
   font-weight: 600;
-  letter-spacing: 1.9px;
+  letter-spacing: .22em;
 }
 
 /* the favourite pulse: 96 px, centred on the hub */
@@ -395,8 +409,8 @@
   box-sizing: border-box;
 }
 .rm-tip-ic svg {
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   display: block;
 }
 .rm-tip-title {

@@ -91,11 +91,12 @@ func TestRadialMenuLooksLikeTheDesign(t *testing.T) {
 		{"the gap between two outer wedges (bottom left)", at(178, 210)},
 		{"the hairline ring between the rings", at(122, 0)},
 		{"between the rings", at(119.5, 90)},
-		{"the gap between two categories", at(86, 0)},
+		{"the gap between two categories", at(86, 144)},
 		{"an outer wedge", at(192, 60)},
 		{"an outer wedge (bottom)", at(150, 200)},
 		{"a category wedge", at(100, 108)},
 		{"the active category (AI)", at(100, 324)},
+		{"the active category's icon (accent blue)", at(86, 324)},
 		{"the hold arc", at(207, 120)},
 		{"the hub", at(30, 90)},
 		{"just past the outer ring", at(222, 45)},
@@ -128,23 +129,27 @@ func TestRadialMenuLooksLikeTheDesign(t *testing.T) {
 			t.Errorf("on a light page, %s at %v is %v: not the design's dark", s.name, s.p, c)
 		}
 	}
-	// The whole rings area, pixel by pixel.
-	var sum, n, far float64
-	for y := 0; y < 480; y++ {
-		for x := 0; x < 480; x++ {
-			if math.Hypot(float64(x)-240, float64(y)-240) > 214*k {
-				continue
-			}
-			d := float64(maxDiff(rgb(dark, image.Pt(x, y)), rgb(ref, image.Pt(x, y))))
-			sum += d
-			n++
-			if d > 32 {
-				far++
+	// The whole rings area, pixel by pixel, on both pages.
+	for name, img := range map[string]image.Image{"dark page": dark, "light page": light} {
+		var sum, n, far float64
+		for y := 0; y < 480; y++ {
+			for x := 0; x < 480; x++ {
+				if math.Hypot(float64(x)-240, float64(y)-240) > 214*k {
+					continue
+				}
+				d := float64(maxDiff(rgb(img, image.Pt(x, y)), rgb(ref, image.Pt(x, y))))
+				sum += d
+				n++
+				if d > 32 {
+					far++
+				}
 			}
 		}
-	}
-	if mean := sum / n; mean > 4 || far/n > 0.02 {
-		t.Errorf("the rings differ from the design: mean %.2f levels, %.2f%% of pixels off by more than 32", mean, 100*far/n)
+		mean := sum / n
+		t.Logf("%s: the rings differ from the design by %.2f levels on average, %.2f%% of pixels by more than 32", name, mean, 100*far/n)
+		if mean > 3 || far/n > 0.015 {
+			t.Errorf("on a %s the rings differ from the design: mean %.2f levels, %.2f%% of pixels off by more than 32", name, mean, 100*far/n)
+		}
 	}
 	// Six outer wedges, as the design draws them, on both pages.
 	for name, img := range map[string]image.Image{"the design": ref, "the menu": dark, "the menu on a light page": light} {

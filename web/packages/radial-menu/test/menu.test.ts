@@ -85,13 +85,13 @@ test("C2 C3 C7 the design's gradients and colours", () => {
   ok(g("cat") && attr(g("cat"), "r") === "116");
   eq(g("wedge").children.map((s) => attr(s, "offset")), ["0.55", "1"]);
   eq(attr(g("wedgeAcc"), "r"), "212");
-  eq(attr(g("catActive").children[0], "stop-color"), "#264F78");
+  eq(attr(g("catActive").children[0], "stop-color"), "#264f78");
   const active = by(r, "rm-cat")[0];
   ok(attr(active, "fill").includes("catActive"));
-  // icons: active category #8fc8f2, others #9a9aa4 (the design's)
+  // icons: the active category's in the accent blue, others #9a9aa4 (final_blue.png)
   const icons = r.stage.all((e) => e.attrs.has("data-icon") && e.parentNode?.classList.contains("rm-inner") === true);
   const cols = (g: FakeElement) => g.all((e) => e !== g).map((e) => attr(e, "stroke") || attr(e, "fill"));
-  ok(cols(icons[0]).includes("#8fc8f2"), String(cols(icons[0])));
+  ok(cols(icons[0]).includes("currentColor") && icons[0].classList.contains("rm-accent"), String(cols(icons[0])));
   ok(cols(icons[1]).includes("#9a9aa4"));
   eq(g("cat").children.map((s) => attr(s, "stop-color")), ["#1b1b23", "#15151b"], "stop colours as attributes, no style");
 });

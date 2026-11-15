@@ -27,14 +27,20 @@ export const ACT_ICON_S = 1.62;
 /** The long-press progress arc: 5° in from each edge, 5 in from the rim. */
 export const PROG_INSET = 5;
 export const PROG_R = RO2 - 5;
-/** The box around the rings: at most 480 px, 12 px from every screen
- * edge, 18 px padding around the drawing. */
+/** The box around the rings: at most 480 px (the design's own size),
+ * smaller only when its disc would come closer than 12 px to an edge;
+ * 18 px padding around the drawing. */
 export const MAX_SIDE = 480;
 export const MARGIN = 12;
 export const PAD = 18;
-/** The radius the box is kept on screen by: the outer ring plus a little
- * for its stroke and the pulse (its empty glow may spill off). */
-export const CLAMP_R = 220;
+/** The dark disc behind the rings (the design's stage, round): the page
+ * never shows between the wedges. */
+export const DISC_R = 232;
+/** The radius the box is kept on screen by: the whole disc. */
+export const CLAMP_R = DISC_R;
+/** The outer ring always has at least six equal wedges (the design's);
+ * a ring with fewer actions shows the rest empty. */
+export const MIN_SLOTS = 6;
 /** Most actions a ring takes (marking-menu budget: positions become
  * muscle memory). */
 export const MAX_ITEMS = 8;
@@ -67,6 +73,11 @@ export function arcLength(d1: number, d2: number, r: number): number {
   return (Math.abs(d2 - d1) * Math.PI * r) / 180;
 }
 
+/** slots is how many wedges the outer ring draws for n actions. */
+export function slots(n: number): number {
+  return Math.max(MIN_SLOTS, n);
+}
+
 /** catCentre: categories start at the bottom (180°) and go clockwise. */
 export function catCentre(i: number, n: number): number {
   return 180 + (i * 360) / n;
@@ -87,8 +98,9 @@ export function within(deg: number, centre: number, half: number): boolean {
 export type Hit = { kind: "hub" } | { kind: "cat"; i: number } | { kind: "act"; i: number } | null;
 
 /** hitTest maps a point of the design space to what is under it. A closed
- * menu has only its hub. */
-export function hitTest(x: number, y: number, open: boolean, cats: number, items: number): Hit {
+ * menu has only its hub. The outer ring has wedges (slots) for its items
+ * first, then empty ones, which hit nothing. */
+export function hitTest(x: number, y: number, open: boolean, cats: number, items: number, wedges = items): Hit {
   const dx = x - C, dy = y - C;
   const r = Math.sqrt(dx * dx + dy * dy);
   if (r <= HUB) return { kind: "hub" };
@@ -101,8 +113,8 @@ export function hitTest(x: number, y: number, open: boolean, cats: number, items
     for (let i = 0; i < cats; i++) if (within(deg, catCentre(i, cats) % 360, step / 2)) return { kind: "cat", i };
   }
   if (r >= RI2 && r <= RO2 && items > 0) {
-    const step = 360 / items;
-    for (let i = 0; i < items; i++) if (within(deg, actCentre(i, items) % 360, step / 2)) return { kind: "act", i };
+    const n = Math.max(wedges, items), step = 360 / n;
+    for (let i = 0; i < n; i++) if (within(deg, actCentre(i, n) % 360, step / 2)) return i < items ? { kind: "act", i } : null;
   }
   return null;
 }
@@ -119,12 +131,13 @@ export const NO_INSETS: Insets = { top: 0, right: 0, bottom: 0, left: 0 };
 
 const clamp = (v: number, a: number, b: number): number => Math.min(Math.max(v, Math.min(a, b)), Math.max(a, b));
 
-/** stageSide is the menu box's side on a w × h screen. */
+/** stageSide is the menu box's side on a w × h screen: the design's 480
+ * (a 444 px drawing), or less when the disc would not fit 12 px inside. */
 export function stageSide(w: number, h: number): number {
-  return Math.min(MAX_SIDE, w - 2 * MARGIN, h - 2 * MARGIN);
+  return Math.min(MAX_SIDE, ((Math.min(w, h) - 2 * MARGIN) * VIEW) / (2 * DISC_R) + 2 * PAD);
 }
 
-/** ringRadius is how far the rings reach from the centre, in px, for a box of side. */
+/** ringRadius is how far the menu (its disc) reaches from the centre, in px, for a box of side. */
 export function ringRadius(side: number): number {
   return (CLAMP_R / VIEW) * (side - 2 * PAD);
 }

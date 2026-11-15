@@ -62,8 +62,17 @@ Every number is the design's (see the parity checklist in the PR).
 
 - **Geometry** (600 × 600 design space): centre 300, categories 56…116
   (first at the bottom, clockwise, 1.2° gaps), actions 128…212 (first at
-  the top, clockwise, 0.7° gaps), hub 50 with a hairline at 44, a gap
-  ring at 122. The box is `min(480, screen − 24)` with 18 px padding.
+  the top, clockwise, 0.7° gaps; always at least six equal wedges, the
+  ones without an action drawn empty), hub 50 with a hairline at 44, a
+  gap ring at 122. The box is the design's 480 px (18 px padding), smaller
+  only when the disc would come closer than 12 px to a screen edge.
+- **Look**: the design's own dark palette, fixed (the page's theme never
+  shows): one dark disc (r 232) under the rings with the stage's
+  gradient, its faint blue glow and its big drop shadow; the design's
+  gradients, 1 px hairlines, hold arc, active-category glow and labels.
+  `demo/design.html` is the design's reference state; the look test
+  (`TestRadialMenuLooksLikeTheDesign`) screenshots it in headless Chrome
+  and compares it with `test/final_blue.png`, on a dark and a light page.
 - **The button**: 64 px, 16 px from the right and 12 px above the bottom
   (safe areas included). It breathes (2.8 s, scale 1.02, the glow
   .2 → .38 and blur 10 → 15 px) only while it shows, the page is visible
