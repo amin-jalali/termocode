@@ -43,8 +43,8 @@ func TestAITodoWriteKeepsTheListAndShowsACard(t *testing.T) {
 	}
 	runAITurn(t, &m, "go on")
 	r := p.requests()
-	if sys := r[len(r)-1].Messages[0].Content; !strings.Contains(sys, "[ ] Run tests") || !strings.Contains(sys, "2 open") {
-		t.Fatalf("system prompt has no todos:\n%s", sys)
+	if user := lastUserContent(r[len(r)-1]); !strings.Contains(user, "[ ] Run tests") || !strings.Contains(user, "2 open") {
+		t.Fatalf("the turn's message has no todos:\n%s", user)
 	}
 }
 

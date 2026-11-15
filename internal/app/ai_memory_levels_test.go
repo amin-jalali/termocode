@@ -31,9 +31,9 @@ func TestAIMemoryUseOnlyStillInPrompt(t *testing.T) {
 	seedAILessons(t, dir, l)
 	setAIMemory("read")
 	driveAIChat(t, m, m.sendAIChat("install deps"), nil)
-	sys := rec.reqs[0].Messages[0].Content
-	if !strings.Contains(sys, "- [correction] Not npm: Use pnpm in this repo.") {
-		t.Fatalf("prompt:\n%s", sys)
+	user := lastUserContent(rec.reqs[0])
+	if !strings.Contains(user, "- [correction] Not npm: Use pnpm in this repo.") {
+		t.Fatalf("turn message:\n%s", user)
 	}
 }
 

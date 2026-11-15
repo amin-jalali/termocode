@@ -201,8 +201,8 @@ func TestAIMemoryFailedTurnLessonInNextPrompt(t *testing.T) {
 	rec := &recordingAIProvider{}
 	m.ai.provider = rec
 	driveAIChat(t, m, m.sendAIChat("try the build again"), nil)
-	if sys := rec.reqs[0].Messages[0].Content; !strings.Contains(sys, "Build server flaky: HTTP 500 from the build server: retry later.") {
-		t.Errorf("next prompt lacks the lesson:\n%s", sys)
+	if user := lastUserContent(rec.reqs[0]); !strings.Contains(user, "Build server flaky: HTTP 500 from the build server: retry later.") {
+		t.Errorf("next turn's message lacks the lesson:\n%s", user)
 	}
 }
 
