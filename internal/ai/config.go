@@ -149,6 +149,25 @@ type Settings struct {
 	// prompt instead); default: the next turn resumes the step's session.
 	// Edited by hand.
 	CLIResume string `json:"ai_cli_resume,omitempty"`
+	// ToolTurns is ai_tool_turns: how many of the chat's last turns keep
+	// their tool calls and results in full for the next turns (nil:
+	// DefaultToolTurns; 0: none, every earlier turn is its one-line tool
+	// rows; at most MaxToolTurns). Edited by hand.
+	ToolTurns *int `json:"ai_tool_turns,omitempty"`
+}
+
+// DefaultToolTurns and MaxToolTurns bound ai_tool_turns.
+const (
+	DefaultToolTurns = 3
+	MaxToolTurns     = 20
+)
+
+// ToolTurnsKept is ai_tool_turns within 0..MaxToolTurns.
+func (s Settings) ToolTurnsKept() int {
+	if s.ToolTurns == nil {
+		return DefaultToolTurns
+	}
+	return min(max(*s.ToolTurns, 0), MaxToolTurns)
 }
 
 // CLIResumeOn reports ai_cli_resume (on unless "off").

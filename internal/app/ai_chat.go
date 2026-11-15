@@ -51,6 +51,12 @@ type aiChatDoneMsg struct {
 	run *agentrun.Event
 	// stop is the reason a stop hook gives to go on ("" for none, CMP-59).
 	stop string
+	// turn is a plain turn's provider messages (agent.Run's), kept on its
+	// user message (index user) in form (aiNativeFor).
+	turn     []ai.Message
+	user     int
+	userText string
+	form     string
 }
 
 // aiPendingConfirm is a tool call waiting for the user.
@@ -95,6 +101,13 @@ func (m *Model) aiChatHistory(system string) []ai.Message {
 // aiChatHistoryN is aiChatHistory of the first n stored messages. A
 // pipeline run's step tool lines count as the turn's tools.
 func (m *Model) aiChatHistoryN(system string, n int) []ai.Message {
+	return m.aiChatHistoryWith(system, n, nil)
+}
+
+// aiChatHistoryWith is aiChatHistoryN where native (nil: none) gives the
+// stored provider messages of the turn of user message i (nil: that turn
+// is its one-line tool rows and text).
+func (m *Model) aiChatHistoryWith(system string, n int, native func(i int) []ai.Message) []ai.Message {
 	s := m.aiS()
 	users, sum := 0, aiLastSummary(s.conv.Messages[:n])
 	from := max(sum, 0)
@@ -130,10 +143,15 @@ func (m *Model) aiChatHistoryN(system string, n int) []ai.Message {
 		}
 		tools, text = tools[:0], text[:0]
 	}
-	for _, sm := range s.conv.Messages[from:n] {
+	kept := false // the turn's provider messages went in: skip its rows
+	for j, sm := range s.conv.Messages[from:n] {
+		if kept && sm.Role != ai.StoredUser {
+			continue
+		}
 		switch sm.Role {
 		case ai.StoredUser:
 			flush()
+			kept = false
 			c := sm.Text
 			if sm.Context != "" {
 				c = sm.Context + "\n\n" + sm.Text
@@ -151,6 +169,11 @@ func (m *Model) aiChatHistoryN(system string, n int) []ai.Message {
 				}
 			}
 			msgs = append(msgs, um)
+			if native != nil {
+				if nm := native(from + j); len(nm) > 0 {
+					msgs, kept = append(msgs, nm...), true
+				}
+			}
 		case ai.StoredTool:
 			if !aiForUserOnly(sm.Text) { // OMX-4, MCPX-38: for the user, not the model
 				tools = append(tools, sm.Text)
@@ -331,6 +354,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	if model == s.cfg.Model {
 		model = "" // the chat's own model: stored chats stay as they were
 	}
+	userIdx := len(s.conv.Messages) // the turn's provider messages are kept on it
 	s.conv.Messages = append(s.conv.Messages,
 		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Attached: chips, Images: images, Rules: aiRulesLabel(rules), Lessons: lessons})
 	if routeNote != "" { // CMP-25: for the user, not the model
@@ -354,8 +378,9 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	}
 	native := slot.p.SupportsTools()
 	base := aiWithToolGuide(m.aiChatBasePrompt(root, rules, memBlock), tools, false) + autoRules + aiStepSystem(step.System)
-	history := m.aiChatHistory(ai.SystemPrompt(base, tools, native))
-	mcpTools := m.aiMCPTurn(gen, ch) // MCP servers' tools, built on the goroutine
+	form := aiNativeFor(slot.cfg.Kind, native)
+	history := m.aiChatTurnHistory(ai.SystemPrompt(base, tools, native), native, slot.cfg.Kind) // earlier turns' tool results too
+	mcpTools := m.aiMCPTurn(gen, ch)                                                            // MCP servers' tools, built on the goroutine
 	// "@server:uri" words: MCP resources read on the goroutine (MCPX-12).
 	mentions := m.aiMCPMentions(gen, ch, text, ai.SupportsImages(slot.p))
 	// "@chat:", "@symbol:", "@diagnostics", "@diff", "@changes", "@url:"
@@ -422,12 +447,12 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		if history, ev = aiCompactEarly(ctx, history, window, agent.Compact); ev.Kind == ai.EventCompacted {
 			emit(ev)
 		}
-		agent.Run(ctx, history, emit)
+		turn := agent.Run(ctx, history, emit)
 		stop := ""
 		if ctx.Err() == nil { // a turn the user stopped is not asked to go on
 			stop = aiRunStopHooks(root, hooks, out)
 		}
-		ch <- aiChatDoneMsg{gen: gen, stop: stop}
+		ch <- aiChatDoneMsg{gen: gen, stop: stop, turn: turn, user: userIdx, userText: text, form: form}
 		close(ch)
 	}, func() { // the chat turn ends instead of waiting for ever
 		ch <- aiChatDoneMsg{gen: gen}
@@ -745,6 +770,8 @@ func (m *Model) onAIChatDone(msg aiChatDoneMsg) tea.Cmd {
 	}
 	if msg.run != nil {
 		m.finishAIRun(*msg.run)
+	} else if msg.turn != nil {
+		aiKeepTurn(s.conv.Messages, msg.user, msg.userText, msg.turn, msg.form, s.settings.ToolTurnsKept())
 	}
 	s.streaming = false
 	s.chatCancel = nil

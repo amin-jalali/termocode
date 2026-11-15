@@ -233,6 +233,11 @@ What you get:
 ### Long chats
 
 Every model can read only so much text at once (its context window).
+The last 3 turns keep their tool calls and results (what a file read or
+a command gave) for the next turns, so the AI does not read the same file
+again. Older turns are sent as their short tool lines. Change how many
+with `"ai_tool_turns"` in config.json (0: only the short lines).
+
 When a chat gets near that limit, termocode makes it shorter for you:
 
 - The quick model writes a short summary of the older messages (one

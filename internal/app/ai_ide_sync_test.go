@@ -337,13 +337,19 @@ func TestAIStepLimitThenContinueKeepsToolSteps(t *testing.T) {
 	p.mu.Lock()
 	hist := p.seen[len(p.seen)-1]
 	p.mu.Unlock()
-	var asst string
+	var asst string // the earlier turn: its tool calls and results (ai_tool_turns)
 	for _, msg := range hist {
-		if msg.Role == ai.RoleAssistant {
+		switch msg.Role {
+		case ai.RoleAssistant:
 			asst += msg.Content
+			for _, c := range msg.ToolCalls {
+				asst += "\n" + c.Name
+			}
+		case ai.RoleTool:
+			asst += "\n" + msg.Content
 		}
 	}
-	if !strings.Contains(asst, "List .") || !strings.Contains(asst, "a.txt") {
+	if !strings.Contains(asst, "list_dir") || !strings.Contains(asst, "a.txt") || !strings.Contains(asst, "step limit") {
 		t.Errorf("history does not carry the earlier tool steps:\n%s", asst)
 	}
 	if hist[len(hist)-1].Role != ai.RoleUser || hist[len(hist)-1].Content != "continue" {
