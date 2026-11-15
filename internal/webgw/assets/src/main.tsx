@@ -180,9 +180,17 @@ effect(() => {
   else delete html.dataset.signin;
 });
 
+// A sign-in that is over (4001, 4002: the kill switch and a new start,
+// or a timed-out session) shows what a new tab here shows: the sign-in,
+// or the line to open the page from termocode. Never a retry loop.
 effect(() => {
   html.dataset.link = link.state.value;
-  if (link.finalCode.value === 4001 || link.finalCode.value === 4002) forgetToken();
+  if (link.finalCode.value !== 4001 && link.finalCode.value !== 4002) return;
+  forgetToken();
+  const p = phase.peek();
+  if (p !== "shell" && p !== "pick") return;
+  connect.value = "nolink";
+  phase.value = relayCode || passkeysHere() || isRemembered() ? "signin" : "connect";
 });
 
 // The title badge: the waiting cards, or a dot for a run that ended

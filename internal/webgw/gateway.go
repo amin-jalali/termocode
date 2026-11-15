@@ -649,6 +649,7 @@ func siteMux(site Site, auth, ws, assets http.Handler) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.Handle("/auth", auth)
 	mux.Handle("/ws", ws)
+	mux.Handle(CheckPath, ws)
 	if site.Installable() {
 		mux.Handle(ManifestPath, Manifest())
 		mux.Handle(SWPath, ServiceWorker())

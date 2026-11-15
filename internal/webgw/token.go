@@ -141,6 +141,22 @@ func (t *Tokens) Check(tok string, now time.Time) (Sess, error) {
 	return *s, nil
 }
 
+// Peek returns the session of tok without marking it used: a check of
+// whether a sign-in is still good is not use of it.
+func (t *Tokens) Peek(tok string, now time.Time) (Sess, error) {
+	h := sha256.Sum256([]byte(tok))
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	s, ok := t.byHash[h]
+	if !ok {
+		return Sess{}, ErrTokenUnknown
+	}
+	if t.expired(s, now) {
+		return Sess{}, ErrTokenExpired
+	}
+	return *s, nil
+}
+
 // expired: the session was idle for t.idle or longer, or began t.max or
 // longer ago.
 func (t *Tokens) expired(s *Sess, now time.Time) bool {

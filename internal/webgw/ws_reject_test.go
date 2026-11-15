@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-
 	"github.com/amin-jalali/termocode/internal/webdevices"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )

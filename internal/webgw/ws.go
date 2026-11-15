@@ -9,6 +9,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"io"
+	"mime"
 	"net"
 	"net/http"
 	"strings"
@@ -31,7 +33,9 @@ import (
 //
 // Order on a new connection:
 //   - before the upgrade: an exact Origin, the termocode.v2 subprotocol, a
-//     live session to log in to, a gateway that is not stopping;
+//     live session to log in to, a gateway that is not stopping (each
+//     refusal is a rate-limited reject line in the audit log; the page
+//     asks POST /ws/check why, since the browser hides the status);
 //   - after it: no HTTP deadlines (the WebSocket has its own), no
 //     compression (never-do 11), a 4 KiB read limit until hello;
 //   - hello within HelloWait, v 2 (else 4011), a live token (else 4001 or
@@ -127,6 +131,9 @@ type WS struct {
 	conns   map[*wsConn]struct{} // past hello
 	stopped bool
 	wg      sync.WaitGroup
+
+	rejectLog  *Bucket // audit lines for refused attempts and checks
+	checkLimit *Bucket // POST /ws/check requests
 }
 
 // NewWS makes the endpoint; zero durations get their defaults.
@@ -158,7 +165,9 @@ func NewWS(cfg WSConfig) *WS {
 	if cfg.MaxHubs <= 0 {
 		cfg.MaxHubs = webproto.MaxHubs
 	}
-	return &WS{cfg: cfg, conns: map[*wsConn]struct{}{}}
+	return &WS{cfg: cfg, conns: map[*wsConn]struct{}{},
+		rejectLog:  NewBucket(blockedAuditPerSecond, blockedAuditBurst),
+		checkLimit: NewBucket(AuthRatePerSecond, AuthRatePerSecond)}
 }
 
 // Count is the number of browsers connected now (past hello).
@@ -202,6 +211,10 @@ func (s *WS) CloseAll(code webproto.CloseCode, wait time.Duration) {
 func (s *WS) Wait() { s.wg.Wait() }
 
 func (s *WS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == CheckPath {
+		s.serveCheck(w, r)
+		return
+	}
 	if !s.upgradeOK(w, r) {
 		return
 	}
@@ -230,31 +243,117 @@ func (s *WS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // repeated here so this handler is safe on its own.
 func (s *WS) upgradeOK(w http.ResponseWriter, r *http.Request) bool {
 	if r.Method != http.MethodGet || !headerHasToken(r.Header, "Upgrade", "websocket") {
-		refuse(w, http.StatusBadRequest, "need a WebSocket")
+		s.reject(w, http.StatusBadRequest, "not_websocket", "need a WebSocket")
 		return false
 	}
 	origins := r.Header.Values("Origin")
 	if !s.cfg.Site.hasHost(r.Host) || len(origins) != 1 || origins[0] != s.cfg.Site.Scheme+"://"+r.Host {
-		refuse(w, http.StatusForbidden, "wrong origin")
+		s.reject(w, http.StatusForbidden, "bad_origin", "wrong origin")
 		return false
 	}
 	if !headerHasToken(r.Header, "Sec-WebSocket-Protocol", Subprotocol) {
-		refuse(w, http.StatusBadRequest, "need the "+Subprotocol+" subprotocol")
+		s.reject(w, http.StatusBadRequest, "subprotocol", "need the "+Subprotocol+" subprotocol")
 		return false
 	}
 	if s.cfg.Tokens == nil || s.cfg.Tokens.Len() == 0 {
-		refuse(w, http.StatusUnauthorized, "no web session")
+		// After a kill switch and a new start a page still holds its old
+		// token: it learns why on /ws/check (the browser hides this status).
+		s.reject(w, http.StatusUnauthorized, "signed_out", "no web session")
 		return false
 	}
 	// Counted under the lock, so Wait after CloseAll misses no handler.
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.stopped {
-		refuse(w, http.StatusServiceUnavailable, "the web panel is stopping")
+		s.reject(w, http.StatusServiceUnavailable, "stopping", "the web panel is stopping")
 		return false
 	}
 	s.wg.Add(1)
 	return true
+}
+
+// reject refuses a /ws attempt before the upgrade and logs it as reject
+// with the rule's name, while the rate allows: a page that retries
+// without end cannot flood the log. The line has no value from the
+// request.
+func (s *WS) reject(w http.ResponseWriter, code int, why, msg string) {
+	if s.rejectLog.Allow(s.cfg.Now()) {
+		_ = s.cfg.Audit.Log(Event{Kind: EvReject, Code: code, Why: why})
+	}
+	refuse(w, code, msg)
+}
+
+// CheckPath is where the page asks whether its sign-in is still good.
+const CheckPath = "/ws/check"
+
+// serveCheck answers POST /ws/check {"token":"…"}. A browser hides the
+// status of a WebSocket refused before the upgrade (it says 1006, as for
+// a dropped network), so the page asks here when its socket never
+// opened: 200 {"ok":true} for a live sign-in (the page retries), 401
+// {"error":why} for one that is over (signed_out, expired, revoked: the
+// page shows its sign-in). The check does not mark the session used.
+func (s *WS) serveCheck(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", "POST")
+		writeJSON(w, http.StatusMethodNotAllowed, errorReply("method_not_allowed"))
+		return
+	}
+	now := s.cfg.Now()
+	if !s.checkLimit.Allow(now) {
+		w.Header().Set("Retry-After", "1")
+		if s.rejectLog.Allow(now) {
+			_ = s.cfg.Audit.Log(Event{Kind: EvRateLimited, Code: http.StatusTooManyRequests, Op: "ws_check"})
+		}
+		writeJSON(w, http.StatusTooManyRequests, errorReply("rate_limited"))
+		return
+	}
+	if mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || mt != "application/json" {
+		writeJSON(w, http.StatusUnsupportedMediaType, errorReply("need_json"))
+		return
+	}
+	tok, ok := decodeCheck(r.Body)
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, errorReply("bad_request"))
+		return
+	}
+	if why := s.signInOver(tok, now); why != "" {
+		writeJSON(w, http.StatusUnauthorized, errorReply(why))
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// signInOver names why tok can no longer connect, or "" when it can.
+func (s *WS) signInOver(tok string, now time.Time) string {
+	if s.cfg.Tokens == nil {
+		return "signed_out"
+	}
+	sess, err := s.cfg.Tokens.Peek(tok, now)
+	switch {
+	case errors.Is(err, ErrTokenExpired):
+		return "expired"
+	case err != nil:
+		return "signed_out"
+	case !s.deviceOK(sess.Device):
+		return "revoked"
+	}
+	return ""
+}
+
+// decodeCheck reads exactly one JSON object with a string "token".
+func decodeCheck(body io.Reader) (string, bool) {
+	dec := json.NewDecoder(body)
+	dec.DisallowUnknownFields()
+	var req struct {
+		Token *string `json:"token"`
+	}
+	if err := dec.Decode(&req); err != nil || req.Token == nil {
+		return "", false
+	}
+	if err := dec.Decode(&struct{}{}); err != io.EOF {
+		return "", false
+	}
+	return *req.Token, true
 }
 
 // headerHasToken reports whether a comma-separated header lists tok
