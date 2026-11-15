@@ -1066,8 +1066,9 @@ tab, and a written one shows the new text (undo with `u`). Git and shell tools
 refresh the git panel, the branch and open files. The agent never overwrites,
 deletes or saves a file whose tab has unsaved edits; it asks you to save first.
 
-The agent stops after 25 tool steps per message and says so. Send "continue"
-to go on. Change the limit with `ai_max_steps` in `config.json`.
+The agent stops after 100 tool steps per message and says so. With keep
+going on (the default) it goes on by itself; else send "continue". Change
+the limit with `ai_max_steps` in `config.json`.
 
 ## Project rules file
 
@@ -1581,4 +1582,4 @@ type and press keys. It is off. Turn it on by hand with
     install the Termux:API app and run `pkg install termux-api`.
 
 **The agent stopped in the middle**
-:   It hit the step limit (25 by default, `ai_max_steps`). Send "continue".
+:   It hit the step limit (100 by default, `ai_max_steps`). With keep going on it goes on by itself; else send "continue".
