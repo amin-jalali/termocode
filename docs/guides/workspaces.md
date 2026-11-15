@@ -189,7 +189,11 @@ program file and moves into it by itself. You never restart it by hand.
   ignored.
 - It waits for a quiet moment: no AI turn, no agent at work, no command
   in a terminal tab, no open dialog or card. Until then the status bar shows **⬆ new build** and a
-  toast says *New build ready — reloading when idle*.
+  toast says *New build ready — reloading when idle*, and
+  `errors.log` names what it waits for. A dialog or card nobody
+  answers (no key or click for 10 minutes, as in `termocode serve`)
+  holds it no longer; a command in a terminal tab or an AI turn holds
+  it until it ends.
 - **termocode: Reload Into New Build** reloads now (on a page it asks
   first). **termocode: Reload New Build Later** keeps the build that runs.
   Both are in the laptop palette and in the page's palette.
