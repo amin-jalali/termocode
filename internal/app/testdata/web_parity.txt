@@ -197,6 +197,7 @@ web	find-files	cmd:search
 web	find-references	op:lsp.references
 web	fold-all	cmd:foldAll
 web	format-document	cmd:formatDocument
+web	git-ai-commit-msg	op:git.ai_message
 web	git-blame	cmd:gitBlame
 web	git-branch	op:git.branches
 web	git-ci	op:ci.status
@@ -645,7 +646,6 @@ missing	db-virtual-objects	Databases|S
 missing	debug-sidecar-start	Debug|S
 missing	debug-sidecar-stop	Debug|S
 missing	git-ai-changelog	Git|S
-missing	git-ai-commit-msg	Git|S
 missing	git-ai-compose	Git|S
 missing	git-ai-explain-changes	Git|S
 missing	git-ai-explain-line	Git|S
