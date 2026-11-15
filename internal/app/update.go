@@ -381,6 +381,10 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBSource(msg)
 	case dbFullSchemaMsg:
 		return m, m.onDBFullSchema(msg)
+	case afterAddMsg:
+		return m, m.onAfterAdd(msg)
+	case afterAddRetryMsg:
+		return m, m.onAfterAddRetry(msg)
 	case dbDiscoverMsg:
 		return m, m.onDBDiscover(msg)
 	case dbConnectMsg:

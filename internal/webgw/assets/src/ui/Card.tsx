@@ -11,7 +11,7 @@ import { haptic } from "../lib/haptic";
 import { t, type StringKey } from "../strings";
 import { useArming } from "./arming";
 
-export type CardKind = "tool" | "review" | "plan" | "mcp" | "trust" | "workflow";
+export type CardKind = "tool" | "review" | "plan" | "mcp" | "trust" | "workflow" | "suggest";
 
 /** open: waiting for an answer. answered: the laptop answered first.
  * offline: no answer without a live link. gone: the card no longer
@@ -28,6 +28,7 @@ const titles: Record<CardKind, StringKey> = {
   mcp: "card.mcp.title",
   trust: "card.trust.title",
   workflow: "card.workflow.title",
+  suggest: "card.suggest.title",
 };
 
 const choices: Record<Exclude<CardKind, "trust">, { safe: StringKey; risky: StringKey }> = {
@@ -36,6 +37,7 @@ const choices: Record<Exclude<CardKind, "trust">, { safe: StringKey; risky: Stri
   review: { safe: "card.reject", risky: "card.accept" },
   plan: { safe: "card.deny", risky: "card.approve" },
   workflow: { safe: "card.deny", risky: "card.allow_once" },
+  suggest: { safe: "card.later", risky: "card.approve" },
 };
 
 export interface CardProps {
@@ -81,8 +83,9 @@ export function Card({ id, kind, state = "open", subject, where, children, mode 
   };
   useEffect(() => () => void cancelCheck(), []);
 
+  const dialog = mode === "dialog";
   useEffect(() => {
-    if (mode === "dialog") safeBtn.current?.focus();
+    if (dialog) safeBtn.current?.focus();
   }, [mode, state]);
 
   const titleID = `card-${id}-t`;
@@ -189,8 +192,8 @@ export function Card({ id, kind, state = "open", subject, where, children, mode 
     <section
       ref={root}
       class={`card card-${kind} card-${mode} state-${state}`}
-      role={mode === "dialog" ? "dialog" : "group"}
-      aria-modal={mode === "dialog" ? "true" : undefined}
+      role={dialog ? "dialog" : "group"}
+      aria-modal={dialog ? "true" : undefined}
       aria-labelledby={titleID}
       onKeyDown={onKeyDown}
     >

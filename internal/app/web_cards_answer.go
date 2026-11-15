@@ -88,6 +88,8 @@ func webCardAllows(c webproto.Card, choice string) bool {
 // would, and closes that dialog.
 func (m *Model) webAnswerCard(ref *webCardRef, choice string, hunks []int) tea.Cmd {
 	switch obj := ref.obj.(type) {
+	case *afterAddCard: // after_add.go
+		return m.afterAddAnswer(obj, choice == webproto.ChoiceDo)
 	case *aiPendingConfirm:
 		if m.confirmOpen && m.confirmKind == confirmKindAITool {
 			m.confirmOpen = false
@@ -200,6 +202,10 @@ func webAnswerWord(choice string) string {
 		return "Accepted"
 	case webproto.ChoiceReject:
 		return "Rejected"
+	case webproto.ChoiceLater:
+		return "Not now"
+	case webproto.ChoiceDo:
+		return "Done"
 	}
 	return "Denied"
 }

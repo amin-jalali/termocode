@@ -324,6 +324,7 @@ func (m *Model) webCards(p *webCardsPub, diffs bool) []webCardRef {
 				{ID: webproto.ChoiceConfirm, Label: a.action, NeedsLaptop: true}}})
 		}
 	}
+	m.webAfterAddCards(add) // after-add suggestions (after_add.go)
 	return out
 }
 

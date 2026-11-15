@@ -23,6 +23,7 @@ const (
 	CardTrust    = "trust"    // a project profile, rules, skills or MCP server asks for trust (laptop only)
 	CardLaptop   = "laptop"   // a web request that cannot be undone waits for the laptop (the web may only cancel it)
 	CardWorkflow = "workflow" // a workflow step wants to write to an outside system
+	CardSuggest  = "suggest"  // after an add: what termocode found and one next step (Not now / Do it)
 )
 
 // Choice ids the web may send.
@@ -35,6 +36,8 @@ const (
 	ChoiceCancel  = "cancel"  // a laptop card's safe answer
 	ChoiceConfirm = "confirm" // a laptop card's action: the laptop only
 	ChoiceSend    = "send"    // a card with a form: send the answers (CardsAnswerArgs.Form)
+	ChoiceLater   = "later"   // a suggest card's safe answer: Not now (remembered per item)
+	ChoiceDo      = "do"      // a suggest card's action
 )
 
 // A card's form (MOB-12): at most MaxCardForm answers of at most
@@ -61,7 +64,7 @@ type CardsSnap struct {
 // draws it first and focused.
 type Card struct {
 	ID       string       `json:"id"`
-	Kind     string       `json:"kind" enum:"tool|mcp|plan|review|trust|laptop|workflow"`
+	Kind     string       `json:"kind" enum:"tool|mcp|plan|review|trust|laptop|workflow|suggest"`
 	Title    string       `json:"title"`
 	Body     string       `json:"body,omitempty"` // plain text
 	Choices  []CardChoice `json:"choices"`

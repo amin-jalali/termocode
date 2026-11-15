@@ -428,6 +428,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAgentAutoAccept(id), true
 	case confirmKindAgentMCP: // agent_mcp_card.go
 		return m.answerAgentMCPCard(id), true
+	case confirmKindAfterAdd: // after_add.go
+		return m.answerAfterAdd(id), true
 	case confirmKindAIWorktreeConflict, confirmKindAIWorktreeDiscard: // ai_worktree_actions.go
 		return m.answerAIWorktreeCard(m.confirmKind, id), true
 	case confirmKindAIWorktreeLeft: // ai_worktree_list.go
@@ -576,6 +578,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAgentAutoAccept("") // Esc: Cancel
 	case confirmKindAgentMCP:
 		return m.answerAgentMCPCard("skip")
+	case confirmKindAfterAdd:
+		return m.answerAfterAdd("skip") // Esc: Not now
 	case confirmKindWebStart:
 		return m.answerWebStart("") // Esc: Not now
 	case confirmKindWebAsk:

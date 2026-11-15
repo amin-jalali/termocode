@@ -7625,7 +7625,8 @@
             "review",
             "trust",
             "laptop",
-            "workflow"
+            "workflow",
+            "suggest"
           ]
         },
         "read_only": {

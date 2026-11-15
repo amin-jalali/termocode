@@ -1529,7 +1529,7 @@ export interface CardsSnap {
 
 export interface Card {
   id: string;
-  kind: "tool" | "mcp" | "plan" | "review" | "trust" | "laptop" | "workflow";
+  kind: "tool" | "mcp" | "plan" | "review" | "trust" | "laptop" | "workflow" | "suggest";
   title: string;
   body?: string;
   choices: CardChoice[];
