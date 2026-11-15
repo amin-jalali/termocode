@@ -119,3 +119,45 @@ func TestTactileKeyboardSettingsOnThisPhone(t *testing.T) {
 		t.Errorf("stored %s", got)
 	}
 }
+
+// The phone terminal (PHONE-TERM's entry point, pressTermKey): a tap on
+// the terminal docks the Tactile keyboard instead of the system one, the
+// key bar hides (the keyboard has its keys), and its keys go straight to
+// the shell: ls -la, Enter, then Ctrl+C as a one-shot Ctrl.
+func TestTactileKeyboardTypesInTheTerminal(t *testing.T) {
+	s := StartServer(t)
+	p := NewPage(t, s, Phone)
+	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+	c := p.Login("c-1")
+	p.GoTab("term")
+	c.Subs(t, "terms")
+	showTerm(t, p, c, termSnap(3, 0, 80, "$ "), termItem(3, "zsh", false, true))
+	p.TapJS(termView + `.querySelector(".pterm-x .xterm-screen")`)
+	p.WaitJS(tkDock + ` && !` + tkDock + `.hidden`)
+	if got := Eval[string](p, xtermInput+`.getAttribute("inputmode")`); got != "none" {
+		t.Errorf("the terminal's inputmode is %q, want none", got)
+	}
+	if Eval[bool](p, `!!document.querySelector('[data-view="term"] .keybar')?.offsetHeight`) {
+		t.Error("the key bar shows with the Tactile keyboard up")
+	}
+	if !Eval[bool](p, `document.querySelector(".pterm-x").getBoundingClientRect().bottom <= document.querySelector(".tk-host").getBoundingClientRect().top + 1`) {
+		t.Error("the terminal runs under the keyboard")
+	}
+	want := []string{"l", "s", " ", "-", "l", "a", "\r"}
+	for i, k := range []string{"L", "S", "space", "-", "L", "A", "enter"} {
+		tapKeys(p, k)
+		if got := expectSend(t, c); got != want[i] {
+			t.Errorf("key %s sent %q, want %q", k, got, want[i])
+		}
+	}
+	tapKeys(p, "ctrl", "C")
+	if got := expectSend(t, c); got != "\x03" {
+		t.Errorf("ctrl, C sent %q, want ^C", got)
+	}
+	if !Eval[bool](p, `document.activeElement === `+xtermInput) {
+		t.Error("the keyboard took the focus from the terminal")
+	}
+	if probs := p.Problems(); len(probs) > 0 {
+		t.Errorf("problems (CSP, console): %v", probs)
+	}
+}
