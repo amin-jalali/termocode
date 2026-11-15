@@ -918,6 +918,8 @@ type Model struct {
 	agentMCPPending  *agentMCPCard
 	agentMCPDeclined map[string]bool
 	agentMCPTipped   map[string]bool
+	// afterAddS is the after-add engine and its waiting cards (after_add.go).
+	afterAddS *afterAddState
 	// mcpServeErr: why the listener did not start ("" when it did or was
 	// not asked to); the status screen shows it (mcp_serve_status.go).
 	mcpServeErr string

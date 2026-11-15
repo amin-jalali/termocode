@@ -154,6 +154,7 @@ export const S = {
   "card.mcp.title": "An outside agent asks to…",
   "card.trust.title": "This needs the laptop.",
   "card.workflow.title": "A workflow wants to write…",
+  "card.suggest.title": "Next step",
   "card.deny": "Deny",
   "card.allow_once": "Allow once",
   "card.accept": "Accept",

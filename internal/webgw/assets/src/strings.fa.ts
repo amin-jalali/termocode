@@ -159,6 +159,7 @@ export const FA: Record<TranslatedKey, string> = {
   "card.mcp.title": "یک عامل بیرونی می‌خواهد…",
   "card.trust.title": "این کار لپ‌تاپ را لازم دارد.",
   "card.workflow.title": "یک گردش کار می‌خواهد بنویسد…",
+  "card.suggest.title": "قدم بعد",
   "card.deny": "رد",
   "card.allow_once": "فقط این بار",
   "card.accept": "پذیرفتن",
