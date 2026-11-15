@@ -35,16 +35,25 @@ function write(key: string, v: unknown): void {
 const isIds = (v: unknown): v is string[] => Array.isArray(v) && v.length <= 8 && v.every((x) => typeof x === "string" && x.length < 64);
 const isPt = (v: unknown): v is [number, number] => Array.isArray(v) && v.length === 2 && v.every((x) => typeof x === "number" && Number.isFinite(x));
 
-/** reserve is the room at the bottom the page keeps for itself: the tab
- * bar, a composer or the Home's box, whichever reaches highest. */
-function reserve(): number {
-  const vh = innerHeight;
-  let top = vh;
-  for (const el of document.querySelectorAll(".tabbar, .composer, .home-foot")) {
+/** reserve is the room the page keeps for itself: at the bottom the
+ * tab bar, a composer, the terminal's key bar, the Home's box or the
+ * Tactile keyboard, whichever reaches highest; at a side the tablet's
+ * rail (on the right in a right-to-left page). */
+function reserve(): { bottom: number; left: number; right: number } {
+  const vh = innerHeight, vw = innerWidth;
+  let top = vh, left = 0, right = 0;
+  for (const el of document.querySelectorAll(".tabbar, .composer, .keybar, .home-foot, .tk-dock")) {
     const r = el.getBoundingClientRect();
     if (r.height > 0 && r.top > vh / 2) top = Math.min(top, r.top);
   }
-  return vh - top;
+  for (const el of document.querySelectorAll(".rail")) {
+    const r = el.getBoundingClientRect();
+    if (r.width > 0 && r.width < vw / 2) {
+      if (r.left > vw / 2) right = Math.max(right, vw - r.left);
+      else left = Math.max(left, r.right);
+    }
+  }
+  return { bottom: vh - top, left, right };
 }
 
 /** sheet links radial.css once; the button waits for it (no unstyled flash). */
@@ -87,7 +96,7 @@ function show(host: RadialHost): () => void {
     onFavoritesChange: (ids) => write(FAVS, ids),
     position: read(POS, isPt),
     onMove: (p) => write(POS, p),
-    extraInsets: () => ({ bottom: reserve() }),
+    extraInsets: reserve,
   });
   // Over the page and its bars, under its sheets and cards.
   fab.root.style.setProperty("--rm-z", "35");
@@ -96,6 +105,16 @@ function show(host: RadialHost): () => void {
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(() => fab.relayout());
   };
+  // Bars come and go without a route change (the terminal's key bar, the
+  // keyboard dock): look twice a second, move only when they changed.
+  let last = "";
+  const watch = setInterval(() => {
+    const now = JSON.stringify(reserve());
+    if (now !== last) {
+      last = now;
+      if (!fab.dragging) fab.relayout();
+    }
+  }, 500);
   const offs = [
     host.route.subscribe(again),
     host.layout.subscribe((l) => {
@@ -106,6 +125,7 @@ function show(host: RadialHost): () => void {
   return () => {
     offs.forEach((f) => f());
     cancelAnimationFrame(raf);
+    clearInterval(watch);
     fab.destroy();
   };
 }
