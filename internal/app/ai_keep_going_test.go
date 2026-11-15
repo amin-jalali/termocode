@@ -219,3 +219,23 @@ func TestAIKeepGoingPaletteEntry(t *testing.T) {
 		t.Fatal("palette entry does not toggle keep going")
 	}
 }
+
+// A turn that hits the step limit goes on by itself when keep going is
+// on, todos or not; with keep going off it waits for "continue".
+func TestAIKeepGoingContinuesAtTheStepLimit(t *testing.T) {
+	look := ai.Chunk{ToolCalls: []ai.ToolCall{{ID: "l1", Name: "todo_read", Args: map[string]any{}}}}
+	m, _ := keepGoingModel(t, look, ai.Chunk{Delta: "finished"}, ai.Chunk{Delta: "never"})
+	m.ai.settings.MaxSteps = 1
+	runAIChain(t, &m, "look")
+	users := aiUserTexts(m.ai)
+	if len(users) != 2 || m.ai.conv.Messages[len(m.ai.conv.Messages)-1].Text != "finished" {
+		t.Fatalf("no push after the step limit: %q", users)
+	}
+	m, _ = keepGoingModel(t, look, ai.Chunk{Delta: "never"})
+	m.ai.settings.MaxSteps = 1
+	m.ai.conv.KeepGoingOff = true
+	runAIChain(t, &m, "look")
+	if n := len(aiUserTexts(m.ai)); n != 1 {
+		t.Fatalf("%d user messages with keep going off", n)
+	}
+}

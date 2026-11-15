@@ -310,7 +310,7 @@ var fileOnlySettings = []SettingEntry{
 	{Key: "ai_review_order", Type: "enum", Default: "explain", Category: "AI (file only)", Choices: []string{"explain", "proposed"},
 		Description: "Order of the files in the AI review card (and the web's review cards). explain: the files that explain the change come first: notes and docs, then schemas and the files that define new names, then the code that uses them, tests last; each moved file says why. proposed: the order the agent proposed them in. Toggle with AI: Toggle Review Order."},
 	{Key: "ai_max_steps", Type: "int", Default: strconv.Itoa(ai.DefaultMaxSteps), Category: "AI (file only)",
-		Description: "Most tool steps the AI agent takes for one chat message. At the limit it stops and asks you to send \"continue\"."},
+		Description: "Most tool steps the AI agent takes for one chat message. At the limit the turn pauses; with keep going on (ai_keep_going) it goes on by itself, else it asks you to send \"continue\"."},
 	{Key: "ai_prices", Type: "object", Default: "{}", Category: "AI (file only)",
 		Description: "Model prices in US dollars per million tokens, by model id prefix, over the built-in table (checked " + ai.PricesDate + "): for example `{\"my-model\": {\"in\": 3, \"out\": 15, \"cache_read\": 0.3, \"cache_write\": 3.75}}`. A missing cache price is the input price. Your entry wins over a built-in one. Ollama and LM Studio cost $0; a model with no price shows tokens only."},
 	{Key: "ai_context_windows", Type: "object", Default: "{}", Category: "AI (file only)",

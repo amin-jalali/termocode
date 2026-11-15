@@ -49,6 +49,9 @@ type Event struct {
 	// EventDone / EventError: the summed token usage of every request
 	// of the turn (nil when the provider reported none).
 	Usage *Usage
+	// EventDone: the turn stopped at the step limit (MaxSteps), not
+	// with a final answer.
+	StepLimit bool
 }
 
 // Gates of a tool call (Event.Gate).
@@ -73,9 +76,10 @@ func CallID(ctx context.Context) string {
 // (the TUI answers through a channel); return false to decline.
 type ConfirmFunc func(ctx context.Context, t Tool, human string) bool
 
-// DefaultMaxSteps caps tool round-trips per user turn (Cursor uses 25).
-// config.json "ai_max_steps" changes it.
-const DefaultMaxSteps = 25
+// DefaultMaxSteps caps tool round-trips per user turn. It is high: keep
+// going continues a turn that hits it, and the stall, budget and repeat
+// brakes end one that runs away. config.json "ai_max_steps" changes it.
+const DefaultMaxSteps = 100
 
 // Agent runs a tool-calling loop on top of a Provider. Port of mobocode's
 // ai_agent.dart: with Native it uses the provider's function calling
@@ -348,7 +352,7 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 		msgs = append(msgs, a.inbox()...)
 	}
 	emit(Event{Kind: EventText, Text: StepLimitText(steps)})
-	emit(Event{Kind: EventDone, Usage: total()})
+	emit(Event{Kind: EventDone, Usage: total(), StepLimit: true})
 	return msgs[start:]
 }
 

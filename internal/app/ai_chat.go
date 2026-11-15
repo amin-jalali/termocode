@@ -257,6 +257,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	if !s.keep.pushing { // OMX-7: a message of the user starts a new keep-going chain
 		s.keep = aiKeepGoingRun{}
 	}
+	s.keep.stepLimit = false
 	prof := s.activeProfile()
 	if name := s.kwProfile; name != "" { // OMX-17: the keyword chip the user kept
 		s.kwProfile = ""
@@ -588,6 +589,7 @@ func (m *Model) onAIChatEvent(msg aiChatEventMsg) tea.Cmd {
 	case ai.EventDone:
 		m.aiAuditUsage(msg.ev)
 		s.aiKeepGoingUsage(msg.ev.Usage)
+		s.keep.stepLimit = msg.ev.StepLimit
 	case ai.EventCompacted: // OMX-3
 		s.aiMarkCompacted(msg.ev.Detail)
 	}
