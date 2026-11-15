@@ -1,47 +1,24 @@
-// The terminal view (WEB-20, web UX 3.3, 5.6): the laptop's shells as
-// chips (a busy one has an amber dot), the chosen shell's rows live. Rows
-// the laptop wrapped at its width are joined again and wrap at the
-// phone's width, LTR and isolated. The view follows new output while the
-// reader is at the end; scrolling up stops that and shows Follow. Older
-// rows page in from the top.
-import { Fragment, h } from "preact";
+// The terminal's shared parts (WEB-20, web UX 3.3, 5.6): a full-screen
+// program's grid (Screen), the ⓘ sheet (About) and Open a new one. The
+// phone's view is views/phone/PhoneTerm.tsx (home.js), the desktop's
+// DeskTerm.tsx.
+import { h } from "preact";
 import { signal } from "@preact/signals";
-import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
-import type { TermItem, TermNewRes } from "../../../../webproto/proto";
-import { rang } from "../lib/attention";
-import { linkItems } from "../lib/links";
-import { useLongPress } from "../lib/longpress";
+import type { TermNewRes } from "../../../../webproto/proto";
 import { prefs, setPref } from "../lib/prefs";
-import { usePinch } from "../lib/rowfont";
-import { canKeepOn, useWakeLock } from "../lib/wakelock";
-import { go, route } from "../lib/router";
-import { dropOlder, loadingOlder, loadOlder, older, stitch } from "../lib/term";
-import { colorsOn, dropColors, paintLine, termColors, wantColors } from "../lib/termcolors";
+import { canKeepOn } from "../lib/wakelock";
+import { go } from "../lib/router";
+import { colorsOn, dropColors } from "../lib/termcolors";
 import { toast } from "../lib/toasts";
 import { ReqError } from "../net/link";
-import { link, live, store } from "../session";
-import { isGone } from "../state/files";
-import { readTerm, readTerms, reflow } from "../state/term";
+import { link } from "../session";
 import { t } from "../strings";
 import { Button } from "../ui/Button";
 import { errText } from "../ui/CardSheet";
 import { Chip } from "../ui/Chip";
 import { FontSize } from "../ui/FontSize";
 import { Sheet } from "../ui/Sheet";
-import { RowMenu, type MenuItem } from "../ui/RowMenu";
-import { TermRow } from "../ui/rows";
-import { SkeletonRows } from "../ui/Skeleton";
-import { Refused, TopicBody } from "./Placeholder";
-import { pasting, TermInput } from "./TermInput";
-import { View } from "./View";
-import { copyText as copy } from "../lib/clip";
 
-/** NEAR_BOTTOM_PX: closer than this to the end, new output keeps the view at the end. */
-const NEAR_BOTTOM_PX = 48;
-/** READ_ROWS is how many rows "Read the last rows" reads. */
-const READ_ROWS = 20;
-/** RING_MS is how long the bell dot shows after a shell rang. */
-const RING_MS = 3000;
 
 /** wrapRows: long rows wrap (on) or scroll sideways (off). */
 export const wrapRows = signal(true);
@@ -54,12 +31,6 @@ function setAsRows(buf: number, on: boolean): void {
   if (on) next.add(buf);
   else next.delete(buf);
   asRows.value = next;
-}
-
-/** pageBackground is this page's background colour (for readable colours). */
-function pageBackground(): string {
-  const v = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim().toLowerCase();
-  return /^#[0-9a-f]{6}$/.test(v) ? v : "#1e1e1e";
 }
 
 /** showOnLaptop shows the shell's tab on the laptop. */
@@ -95,7 +66,7 @@ export function Screen({ buf, rows, cols, height }: { buf: number; rows: readonl
 }
 
 /** About is the ⓘ sheet: the honest width note and the view's toggles. */
-export function About({ buf, cols, screen, onClose }: { buf: number; cols: number; screen: boolean; onClose: () => void }) {
+export function About({ buf, cols, screen, onClose, wrap = true }: { buf: number; cols: number; screen: boolean; onClose: () => void; wrap?: boolean }) {
   return (
     <Sheet onLater={onClose} label={t("term.about")}>
       <section class="edit term-about" role="dialog" aria-modal="true" aria-labelledby="term-about-t">
@@ -104,9 +75,11 @@ export function About({ buf, cols, screen, onClose }: { buf: number; cols: numbe
         </h2>
         <p class="group-text">{t("term.info", { cols: cols || 80 })}</p>
         <div class="term-toggles">
-          <Chip on={wrapRows.value} onClick={() => (wrapRows.value = !wrapRows.peek())}>
-            {t("term.wrap")}
-          </Chip>
+          {wrap && (
+            <Chip on={wrapRows.value} onClick={() => (wrapRows.value = !wrapRows.peek())}>
+              {t("term.wrap")}
+            </Chip>
+          )}
           <Chip on={screen && !asRows.value.has(buf)} onClick={() => setAsRows(buf, !asRows.peek().has(buf))}>
             {t("term.screen")}
           </Chip>
@@ -147,275 +120,5 @@ export function newTerm(): void {
     (e: unknown) => {
       if (e instanceof ReqError) toast("warn", errText(e));
     },
-  );
-}
-
-function showTerm(buf: number): void {
-  go({ tab: "term", rest: String(buf), query: {} });
-}
-
-/** Chips is the shell picker: one chip per shell, the chosen one on. */
-function Chips({ terms, cur }: { terms: TermItem[]; cur: number | undefined }) {
-  return (
-    <div class="term-chips" role="tablist" aria-label={t("tab.term")}>
-      {terms.map((x, i) => (
-        <span key={x.buf} class="term-chip" data-buf={x.buf}>
-          <Chip tab on={x.buf === cur} dot={x.busy ? "busy" : x.exited ? "warn" : undefined} onClick={() => showTerm(x.buf)}>
-            <span class="trunc term-chip-title" dir="auto">
-              {x.task || x.title}
-            </span>
-            <span class="term-chip-n">{i + 1}</span>
-          </Chip>
-        </span>
-      ))}
-    </div>
-  );
-}
-
-/** rowMenu is what a long press on a terminal row offers. */
-function rowMenu(row: string, all: string, canPaste: boolean): MenuItem[] {
-  const items: MenuItem[] = [
-    { label: t("term.copy_row"), pick: () => copy(row) },
-    { label: t("term.copy_all"), pick: () => copy(all) },
-  ];
-  if (canPaste) items.push({ label: t("term.paste"), pick: () => (pasting.value = true) });
-  return [...items, ...linkItems(row)];
-}
-
-function Rows({ buf, item, body }: { buf: number; item: TermItem | undefined; body: { current: HTMLElement | null } }) {
-  const topic = "term:" + buf;
-  const ts = store.topic(topic).value;
-  const snap = readTerm(ts?.data);
-  const prev = useRef<{ first: number; rows: readonly string[] } | null>(null);
-  const keep = useRef<number | null>(null);
-  const stick = useRef(true);
-  const [pinned, setPinned] = useState(true);
-  const [menu, setMenu] = useState<string | null>(null);
-  const [said, setSaid] = useState("");
-  useLongPress(body, (target) => {
-    const row = target.closest(".term-rows .trow");
-    if (row) setMenu(row.querySelector(".trow-text")?.textContent ?? "");
-  });
-
-  useEffect(() => {
-    dropOlder();
-    dropColors();
-    prev.current = null;
-    stick.current = true;
-    setPinned(true);
-  }, [buf]);
-  // Rows the window drops from its top stay joined to the paged ones.
-  useEffect(() => {
-    if (!snap) return;
-    const p = prev.current;
-    if (p && snap.first !== p.first) stitch(buf, p.first, p.rows, snap.first);
-    prev.current = { first: snap.first, rows: snap.rows };
-  }, [snap?.first, snap?.rows]);
-
-  useEffect(() => {
-    const el = body.current;
-    if (!el) return;
-    const onScroll = () => {
-      const at = el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM_PX;
-      stick.current = at;
-      setPinned(at);
-    };
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
-  }, []);
-  useLayoutEffect(() => {
-    const el = body.current;
-    if (!el) return;
-    if (keep.current !== null) {
-      el.scrollTop += el.scrollHeight - keep.current; // older rows came in above: stay put
-      keep.current = null;
-    } else if (stick.current) el.scrollTop = el.scrollHeight;
-  });
-
-  // Colours of the rows on the laptop's screen, once output settles.
-  const on = colorsOn.value;
-  useEffect(() => {
-    if (!snap || !on || (snap.screen && !asRows.peek().has(buf))) return;
-    wantColors(buf, snap.tick, snap.first, () => {
-      const s = readTerm(store.topic(topic).peek()?.data);
-      return s && { first: s.first, rows: s.rows, tick: s.tick };
-    });
-  }, [snap?.tick, on]);
-  useEffect(() => () => dropColors(), []);
-
-  if (!snap) {
-    const r = link.refused.value.get(topic);
-    if (r) return <Refused topic={topic}>{r.msg}</Refused>;
-    return <SkeletonRows rows={10} />;
-  }
-  const o = older.value;
-  const joined = o && o.buf === buf && o.first + o.rows.length === snap.first;
-  const first = joined ? o.first : snap.first;
-  const all = joined ? [...o.rows, ...snap.rows] : snap.rows;
-  const lines = reflow(all, first, snap.cols);
-  const colors = on ? termColors.value : null;
-  const pageBg = colors ? pageBackground() : "";
-  const more = joined ? o.more : snap.more;
-  const gone = isGone(ts?.data);
-  const screen = snap.screen && !asRows.value.has(buf);
-  const follow = () => {
-    stick.current = true;
-    setPinned(true);
-    const el = body.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  };
-  return (
-    <div class={`topic term${ts?.stale ? " is-stale" : ""}`}>
-      {more && (
-        <button
-          type="button"
-          class="term-older"
-          disabled={loadingOlder.value}
-          onClick={() => {
-            keep.current = body.current?.scrollHeight ?? null;
-            stick.current = false;
-            loadOlder(buf, first);
-          }}
-        >
-          {t("term.older")}
-        </button>
-      )}
-      {/* A screen reader hears the rows only when asked (web UX 8.1). */}
-      <button type="button" class="sr-focus term-read" onClick={() => setSaid(lines.slice(-READ_ROWS).map((l) => l.text).join("\n"))}>
-        {t("term.read_last")}
-      </button>
-      <div class="sr-only term-said" role="status">
-        {said}
-      </div>
-      {screen ? (
-        <Screen buf={buf} rows={snap.rows} cols={snap.cols} height={snap.height} />
-      ) : (
-        <div class={`term-rows${wrapRows.value ? "" : " is-nowrap"}`} role="log" aria-live="off" aria-label={item?.title || t("tab.term")}>
-          {lines.map((l, i) => (
-            <TermRow
-              key={l.row}
-              text={l.text}
-              segs={colors ? paintLine(colors, buf, l.row, all.slice(l.row - first, (lines[i + 1]?.row ?? first + all.length) - first), pageBg) : null}
-            />
-          ))}
-        </div>
-      )}
-      {(gone || item?.exited) && (
-        <p class="file-note term-ended" role="status">
-          <span>{t(gone ? "term.gone" : "term.ended_now")}</span>
-          <Button kind="neutral" small needsLink onClick={newTerm}>
-            {t("term.new")}
-          </Button>
-        </p>
-      )}
-      {menu !== null && (
-        <RowMenu
-          title={menu || t("tab.term")}
-          items={rowMenu(menu, lines.map((l) => l.text).join("\n"), link.meta.value?.role === "controller" && live.value && !gone && !item?.exited)}
-          onClose={() => setMenu(null)}
-        />
-      )}
-      {!pinned && (
-        <span class="term-follow">
-          <Chip onClick={follow}>↓ {t("term.follow")}</Chip>
-        </span>
-      )}
-    </div>
-  );
-}
-
-function NoTerms({ controller }: { controller: boolean }) {
-  return (
-    <div class="empty-state">
-      <p>{t("term.none")}</p>
-      {controller && (
-        <Button kind="neutral" needsLink onClick={newTerm}>
-          {t("term.open_one")}
-        </Button>
-      )}
-    </div>
-  );
-}
-
-export function TermView() {
-  const body = useRef<HTMLDivElement | null>(null);
-  usePinch(body);
-  useEffect(() => link.subscribe("terms"), []);
-  const terms = readTerms(store.topic("terms").value?.data);
-  const r = route.value;
-  const want = r.tab === "term" && /^\d+$/.test(r.rest) ? Number(r.rest) : NaN;
-  const buf = Number.isInteger(want) ? want : (terms.find((x) => x.active) ?? terms[0])?.buf;
-  const item = terms.find((x) => x.buf === buf);
-  useWakeLock(prefs.value.wakeLock && item?.busy === true && !item.exited);
-  useEffect(() => {
-    if (buf === undefined) return;
-    const topic = "term:" + buf;
-    link.subscribe(topic);
-    return () => link.unsubscribe(topic);
-  }, [buf]);
-  const controller = link.meta.value?.role === "controller";
-  const [ring, setRing] = useState(false);
-  const [about, setAbout] = useState(false);
-  const bells = rang.value;
-  useEffect(() => {
-    if (bells === 0) return;
-    setRing(true);
-    const timer = setTimeout(() => setRing(false), RING_MS);
-    return () => clearTimeout(timer);
-  }, [bells]);
-  const ts = buf === undefined ? undefined : store.topic("term:" + buf).value;
-  const ended = isGone(ts?.data) || item?.exited === true;
-  let foot;
-  if (ts && buf !== undefined) {
-    foot = controller ? (
-      <TermInput buf={buf} ended={ended} />
-    ) : (
-      <div class="composer">
-        <p class="composer-note">{t("viewonly")}</p>
-      </div>
-    );
-  }
-  return (
-    <View
-      tab="term"
-      title={t("tab.term")}
-      bodyRef={body}
-      bodyClass="term-body"
-      foot={foot}
-      actions={
-        <>
-          {ring && <span class="bell-dot" role="status" aria-label={t("term.bell")} />}
-          {buf !== undefined && ts && (
-            <button type="button" class="head-btn term-info-btn" aria-label={t("term.about")} onClick={() => setAbout(true)}>
-              ⓘ
-            </button>
-          )}
-          {controller && terms.length > 0 && (
-            <Button kind="quiet" small needsLink label={t("term.new")} onClick={newTerm}>
-              +
-            </Button>
-          )}
-        </>
-      }
-    >
-      <TopicBody
-        topic="terms"
-        empty={<NoTerms controller={controller} />}
-      >
-        {terms.length === 0 ? (
-          <div class="empty">
-            <NoTerms controller={controller} />
-          </div>
-        ) : (
-          <>
-            <Chips terms={terms} cur={buf} />
-            {buf !== undefined && <Rows key={buf} buf={buf} item={item} body={body} />}
-          </>
-        )}
-      </TopicBody>
-      {about && buf !== undefined && (
-        <About buf={buf} cols={readTerm(ts?.data)?.cols ?? 0} screen={readTerm(ts?.data)?.screen === true} onClose={() => setAbout(false)} />
-      )}
-    </View>
   );
 }

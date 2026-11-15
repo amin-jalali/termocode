@@ -42,7 +42,11 @@ export function FilesView() {
   return r.tab === "files" && r.rest ? <FileView path={r.rest} /> : <TreeView />;
 }
 
-export { TermView } from "./Term";
+/** TermView is the phone's and the tablet's terminal (PHONE-TERM), from
+ * home.js, loaded on first open. */
+export function TermView() {
+  return <PhoneLazy tkey="tab.term" name="term" draw={(m) => <m.PhoneTermView />} />;
+}
 
 export { GitView } from "./git/GitView";
 

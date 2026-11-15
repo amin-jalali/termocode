@@ -17,8 +17,9 @@ export const KEY_IDS: readonly KeyId[] = [
   "pipe", "tilde", "slash", "dash",
 ];
 
-/** DEFAULT_KEYS is the bar until the user changes it. */
-export const DEFAULT_KEYS: readonly KeyId[] = ["esc", "tab", "ctrl", "alt", "left", "down", "up", "right", "int"];
+/** DEFAULT_KEYS is the bar until the user changes it: the proven mobile
+ * terminal row (Esc, Tab, Ctrl, Alt, -, the arrows), then more to the side. */
+export const DEFAULT_KEYS: readonly KeyId[] = ["esc", "tab", "ctrl", "alt", "dash", "left", "down", "up", "right", "int", "pipe", "tilde", "slash", "home", "end", "pgup", "pgdn"];
 
 /** MAX_KEYS bounds the bar. */
 export const MAX_KEYS = KEY_IDS.length;

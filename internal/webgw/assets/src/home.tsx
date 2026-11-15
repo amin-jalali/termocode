@@ -23,3 +23,7 @@ export { DBView } from "./views/more/DBView";
 // home.js on a phone for it.
 import { phoneLook } from "./phone/chatlook";
 phoneLook();
+// The phone's terminal (PHONE-TERM): the terminal engine (term.js) and
+// the key bar; on a phone and a tablet only.
+export { PhoneTermView } from "./views/phone/PhoneTerm";
+export { pressTermKey, setTermInputMode, termKeyBytes, typeTerm } from "./views/phone/termtype";
