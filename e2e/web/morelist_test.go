@@ -39,7 +39,7 @@ func TestMoreListGroupsSearchRecent(t *testing.T) {
 			// a visited view comes first, under Recent
 			p.Tap(`.more-link[data-sub="containers"]`)
 			p.WaitJS(`location.hash === "#/more/containers"`)
-			p.GoTab("more")
+			Eval[bool](p, `(history.back(), true)`) // back to the list
 			p.WaitJS(`document.querySelector(".more-group.is-recent .more-link")?.dataset.sub === "containers"`)
 			if got := Eval[string](p, `document.querySelector(".more-group.is-recent > .group-title").textContent`); !strings.Contains(got, "Recent") {
 				t.Errorf("recent header %q", got)
