@@ -70,9 +70,9 @@ func waitAIChat(ch chan tea.Msg) tea.Cmd {
 	}
 }
 
+// aiChatSystemPrompt is the chat's own short rules. How to change the
+// open file when the turn has no edit tools is in aiDoctrine.
 const aiChatSystemPrompt = "Be concise and concrete.\n" +
-	"When the user asks you to change the OPEN FILE, reply with the COMPLETE updated file in ONE fenced code block " +
-	"(real code, not json) — the user reviews it in a side-by-side diff and applies it with one click. " +
 	"For questions, answer in prose (short code snippets are fine). " +
 	"To show data (lists, tables, status), prefer view_show with a spec from view_catalog over writing it out."
 

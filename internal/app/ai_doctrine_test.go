@@ -71,8 +71,8 @@ func TestAIDoctrineFollowsTheTools(t *testing.T) {
 	if !strings.Contains(reads, aiDocStop) {
 		t.Errorf("read tools but no stop rule:\n%s", reads)
 	}
-	if l := aiDocLine(chat("read_file", "agent_run_start"), aiDocExplore); !strings.Contains(l, "agent_run_start") || !strings.Contains(l, "read-only") {
-		t.Errorf("with agent_run_start the explore line should offer read-only runs: %q", l)
+	if l := aiDocLine(chat("read_file", "agent_run_start"), aiDocExplore); !strings.Contains(l, "agent_run_start") || !strings.Contains(l, "only read") {
+		t.Errorf("with agent_run_start the explore line should offer runs that only read: %q", l)
 	}
 
 	// proof: names only the check tools present
