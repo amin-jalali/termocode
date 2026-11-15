@@ -33,6 +33,10 @@ type Settings struct {
 	NextEdit    *bool    `json:"ai_next_edit,omitempty"`
 	AutoApprove []string `json:"ai_auto_approve,omitempty"`
 	MaxSteps    int      `json:"ai_max_steps,omitempty"` // 0: DefaultMaxSteps
+	// RepeatCallLimit is ai_repeat_call_limit (0: DefaultRepeatLimit; a
+	// negative value: off): the same tool call this many times in a row
+	// is not run. Edited by hand.
+	RepeatCallLimit int `json:"ai_repeat_call_limit,omitempty"`
 	// EditReview is "review" (default: the agent's file changes open as a
 	// diff to accept or reject) or "auto" (they are written after the
 	// confirm dialog, or at once when fileWrite is auto-approved).

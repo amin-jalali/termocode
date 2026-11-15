@@ -288,7 +288,8 @@ it off for every chat that did not turn it on itself.
   turns (default 10), when the auto turns cost the "work until done"
   budget (`ai_until_done_budget_usd`), after 3 auto turns in a row that
   did not change the list, when the answer ends with a question to you,
-  or when a turn failed. The chat says why.
+  when the AI made the same tool call again and again
+  (`ai_repeat_call_limit`), or when a turn failed. The chat says why.
 - The desktop notice "AI run ended" comes once, when the last turn ends.
 - **Stop** (`Ctrl+C` or **AI: Stop Generating**) ends it at once. Your
   next message starts it again.
@@ -1076,6 +1077,12 @@ deletes or saves a file whose tab has unsaved edits; it asks you to save first.
 The agent stops after 100 tool steps per message and says so. With keep
 going on (the default) it goes on by itself; else send "continue". Change
 the limit with `ai_max_steps` in `config.json`.
+
+When the agent makes the same tool call (same tool, same arguments) 4
+times in a row, termocode does not run it: the AI is told to try another
+way, and the chat shows **Same call 4 times in a row: not run**. If it
+makes the same call once more, the turn stops with a note. Change the
+count with `ai_repeat_call_limit` (a negative value turns it off).
 
 ## Project rules file
 
