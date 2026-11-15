@@ -722,6 +722,9 @@ kbd {
 .wb-editor .view-body.is-editing { padding: 0; }
 .desk-host { position: relative; flex: 1 1 auto; min-height: 0; }
 .desk-editor { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: var(--wb-editor-bg); }
+/* The spare editor frame waits off screen until a file opens in it (deskeditor.ts). */
+#desk-spare { position: fixed; left: -10000px; top: 0; width: 1000px; height: 700px; visibility: hidden; pointer-events: none; overflow: hidden; }
+#desk-spare > iframe { width: 100%; height: 100%; border: 0; }
 .wb-editor .live-conflict { background: var(--wb-side-bg); }
 
 /* ---- Quick input: Go to file, commands, Go to line ---- */
