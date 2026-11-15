@@ -132,24 +132,48 @@ func TestGitPhoneAIView(t *testing.T) {
 	p.WaitJS(`!document.querySelector(".gp-aiv") && [...document.querySelectorAll(".gp-sec-t")].map((e) => e.textContent).join("|") === "Staged|Changes|Untracked"`)
 }
 
-// Commit asks first (Cancel first), then commits the message; an empty
-// message says so instead.
-func TestGitPhoneCommit(t *testing.T) {
+// Commit opens the commit sheet (page design 06): ✕ and "Commit
+// changes", one box for the message and its description, the staged
+// files, "✦ Write it for me" (the laptop's AI writes the message from
+// the staged diff), the branch and a green Commit. The sheet is the
+// question: Commit commits what it names. The split ▾ holds Stage all
+// and commit and Amend last commit….
+func TestGitPhoneCommitSheet(t *testing.T) {
 	p, c := openGit(t, Phone, gitSnap())
-	p.TapJS(`document.querySelector('.gp-dock [data-act="commit"]')`)
-	p.WaitJS(`document.querySelector(".toasts")?.textContent.includes("Write a commit message first.")`)
-	c.Quiet(t, 200*time.Millisecond)
+	const sheet = `document.querySelector(".gp-cs")`
+	p.TapJS(`document.querySelector('.gp-dock [data-act="commit-more"]')`)
+	if got := texts(p, ".gp-menu .gp-mi"); got != "Stage all and commit|Amend last commit…|Stage all|Unstage all" {
+		t.Errorf("commit menu %q", got)
+	}
+	p.TapJS(`document.querySelector(".gp-scrim")`)
 	p.Tap(".gp-msg")
 	p.Key("fix: one line")
 	p.TapJS(`document.querySelector('.gp-dock [data-act="commit"]')`)
-	p.WaitJS(`document.querySelector(".commit-ask-text")?.textContent === "Commit 1 staged file to main?"`)
-	if first := p.Text(".commit-ask .choices button"); first != "Cancel" {
-		t.Errorf("first choice %q", first)
+	p.WaitJS(sheet)
+	if got := p.Text(".gp-cs-t"); got != "Commit changes" {
+		t.Errorf("title %q", got)
 	}
-	p.TapJS(`[...document.querySelectorAll(".commit-ask button")].find((b) => b.textContent.trim() === "Commit")`)
-	reply(t, c, expectOp(t, c, webproto.OpGitCommit, `{"message":"fix: one line"}`), webproto.GitCommitted{Hash: "9f9f9f9", Files: 1})
+	if got := Eval[string](p, `document.querySelector(".gp-cs-msg").value`); got != "fix: one line" {
+		t.Errorf("the box lost the bar's message: %q", got)
+	}
+	if got := p.Text(".gp-cs-files"); got != "1 staged file: b.go" {
+		t.Errorf("files %q", got)
+	}
+	if got := texts(p, ".gp-cs-acts button"); got != "Rewrite|main|Commit" {
+		t.Errorf("buttons %q", got)
+	}
+	c.Quiet(t, 200*time.Millisecond) // opening the sheet commits nothing
+	// The AI writes the message; the user reads it and commits.
+	Eval[bool](p, `(() => { const b = document.querySelector(".gp-cs-msg"); b.value = ""; b.dispatchEvent(new Event("input", {bubbles: true})); return true; })()`)
+	p.WaitJS(`document.querySelector('.gp-cs [data-act="write"]')?.textContent.trim() === "Write it for me"`)
+	p.TapJS(`document.querySelector('.gp-cs [data-act="write"]')`)
+	reply(t, c, expectOp(t, c, webproto.OpGitAIMessage, `{}`), webproto.GitAIMessage{Message: "Add the b file\n\nThe tests need it."})
+	p.WaitJS(`document.querySelector(".gp-cs-msg").value === "Add the b file\n\nThe tests need it." && document.querySelector('.gp-cs [data-act="write"]').textContent.trim() === "Rewrite"`)
+	p.TapJS(`document.querySelector('.gp-cs [data-act="commit-do"]')`)
+	reply(t, c, expectOp(t, c, webproto.OpGitCommit, `{"message":"Add the b file\n\nThe tests need it."}`), webproto.GitCommitted{Hash: "9f9f9f9", Files: 1})
 	p.WaitJS(`[...document.querySelectorAll(".toasts .toast-title")].some((e) => e.textContent === "Committed 9f9f9f9 · 1 files")`)
-	p.WaitJS(`document.querySelector(".gp-msg").value === "" && !document.querySelector(".commit-ask")`)
+	p.WaitJS(`!` + sheet + ` && document.querySelector(".gp-msg").value === ""`)
+	p.noOverflow("commit sheet")
 }
 
 // A viewer reads only: no ticks, no commit bar, no ⇅.
