@@ -31,6 +31,7 @@ const (
 
 type contextManageDoneMsg struct {
 	verb, name string
+	host       string // the new context's host (create)
 	err        error
 }
 
@@ -189,7 +190,7 @@ func (m *Model) runContextManage(id string) tea.Cmd {
 		} else {
 			err = e.RemoveContext(ctx, spec.Name)
 		}
-		return contextManageDoneMsg{verb: verb, name: spec.Name, err: err}
+		return contextManageDoneMsg{verb: verb, name: spec.Name, host: spec.Host, err: err}
 	}
 }
 
@@ -204,7 +205,11 @@ func (m *Model) onContextManageDone(msg contextManageDoneMsg) tea.Cmd {
 	if msg.verb == "remove" {
 		title, detail = "Removed "+word+" "+name, ""
 	}
-	return tea.Batch(m.servicesToast(toast.Info, title, detail), m.containersRefreshContexts())
+	var scan tea.Cmd
+	if msg.verb == "create" {
+		scan = m.afterAddSSHAdded(msg.name, msg.host) // after_add_ssh.go: scan this server? (ssh:// only)
+	}
+	return tea.Batch(m.servicesToast(toast.Info, title, detail), m.containersRefreshContexts(), scan)
 }
 
 // inspectContext opens `context inspect` as a read-only page.
