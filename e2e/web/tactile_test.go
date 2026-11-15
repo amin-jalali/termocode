@@ -41,6 +41,13 @@ func TestTactileKeyboardTypesInTheEditor(t *testing.T) {
 	if !Eval[bool](p, `document.documentElement.classList.contains("tk-on")`) {
 		t.Error("html has no tk-on while the keyboard is up")
 	}
+	// The shell ends above the dock; the tab bar hides while it is up.
+	if !Eval[bool](p, `Math.abs(document.querySelector(".shell").getBoundingClientRect().bottom - document.querySelector(".tk-host").getBoundingClientRect().top) < 1.5`) {
+		t.Error("the shell does not end above the keyboard")
+	}
+	if Eval[bool](p, `!!document.querySelector(".tabbar")?.offsetHeight`) {
+		t.Error("the tab bar shows under the keyboard")
+	}
 	// The compact phone layout: no function row.
 	if Eval[bool](p, `!!document.querySelector('.tk-key[data-key="f1"]')`) {
 		t.Error("the phone shows the function row")
