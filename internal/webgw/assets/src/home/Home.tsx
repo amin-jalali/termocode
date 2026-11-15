@@ -349,7 +349,18 @@ export function Home() {
     <section class="home" data-view="home" aria-label={hs("title")}>
       <TopBar panels={panels} />
       <div class="home-stream" ref={body} role="log" aria-live="polite">
-        {stream.length === 0 && <HomeStart sum={homeSummary(readInbox(data("inbox")), H.cards.value, Date.now())} onCard={onCard} />}
+        {stream.length === 0 && (
+          <HomeStart
+            sum={homeSummary(readInbox(data("inbox")), H.cards.value, Date.now())}
+            chat={chatId}
+            chips={<Chips onChip={onChip} />}
+            onCard={onCard}
+            onFill={(text) => {
+              H.setDraft(chatId, text);
+              requestAnimationFrame(focusBox);
+            }}
+          />
+        )}
         {stream.length > 0 && <PinnedViews />}
         {stream.map((it) => {
           if (it.kind === "msg") return <H.Message key={"m" + it.m.i} m={it.m} chat={chatId} canFetch />;
@@ -374,7 +385,7 @@ export function Home() {
         <HomeCards host={H.cardsHost} />
       </div>
       <footer class="home-foot">
-        <Chips onChip={onChip} />
+        {stream.length > 0 && <Chips onChip={onChip} />}
         {laptop ? (
           <H.Composer chat={chatId} busy={busy} profile={laptop.profile ?? ""} model={laptop.model ?? ""} placeholder={hs("ask")} />
         ) : (

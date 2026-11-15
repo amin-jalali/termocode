@@ -6,13 +6,15 @@ import (
 	"testing"
 )
 
-// The Home's empty state (MOBUX-4): when the stream is empty the Home
-// shows a short hello, three cards (needs you · working · done today)
-// and the pinned views below them. Each card is one 44 px button, says
-// its state with a shape and a word (never colour alone), and opens the
-// list behind it through a chip (no tokens). The counts come from the
-// inbox topic (cards while the laptop has none), done counts today only.
-// All of it lives in home.js: the phone's first files do not grow.
+// The Home's empty state (MOBUX-4, design sheet 32): when the stream is
+// empty the Home shows one summary line, "My work" as one grouped card
+// (needs you · working · done today, a row per non-empty state with its
+// shape tile, the newest title and its count), "Shortcuts" with live
+// counts and the chip strip, then the pinned views. A quiet day is one
+// line and chips that only fill the box. A row opens the list behind it
+// through a chip (no tokens); a long press offers it to the AI. The
+// counts come from the inbox topic (cards while the laptop has none),
+// done counts today only. All of it lives in home.js.
 
 func TestHomeStartSummary(t *testing.T) {
 	st := readSrc(t, "src/state/home.ts")
@@ -46,34 +48,30 @@ func TestHomeStartCards(t *testing.T) {
 	if !strings.Contains(start, "export function HomeStart(") {
 		t.Fatal("src/home/Start.tsx does not export HomeStart")
 	}
-	// Three cards, in board order: what needs the user first.
+	// My work in board order: what needs the user first.
 	order := []string{`"needs"`, `"working"`, `"done"`}
 	at := -1
 	for _, k := range order {
-		i := strings.Index(start, "card="+k)
+		i := strings.Index(start, "card: "+k)
 		if i < 0 {
-			t.Fatalf("Start.tsx has no card=%s", k)
+			t.Fatalf("Start.tsx has no row card: %s", k)
 		}
 		if i < at {
-			t.Errorf("card=%s comes before the card above it: needs you, working, done today", k)
+			t.Errorf("card: %s comes before the row above it: needs you, working, done today", k)
 		}
 		at = i
 	}
-	// Status is a shape and a word.
-	for _, g := range []string{`"●"`, `"◐"`, `"✓"`} {
-		if !strings.Contains(start, g) {
-			t.Errorf("Start.tsx has no shape %s", g)
+	for _, k := range []string{`"start.mywork"`, `"start.shortcuts"`, `"start.quiet"`, "openActions(", "onContextMenu", `class="home-tile`} {
+		if !strings.Contains(start, k) {
+			t.Errorf("Start.tsx has no %s", k)
 		}
 	}
-	if !strings.Contains(start, `<button`) || !strings.Contains(start, `class={"home-card`) || !strings.Contains(start, "aria-label=") {
-		t.Error("a Home card is not one labelled button")
+	// The pinned views come below the sections.
+	secs, pins := strings.Index(start, `"start.shortcuts"`), strings.Index(start, "<PinnedViews")
+	if secs < 0 || pins < 0 || pins < secs {
+		t.Error("the pinned views are not below the sections")
 	}
-	// The pinned views come below the cards.
-	cards, pins := strings.Index(start, `class="home-cards"`), strings.Index(start, "<PinnedViews")
-	if cards < 0 || pins < 0 || pins < cards {
-		t.Error("the pinned views are not below the three cards")
-	}
-	// The hello is short: one line, no more than 60 characters.
+	// The summary line is short: no more than 60 characters.
 	m := regexp.MustCompile(`"start\.hello": "([^"]*)"`).FindStringSubmatch(strs)
 	if m == nil {
 		t.Fatal(`src/home/strings.ts has no "start.hello"`)
@@ -81,7 +79,7 @@ func TestHomeStartCards(t *testing.T) {
 	if n := len([]rune(m[1])); n == 0 || n > 60 {
 		t.Errorf("the hello is %d characters; keep it short (≤ 60)", n)
 	}
-	for _, k := range []string{"start.needs", "start.working", "start.done", "start.card"} {
+	for _, k := range []string{"start.needs", "start.working", "start.done", "start.mywork", "start.shortcuts", "start.quiet", "start.quiet_hint"} {
 		if !strings.Contains(strs, `"`+k+`"`) {
 			t.Errorf("src/home/strings.ts has no %q", k)
 		}
@@ -90,23 +88,23 @@ func TestHomeStartCards(t *testing.T) {
 		t.Error("the Home's empty state carries non-English text: the phone app is English only")
 	}
 
-	// The Home shows it when the stream is empty, and hears saved views.
+	// The Home shows it when the stream is empty, and hears saved views;
+	// the chip strip sits in Shortcuts then, under the box once it is not.
 	if !regexp.MustCompile(`stream\.length === 0 && \(?\s*<HomeStart`).MatchString(home) {
 		t.Error("Home.tsx does not show <HomeStart> when the stream is empty")
 	}
 	if !strings.Contains(home, "startSaved()") {
 		t.Error("Home.tsx does not start the saved views (pinned views stay empty)")
 	}
-	// A tap opens the list behind the card through a chip: no tokens.
-	if !strings.Contains(home, "onCard=") {
-		t.Error("Home.tsx does not hand the cards a tap handler")
+	if !strings.Contains(home, "onCard=") || !regexp.MustCompile(`stream\.length > 0 && <Chips`).MatchString(home) {
+		t.Error("Home.tsx does not hand the rows a tap handler or keeps the strip under the box on an empty Home")
 	}
 
-	// 44 px targets, and a shape colour per state.
-	if !regexp.MustCompile(`\.home-card \{[^}]*min-height: 44px`).MatchString(css) {
-		t.Error("home.css: a Home card is not a 44 px target")
+	// 44 px rows and a 28 px colour tile per state.
+	if !regexp.MustCompile(`\.home-tile \{[^}]*width: 28px`).MatchString(css) {
+		t.Error("home.css: no 28 px tile")
 	}
-	for _, c := range []string{".home-card.is-needs", ".home-card.is-working", ".home-card.is-done"} {
+	for _, c := range []string{".home-sec", ".home-quiet", ".home-row"} {
 		if !strings.Contains(css, c) {
 			t.Errorf("home.css has no %s", c)
 		}

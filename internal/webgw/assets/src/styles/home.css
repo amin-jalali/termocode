@@ -18,25 +18,28 @@
 .home-stream > * { flex-shrink: 0; }
 .home-hello { color: var(--muted); margin: auto 0 0; padding: 8px 4px; }
 .home-hello .star { color: var(--ai); }
-/* The empty state (MOBUX-4): hello, three cards, pinned views below. */
-.home-start { margin-top: auto; display: flex; flex-direction: column; gap: 12px; }
-.home-start .home-hello { margin: 0; }
-.home-hello-hint { display: block; font-size: 13px; }
-.home-cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.home-card { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; min-height: 44px; padding: 10px; border: 1px solid var(--border); border-inline-start-width: 3px; border-radius: 12px; background: var(--bg-panel); color: var(--text); font: inherit; text-align: start; }
-.home-card:active { background: var(--bg-hover); }
-.home-card:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.home-card-head { font-size: 12px; color: var(--text-2); white-space: nowrap; }
-.home-card-value { font-size: 24px; font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums; }
-.home-card-detail, .home-card-extra { font-size: 12px; color: var(--muted); max-width: 100%; }
-.home-card.is-needs .home-card-mark { color: var(--amber); }
-.home-card.is-needs.has-items { border-inline-start-color: var(--amber); }
-.home-card.is-working .home-card-mark { color: var(--blue); }
-.home-card.is-working.has-items { border-inline-start-color: var(--blue); }
-.home-card.is-done .home-card-mark { color: var(--green); }
-.home-card.is-done.has-items { border-inline-start-color: var(--green); }
-.home-card-extra { color: var(--red); }
-@media (max-width: 340px) { .home-cards { grid-template-columns: 1fr; } }
+/* The empty state (MOBUX-4, sheet 32): a summary line, My work and
+   Shortcuts as grouped cards with a colour tile per row; a quiet day. */
+.home-start { display: flex; flex-direction: column; gap: 14px; min-height: 100%; }
+.home-start .home-hello { margin: 0; color: var(--text); }
+.home-hello-hint { display: block; font-size: 13px; color: var(--muted); }
+.home-sec-h { display: flex; align-items: center; margin: 0 2px 6px; }
+.home-sec-h h2 { flex: 1; margin: 0; font-size: 16px; }
+.home-sec-more { width: 44px; height: 32px; color: var(--muted); font-size: 18px; }
+.home-card { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--bg-panel); }
+.home-card .home-row + .home-row { border-top: 1px solid var(--border); }
+.home-card .home-row::after { content: "\203A"; color: var(--muted); font-size: 20px; }
+.ph-row-end.is-bad { color: var(--red); }
+.home-tile { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 7px; color: var(--bg); background: var(--green); }
+.home-tile[data-t="a"] { background: var(--amber); }
+.home-tile[data-t="b"] { background: var(--blue); }
+.home-tile[data-t="r"] { background: var(--red); }
+.home-sec .home-chips { padding: 8px 0 0; }
+.home-quiet { margin: auto 0; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; color: var(--muted); }
+.home-quiet .star { color: var(--ai); font-size: 22px; }
+.home-quiet strong { color: var(--text); font-size: 20px; }
+.home-quiet p { margin: 0 0 12px; }
+.home-qchips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .home-foot { border-top: 1px solid var(--border); background: var(--bg-2); padding-bottom: env(safe-area-inset-bottom); }
 .home-chips { display: flex; gap: 8px; overflow-x: auto; padding: 8px 12px; scrollbar-width: none; scroll-snap-type: x proximity; }
 .home-chips::-webkit-scrollbar { display: none; }
