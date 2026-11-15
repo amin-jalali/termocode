@@ -168,12 +168,65 @@ export function setDesk(slot: string, d: DeskHandle | null): void {
 }
 
 /** mountDesk puts the frame in parent and returns its handle. */
-export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
+/** A spare editor frame: loaded in the background once an editor is up,
+ * so the next file opens without fetching and starting the editor again
+ * (the page is sent no-store: each new frame fetched 1.2 MB). Only where
+ * the browser moves a frame into place without reloading it (moveBefore). */
+interface Spare {
+  frame: HTMLIFrameElement;
+  ready: boolean;
+}
+let spare: Spare | null = null;
+let spareTimer: ReturnType<typeof setTimeout> | undefined;
+/** SPARE_WAIT: the spare loads after the editor the user opened. */
+const SPARE_WAIT = 1500;
+type Mover = { moveBefore(node: Node, child: Node | null): void };
+const canMove = (): boolean => typeof (Element.prototype as Partial<Mover>).moveBefore === "function";
+
+function warmSpare(): void {
+  spareTimer = undefined;
+  if (spare || !canMove() || !document.body) return;
+  let box = document.getElementById("desk-spare");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "desk-spare";
+    box.setAttribute("aria-hidden", "true");
+    document.body.append(box);
+  }
   const frame = document.createElement("iframe");
+  frame.className = "desk-spare-frame";
+  frame.tabIndex = -1;
+  const s: Spare = { frame, ready: false };
+  const on = (e: MessageEvent) => {
+    if (e.source !== frame.contentWindow || e.origin !== location.origin || (e.data as FromFrame | null)?.t !== "ready") return;
+    s.ready = true;
+    removeEventListener("message", on);
+  };
+  addEventListener("message", on);
+  frame.src = FRAME_PATH;
+  box.append(frame);
+  spare = s;
+}
+
+function spareLater(): void {
+  if (spare || spareTimer !== undefined || !canMove()) return;
+  spareTimer = setTimeout(warmSpare, SPARE_WAIT);
+}
+
+export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
+  const sp = spare;
+  spare = null;
+  const frame = sp?.frame ?? document.createElement("iframe");
   frame.className = "desk-editor";
   frame.title = host.label;
-  frame.src = FRAME_PATH;
-  parent.replaceChildren(frame);
+  if (sp) {
+    frame.removeAttribute("tabindex");
+    parent.replaceChildren();
+    (parent as unknown as Mover).moveBefore(frame, null); // keeps the loaded editor
+  } else {
+    frame.src = FRAME_PATH;
+    parent.replaceChildren(frame);
+  }
   let text = host.doc;
   let seen = 0;
   let canUndo = false, canRedo = false;
@@ -190,25 +243,30 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     frame.contentWindow?.postMessage(m, location.origin);
   };
 
+  const onReady = () => {
+    if (ready) return;
+    ready = true;
+    const c = frameColors(parent);
+    frame.contentWindow?.postMessage({ t: "init", doc: text, label: host.label, path: host.path, diff: host.diff, lang: host.lang, comment: host.comment, lsp: host.lsp, refsLabel: host.refsLabel, ai: host.ai, readOnly: host.readOnly, wrap: host.wrap, tabSize: host.tabSize, insertSpaces: host.insertSpaces, vim: prefs.peek().vim, ...c } satisfies ToFrame, location.origin);
+    if (prefs.peek().vim) sendMaps();
+    for (const q of queue.splice(0)) {
+      // A focus asked before the frame was ready does not take the
+      // keyboard from something the user went to meanwhile.
+      const away = document.activeElement !== null && document.activeElement !== frame && document.activeElement !== document.body;
+      if (q.t === "focus" && (away || quick.peek())) continue;
+      frame.contentWindow?.postMessage(q, location.origin);
+    }
+    spareLater();
+  };
+
   const onMessage = (e: MessageEvent) => {
     if (e.source !== frame.contentWindow || e.origin !== location.origin) return;
     const m = e.data as FromFrame;
     if (typeof m !== "object" || m === null || typeof m.t !== "string") return;
     switch (m.t) {
-      case "ready": {
-        ready = true;
-        const c = frameColors(parent);
-        frame.contentWindow?.postMessage({ t: "init", doc: text, label: host.label, path: host.path, diff: host.diff, lang: host.lang, comment: host.comment, lsp: host.lsp, refsLabel: host.refsLabel, ai: host.ai, readOnly: host.readOnly, wrap: host.wrap, tabSize: host.tabSize, insertSpaces: host.insertSpaces, vim: prefs.peek().vim, ...c } satisfies ToFrame, location.origin);
-        if (prefs.peek().vim) sendMaps();
-        for (const q of queue.splice(0)) {
-          // A focus asked before the frame was ready does not take the
-          // keyboard from something the user went to meanwhile.
-          const away = document.activeElement !== null && document.activeElement !== frame && document.activeElement !== document.body;
-          if (q.t === "focus" && (away || quick.peek())) continue;
-          frame.contentWindow?.postMessage(q, location.origin);
-        }
+      case "ready":
+        onReady();
         return;
-      }
       case "text":
         seen = Math.max(seen, m.v);
         canUndo = m.canUndo;
@@ -307,6 +365,7 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     }
   };
   addEventListener("message", onMessage);
+  if (sp?.ready) onReady();
   // Vim mode follows the browser's choice in every editor at once.
   let vimWas = prefs.peek().vim;
   const stopVim = effect(() => {
