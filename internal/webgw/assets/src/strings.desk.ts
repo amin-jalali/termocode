@@ -7,6 +7,10 @@
 import { addStrings } from "./strings";
 
 export const SD = {
+  // Settings (the desktop's; the phone's are pages/strings.ts)
+  "settings.readonly": "Read only. Change settings on the laptop.",
+  "settings.none": "No settings to show.",
+  "settings.default": "default {value}",
   // Workflows (desktop side bar and run tab)
   "wfv.list": "All workflows",
   "wfv.no_runs": "No runs yet.",

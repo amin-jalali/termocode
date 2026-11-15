@@ -34,6 +34,7 @@
       "/assets/link.js": ["./src/link.ts"],
       "/assets/strings-fa.js": ["./src/strings.fa.ts"],
       "/assets/home.js": ["./src/home.tsx"],
+      "/assets/pages.js": ["./src/pages/main.tsx"],
       "/assets/device.js": ["./src/device.tsx"],
       "/assets/coedit.js": ["./src/coedit/main.ts"],
       "/assets/aictx.js": ["./src/aictx/main.tsx"],

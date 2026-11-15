@@ -3,6 +3,7 @@ package app
 import (
 	"os"
 	"reflect"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -11,13 +12,14 @@ import (
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
-// The settings topic (WEB-46, web design 2.9): a read-only view of the
-// laptop's settings, for the allow-listed keys only. A key that holds or
+// The settings topic (WEB-46, web design 2.9): the laptop's settings,
+// for the allow-listed keys only. A key that holds or
 // leads to a credential (ai_base_url, secret_*), changes trust
 // (ai_auto_approve, mcp_server_auto_approve, mcp_trusted*) or belongs to
 // the web panel itself (web_*) is never on the list: the list names what
 // may be shown, so a new setting stays hidden until someone adds it here.
-// There is no write op. The values come from the same code as the
+// settings.set (the phone's Settings page) changes a listed key only.
+// The values come from the same code as the
 // laptop's Settings rows; the list is sent again when the config files
 // changed (checked on Update, at most every webSettingsEvery; never a
 // web timer).
@@ -41,6 +43,7 @@ var webSettingsAllow = map[string]bool{
 func init() {
 	webTopics["settings"] = webTopicDef{snapshot: webSettingsSnapshot, apply: webApplyReplace[webproto.SettingsSnap]}
 	webAfterUpdates = append(webAfterUpdates, (*Model).webPublishSettings)
+	webOps[webproto.OpSettingsSet] = (*Model).webSettingsSet
 }
 
 // webSettingsDelta is a settings delta: the whole list; a newer one
@@ -134,8 +137,55 @@ func webSettingsBuild() webproto.SettingsSnap {
 		default:
 			typ = "string"
 		}
+		var choices []string
+		if typ == "enum" {
+			choices = e.Choices
+		}
 		s.Items = append(s.Items, webproto.SettingItem{Key: e.Key, Group: e.Category, Type: typ,
-			Value: currentSettingValue(r, cfg), Default: e.Default, Description: e.Description})
+			Value: currentSettingValue(r, cfg), Default: e.Default, Description: e.Description, Choices: choices})
 	}
 	return s
+}
+
+// webSettingsSet is settings.set (the phone's Settings page): one
+// allow-listed key, checked like the AI's settings_set (type, range,
+// choices), then saved and applied by the same code as the laptop's
+// Settings row and read back. The list goes out again at once.
+func (m *Model) webSettingsSet(call *webCall) tea.Cmd {
+	a := call.args.(*webproto.SettingsSetArgs)
+	var e SettingEntry
+	for _, x := range SettingsCatalog() {
+		if x.Key == a.Key && x.ID != "" {
+			e = x
+		}
+	}
+	if !webSettingsAllow[a.Key] || e.ID == "" {
+		call.fail(webproto.CodeForbidden, "That setting is changed on the laptop only.")
+		return nil
+	}
+	row, value, err := checkSettingValue(e, strings.TrimSpace(a.Value))
+	if err != nil {
+		call.fail(webproto.CodeBadRequest, err.Error())
+		return nil
+	}
+	cmd := m.applySetting(row.ID, value)
+	now := currentSettingValue(row, loadSettings())
+	if now != value {
+		call.fail(webproto.CodeInternal, "The laptop could not save "+a.Key+".")
+		return cmd
+	}
+	cur := webSettingsBuild()
+	if h := m.web; h != nil && h.webListens("settings") {
+		p := &h.more.settings
+		p.last, p.stamp, p.checked = &cur, webSettingsStampNow(), webNow()
+		h.publish("settings", webSettingsDelta(cur))
+	}
+	for _, it := range cur.Items {
+		if it.Key == a.Key {
+			call.reply(it)
+			return cmd
+		}
+	}
+	call.reply(webproto.SettingItem{Key: a.Key, Group: e.Category, Type: e.Type, Value: now, Default: e.Default})
+	return cmd
 }
