@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/amin-jalali/termocode/internal/agentrun"
+	"github.com/amin-jalali/termocode/internal/ai"
 )
 
 // Before the AI says done it audits the work: each thing the owner asked,
@@ -31,6 +32,22 @@ func TestAIDoneAuditEverywhere(t *testing.T) {
 	for _, w := range []string{"EVIDENCE:", "VERDICT: PASS"} {
 		if !strings.Contains(agentrun.VerifyPrompt, w) {
 			t.Errorf("verify prompt lost %q", w)
+		}
+	}
+}
+
+// The step-limit texts: the push (no open todos) carries the audit too,
+// and the note no longer tells the owner to reply "continue" as the only
+// way on: keep going (on by default) goes on by itself, "continue" is
+// for when it is off.
+func TestAIStepLimitTexts(t *testing.T) {
+	if !strings.Contains(aiStepLimitPush, agentrun.DoneAudit) {
+		t.Errorf("step-limit push lacks the audit: %q", aiStepLimitPush)
+	}
+	note := ai.StepLimitText(100)
+	for _, w := range []string{"step limit (100 tool steps)", "goes on by itself", "keep going is off", `"continue"`} {
+		if !strings.Contains(note, w) {
+			t.Errorf("step-limit note misses %q: %q", w, note)
 		}
 	}
 }
