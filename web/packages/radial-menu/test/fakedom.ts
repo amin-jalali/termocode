@@ -148,8 +148,10 @@ export class FakeElement {
   focus(): void {
     this.focused = true;
   }
-  querySelector(): null {
-    return null;
+  /** querySelector knows ".class" only (the first match, or null) */
+  querySelector(sel: string): FakeElement | null {
+    if (!/^\.[\w-]+$/.test(sel)) return null;
+    return this.byClass(sel.slice(1))[0] ?? null;
   }
   /** all descendants (self included) that match pred, in tree order */
   all(pred: (e: FakeElement) => boolean): FakeElement[] {

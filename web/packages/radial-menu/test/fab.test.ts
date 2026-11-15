@@ -97,7 +97,7 @@ test("S1 S9 S17 tap opens on the button, an outside tap sucks it in, and it open
   const cx = parseFloat(stage.style.getPropertyValue("left")) + side / 2;
   const cy = parseFloat(stage.style.getPropertyValue("top")) + side / 2;
   ok(cx <= 752 && cy <= 556, "moved in only as the rings need");
-  near(cx, 800 - 12 - (220 / 600) * 444, 1e-6);
+  near(cx, 800 - 12 - (232 / 600) * 444, 1e-6); // the whole disc 12 px inside
   overlay.dispatchEvent(pointer("pointerdown", 20, 20, 3));
   overlay.dispatchEvent(pointer("pointerup", 20, 20, 3));
   ok(r.fab.menu?.closing, "the suck-in");
@@ -237,6 +237,17 @@ test("keyboard: Enter on the button opens; Escape on the overlay closes", () => 
   ok(r.fab.isOpen);
   r.host.byClass("rm-overlay")[0].dispatchEvent({ type: "keydown", key: "Escape" });
   ok(r.fab.menu?.closing);
+});
+
+test("look: a tap opens the menu with no focus ring on a wedge (the design has none); Enter puts the focus on the first action", () => {
+  const r = rig({ favorites: ["push"] });
+  tapFab(r);
+  const acts = () => r.host.byClass("rm-act");
+  ok(acts().length > 0);
+  eq(acts().filter((e) => e.focused).length, 0, "a touch open focuses nothing");
+  const k = rig({ favorites: ["push"] });
+  btn(k).dispatchEvent({ type: "keydown", key: "Enter" });
+  ok(k.host.byClass("rm-act")[0].focused, "a keyboard goes on from the first action");
 });
 
 test("destroy takes everything off the page", () => {

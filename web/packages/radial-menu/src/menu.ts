@@ -5,7 +5,7 @@
 // ★ favorite. One requestAnimationFrame loop paints every animation
 // (entrance, rings, the clockwise bloom, the hold, the flash, the close)
 // from a clock, so tests drive it with a fake clock and fake frames.
-import { ACT_GAP, ACT_ICON_R, ACT_ICON_S, C, CAT_GAP, CAT_ICON_R, CAT_ICON_S, GAP_RING, HUB, HUB_RING, MAX_ITEMS, PAD, PROG_INSET, PROG_R, RI1, RI2, RO1, RO2, actCentre, arcLength, arcPath, catCentre, hitTest, placeTip, polar, sectorPath, toDesign, type Insets, type Hit } from "./geometry";
+import { ACT_GAP, ACT_ICON_R, ACT_ICON_S, C, CAT_GAP, CAT_ICON_R, CAT_ICON_S, GAP_RING, HUB, HUB_RING, MAX_ITEMS, PAD, PROG_INSET, PROG_R, RI1, RI2, RO1, RO2, actCentre, arcLength, arcPath, catCentre, hitTest, placeTip, polar, sectorPath, slots, toDesign, type Insets, type Hit } from "./geometry";
 import { iconNodes } from "./icons";
 import { DUR, SLOP, collapseFrame, entranceFrame, flashScale, holdScale, petalFrame, ringsFrame, sparkFrame } from "./motion";
 
@@ -171,6 +171,8 @@ export class RadialMenu {
   private tipFav: HTMLElement;
   private toastEl: HTMLElement;
   private petals: { g: SVGGElement; path: SVGPathElement; icon: SVGGElement; prog: SVGPathElement; len: number; c: [number, number] }[] = [];
+  /** the outer ring's empty wedges (it always has six or more) */
+  private empties: SVGPathElement[] = [];
   private catEls: SVGPathElement[] = [];
 
   constructor(stage: HTMLElement, opts: MenuOptions) {
@@ -195,10 +197,13 @@ export class RadialMenu {
       parent.appendChild(e);
       return e;
     };
-    div("rm-glow", stage);
     this.collapseEl = div("rm-collapse", stage);
     this.entranceEl = div("rm-entrance", this.collapseEl);
     this.entranceEl.style.setProperty("inset", PAD + "px");
+    // The design's stage, round: one dark disc under the rings, so the
+    // page (a light one too) never shows between the wedges.
+    div("rm-shade", this.entranceEl);
+    div("rm-disc", this.entranceEl);
     this.svg = this.svgEl("svg", { viewBox: "0 0 600 600", class: "rm-svg", "aria-label": this.s.fabLabel, role: "menu" }) as SVGSVGElement;
     this.entranceEl.appendChild(this.svg);
     this.svg.appendChild(this.defs());
@@ -406,7 +411,8 @@ export class RadialMenu {
   private hit(e: { clientX: number; clientY: number }): Hit {
     const [x, y] = toDesign(e.clientX, e.clientY, this.box);
     if (x < 0 || y < 0 || x > 600 || y > 600) return null;
-    return hitTest(x, y, this.open, this.cats().length, this.items().length);
+    const n = this.items().length;
+    return hitTest(x, y, this.open, this.cats().length, n, slots(n));
   }
 
   /** inside says whether a page point is on the drawing (not the padding). */
@@ -566,13 +572,13 @@ export class RadialMenu {
       for (const [o, c] of stops) g.appendChild(this.svgEl("stop", { offset: o, "stop-color": c }));
       d.appendChild(g);
     };
-    // radial_menu.dart _paintInner / _paintOuter (mobocode-radial-v6.html: the darker originals)
-    grad("cat", 116, [[0.4, "#24242F"], [1, "#131319"]]);
-    grad("catHover", 116, [[0.4, "#2C2C38"], [1, "#1B1B22"]]);
-    grad("catActive", 116, [[0.3, "#264F78"], [1, "#15314C"]]);
-    grad("wedge", 212, [[0.5, "#272732"], [1, "#111116"]]);
-    grad("wedgeHot", 212, [[0.5, "#34343F"], [1, "#1C1C24"]]);
-    grad("wedgeAcc", 212, [[0.5, "#16456E"], [1, "#0E2D49"]]);
+    // mobocode-radial-v6.html's own gradients, 1:1
+    grad("cat", 116, [[0.4, "#1b1b23"], [1, "#15151b"]]);
+    grad("catHover", 116, [[0.4, "#23232d"], [1, "#1b1b22"]]);
+    grad("catActive", 116, [[0.3, "#264f78"], [1, "#15314c"]]);
+    grad("wedge", 212, [[0.55, "#1d1d27"], [1, "#141419"]]);
+    grad("wedgeHot", 212, [[0.55, "#26262f"], [1, "#1a1a20"]]);
+    grad("wedgeAcc", 212, [[0.5, "#16456e"], [1, "#0e2d49"]]);
     const blur = this.svgEl("filter", { id: `rm${this.id}-blur`, x: "-200%", y: "-200%", width: "500%", height: "500%" });
     blur.appendChild(this.svgEl("feGaussianBlur", { stdDeviation: 13 }));
     d.appendChild(blur);
@@ -600,14 +606,19 @@ export class RadialMenu {
       this.catEls.push(p);
       this.innerG.appendChild(p);
       const [x, y] = polar(CAT_ICON_R, c0);
-      this.innerG.appendChild(this.icon(cat.icon, x, y, CAT_ICON_S, on ? "#AEDAFF" : "#BEBEC8"));
+      // final_blue.png: the active category's icon in the accent blue
+      const ic = this.icon(cat.icon, x, y, CAT_ICON_S, on ? "currentColor" : "#9a9aa4");
+      if (on) ic.classList.add("rm-accent");
+      this.innerG.appendChild(ic);
     });
   }
 
   private buildOuter(): void {
-    const items = this.items(), n = items.length;
+    const items = this.items(), n = slots(items.length);
     this.outerG.replaceChildren();
+    this.outerG.setAttribute("data-slots", String(n));
     this.petals = [];
+    this.empties = [];
     items.forEach((it, i) => {
       const c0 = actCentre(i, n), half = 180 / n;
       const d1 = c0 - half, d2 = c0 + half;
@@ -629,6 +640,13 @@ export class RadialMenu {
       this.outerG.appendChild(g);
       this.petals.push({ g, path, icon, prog, len, c });
     });
+    // The rest of the six: drawn, empty, taking no taps.
+    for (let i = items.length; i < n; i++) {
+      const c0 = actCentre(i, n), half = 180 / n;
+      const e = this.svgEl("path", { d: sectorPath(c0 - half + ACT_GAP, c0 + half - ACT_GAP, RI2, RO2), class: "rm-slot", fill: `url(#rm${this.id}-wedge)`, "aria-hidden": "true" }) as SVGPathElement;
+      this.outerG.appendChild(e);
+      this.empties.push(e);
+    }
   }
 
   private buildCenter(): void {
@@ -638,7 +656,7 @@ export class RadialMenu {
     g.appendChild(hub);
     g.appendChild(this.svgEl("circle", { cx: C, cy: C, r: HUB_RING, class: "rm-hubring", "pointer-events": "none" }));
     const text = (cls: string, y: number, s: string): void => {
-      const t = this.svgEl("text", { x: C, y, class: cls, "pointer-events": "none", "dominant-baseline": "central", "text-anchor": "middle" });
+      const t = this.svgEl("text", { x: C, y, class: cls, "pointer-events": "none", "text-anchor": "middle" });
       t.textContent = s;
       g.appendChild(t);
     };
@@ -739,7 +757,12 @@ export class RadialMenu {
       if (fk >= 1) this.flash = null;
       else moving = true;
     }
-    const n = this.petals.length;
+    const n = this.petals.length + this.empties.length;
+    this.empties.forEach((e, k) => {
+      const bf = blooming ? petalFrame(this.petals.length + k, n, rv) : { show: true, opacity: 1, scale: 1 };
+      e.setAttribute("visibility", bf.show ? "visible" : "hidden");
+      e.setAttribute("opacity", String(bf.opacity));
+    });
     this.petals.forEach((p, i) => {
       const bf = blooming ? petalFrame(i, n, rv) : { show: true, opacity: 1, scale: 1 };
       const held = this.press?.i === i;
@@ -787,7 +810,7 @@ export class RadialMenu {
     this.tipItem = it;
     this.tipGuard = true;
     this.clock.setTimeout(() => (this.tipGuard = false), DUR.tipGuard);
-    const sv = this.svgEl("svg", { viewBox: "-11.25 -11.25 22.5 22.5", "aria-hidden": "true" });
+    const sv = this.svgEl("svg", { viewBox: "-12 -12 24 24", "aria-hidden": "true" });
     sv.append(...iconNodes(this.doc, it.icon, "currentColor"));
     this.tipIcon.replaceChildren(sv);
     this.tipTitle.textContent = it.label;

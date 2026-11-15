@@ -8,7 +8,8 @@ import { eq, near, ok, test } from "./t";
 // the 18 px padding, scale 1.
 const P = (x: number, y: number): [number, number] => [x + 18, y + 18];
 const TOP = P(300, 130); // the first action
-const RIGHT = P(470, 300); // the second of four
+// the second wedge of the six the outer ring always has (60°)
+const RIGHT = P(300 + 170 * Math.sin(Math.PI / 3), 300 - 170 * Math.cos(Math.PI / 3));
 const HUB_P = P(300, 300);
 const cat = (i: number, n: number): [number, number] => {
   const a = ((180 + (i * 360) / n - 90) * Math.PI) / 180;
@@ -82,17 +83,17 @@ test("C2 C3 C7 the design's gradients and colours", () => {
   const stops = r.stage.all((e) => e.tagName === "RADIALGRADIENT");
   const g = (id: string) => stops.find((s) => attr(s, "id").endsWith("-" + id))!;
   ok(g("cat") && attr(g("cat"), "r") === "116");
-  eq(g("wedge").children.map((s) => attr(s, "offset")), ["0.5", "1"]);
+  eq(g("wedge").children.map((s) => attr(s, "offset")), ["0.55", "1"]);
   eq(attr(g("wedgeAcc"), "r"), "212");
-  eq(attr(g("catActive").children[0], "stop-color"), "#264F78");
+  eq(attr(g("catActive").children[0], "stop-color"), "#264f78");
   const active = by(r, "rm-cat")[0];
   ok(attr(active, "fill").includes("catActive"));
-  // icons: active category #AEDAFF, others #BEBEC8
+  // icons: the active category's in the accent blue, others #9a9aa4 (final_blue.png)
   const icons = r.stage.all((e) => e.attrs.has("data-icon") && e.parentNode?.classList.contains("rm-inner") === true);
   const cols = (g: FakeElement) => g.all((e) => e !== g).map((e) => attr(e, "stroke") || attr(e, "fill"));
-  ok(cols(icons[0]).includes("#AEDAFF"), String(cols(icons[0])));
-  ok(cols(icons[1]).includes("#BEBEC8"));
-  eq(g("cat").children.map((s) => attr(s, "stop-color")), ["#24242F", "#131319"], "stop colours as attributes, no style");
+  ok(cols(icons[0]).includes("currentColor") && icons[0].classList.contains("rm-accent"), String(cols(icons[0])));
+  ok(cols(icons[1]).includes("#9a9aa4"));
+  eq(g("cat").children.map((s) => attr(s, "stop-color")), ["#1b1b23", "#15151b"], "stop colours as attributes, no style");
 });
 
 test("S3 M5 a category tap switches the actions (no back) and replays the bloom", () => {
@@ -212,7 +213,7 @@ test("F2 F3 M10 ★ favorite: saved with a toast and the pulse; the open SAVED r
   ok(r.m.toastText === null);
   tap(r, cat(2, 4)); // GIT
   r.clock.tick(600);
-  r.stage.dispatchEvent(pointer("pointerdown", RIGHT[0], RIGHT[1], 11)); // push (2nd of 3 is at 120°, RIGHT is 90°: inside)
+  r.stage.dispatchEvent(pointer("pointerdown", RIGHT[0], RIGHT[1], 11)); // push (the 2nd of six wedges, at 60°)
   r.clock.tick(540);
   eq(r.m.tipShown?.id, "push");
   by(r, "rm-tip-fav")[0].dispatchEvent({ type: "click" });

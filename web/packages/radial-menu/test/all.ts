@@ -5,6 +5,7 @@ import "./geometry.test";
 import "./motion.test";
 import "./menu.test";
 import "./fab.test";
+import "./look.test";
 import { run } from "./t";
 
 void run();
