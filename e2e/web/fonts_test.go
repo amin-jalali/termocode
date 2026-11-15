@@ -27,13 +27,13 @@ func TestSymbolFontLoadsOnDemand(t *testing.T) {
 		t.Fatalf("fonts fetched with no symbol on screen: %v", got)
 	}
 	c.Send(t, Delta("term:3", 2, map[string]any{"kind": "lines", "first": 2, "last": 2, "lines": []string{" main  ok"}, "tick": 4}))
-	p.WaitJS(`[...document.querySelectorAll('[data-view="term"] .trow-text')].some((e) => e.textContent.includes("main"))`)
+	p.WaitJS(`[...document.querySelectorAll('[data-view="term"] .trow-text, [data-view="term"] .xterm-rows > div')].some((e) => e.textContent.includes("main"))`)
 	p.WaitJS(`document.fonts.check('13px "termocode symbols"', "")`)
 	got := strings.Join(fonts(), " ")
 	if !strings.Contains(got, "nf-powerline.woff2") || !strings.Contains(got, "nf-octicons.woff2") || strings.Contains(got, "nf-devicons.woff2") {
 		t.Errorf("fetched %q; want powerline and octicons only", got)
 	}
-	if fam := Eval[string](p, `getComputedStyle(document.querySelector('[data-view="term"] .trow')).fontFamily`); !strings.HasPrefix(fam, `"termocode symbols"`) {
+	if fam := Eval[string](p, `getComputedStyle(document.querySelector('[data-view="term"] .trow, [data-view="term"] .xterm-rows')).fontFamily`); !strings.HasPrefix(fam, `"termocode symbols"`) {
 		t.Errorf("terminal rows use %s", fam)
 	}
 	if bad := p.Problems(); len(bad) > 0 {

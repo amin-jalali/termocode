@@ -74,7 +74,7 @@ termocode.
 |---|---|
 | **Chat** | Read and write in the AI chat. Answers stream in. Answer the AI's cards. While the AI answers, **Send** puts your message in a line: it goes when the answer ends. Up to 5 wait above the box. **Send now** stops the answer and sends that one next. **Take back** removes one. **Stop** clears the line. |
 | **Files** | Browse the workspace, read files, change lines and send them. Each row's **⋯** makes a new file or folder, renames, deletes, downloads a file or uploads into a folder. |
-| **Term** | Watch the terminals and type into them, with a key bar for Esc, Ctrl, Alt and arrows. |
+| **Term** | The terminal itself: tap it and type, every key goes to the shell. A key bar above the keyboard has Esc, Tab, Ctrl, Alt, the arrows and more. |
 | **Git** | See changes and diffs, stage and unstage, commit. The **⇅** button pushes, pulls, stashes and switches branch. |
 | **More** | Search, **New task** (start an agent on the laptop in a new worktree; see [Worktrees](worktrees.md#start-a-new-task-from-the-phone-or-the-page)), tasks, runs, databases, containers, the MCP server, settings (read only), the theme, text direction and language. |
 
@@ -160,7 +160,13 @@ stop it.
 ## Use it on a phone
 
 The page is made for a phone: big buttons, a tab bar for your thumb, and
-a key bar for the terminal. The easy way to reach it from your phone is
+a real terminal. On the **Term** tab the terminal fills the screen. Tap
+it and the phone keyboard opens; what you type goes straight to the
+shell, as in a terminal app. The key bar sits right above the keyboard:
+Esc, Tab, Ctrl, Alt, -, the arrows, and more when you swipe it (`|`, `~`,
+`/`, Home, End, PgUp, PgDn). Ctrl and Alt hold for the next key; tap
+twice to lock. Swipe the terminal to read older rows. The shells are one
+slim row of tabs at the top, with ⓘ and + at its end. The easy way to reach it from your phone is
 your own [Tailscale](https://tailscale.com) network (your *tailnet*).
 
 ### Turn on tailnet mode

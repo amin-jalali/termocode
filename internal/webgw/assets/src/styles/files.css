@@ -51,9 +51,20 @@
 
 /* Terminal */
 .term-body { padding-top: 0; }
-.term-chips { position: sticky; top: 0; z-index: 2; display: flex; gap: var(--s2); margin: 0 calc(-1 * var(--gutter)) var(--s2); padding: var(--s2) var(--gutter); overflow-x: auto; background: var(--bg); border-bottom: 1px solid var(--border); scrollbar-width: none; }
+/* The phone's terminal (PHONE-TERM): one slim strip, the terminal fills the rest. */
+.pterm-strip { display: flex; align-items: center; gap: var(--s1); padding: 0 var(--s2); border-bottom: 1px solid var(--border); }
+.term-chips { display: flex; flex: 1; min-width: 0; gap: var(--s1); padding-block: 2px; overflow-x: auto; scrollbar-width: none; }
 .term-chip { flex: none; }
-.term-chip .chip { gap: var(--s2); max-width: 14rem; }
+.term-chip .chip { gap: var(--s2); max-width: 12rem; min-height: 32px; }
+.pterm-body { display: flex; flex-direction: column; padding: 0; overflow: hidden; background: var(--bg-panel); }
+.pterm { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.pterm-x { flex: 1; min-height: 0; padding: 2px 0 0 4px; font-family: "termocode symbols", var(--font-mono); -webkit-touch-callout: none; }
+.pterm-x .xterm { height: 100%; }
+.pterm-x .xterm .xterm-viewport { background-color: var(--bg-panel); }
+.pterm-keys { padding-block: var(--s1); }
+.pterm-keys .keybar { margin-top: 0; }
+.pterm-body .term-follow { position: absolute; inset-inline-end: var(--s3); bottom: var(--s3); }
+.pterm-body { position: relative; }
 .term-chip-title { min-width: 0; }
 .term-chip-n { color: var(--muted); }
 .term-rows { -webkit-touch-callout: none; margin-inline: calc(-1 * var(--gutter)); padding-block: var(--s2); background: var(--bg-panel); min-height: 50vh; }
@@ -65,8 +76,7 @@
 .term-follow .chip { pointer-events: auto; background: var(--bg-panel); }
 .bell-dot { align-self: center; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--amber); }
 
-/* Terminal input and key bar */
-.term-line { font-family: var(--font-mono); font-size: var(--fs-row); unicode-bidi: isolate; }
+/* The key bar */
 .keybar { display: flex; gap: var(--s1); margin-top: var(--s2); overflow-x: auto; scrollbar-width: none; }
 .key { flex: none; min-width: var(--tap); min-height: var(--tap); padding: 0 var(--s2); border: 1px solid var(--border); border-radius: var(--r-chip); background: var(--bg-panel); color: var(--text); font-family: var(--font-mono); font-size: var(--fs-row); }
 .key:hover { background: var(--bg-hover); }
