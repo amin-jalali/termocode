@@ -580,7 +580,7 @@ func (m *Model) onMCPWizDone(msg mcpWizDoneMsg) tea.Cmd {
 	if m.setup != nil {
 		m.setup.services = -1 // the setup card counts again
 	}
-	return m.showWizard()
+	return tea.Batch(m.showWizard(), m.afterAddMCPAdded(w.name)) // after_add_mcp.go: its card waits for the connect card
 }
 
 // wizTick redraws the countdown once a second while a step waits.

@@ -112,7 +112,7 @@ func (m *Model) afterAddShowNext() tea.Cmd {
 	if len(st.cards) == 0 || st.shown && m.confirmOpen && m.confirmKind == confirmKindAfterAdd {
 		return nil
 	}
-	if m.confirmOpen {
+	if m.confirmOpen || m.connectOpen { // a dialog or the connect card is open
 		st.shown = false
 		if st.retrying {
 			return nil
