@@ -16,7 +16,6 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { TermItem } from "../../../../../webproto/proto";
 import { rang } from "../../lib/attention";
 import { copyText as copy } from "../../lib/clip";
-import { linkItems } from "../../lib/links";
 import { useLongPress } from "../../lib/longpress";
 import { prefs } from "../../lib/prefs";
 import { go, route } from "../../lib/router";
@@ -39,9 +38,8 @@ import { SkeletonRows } from "../../ui/Skeleton";
 import { KeysSheet } from "../KeysSheet";
 import { Refused } from "../Placeholder";
 import { About, asRows, newTerm, Screen, showOnLaptop } from "../Term";
-import { pendingDraft } from "../../lib/drafts";
 import { toast } from "../../lib/toasts";
-import { addRef, toAttach, type ChatRef } from "../../lib/tochat";
+import { loadPTerm, ptermMod } from "../../lib/pterm";
 import { errText } from "../../ui/CardSheet";
 import { KEYS, MAX_PASTE, PasteSheet, pasting } from "../TermInput";
 import { pressTermKey, setTermInputMode, termInputMode, typeBuf, typeTerm } from "./termtype";
@@ -125,107 +123,6 @@ function closeTerm(buf: number): void {
   link.request("term.close", { buf }).catch((e: unknown) => toast("warn", errText(e)));
 }
 
-/** termRef is rows from..to (from 1) of a shell, for the chat. */
-const termRef = (buf: number, from: number, to: number): ChatRef => ({ kind: "term", id: String(buf), from, to: Math.min(to, from + 1999) });
-
-/** ask sends a request about a shell's rows to the laptop's AI; the
- * answer comes in Chat. */
-function ask(text: string, ref: ChatRef, label: string): void {
-  const a = toAttach(ref, label);
-  link.request("chat.send", { text, attach: a ? [a] : [] }).then(
-    () => toast("ok", t("ph.term.sent")),
-    (e: unknown) => toast("warn", errText(e)),
-  );
-}
-
-/** Chips are the suggestions the last output brings: a failure brings
- * Fix it and Explain error, a failed Go test Run <it>. None: no row. */
-export function termChips(rows: readonly string[]): { fix: boolean; test: string } {
-  const tail = rows.slice(-40);
-  const fix = tail.some((r) => /\bFAIL\b|\berror\b|\bpanic:|command not found|exit status [1-9]/i.test(r));
-  let test = "";
-  for (const r of tail) test = /--- FAIL: (\w+)/.exec(r)?.[1] ?? test;
-  return { fix, test };
-}
-
-/** AIBar is the chips and the "Ask AI to write a command" field above
- * the keys: the AI writes the command into the shell, never runs it. */
-function AIBar({ buf, label, rows, first }: { buf: number; label: string; rows: readonly string[]; first: number }) {
-  const [text, setText] = useState("");
-  const { fix, test } = termChips(rows);
-  const tail = termRef(buf, Math.max(first + 1, first + rows.length - 199), first + rows.length);
-  return (
-    <div class="pterm-ai">
-      {(fix || test) && (
-        <div class="pterm-chips" role="toolbar" aria-label={t("ph.term.ask")}>
-          {fix && (
-            <Chip tone="ai" onClick={() => ask(FIX, tail, label)}>
-              {t("ph.term.fix")}
-            </Chip>
-          )}
-          {fix && <Chip onClick={() => ask(EXPLAIN, tail, label)}>{t("ph.term.explain")}</Chip>}
-          {test && <Chip onClick={() => typeTerm(`go test -run '^${test}$' ./...\r`)}>{t("ph.term.run", { name: test })}</Chip>}
-        </div>
-      )}
-      <form
-        class="pterm-ask"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const v = text.trim();
-          if (!v) return;
-          ask(`Write one shell command for terminal ${label} and type it there without running it: ${v}`, tail, label);
-          setText("");
-        }}
-      >
-        <span class="pterm-ask-ic" aria-hidden="true">
-          ✦
-        </span>
-        <input type="text" enterkeyhint="send" autocomplete="off" placeholder={t("ph.term.ask")} aria-label={t("ph.term.ask")} value={text} onInput={(e) => setText((e.currentTarget as HTMLInputElement).value)} />
-      </form>
-    </div>
-  );
-}
-
-/** LineMenu is a long press on lines (the selection, else the line):
- * Ask AI about them, add them to the chat, copy them, run a prompt line
- * again; then the page's own: Copy all, Paste, the line's links. */
-function LineMenu({ buf, label, lines, end, at, canType, copyAll, onClose }: { buf: number; label: string; lines: Line[]; end: number; at: [number, number]; canType: boolean; copyAll: () => void; onClose: () => void }) {
-  const [a, b] = at;
-  const picked = lines.slice(a, b + 1);
-  const text = picked.map((l) => l.text).join("\n");
-  const n = picked.length;
-  const title = t(n === 1 ? "ph.term.line" : "ph.term.lines", { n, name: label });
-  const ref = termRef(buf, (lines[a]?.row ?? 0) + 1, lines[b + 1]?.row ?? end);
-  const cmd = n === 1 ? /[$#%❯›]\s+(\S.*)$/.exec(text)?.[1].trim() : undefined;
-  const add = () => addRef(ref, title) !== "bad";
-  return (
-    <RowMenu
-      title={title}
-      items={[
-        {
-          label: t("ph.term.ask_about"),
-          pick: () => {
-            if (!add()) return;
-            pendingDraft.value = { text: ASK_ABOUT, notChat: "" };
-            go({ tab: "chat", rest: "", query: {} });
-          },
-        },
-        { label: t("ph.term.to_chat"), pick: () => add() && toast("ok", t("ph.term.added")) },
-        { label: t(n === 1 ? "ph.term.copy1" : "ph.term.copy", { n }), pick: () => copy(text) },
-        ...(cmd && canType ? [{ label: t("item.run_again"), pick: () => typeTerm(cmd + "\r") }] : []),
-        { label: t("term.copy_all"), pick: copyAll },
-        ...(canType ? [{ label: t("term.paste"), pick: () => (pasting.value = true) }] : []),
-        ...linkItems(text),
-      ]}
-      onClose={onClose}
-    />
-  );
-}
-
-const ASK_ABOUT = "Explain these terminal lines.";
-const FIX = "Fix the failure in this terminal's last output.";
-const EXPLAIN = "Explain the error in this terminal's last output.";
-
 /** PasteAsk asks before a paste of several lines goes to the shell. */
 function PasteAsk({ text, onClose }: { text: string; onClose: () => void }) {
   const n = text.replace(/(\r\n?|\n)$/, "").split(/\r\n?|\n/).length;
@@ -269,6 +166,7 @@ function Rows({ buf, item, canType, onEnd }: { buf: number; item: TermItem | und
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const [menu, setMenu] = useState<[number, number] | null>(null);
+  const PT = ptermMod.value;
   const [ask, setAsk] = useState<string | null>(null);
   const [said, setSaid] = useState("");
   const lastY = useRef(0);
@@ -429,7 +327,7 @@ function Rows({ buf, item, canType, onEnd }: { buf: number; item: TermItem | und
           </Button>
         </p>
       )}
-      {menu !== null && <LineMenu buf={buf} label={name(item)} lines={lines} end={first + all.length} at={menu} canType={canType} copyAll={() => copy(xt.current?.text() ?? lines.map((l) => l.text).join("\n"))} onClose={() => setMenu(null)} />}
+      {menu !== null && PT && <PT.LineMenu paste={() => (pasting.value = true)} buf={buf} label={name(item)} lines={lines} end={first + all.length} at={menu} canType={canType} copyAll={() => copy(xt.current?.text() ?? lines.map((l) => l.text).join("\n"))} onClose={() => setMenu(null)} />}
       {ask !== null && <PasteAsk text={ask} onClose={() => setAsk(null)} />}
     </div>
   );
@@ -500,6 +398,7 @@ export function PhoneTermView() {
   const body = useRef<HTMLDivElement | null>(null);
   usePinch(body);
   useEffect(() => link.subscribe("terms"), []);
+  useEffect(loadPTerm, []); // the chips, the Ask AI field and the line menu (pterm.js)
   const termsTopic = store.topic("terms").value;
   const terms = readTerms(termsTopic?.data);
   const r = route.value;
@@ -563,7 +462,7 @@ export function PhoneTermView() {
           </span>
         )}
       </div>
-      {ts && buf !== undefined && controller && snap && !ended && <AIBar buf={buf} label={name(item)} rows={snap.rows} first={snap.first} />}
+      {ts && buf !== undefined && controller && snap && !ended && ptermMod.value && <ptermMod.value.AIBar buf={buf} label={name(item)} rows={snap.rows} first={snap.first} />}
       {ts && buf !== undefined && (controller ? <KeyBar buf={buf} off={!live.value || ended} /> : <div class="composer"><p class="composer-note">{t("viewonly")}</p></div>)}
       {more && buf !== undefined && (
         <RowMenu

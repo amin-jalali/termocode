@@ -371,18 +371,6 @@ export const SP = {
   "ph.term.more": "More for this shell",
   "ph.term.laptop": "Show on the laptop",
   "ph.term.close_n": "Close {name}",
-  "ph.term.ask": "Ask AI to write a command",
-  "ph.term.fix": "✦ Fix it",
-  "ph.term.explain": "Explain this",
-  "ph.term.run": "Run {name}",
-  "ph.term.sent": "Sent to the AI. The answer comes in Chat.",
-  "ph.term.line": "{n} line · terminal {name}",
-  "ph.term.lines": "{n} lines · terminal {name}",
-  "ph.term.ask_about": "✦ Ask AI about this",
-  "ph.term.to_chat": "Add to chat ↩",
-  "ph.term.added": "Added to the chat.",
-  "ph.term.copy1": "Copy {n} line",
-  "ph.term.copy": "Copy {n} lines",
 } as const;
 
 addStrings(SP);
