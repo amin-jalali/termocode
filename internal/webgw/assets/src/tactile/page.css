@@ -1,2 +1,9 @@
 /* The Tactile keyboard in the page (tactile.css, loaded with tactile.js). */
 .tk-host { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; }
+/* While the dock (or its Show keyboard bar) is up, the phone's shell ends
+   above it: the terminal and the editor keep their last row in view. The
+   tab bar and the pill hide while the keyboard is up, as with the system
+   keyboard (html[data-kb="up"]). */
+html:is(.tk-on, .tk-off) .shell:not(.layout-desktop) { height: calc(var(--vvh, 100dvh) - var(--tk-dock-h, 0px)); }
+html.tk-on .layout-phone .tabbar,
+html.tk-on .layout-phone .pill-wrap { display: none; }

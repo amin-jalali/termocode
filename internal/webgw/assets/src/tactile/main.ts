@@ -126,6 +126,7 @@ function ensureDock(host: Host): Dock {
     d.setOptions({ layout: autoCompact(innerWidth, innerHeight) ? "compact" : "full" });
     mark();
   };
+  new ResizeObserver(() => mark()).observe(box); // the strip comes and goes, a drag peeks
   visualViewport?.addEventListener("resize", fit);
   addEventListener("resize", fit);
   dock = d;
@@ -140,7 +141,7 @@ function mark(): void {
   const root = document.documentElement;
   root.classList.toggle("tk-on", on);
   root.classList.toggle("tk-off", !!dock?.attached && !!dock.collapsed);
-  requestAnimationFrame(() => root.style.setProperty("--tk-dock-h", `${dock?.attached ? (box?.offsetHeight ?? 0) : 0}px`));
+  root.style.setProperty("--tk-dock-h", `${dock?.attached ? (box?.offsetHeight ?? 0) : 0}px`);
 }
 
 function toSystem(): void {
