@@ -84,7 +84,10 @@ func TestPhoneApprovesHere(t *testing.T) {
 	gitViews(t, Phone, c, noViews)
 	p.TapJS(`document.querySelector('.gp-row[data-path="src/a.go"] .gp-open')`)
 	reply(t, c, expectOp(t, c, webproto.OpGitDiff, ""), webproto.GitDiff{Path: "src/a.go", Rows: []webproto.DiffRow{}})
-	approveHereDiscard(t, p, c, func() { p.TapJS(ButtonByText("Discard changes…")) }, `"src/a.go"`)
+	approveHereDiscard(t, p, c, func() {
+		p.TapJS(`document.querySelector('[data-act="file-more"]')`) // the diff page's ⋯
+		p.TapJS(ButtonByText("Discard changes…"))
+	}, `"src/a.go"`)
 	p.noOverflow("approve here")
 }
 

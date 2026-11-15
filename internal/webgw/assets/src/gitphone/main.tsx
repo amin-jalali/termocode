@@ -8,6 +8,7 @@ import type { GitHost } from "./api";
 import { readGit } from "../state/git";
 import { Branches } from "./Branches";
 import { Changes } from "./Changes";
+import { DiffPage } from "./DiffPage";
 import { cleanMessage, CommitSheet } from "./CommitSheet";
 import { History } from "./History";
 import { H, h, Fragment, setHost } from "./jsx";
@@ -46,18 +47,19 @@ export function GitPage() {
   if (!st) return <Changes g={{ ...g, loading: true }} stale={false} canAct={false} msg={msg} setMsg={setMsg} onCommit={commit} onAmend={() => setAmend(true)} onDiscard={setDiscard} />;
   return (
     <>
-      {r.query.view === "history" ? <History g={g} /> : <Changes g={g} stale={st.stale === true} canAct={canAct} msg={msg} setMsg={setMsg} onCommit={commit} onAmend={() => setAmend(true)} onDiscard={setDiscard} />}
-      {path && (
-        <H.DiffSheet
-          file={file}
+      {path ? (
+        <DiffPage
           path={path}
+          file={file}
           staged={file ? (staged ? file.staged : !(file.unstaged || file.untracked)) : staged}
           canAct={canAct}
           onSide={(on) => H.go({ tab: "git", rest: path, query: on ? { side: "staged" } : {} }, true)}
-          onClose={close}
-          onStage={(on) => H.stage(path, on)}
           onDiscard={() => setDiscard(path)}
         />
+      ) : r.query.view === "history" ? (
+        <History g={g} />
+      ) : (
+        <Changes g={g} stale={st.stale === true} canAct={canAct} msg={msg} setMsg={setMsg} onCommit={commit} onAmend={() => setAmend(true)} onDiscard={setDiscard} />
       )}
       {r.query.show && <H.ShowSheet hash={r.query.show} onClose={() => H.go({ tab: "git", rest: "", query: r.query.view ? { view: r.query.view } : {} })} />}
       {r.query.sheet === "remote" && g.repo && <Branches g={g} onClose={close} />}
