@@ -50,7 +50,6 @@ func TestPhoneHomeKeyboardKeepsTheComposerInView(t *testing.T) {
 	Eval[bool](p, `(`+homeView+`.querySelector(".home-foot textarea").focus(), true)`)
 	fakeViewport(p, 450, 0)
 	p.WaitJS(`document.documentElement.dataset.kb === "up"`)
-	shotTo(t, p, "home-kb")
 
 	r := Eval[struct{ Top, Bottom float64 }](p, `(() => {
 		const b = `+homeView+`.querySelector(".home-foot .composer").getBoundingClientRect();
@@ -59,6 +58,10 @@ func TestPhoneHomeKeyboardKeepsTheComposerInView(t *testing.T) {
 	if r.Top < 0 || r.Bottom > 450.5 {
 		t.Errorf("the composer is at %.0f–%.0f px, want it inside the visible 0–450 px above the keyboard", r.Top, r.Bottom)
 	}
+
+	// The stream stays at its end: the newest message shows above the box.
+	p.WaitJS(`(() => { const s = ` + homeView + `.querySelector(".home-stream"); return s.scrollHeight - s.scrollTop - s.clientHeight < 2; })()`)
+	shotTo(t, p, "home-kb")
 
 	// The user's message, then its chip under it (not side by side).
 	type box struct{ Top, Bottom, Left, Right float64 }
