@@ -248,7 +248,7 @@ func parseAnthropicSSE(ctx context.Context, r io.Reader, ch chan<- Chunk) Chunk 
 		}
 	}
 	finish := func() Chunk {
-		out := Chunk{Done: true, Usage: finishUsage(model, in, outTok, cacheRead, cacheWrite, seenUsage)}
+		out := Chunk{Done: true, Usage: finishUsage(model, in, outTok, cacheRead, cacheWrite, seenUsage), Cut: stopReason == "max_tokens"}
 		if stopReason == "refusal" {
 			out.Err = anthropicRefusalError
 		}

@@ -227,6 +227,9 @@ type Chunk struct {
 	ToolCalls []ToolCall
 	Blocks    json.RawMessage
 	Usage     *Usage
+	// Cut is set on the Done chunk when the answer stopped at the output
+	// token limit: its last tool call may be cut short.
+	Cut bool
 }
 
 // Provider streams chat completions. Stream never blocks the caller: it
