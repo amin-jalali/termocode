@@ -101,6 +101,7 @@ export function mount(host: HTMLElement, opts: MountOptions): TactileKeyboard {
 
   let keyEls: HTMLElement[] = [];
   let height = 0;
+  let narrow = false;
 
   const engine = new Engine({
     clock: o.clock,
@@ -129,7 +130,8 @@ export function mount(host: HTMLElement, opts: MountOptions): TactileKeyboard {
     height = o.height ?? defaultHeight(w);
     root.style.height = `${height}px`;
     engine.layout(w, height, wantCompact());
-    root.classList.toggle("tk-narrow", isNarrow(w, engine.compact));
+    narrow = isNarrow(w, engine.compact);
+    root.classList.toggle("tk-narrow", narrow);
     build();
   }
 
@@ -190,6 +192,8 @@ export function mount(host: HTMLElement, opts: MountOptions): TactileKeyboard {
       const st = el("span", "tk-legend tk-stack", face);
       el("span", "tk-up", st).textContent = def.shifted;
       el("span", "tk-main", st).textContent = def.main!;
+    } else if (narrow && id === "backspace") {
+      el("span", "tk-legend tk-main", face).textContent = "\u232b"; // upright: the word would be a few px tall
     } else if (def.kind === "letter") {
       el("span", "tk-legend tk-main", face).textContent = def.main!;
     } else if (def.kind === "ai") {
