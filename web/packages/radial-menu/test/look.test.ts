@@ -75,7 +75,9 @@ test("look: one dark disc behind the rings, with the design's stage glow and dro
   eq(d["border-radius"], "50%");
   ok(d["background"].includes("rgba(0, 122, 204, 0.07)"), "the faint blue glow: " + d["background"]);
   ok(d["background"].includes("#15151d") && d["background"].includes("#0c0c11"), "the stage's dark gradient: " + d["background"]);
-  ok(/#000\b/.test(d["box-shadow"]), "the big drop shadow: " + d["box-shadow"]);
+  // the big drop shadow (0 40px 90px -30px #000) as a gradient under the disc
+  eq(stage.byClass("rm-shade").length, 1, "the drop shadow");
+  ok(/radial-gradient\(closest-side, #000\b/.test(decls(".rm-shade")["background"]), "the drop shadow: " + decls(".rm-shade")["background"]);
   ok(DISC_R > RO2, "the disc reaches past the outer ring");
   near(Number(attr(stage.byClass("rm-gapring")[0], "r")), 122);
 });
