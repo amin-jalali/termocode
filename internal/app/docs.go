@@ -343,6 +343,8 @@ var fileOnlySettings = []SettingEntry{
 		Description: "0: off. 1 to 5: a reviewer on the deep model reads a planner's plan and approves it, or sends its reasons back so the planner plans again, at most this many times; then the last plan goes on (plan approval still asks). Each round is one more model request."},
 	{Key: "ai_plan_file", Type: "bool", Default: "false", Category: "AI (file only)",
 		Description: "true: a planned run writes its plan to .termocode/plans/<slug>.md in the workspace: the steps with their tasks, the review rounds, the verify step's evidence and how the run ended (secrets hidden). The file shows as untracked in git unless you ignore it. false (the default): no file."},
+	{Key: "ai_write_needs_read", Type: "bool", Default: "true", Category: "AI (file only)",
+		Description: "true (the default): in a chat, write_file on a file that already exists is refused until the chat has read it (read_file) or written it; the agent is told to read it first or to use edit_file, so it never replaces code it did not see. A new chat starts with nothing read. false: write_file overwrites at once (it still asks or shows the diff as before)."},
 	{Key: "ai_step_stall_minutes", Type: "int", Default: "10", Category: "AI (file only)",
 		Description: "An agent step whose model sends nothing for this many minutes is stopped and started once more; a second stall fails the step. A running tool call (a build, a card that waits for you) is no stall. 0 turns it off; at most 120."},
 	{Key: "ai_team_mode", Type: "bool", Default: "false", Category: "AI (file only)",

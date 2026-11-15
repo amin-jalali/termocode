@@ -29,6 +29,10 @@ func aiTestModel(t *testing.T) Model {
 	// G-PLAN: the plan card has its own tests (ai_plan_approval_test.go);
 	// the other run tests run their plans without it.
 	m.ai.settings.PlanApproval = ai.PlanApprovalAuto
+	// The write guard (ai_write_needs_read) has its own tests
+	// (ai_write_guard_test.go); the other tests write their fixtures unread.
+	off := false
+	m.ai.settings.WriteNeedsRead = &off
 	return m
 }
 

@@ -942,6 +942,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_step_escalate":      aiNever(aiNoAIConfig),
 	"ai_plan_review_rounds": aiNever(aiNoAIConfig),
 	"ai_plan_file":          aiNever(aiNoAIConfig),
+	"ai_write_needs_read":   aiNever(aiNoAIConfig),
 	"ai_keep_going":         aiNever(aiNoAIConfig),
 	"ai_keep_going_turns":   aiNever(aiNoAIConfig),
 	"ai_step_stall_minutes": aiNever(aiNoAIConfig),
