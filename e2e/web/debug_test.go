@@ -20,7 +20,7 @@ const dbgView = `document.querySelector('[data-view="debug"]')`
 // new watch and a removed breakpoint each send the laptop one fixed op;
 // removing every breakpoint asks first, Cancel first and focused.
 func TestDebugViewSteps(t *testing.T) {
-	for _, vp := range Both {
+	for _, vp := range []Viewport{Desktop} { // the phone's page is debugphone_test.go
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openRunView(t, vp, "run", "debug", "debug")
 			c.Send(t, Snap("debug", 1, debugPaused()))

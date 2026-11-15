@@ -37,6 +37,13 @@ export const P = {
   link: "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1",
   copy: "M9 9h11v11H9zM5 15H4V4h11v1",
   more: "M5 12h.01M12 12h.01M19 12h.01",
+  stepOver: "M4 15a8 8 0 0 1 15-3M19 6v6h-6M12 19h.01",
+  stepInto: "M12 4v11M7 10l5 5 5-5M12 20h.01",
+  stepOut: "M12 16V5M7 10l5-5 5 5M12 20h.01",
+  restart: "M4 12a8 8 0 1 0 2.3-5.7M4 4v5h5",
+  stop: "M6 6h12v12H6z",
+  pause: "M8 5v14M16 5v14",
+  watch: "M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6",
 };
 
 export type IconName = keyof typeof P;

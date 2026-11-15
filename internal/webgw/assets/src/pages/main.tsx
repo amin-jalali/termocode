@@ -10,6 +10,7 @@ import { PG } from "./strings";
 
 export type { PagesHost } from "./host";
 export { SettingsPage } from "./settings";
+export { DebugPage } from "./debug";
 
 /** init takes the page's host, once, before a page draws. */
 export function init(host: PagesHost): void {

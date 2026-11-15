@@ -179,7 +179,7 @@ export function MoreView() {
   if (sub === "containers") return <PhoneLazy tkey="more.containers" name="containers" draw={(m) => <m.ContainersView />} />;
   if (sub === "db" || sub.startsWith("db/")) return <PhoneLazy tkey="more.db" name="db" draw={(m) => <m.DBView rest={sub} />} />;
   if (sub === "testing") return <TestingView />;
-  if (sub === "debug") return <DebugView />;
+  if (sub === "debug") return layout.value === "desktop" ? <DebugView /> : <PageLazy tkey="act.run" name="debug" draw={(m) => <m.DebugPage />} />;
   if (sub === "services") return <ServicesView />;
   if (sub === "kube") return <KubeView />;
   if (sub === "phone" && layout.value !== "desktop") return <PhoneHost />;
