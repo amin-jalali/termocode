@@ -419,7 +419,7 @@ func TestAIDBConnectionsAndHistory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"local · postgres localhost:5432/app · environment development · connected", "prod · postgres db.example:5432/app · environment production · not connected", "ro · postgres ro.example:5432/app · environment development · read-only"} {
+	for _, want := range []string{"local · postgres localhost:5432/app · environment development · status: connected", "prod · postgres db.example:5432/app · environment production · status: missing info: password", "ro · postgres ro.example:5432/app · environment development · read-only"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("connections lack %q:\n%s", want, out)
 		}
