@@ -53,6 +53,15 @@ type StoredMessage struct {
 	// Lessons is how many memory lessons (OM-2) went into the prompt of
 	// this user message's turn. Only shown.
 	Lessons int `json:"lessons,omitempty"`
+	// Native (on a user message) is what the model and its tools said in
+	// that turn as the provider saw it: the assistant messages with their
+	// tool calls and the tool results (secrets redacted, results cut),
+	// so the next turns rebuild them instead of the one-line tool rows.
+	// NativeFor is the provider kind (and " tools" for native tool calls)
+	// they are in: another provider gets the rows. Only the last
+	// ai_tool_turns turns keep it.
+	Native    []StoredNative `json:"native,omitempty"`
+	NativeFor string         `json:"native_for,omitempty"`
 	// Memory is how many lessons the memory extractor saved after the
 	// turn that ends with this message (OM-2). Only shown.
 	Memory int `json:"memory,omitempty"`
@@ -192,6 +201,22 @@ type StoredStep struct {
 	// next turn resumes the session while the key is the same.
 	CLISession    string `json:"cli_session,omitempty"`
 	CLISessionKey string `json:"cli_session_key,omitempty"`
+}
+
+// StoredNative is one provider message of a turn (StoredMessage.Native).
+type StoredNative struct {
+	Role    string       `json:"role"` // a Role
+	Content string       `json:"content,omitempty"`
+	Calls   []StoredCall `json:"calls,omitempty"`   // an assistant message's tool calls
+	CallID  string       `json:"call_id,omitempty"` // a tool result's call
+	Tool    string       `json:"tool,omitempty"`    // a tool result's tool name
+}
+
+// StoredCall is one tool call of a StoredNative.
+type StoredCall struct {
+	ID   string         `json:"id"`
+	Name string         `json:"name"`
+	Args map[string]any `json:"args,omitempty"`
 }
 
 // MaxStepBlocks is how many tool blocks a step keeps (webproto
