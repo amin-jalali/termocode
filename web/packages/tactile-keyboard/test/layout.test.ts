@@ -43,9 +43,9 @@ test("A8 A9 A11 full layout math (800x320)", () => {
   near(p[1].x, 8 + innerW0 / 16 + 1.5);
   const num = p.filter((k) => k.row === 1);
   const innerW1 = 800 - 16 - 3 * 13;
-  near(num[0].w, (innerW1 * 1.2) / 16.0, 1e-9, "backquote 1.2 of 16");
+  near(num[0].w, (innerW1 * 1.2) / 15, 1e-9, "backquote 1.2 of 15");
   near(num[0].y, 8 + 0.7 * unit + 3, 1e-9, "row gap 3");
-  near(num[13].w, (innerW1 * 1.8) / 16.0, 1e-9, "backspace 1.8");
+  near(num[13].w, (innerW1 * 1.8) / 15, 1e-9, "backspace 1.8");
   near(num[13].x + num[13].w, 800 - 8, 1e-9, "row ends at the pad");
 });
 
@@ -58,7 +58,7 @@ test("A10 compact drops the fn row, 5 equal rows, gaps 1.5", () => {
   const tab = p.find((k) => k.def.id === "tab")!;
   near(tab.y, 8 + unit + 1.5);
   const innerW = 390 - 16 - 1.5 * 13;
-  near(p[0].w, (innerW * 1.2) / 16);
+  near(p[0].w, (innerW * 1.2) / 15);
 });
 
 test("A12 arrow stack splits into flush up/down halves", () => {

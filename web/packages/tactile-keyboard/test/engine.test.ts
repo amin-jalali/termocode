@@ -361,11 +361,11 @@ test("D1 D2 ticks: press on every key, release for normal, mod, repeat and space
   r.e.up(3);
   eq(r.ticks.slice(4), [false, true]);
   r.tap("caps");
-  eq(r.ticks.slice(6), [false], "caps: press tick only");
+  eq(r.ticks.slice(6), [false, true], "caps: press and release");
   const b = r.down("backspace");
   r.clock.tick(350 + 55);
   r.up(b);
-  eq(r.ticks.slice(7), [false, false, true], "repeat ticks then release");
+  eq(r.ticks.slice(8), [false, false, true], "repeat ticks then release");
 });
 
 test("relayout on size and compact change", () => {
