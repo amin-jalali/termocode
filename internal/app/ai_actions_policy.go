@@ -933,6 +933,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_critic_slot":        aiNever(aiNoAIConfig),
 	"ai_compact":            aiNever(aiNoAIConfig),
 	"ai_cli_resume":         aiNever(aiNoAIConfig),
+	"ai_tool_turns":         aiNever(aiNoAIConfig),
 	"ai_plan_approval":      aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
 	"ai_autopilot":          aiNever(aiNoAIConfig + "; the AI never lowers its own approval cards"),
 	"ai_approval_rules":     aiNever(aiNoAIConfig + "; the AI never writes its own approval rules"),
