@@ -202,6 +202,7 @@ export class RadialMenu {
     this.entranceEl.style.setProperty("inset", PAD + "px");
     // The design's stage, round: one dark disc under the rings, so the
     // page (a light one too) never shows between the wedges.
+    div("rm-shade", this.entranceEl);
     div("rm-disc", this.entranceEl);
     this.svg = this.svgEl("svg", { viewBox: "0 0 600 600", class: "rm-svg", "aria-label": this.s.fabLabel, role: "menu" }) as SVGSVGElement;
     this.entranceEl.appendChild(this.svg);
