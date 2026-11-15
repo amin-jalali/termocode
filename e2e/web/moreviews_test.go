@@ -75,7 +75,7 @@ func TestMCPStatusReadOnly(t *testing.T) {
 				Agents: []webproto.MCPAgent{{Name: "agent-x", Since: 1_700_000_000_000, Calls: 14, Asked: 2}, {Since: 1_700_000_000_000}},
 				Calls:  []string{"12:03 agent-x · read_file · ran without asking"}}))
 			p.WaitJS(`document.querySelectorAll(".mcp-agent").length === 2`)
-			if s := p.Text(".mcp-state"); s != "Listening for outside agents." {
+			if s := p.Text(".mcp-state"); s != "On: agents can connect." {
 				t.Errorf("state %q", s)
 			}
 			if m := p.Text(".mcp-agent .mcp-meta"); !strings.Contains(m, "14 calls, 2 asked") {
@@ -89,11 +89,39 @@ func TestMCPStatusReadOnly(t *testing.T) {
 			}
 			c.Send(t, Delta("mcp", 2, webproto.MCPSnap{Mode: "off", Why: "The MCP server is turned off.", Agents: []webproto.MCPAgent{}, Calls: []string{}}))
 			p.WaitJS(`document.querySelector(".mcp-why")?.textContent === "The MCP server is turned off."`)
-			if s := p.Text(".mcp-state"); s != "Not listening." {
+			if s := p.Text(".mcp-state"); !strings.HasPrefix(s, "Off") {
 				t.Errorf("state %q", s)
 			}
 			p.noOverflow("mcp")
 		})
+	}
+}
+
+// Off and idle (owner, 2026-11-15: "Not listening" and empty sections far
+// apart wasted the whole screen): one short page says what the server is
+// and why it is off; no empty agents or calls sections.
+func TestMCPStatusOffIsCompact(t *testing.T) {
+	p, c := openMoreSub(t, Phone, "mcp", "mcp")
+	c.Send(t, Snap("mcp", 1, webproto.MCPSnap{Mode: "auto", Why: "It starts when you start an agent tab.", Agents: []webproto.MCPAgent{}, Calls: []string{}}))
+	p.WaitJS(`document.querySelector(".mcp-state")`)
+	shotTo(t, p, "mcp-off")
+	if s := p.Text(".mcp-about"); s != "termocode's own MCP server for agent tabs." {
+		t.Errorf("about %q, want what the server is", s)
+	}
+	if s := p.Text(".mcp-state"); s != "Off · It starts when you start an agent tab." {
+		t.Errorf("state %q, want Off and why in one line", s)
+	}
+	if n := Eval[int](p, `document.querySelectorAll(".mcpv .group").length`); n != 0 {
+		t.Errorf("%d empty sections shown while off and idle", n)
+	}
+	if h := Eval[float64](p, `(() => { const v = document.querySelector(".mcpv"); const r = v.getBoundingClientRect(); return v.lastElementChild.getBoundingClientRect().bottom - r.top; })()`); h > 200 {
+		t.Errorf("the page's text takes %.0f px, want it compact (≤ 200)", h)
+	}
+	// A call log stays when there is one, also while off.
+	c.Send(t, Delta("mcp", 2, webproto.MCPSnap{Mode: "auto", Why: "It starts when you start an agent tab.", Agents: []webproto.MCPAgent{}, Calls: []string{"12:03 agent-x · read_file · ran without asking"}}))
+	p.WaitJS(`document.querySelectorAll(".mcp-call").length === 1`)
+	if n := Eval[int](p, `document.querySelectorAll(".mcpv .group").length`); n != 1 {
+		t.Errorf("%d sections with one call, want only Last calls", n)
 	}
 }
 

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<title>Tactile keyboard — preview</title>
+<link rel="stylesheet" href="../src/tactile-keyboard.css">
+<style>
+  html, body { margin: 0; height: 100%; background: #0e0e0e; color: #e8e8e8; font-family: system-ui, sans-serif; }
+  body { display: flex; flex-direction: column; height: 100dvh; }
+  h1 { font-size: 15px; font-weight: 500; margin: 12px 16px 0; }
+  #code { flex: 1; margin: 8px 16px; background: transparent; color: #e8e8e8; border: 0; outline: 0; resize: none; font: 14px/1.5 ui-monospace, monospace; caret-color: #007acc; }
+  #hint, #log { color: #707070; font-size: 11px; text-align: center; margin: 0 0 6px; min-height: 13px; }
+</style>
+</head>
+<body>
+<h1>Tactile keyboard — preview</h1>
+<textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off">func main() {
+  fmt.Println("hello, tactile world")
+}
+</textarea>
+<p id="log"></p>
+<p id="hint">tap = type · drag the spacebar = trackpad · tap a modifier = sticky for one key</p>
+<div id="dock"></div>
+<script type="module" src="demo.js"></script>
+</body>
+</html>

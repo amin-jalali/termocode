@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<title>Radial menu — preview</title>
+<link rel="stylesheet" href="../src/radial-menu.css">
+<style>
+  html, body { margin: 0; min-height: 100%; background: #07070a; color: #9a9aa4; font-family: ui-monospace, monospace; }
+  body { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 24px; box-sizing: border-box; min-height: 100dvh; }
+  #inline { width: min(100%, 480px); }
+  .hint { color: #54545e; font-size: 11.5px; text-align: center; line-height: 1.6; max-width: 440px; }
+  .hint b { color: #9a9aa4; font-weight: 600; }
+</style>
+</head>
+<body>
+<div id="inline"></div>
+<p class="hint">tap the <b>center</b> to open / close · tap a category to switch (no back)<br>tap an action to run · <b>hold</b> it for details &amp; <b>★ favorite</b><br>the floating button: tap to open · <b>hold</b> to pick it up and drag</p>
+<script type="module" src="demo.js"></script>
+</body>
+</html>
