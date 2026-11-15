@@ -165,3 +165,36 @@ func TestPerfGuardTreeLaysOutOnlyWhatIsInView(t *testing.T) {
 	Eval[bool](p, `(`+far+`.scrollIntoView({block: "center"}), true)`)
 	p.WaitJS(far + `.checkVisibility({contentVisibilityAuto: true})`)
 }
+
+// The phone's file list lays out only the rows in view, as the desktop's
+// explorer does: a folder of 1,500 names opened at once was one long
+// task of 590 ms on a phone (4x CPU), most of it the layout and paint of
+// rows far below the screen.
+func TestPerfGuardPhoneTreeLaysOutOnlyWhatIsInView(t *testing.T) {
+	s := StartServer(t)
+	p := NewPage(t, s, Phone)
+	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+	r := StartPerf(p)
+	c := p.Login("c-tree")
+	p.GoTab("files")
+	c.Send(t, Snap("tree", 1, bigTree(200)))
+	p.WaitJS(treeRow("dir000"))
+	r.Throttle(4)
+	sp := r.Measure("open a folder of 1500 (4x)", func() {
+		p.TapJS(treeRow("dir000"))
+		p.WaitJS(treeRow("dir000/inner1499.ts"))
+	})
+	r.Throttle(1)
+	t.Log(sp)
+	far := treeRow("dir000/inner1400.ts")
+	if Eval[bool](p, far+`.checkVisibility({contentVisibilityAuto: true})`) {
+		t.Error("a row 1,400 rows down is laid out while out of view")
+	}
+	if !Eval[bool](p, treeRow("dir000")+`.checkVisibility({contentVisibilityAuto: true})`) {
+		t.Fatal("a row in view is not drawn")
+	}
+	const budget = 400 // ms of the longest task at 4x
+	if sp.MaxLong() > budget {
+		t.Errorf("opening the folder took a %d ms task at 4x CPU (budget %d ms)", sp.MaxLong(), budget)
+	}
+}
