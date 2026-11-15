@@ -171,6 +171,26 @@ shown, and the AI cannot run this command.
 The AI's instructions name each connected service and its access
 ("GitHub is connected as amin-jalali (read only)"), never a token.
 
+### After you connect: the check card
+
+When the **Connected** card closes, termocode checks the new server once.
+It never calls one of the server's tools. One card shows what it found:
+
+- the handshake and how long it took, and whether a sign-in is still
+  needed;
+- the tools by risk: read-only, write, and unknown (a tool with no hints
+  counts as risky; every write still asks first);
+- the token cost of the tool schemas (big lists stay on demand);
+- tool names that are the same as termocode's own tools;
+- links to what you have: a Postgres server and a saved Postgres
+  connection, a GitHub server and this project's GitHub repo;
+- its prompts and resources.
+
+The card has one next step: **Review tools** when there are risky tools,
+else **Open prompts**, else **Open the chat**. **Not now** (or Esc) closes
+it, and termocode does not ask again for that server. The same card shows
+on the web.
+
 ### Where else you meet it
 
 - The AI chat header shows `Connect…` when no service is set up,
