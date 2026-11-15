@@ -3,6 +3,7 @@
 package app
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -37,7 +38,7 @@ func webTestSetting(s webproto.SettingsSnap, key string) (webproto.SettingItem, 
 // allow-listed keys, with the laptop's values; credential, trust and web
 // keys never show, whatever the file holds. A change of the file sends
 // the list again (checked on Update, at most twice a second); nothing
-// changed sends nothing. There is no op that writes a setting.
+// changed sends nothing. Only settings.set writes a setting.
 func TestSettingsAllowlist(t *testing.T) {
 	m := aiTestModel(t)
 	withConfigDir(t)
@@ -72,8 +73,8 @@ func TestSettingsAllowlist(t *testing.T) {
 		t.Fatalf("a secret or a hidden key's value left: %s", raw)
 	}
 	for _, p := range webproto.Ops() {
-		if strings.HasPrefix(p.Op, "settings.") {
-			t.Errorf("%s: the web cannot change settings", p.Op)
+		if strings.HasPrefix(p.Op, "settings.") && (p.Op != webproto.OpSettingsSet || p.Role != webproto.RoleController) {
+			t.Errorf("%s: only settings.set, by a controller, changes a setting", p.Op)
 		}
 	}
 
@@ -115,4 +116,47 @@ func TestSettingsReplayGolden(t *testing.T) {
 	}
 	webReplayCheck(t, h.topics["settings"], c)
 	webReplayGolden(t, webReplayPath("settings", "change"), c)
+}
+
+// Spec (UI page 10, Settings on the phone): settings.set changes an
+// allow-listed setting as the laptop's Settings row does (saved in
+// config.json, read back) and answers with the item as the list now has
+// it; an enum lists its choices. A key off the allowlist (a credential,
+// trust or web key), an unknown key or a value of the wrong type or out
+// of range is refused, and nothing is saved.
+func TestWebSettingsSet(t *testing.T) {
+	r := webThemeRig(t)
+	withConfigDir(t)
+	var it webproto.SettingItem
+	webResData(t, r.call(webproto.OpSettingsSet, &webproto.SettingsSetArgs{Key: "word_wrap", Value: "true"}), &it)
+	if it.Key != "word_wrap" || it.Value != "true" || it.Type != "bool" {
+		t.Fatalf("word_wrap after set: %+v", it)
+	}
+	if got, _ := webTestSetting(webSettingsBuild(), "word_wrap"); got.Value != "true" {
+		t.Errorf("word_wrap not saved: %+v", got)
+	}
+	webResData(t, r.call(webproto.OpSettingsSet, &webproto.SettingsSetArgs{Key: "icons", Value: "ascii"}), &it)
+	if it.Value != "ascii" || it.Type != "enum" || !slices.Contains(it.Choices, "ascii") || !slices.Contains(it.Choices, "auto") {
+		t.Fatalf("icons after set: %+v", it)
+	}
+	webResData(t, r.call(webproto.OpSettingsSet, &webproto.SettingsSetArgs{Key: "tab_size", Value: " 2 "}), &it)
+	if it.Value != "2" {
+		t.Fatalf("tab_size after set: %+v", it)
+	}
+	for _, bad := range []struct{ key, value, code string }{
+		{"tab_size", "99", "bad_request"},
+		{"word_wrap", "maybe", "bad_request"},
+		{"icons", "emoji", "bad_request"},
+		{"ai_auto_approve", "true", "forbidden"},
+		{"secret_store", "plain", "forbidden"},
+		{"web_panel", "off", "forbidden"},
+		{"no_such_setting", "1", "forbidden"},
+	} {
+		if f := r.call(webproto.OpSettingsSet, &webproto.SettingsSetArgs{Key: bad.key, Value: bad.value}); webErrCode(f) != bad.code {
+			t.Errorf("%s=%s: %v, want %s", bad.key, bad.value, f, bad.code)
+		}
+	}
+	if got, _ := webTestSetting(webSettingsBuild(), "tab_size"); got.Value != "2" {
+		t.Errorf("a refused value changed tab_size: %+v", got)
+	}
 }

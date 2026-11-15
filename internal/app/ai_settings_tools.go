@@ -148,6 +148,15 @@ func aiValidateSetting(key, value string) (settingsRow, string, error) {
 	if !ok {
 		return settingsRow{}, "", fmt.Errorf("setting %q can not be set here", key)
 	}
+	return checkSettingValue(e, value)
+}
+
+// checkSettingValue checks a new value of the setting e (its type, range
+// and choices). It returns the Settings row and the value in the form
+// the row stores ("yes" → "true"). The AI's settings_set and the web's
+// settings.set share it.
+func checkSettingValue(e SettingEntry, value string) (settingsRow, string, error) {
+	key := e.Key
 	row, _ := findSettingsRow(e.ID)
 	switch e.Type {
 	case "bool":
