@@ -56,7 +56,24 @@ const BODY: Record<Glyph, string> = {
   system_keyboard: `<circle cx="12" cy="12" r="9" ${S}/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18" ${S}/>`,
 };
 
-/** svg returns the markup of a glyph (aria-hidden; its key has a label). */
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+/** svg returns the markup of a glyph (for tests and server-side use). */
 export function svg(g: Glyph): string {
   return `<svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" focusable="false">${BODY[g]}</svg>`;
+}
+
+/** setIcon draws a glyph into el as SVG elements built one by one from
+ * this file's constant shapes (no markup parsing: the page requires
+ * Trusted Types for HTML). */
+export function setIcon(el: Element, g: Glyph): void {
+  const doc = el.ownerDocument ?? document;
+  const root = doc.createElementNS(SVG_NS, "svg");
+  for (const [k, v] of [["viewBox", "0 0 24 24"], ["width", "1em"], ["height", "1em"], ["aria-hidden", "true"], ["focusable", "false"]]) root.setAttribute(k, v);
+  for (const m of BODY[g].matchAll(/<(\w+)([^>]*)\/>/g)) {
+    const shape = doc.createElementNS(SVG_NS, m[1]);
+    for (const a of m[2].matchAll(/([\w-]+)="([^"]*)"/g)) shape.setAttribute(a[1], a[2]);
+    root.appendChild(shape);
+  }
+  el.replaceChildren(root);
 }

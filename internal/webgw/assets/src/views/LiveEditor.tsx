@@ -12,6 +12,7 @@ import { hl, hlRows, wantHl } from "../lib/hl";
 import { lineComment, mountDesk, setDesk, type DeskHandle } from "../lib/deskeditor";
 import { loadEditor } from "../lib/lazy";
 import { editing, liveStatus, session, setSync, syncs, type LiveSync } from "../lib/live";
+import { tactile } from "../lib/tactile";
 import { toast } from "../lib/toasts";
 import { link, live, store } from "../session";
 import { gutterMarks } from "../lib/gutter";
@@ -132,6 +133,7 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
 
   useEffect(() => {
     let dead = false;
+    let untact: (() => void) | undefined;
     const peek = () => readBuf(store.topic(topic).peek()?.data);
     const d = desk;
     // Live editing together (G-COL): the laptop sees this caret.
@@ -192,6 +194,7 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
         if (d) setDesk(slot, handle as DeskHandle);
         setSync(slot, sync);
         handle.setHl(hlRows(hl.peek(), buf));
+        if (handle.input) untact = tactile(handle.input(), { editor: handle as Required<EditorHandle>, path }); // the phone editor: the Tactile keyboard
         handle.focus();
         setReady(true);
       },
@@ -205,6 +208,7 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
     );
     return () => {
       dead = true;
+      untact?.();
       const mine = syncs.peek().get(slot);
       if (mine && mine.buf === buf) {
         mine.dispose();

@@ -8,7 +8,6 @@
   "types": "src/index.ts",
   "style": "src/tactile-keyboard.css",
   "files": ["src", "README.md"],
-  "sideEffects": ["*.css"],
   "license": "MIT",
   "scripts": {
     "test": "cd ../../.. && go test ./internal/webgw/assets -run TestTactileKeyboardPackage -v",

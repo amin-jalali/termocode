@@ -23,6 +23,7 @@ import type { PhoneInfo, PhonePrefsArgs, PushItem, PushList } from "../../../../
 import { notifyState, perm, turnOff, turnOn } from "../../lib/notify";
 import { canPush } from "../../lib/push";
 import { prefs, setPref } from "../../lib/prefs";
+import { kbPrefs, setKbPrefs, type KbPrefs } from "../../lib/tactileprefs";
 import { ReqError } from "../../net/link";
 import { forgetToken } from "../../net/auth";
 import { forgetThisBrowser } from "../../net/devicekey";
@@ -152,6 +153,47 @@ const onOff = [
   { value: "off", label: t("ph.off") },
   { value: "on", label: t("ph.on") },
 ] as const;
+
+const kb = signal<KbPrefs>(kbPrefs());
+
+const vibChoices = [
+  { value: "0", label: t("ph.off") },
+  { value: "1", label: tp("ph.kb_vib1") },
+  { value: "2", label: tp("ph.kb_vib2") },
+  { value: "3", label: tp("ph.kb_vib3") },
+] as const;
+
+/** KeyboardGroup: the Tactile Code keyboard's settings, kept on this
+ * device only (lib/tactileprefs.ts); they apply on the next focus. */
+function KeyboardGroup() {
+  const k = kb.value;
+  const set = (v: Partial<KbPrefs>) => {
+    setKbPrefs(v);
+    kb.value = kbPrefs();
+  };
+  return (
+    <section class="group" aria-labelledby="ph-kb">
+      <h2 class="group-title" id="ph-kb">
+        {tp("ph.kb")}
+      </h2>
+      <p class="group-text">{tp("ph.kb_body")}</p>
+      <div class="field">
+        <span class="field-label">{tp("ph.kb_on")}</span>
+        <Segmented<"off" | "on"> label={tp("ph.kb_on")} value={k.on ? "on" : "off"} choices={onOff} onChange={(v) => set({ on: v === "on" })} />
+      </div>
+      <div class="field">
+        <span class="field-label">{tp("ph.kb_sound")}</span>
+        <p class="group-text">{tp("ph.kb_sound_body")}</p>
+        <Segmented<"off" | "on"> label={tp("ph.kb_sound")} value={k.sound ? "on" : "off"} choices={onOff} onChange={(v) => set({ sound: v === "on" })} />
+      </div>
+      <div class="field">
+        <span class="field-label">{tp("ph.kb_vib")}</span>
+        <p class="group-text">{tp("ph.kb_vib_body")}</p>
+        <Segmented<"0" | "1" | "2" | "3"> label={tp("ph.kb_vib")} value={String(k.haptic) as "0" | "1" | "2" | "3"} choices={vibChoices} onChange={(v) => set({ haptic: Number(v) })} />
+      </div>
+    </section>
+  );
+}
 
 function ForgetSheet() {
   const root = useRef<HTMLDivElement | null>(null);
@@ -343,6 +385,8 @@ function Body({ d }: { d: PhoneInfo }) {
           </p>
         )}
       </section>
+
+      <KeyboardGroup />
 
       <section class="group phone-danger">
         <Button kind="danger" needsLink onClick={() => (forgetOpen.value = true)}>

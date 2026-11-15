@@ -221,6 +221,19 @@ func loadSources(t *testing.T) (map[string]string, map[string]string) {
 	// src/x/y.ts imports "../../../../webproto/proto": that is
 	// internal/webproto/proto.d.ts seen from internal/webgw/assets/src.
 	files[path.Join("src", "../../../webproto/proto.d.ts")] = string(proto)
+	// The Tactile keyboard package (web/packages/tactile-keyboard), which
+	// src/tactile/main.ts imports: its sources are checked the same way.
+	err = filepath.WalkDir(filepath.Join(tactileDir, "src"), func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || filepath.Ext(p) != ".ts" {
+			return err
+		}
+		b, err := os.ReadFile(p)
+		files[path.Clean(filepath.ToSlash(p))] = string(b) // as seen from src/tactile/main.ts
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	var lock struct {
 		Packages []struct {

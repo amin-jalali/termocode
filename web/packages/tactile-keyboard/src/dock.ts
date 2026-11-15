@@ -4,7 +4,7 @@
 // suggestion strip, the keyboard and a safe-area filler. Collapsed, it is
 // one "Show keyboard" bar.
 import { mount, type MountOptions, type TactileKeyboard } from "./dom";
-import { svg } from "./icons";
+import { setIcon } from "./icons";
 import { SuggestionBar } from "./suggestions";
 
 export interface DockOptions extends MountOptions {
@@ -81,13 +81,13 @@ export function mountDock(host: HTMLElement, opts: DockOptions): Dock {
   sys.setAttribute("type", "button");
   sys.setAttribute("aria-label", labels.system);
   sys.setAttribute("title", labels.system);
-  sys.innerHTML = svg("system_keyboard");
+  setIcon(sys, "system_keyboard");
   div("tk-grab", handle);
   const hide = div("tk-hide", handle, "button");
   hide.setAttribute("type", "button");
   hide.setAttribute("aria-label", labels.hide);
   hide.setAttribute("title", labels.hide);
-  hide.innerHTML = svg("keyboard_hide");
+  setIcon(hide, "keyboard_hide");
   const suggestions = new SuggestionBar(doc);
   body.appendChild(suggestions.el);
   const kbHost = div("tk-dock-kb", body);
@@ -96,7 +96,7 @@ export function mountDock(host: HTMLElement, opts: DockOptions): Dock {
   bar.setAttribute("type", "button");
   bar.hidden = true;
   const barIcon = div("tk-collapsed-icon", bar, "span");
-  barIcon.innerHTML = svg("keyboard");
+  setIcon(barIcon, "keyboard");
   div("tk-collapsed-label", bar, "span").textContent = labels.show;
 
   let height = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, o.height ?? 380));

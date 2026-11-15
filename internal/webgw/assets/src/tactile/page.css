@@ -1,0 +1,2 @@
+/* The Tactile keyboard in the page (tactile.css, loaded with tactile.js). */
+.tk-host { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; }
