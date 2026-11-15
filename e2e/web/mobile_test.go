@@ -49,15 +49,15 @@ func TestVisualViewportKeyboardRefit(t *testing.T) {
 	if Eval[bool](p, `document.documentElement.dataset.kb === "up"`) {
 		t.Fatal("keyboard flag before any input has focus")
 	}
-	Eval[bool](p, termLine+`.focus() || true`)
+	Eval[bool](p, xtermInput+`.focus() || true`)
 	p.resize(Phone.W, 480)
 	p.WaitJS(`document.documentElement.dataset.kb === "up"`)
 	p.WaitJS(`getComputedStyle(document.querySelector(".tabbar")).display === "none"`)
-	p.WaitJS(`(() => { const r = ` + termLine + `.getBoundingClientRect(); return r.bottom <= visualViewport.height && r.top >= 0; })()`)
+	p.WaitJS(`(() => { const r = document.querySelector('[data-view="term"] .keybar').getBoundingClientRect(); return r.bottom <= visualViewport.height && r.top >= 0; })()`)
 	if h := Eval[float64](p, `document.querySelector(".shell").getBoundingClientRect().height`); h > 481 {
 		t.Errorf("the shell is %.0f px tall over a 480 px visible area", h)
 	}
-	Eval[bool](p, termLine+`.blur() || true`)
+	Eval[bool](p, xtermInput+`.blur() || true`)
 	p.resize(Phone.W, Phone.H)
 	p.WaitJS(`document.documentElement.dataset.kb !== "up" && getComputedStyle(document.querySelector(".tabbar")).display !== "none"`)
 	p.noOverflow("after the keyboard")
@@ -191,9 +191,9 @@ const rowFontJS = `parseFloat(getComputedStyle(document.querySelector(%q)).fontS
 // 10 to 24 px, and the same size shows in both views.
 func TestPinchChangesRowFont(t *testing.T) {
 	p, c := openShell(t, Phone)
-	row := `[data-view="term"] .trow`
+	row := `[data-view="term"] .xterm-rows` // the phone's terminal engine
 	before := Eval[float64](p, fmt.Sprintf(rowFontJS, row))
-	p.pinch(`document.querySelector('[data-view="term"] .term-rows')`, 60, 180)
+	p.pinch(`document.querySelector('[data-view="term"] .pterm-x')`, 60, 180)
 	p.WaitJS(fmt.Sprintf(rowFontJS, row) + fmt.Sprintf(" > %f + 4", before))
 	if z := Eval[float64](p, `visualViewport.scale`); z != 1 {
 		t.Errorf("the page zoomed to %v; only the rows should change", z)
@@ -205,7 +205,7 @@ func TestPinchChangesRowFont(t *testing.T) {
 	if !Eval[bool](p, `JSON.parse(localStorage.getItem("termocode.prefs.v1")).rowPx === `+fmt.Sprint(big)) {
 		t.Error("the size is not kept in this device's prefs")
 	}
-	p.pinch(`document.querySelector('[data-view="term"] .term-rows')`, 300, 20)
+	p.pinch(`document.querySelector('[data-view="term"] .pterm-x')`, 300, 20)
 	p.WaitJS(fmt.Sprintf(rowFontJS, row) + " === 10")
 
 	Eval[bool](p, `(location.hash = "#/files/a.go", true)`)
@@ -233,6 +233,9 @@ func TestRowFontButtons(t *testing.T) {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, _ := openShell(t, vp)
 			row := `[data-view="term"] .trow`
+			if vp.Mobile {
+				row = `[data-view="term"] .xterm-rows` // the phone's terminal engine
+			}
 			def := Eval[float64](p, fmt.Sprintf(rowFontJS, row))
 			p.Tap(`[data-view="term"] .term-info-btn, .wb-panel .term-info-btn`) // the desktop has it in the panel title
 			p.Tap(`.font-size .font-bigger`)
@@ -285,7 +288,7 @@ func TestTermRowMenu(t *testing.T) {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, _ := openShell(t, vp)
 			p.stubCopy()
-			row := `[...document.querySelectorAll('[data-view="term"] .trow')].find((r) => r.textContent === "a b c")`
+			row := `[...document.querySelectorAll('[data-view="term"] .trow, [data-view="term"] .xterm-rows > div')].find((r) => r.textContent.trimEnd() === "a b c")`
 			p.TapJS(row)
 			p.Holds(`!`+rowMenu, 600*time.Millisecond)
 			open := func() {
@@ -386,11 +389,11 @@ func TestWakeLockWhileARunStreams(t *testing.T) {
 // the focus gets it back; focus the user put elsewhere stays there.
 func TestRefocusAfterReturn(t *testing.T) {
 	p, _ := openShell(t, Phone)
-	Eval[bool](p, termLine+`.focus() || true`)
+	Eval[bool](p, xtermInput+`.focus() || true`)
 	p.setHidden(true)
-	Eval[bool](p, termLine+`.blur() || true`)
+	Eval[bool](p, xtermInput+`.blur() || true`)
 	p.setHidden(false)
-	p.WaitJS(`document.activeElement === ` + termLine)
+	p.WaitJS(`document.activeElement === ` + xtermInput)
 
 	p.setHidden(true)
 	Eval[bool](p, `document.querySelector('[data-view="term"] .term-info-btn').focus() || true`)

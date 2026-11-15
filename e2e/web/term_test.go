@@ -53,7 +53,7 @@ func showTerm(t *testing.T, p *Page, c *HubConn, snap map[string]any, items ...m
 	topic := fmt.Sprint("term:", snap["buf"])
 	c.WaitSub(t, topic)
 	c.Send(t, Snap(topic, 1, snap))
-	p.WaitJS(termView + `.querySelector(".trow")`)
+	p.WaitJS(termView + `.querySelector(".trow") || ` + termView + `.querySelector(".pterm-x .xterm-rows")?.textContent.trim()`)
 	// The desktop pane focuses its input in an effect after the rows
 	// paint: a check that focuses or selects before it would lose to it.
 	p.WaitJS(`!document.querySelector('[data-view="term"] .dterm-pane.is-focus') || document.activeElement === document.querySelector('[data-view="term"] .dterm-pane.is-focus .dterm-input')`)
@@ -72,16 +72,14 @@ func TestTermRowsReflowFollowAndPick(t *testing.T) {
 			p, c := openTerm(t, vp)
 			showTerm(t, p, c, termSnap(3, 0, 10, "$ echo", "aaaaaaaaaa", "bbb", "done"),
 				termItem(3, "zsh", false, true), termItem(9, "build", true, false))
-			got := termTexts(p)
-			if strings.Join(got, "|") != "$ echo|aaaaaaaaaabbb|done" {
+			if got := xtermRows(p); strings.Join(got, "|") != "$ echo|aaaaaaaaaabbb|done" {
 				t.Errorf("rows %q, want the laptop-wrapped row joined", got)
 			}
 			if !Eval[bool](p, termView+`.querySelector('.term-chip[data-buf="9"] .chip-dot.dot-busy') !== null`) {
 				t.Error("the busy shell's chip has no busy dot")
 			}
-			cs := Eval[[]string](p, `(() => { const s = getComputedStyle(`+termView+`.querySelector(".trow")); return [s.direction, s.unicodeBidi]; })()`)
-			if cs[0] != "ltr" || (cs[1] != "isolate" && cs[1] != "isolate-override") {
-				t.Errorf("terminal rows run %v, want ltr isolated", cs)
+			if d := Eval[string](p, `getComputedStyle(`+termView+`.querySelector(".pterm-x")).direction`); d != "ltr" {
+				t.Errorf("the terminal runs %s, want ltr", d)
 			}
 
 			rows := make([]string, 200)
@@ -89,17 +87,15 @@ func TestTermRowsReflowFollowAndPick(t *testing.T) {
 				rows[i] = fmt.Sprint("out ", i)
 			}
 			c.Send(t, Delta("term:3", 2, map[string]any{"kind": "lines", "first": 4, "last": 4, "lines": rows, "tick": 4}))
-			const atEnd = `(() => { const b = ` + termView + `.querySelector(".view-body"); return b.scrollHeight - b.scrollTop - b.clientHeight < 48; })()`
-			p.WaitJS(`(` + termView + `.innerText.includes("out 199")) && ` + atEnd)
-			Eval[bool](p, `(() => { const b = `+termView+`.querySelector(".view-body"); b.scrollTop = 0; b.dispatchEvent(new Event("scroll")); return true; })()`)
+			const shown = `[...document.querySelectorAll('[data-view="term"] .xterm-rows > div')].map((d) => d.textContent).join("\n")`
+			p.WaitJS(shown + `.includes("out 199")`)
+			// The reader scrolls up: Follow shows, new output leaves the place alone.
+			swipe(p, termView+`.querySelector(".xterm-screen")`, 300)
 			p.WaitJS(termView + `.querySelector(".term-follow .chip")`)
 			c.Send(t, Delta("term:3", 3, map[string]any{"kind": "lines", "first": 204, "last": 204, "lines": []string{"late"}, "tick": 5}))
-			p.WaitJS(termView + `.innerText.includes("late")`)
-			if Eval[bool](p, atEnd) {
-				t.Error("new output pulled the reader down while they read above")
-			}
+			p.Holds(`!`+shown+`.includes("late")`, 300*time.Millisecond)
 			p.TapJS(termView + `.querySelector(".term-follow .chip")`)
-			p.WaitJS(atEnd + ` && !` + termView + `.querySelector(".term-follow")`)
+			p.WaitJS(shown + `.includes("late") && !` + termView + `.querySelector(".term-follow")`)
 
 			p.TapJS(termView + `.querySelector('.term-chip[data-buf="9"] .chip')`)
 			p.WaitJS(`location.hash === "#/term/9"`)
@@ -136,7 +132,13 @@ func TestTermHistoryPages(t *testing.T) {
 		old[i] = fmt.Sprint("row ", i)
 	}
 	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(map[string]any{"first": 0, "rows": old, "more": false})})
-	p.WaitJS(`(() => { const t = [...` + termView + `.querySelectorAll(".trow-text")]; return t.length === 4000 && t[0].textContent === "row 0"; })()`)
+	// The oldest row is now at the top of the terminal's scrollback: Copy
+	// all rows starts with it.
+	p.WaitJS(`!` + termView + `.querySelector(".term-older")`)
+	p.stubCopy()
+	p.press(termView+`.querySelector(".xterm-rows > div")`, rowMenu)
+	p.TapJS(ButtonByText("Copy all rows"))
+	p.WaitJS(`window.__copied?.startsWith("row 0\nrow 1\n") && window.__copied.endsWith("row 3999")`)
 	if Eval[bool](p, termView+`.querySelector(".term-older") !== null`) {
 		t.Error("Load older rows is still there with nothing older")
 	}
@@ -176,37 +178,23 @@ func tapKey(p *Page, label string) {
 	p.TapJS(`[...` + termView + `.closest(".view").querySelectorAll(".keybar .key")].find((k) => k.textContent === ` + jsq(label) + `)`)
 }
 
-const termLine = `document.querySelector('[data-view="term"] .term-line')`
-
-// The command line sends a line with Enter (or Send); the key bar sends
-// Esc and arrows; Ctrl and Alt are sticky for one key, locked on a second
-// tap; ^C is term.interrupt; every key is at least 44 px.
+// The terminal itself takes the typing (phoneterm_test.go); the key bar
+// sends Esc and arrows; Ctrl and Alt are sticky for one key, locked on a
+// second tap; ^C is term.interrupt; every key is at least 44 px.
 func TestTermTypeKeysAndInterrupt(t *testing.T) {
 	for _, vp := range []Viewport{Phone} { // the desktop types into the shell: deskterm_test.go
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openTerm(t, vp)
 			showTerm(t, p, c, termSnap(3, 0, 80, "$ "), termItem(3, "zsh", false, true))
-			p.TapJS(termLine)
-			p.Key("echo hi")
-			p.WaitJS(termLine + `.value === "echo hi"`)
-			if vp.Mobile {
-				p.TapJS(`document.querySelector('[data-view="term"] .term-input .send .btn')`)
-			} else {
-				p.Key("\r")
+			p.TapJS(termView + `.querySelector(".pterm-x .xterm-screen")`)
+			p.WaitJS(`document.activeElement === ` + xtermInput)
+			typeLetters(p, "hi")
+			if a, b := expectSend(t, c), expectSend(t, c); a+b != "hi" {
+				t.Fatalf("typing sent %q %q", a, b)
 			}
-			if got := expectSend(t, c); got != "echo hi\r" {
-				t.Fatalf("sent %q, want the line and Enter", got)
-			}
-			p.WaitJS(termLine + `.value === ""`)
-
-			// Thumb-sized keys on a phone; a desktop's are a mouse's (22 px).
-			min := 44
-			if !vp.Mobile {
-				min = 22
-			}
-			small := Eval[[]float64](p, fmt.Sprintf(`[...document.querySelectorAll('[data-view="term"] .keybar .key')].map((k) => Math.min(k.getBoundingClientRect().width, k.getBoundingClientRect().height)).filter((s) => s < %d)`, min))
+			small := Eval[[]float64](p, `[...document.querySelectorAll('[data-view="term"] .keybar .key')].map((k) => Math.min(k.getBoundingClientRect().width, k.getBoundingClientRect().height)).filter((s) => s < 44)`)
 			if len(small) > 0 {
-				t.Errorf("keys smaller than %d px: %v", min, small)
+				t.Errorf("keys smaller than 44 px: %v", small)
 			}
 			for _, k := range []struct{ key, want string }{{"Esc", "\x1b"}, {"↑", "\x1b[A"}, {"Tab", "\t"}} {
 				tapKey(p, k.key)
@@ -214,26 +202,11 @@ func TestTermTypeKeysAndInterrupt(t *testing.T) {
 					t.Errorf("%s sent %q, want %q", k.key, got, k.want)
 				}
 			}
-			// Ctrl for one key.
-			tapKey(p, "Ctrl")
-			p.TapJS(termLine)
-			p.Key("c")
-			if got := expectSend(t, c); got != "\x03" {
-				t.Errorf("Ctrl then c sent %q", got)
-			}
-			if Eval[string](p, termLine+`.value`) != "" {
-				t.Error("the Ctrl key's letter went into the line")
-			}
-			p.Key("x")
-			p.WaitJS(termLine + `.value === "x"`)
-			setInput(p, termLine, "")
 			// Ctrl locked: every letter is a control key until Ctrl is tapped again.
 			tapKey(p, "Ctrl")
 			tapKey(p, "Ctrl")
 			p.WaitJS(`document.querySelector('[data-view="term"] .key.is-locked')`)
-			p.TapJS(termLine)
-			p.Key("a")
-			p.Key("b")
+			typeLetters(p, "ab")
 			if a, b := expectSend(t, c), expectSend(t, c); a != "\x01" || b != "\x02" {
 				t.Errorf("locked Ctrl sent %q %q", a, b)
 			}
@@ -338,8 +311,12 @@ func TestTermScreenModeGrid(t *testing.T) {
 			p.WaitJS(`(` + toastsJS + `).includes("Shown on the laptop")`)
 
 			p.TapJS(`[...` + termView + `.querySelectorAll(".term-banner .btn")].find((b) => b.textContent === "Rows")`)
-			p.WaitJS(`!` + termView + `.querySelector(".term-screen") && ` + termView + `.querySelector(".term-rows")`)
+			p.WaitJS(`!` + termView + `.querySelector(".term-screen") && ` + termView + `.querySelector(".term-rows, .pterm-x")`)
 			// The about sheet turns screen mode back on.
+			if vp.Mobile { // the toast sits over the phone's slim strip: close it first
+				p.TapJS(`document.querySelector(".toast-x")`)
+				p.WaitJS(`!document.querySelector(".toast")`)
+			}
 			p.TapJS(`document.querySelector(".term-info-btn")`)
 			p.WaitJS(`document.querySelector(".sheet .term-about")?.innerText.includes("the laptop's (100 columns)")`)
 			p.TapJS(`[...document.querySelectorAll(".sheet .term-toggles .chip")].find((b) => b.textContent === "Screen mode")`)
@@ -347,17 +324,18 @@ func TestTermScreenModeGrid(t *testing.T) {
 			p.TapJS(`[...document.querySelectorAll(".sheet .btn")].find((b) => b.textContent === "Close")`)
 
 			c.Send(t, Delta("term:3", 4, map[string]any{"kind": "mode", "screen": false, "cols": 100, "height": 4}))
-			p.WaitJS(`!` + termView + `.querySelector(".term-screen") && ` + termView + `.querySelector(".term-rows")`)
+			p.WaitJS(`!` + termView + `.querySelector(".term-screen") && ` + termView + `.querySelector(".term-rows, .pterm-x")`)
 		})
 	}
 }
 
 // Wrap off: long rows scroll sideways inside the rows box, not the page.
+// The desktop's rows; the phone's terminal engine wraps as a terminal does.
 func TestTermWrapToggle(t *testing.T) {
-	p, c := openTerm(t, Phone)
+	p, c := openTerm(t, Desktop)
 	showTerm(t, p, c, termSnap(3, 0, 0, strings.Repeat("long-row-", 30)), termItem(3, "zsh", false, true))
 	h0 := Eval[float64](p, termView+`.querySelector(".trow").getBoundingClientRect().height`)
-	p.TapJS(termView + `.querySelector(".term-info-btn")`)
+	p.TapJS(`document.querySelector(".term-info-btn")`) // in the panel title on the desktop
 	p.TapJS(`[...document.querySelectorAll(".sheet .term-toggles .chip")].find((b) => b.textContent === "Wrap")`)
 	p.WaitJS(termView + `.querySelector(".term-rows.is-nowrap")`)
 	if h1 := Eval[float64](p, termView+`.querySelector(".trow").getBoundingClientRect().height`); h1 >= h0 {
