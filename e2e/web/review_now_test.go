@@ -87,7 +87,7 @@ func TestReviewPhoneOrder(t *testing.T) {
 		rows[3].State != "notrun" || !strings.Contains(rows[3].Tail, "not run") {
 		t.Errorf("proof rows %+v", rows)
 	}
-	acts := Eval[[]string](p, `[...document.querySelectorAll(".rv-page .rv-acts button")].map((b) => b.textContent.trim())`)
+	acts := Eval[[]string](p, `[...document.querySelectorAll(".rv-page .rv-acts .btn")].map((b) => b.textContent.trim())`)
 	if strings.Join(acts, "|") != "Open O|Skip S|Comment C|Approve & next A" {
 		t.Errorf("actions %q", acts)
 	}
