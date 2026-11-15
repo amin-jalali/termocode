@@ -82,16 +82,17 @@ test("C2 C3 C7 the design's gradients and colours", () => {
   const stops = r.stage.all((e) => e.tagName === "RADIALGRADIENT");
   const g = (id: string) => stops.find((s) => attr(s, "id").endsWith("-" + id))!;
   ok(g("cat") && attr(g("cat"), "r") === "116");
-  eq(g("cat").children.map((s) => attr(s, "style")), ["stop-color:#24242F", "stop-color:#131319"]);
   eq(g("wedge").children.map((s) => attr(s, "offset")), ["0.5", "1"]);
   eq(attr(g("wedgeAcc"), "r"), "212");
-  ok(attr(g("catActive").children[0], "style").includes("#264F78"));
+  eq(attr(g("catActive").children[0], "stop-color"), "#264F78");
   const active = by(r, "rm-cat")[0];
   ok(attr(active, "fill").includes("catActive"));
   // icons: active category #AEDAFF, others #BEBEC8
   const icons = r.stage.all((e) => e.attrs.has("data-icon") && e.parentNode?.classList.contains("rm-inner") === true);
-  ok(icons[0].innerHTML.includes("#AEDAFF"), icons[0].innerHTML);
-  ok(icons[1].innerHTML.includes("#BEBEC8"));
+  const cols = (g: FakeElement) => g.all((e) => e !== g).map((e) => attr(e, "stroke") || attr(e, "fill"));
+  ok(cols(icons[0]).includes("#AEDAFF"), String(cols(icons[0])));
+  ok(cols(icons[1]).includes("#BEBEC8"));
+  eq(g("cat").children.map((s) => attr(s, "stop-color")), ["#24242F", "#131319"], "stop colours as attributes, no style");
 });
 
 test("S3 M5 a category tap switches the actions (no back) and replays the bloom", () => {
@@ -354,4 +355,16 @@ test("P5 mountMenu draws the design's page inline: closed hub first", () => {
   ok(host.byClass("rm-inline").length === 1);
   ok(!m.open);
   near(m.box.side, 0);
+});
+
+test("Trusted Types: the menu builds its DOM from nodes, never from markup", () => {
+  const r = rig({ favorites: ["open"] });
+  r.stage.dispatchEvent(pointer("pointerdown", TOP[0], TOP[1], 30));
+  r.clock.tick(540);
+  ok(r.m.tipShown, "the card is open");
+  const marked = r.stage.all((e) => e.innerHTML !== "" || e.attrs.has("style"));
+  eq(marked.map((e) => e.tagName), []);
+  const icon = by(r, "rm-tip-ic")[0];
+  eq(icon.children[0]?.tagName, "SVG", "the card's icon is an svg element");
+  ok(icon.children[0].children.length > 0, "with its shapes");
 });
