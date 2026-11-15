@@ -155,13 +155,19 @@ func aiCLIInstructions(root string, served []ai.Tool, write bool) string {
 		b.WriteString("This step only reads (its Tools setting): your own tools are read-only.\n")
 	}
 	b.WriteString("Your own shell has no network: the only way to servers, containers and databases is termocode's tools.\n")
+	b.WriteString(aiDoctrine(served, true, write))
 	return b.String()
 }
 
 // aiWithToolGuide puts the tool guide of tools right after the identity
-// paragraph of base (at the end when base has none).
+// paragraph of base (at the end when base has none). A plain step also
+// gets the doctrine after the guide; a CLI step (viaMCP) has it in its
+// instructions (aiCLIInstructions).
 func aiWithToolGuide(base string, tools []ai.Tool, viaMCP bool) string {
 	g := aiToolGuide(tools, viaMCP)
+	if !viaMCP {
+		g += aiDoctrine(tools, false, false)
+	}
 	if g == "" {
 		return base
 	}
@@ -170,4 +176,56 @@ func aiWithToolGuide(base string, tools []ai.Tool, viaMCP bool) string {
 		return base[:i] + g + base[i:]
 	}
 	return base + "\n" + g
+}
+
+// aiDoctrine is how the AI works a task: short lines, each only when the
+// step has a tool to follow it (tools; cli: a CLI step, whose own file,
+// search and shell tools always read; write: they may change files).
+func aiDoctrine(tools []ai.Tool, cli, write bool) string {
+	has := func(names ...string) []string {
+		var out []string
+		for _, n := range names {
+			if _, ok := ai.FindTool(tools, n); ok {
+				out = append(out, n)
+			}
+		}
+		return out
+	}
+	var b strings.Builder
+	b.WriteString("How you work:\n- First say in one line what the owner wants and how you will do it.\n")
+	reads := has("read_file", "search", "glob", "list_dir")
+	if cli {
+		reads = append([]string{"your own file and search tools"}, reads...)
+	}
+	if len(reads) > 0 {
+		b.WriteString("- Explore first, in parallel: make several read calls in one reply (" + strings.Join(reads, ", ") + ")")
+		if len(has("agent_run_start")) > 0 {
+			b.WriteString("; for a wide search, start runs whose steps only read, side by side (agent_run_start)")
+		}
+		b.WriteString(". Stop searching once you know enough to act; do not read the same thing twice.\n")
+	}
+	var proof []string
+	if cli {
+		proof = append(proof, "test, build or command output from your shell")
+	}
+	for _, p := range [][2]string{{"diagnostics", "diagnostics after an edit"}, {"tests_run", "tests_run results"},
+		{"tasks_run", "tasks_run output"}, {"run_command", "run_command output"}} {
+		if len(has(p[0])) > 0 {
+			proof = append(proof, p[1])
+		}
+	}
+	if len(proof) > 0 {
+		b.WriteString("- Never say done without proof: " + strings.Join(proof, ", ") + ".\n")
+	}
+	edits := has("edit_file", "write_file", "create_file")
+	if len(edits) > 0 || (cli && write) {
+		b.WriteString("- After 2-3 fixes that fail: stop, undo them, think again or ask the owner.\n")
+	}
+	b.WriteString("- Write one short line before you explore and before a big edit.\n" +
+		"- A question to the owner ends your turn; without one, finish every step before you answer.\n")
+	if len(edits) == 0 && !cli {
+		b.WriteString("- When the owner asks you to change the OPEN FILE, reply with the COMPLETE updated file in ONE fenced code block " +
+			"(real code, not json): the owner reviews it in a side-by-side diff and applies it with one click.\n")
+	}
+	return b.String()
 }
