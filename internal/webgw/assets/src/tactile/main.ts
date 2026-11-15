@@ -20,6 +20,9 @@ export interface Sink {
   /** pad: how the spacebar trackpad moves: "arrows" sends ← → only (a
    * shell line), "caret" moves the caret in all four ways (an editor). */
   pad: "arrows" | "caret";
+  /** inputMode sets the focus target's inputmode when the surface keeps
+   * it itself (the terminal); else bind sets the attribute. */
+  inputMode?(m: "none" | "text"): void;
   /** suggest refreshes the suggestion strip after a key (an editor). */
   suggest?(bar: SuggestionBar): void;
 }
@@ -85,7 +88,7 @@ const FA = { hide: "پنهان کردن صفحه‌کلید", show: "نمایش 
 
 let dock: Dock | undefined;
 let box: HTMLElement | undefined;
-let cur: { el: HTMLElement; sink: Sink } | undefined;
+let cur: { el: HTMLElement; sink: Sink; mode(m: "none" | "text"): void } | undefined;
 let system: HTMLElement | undefined; // the surface the user switched to the system keyboard
 const vib = webVibrate();
 
@@ -150,7 +153,7 @@ function toSystem(): void {
   system = el;
   dock.detach(el);
   mark();
-  el.setAttribute("inputmode", "text");
+  cur?.mode("text");
   el.blur();
   el.focus(); // inside the tap: the system keyboard opens
 }
@@ -161,18 +164,16 @@ const focused = (el: HTMLElement): boolean => (el.getRootNode() as Document | Sh
  * it has focus. Returns unbind. */
 export function bind(el: HTMLElement, spec: Sink | EditorSpec, host: Host): () => void {
   const sink = "editor" in spec ? editorSink(spec) : spec;
+  const mode = (m: "none" | "text"): void => (sink.inputMode ? sink.inputMode(m) : el.setAttribute("inputmode", m));
   const off3 = threeFingerToggle(el, { toggleCollapsed: () => (dock?.toggleCollapsed(), mark()) });
   const onFocus = (): void => {
     if (system === el) return;
     const p = kbPrefs();
-    if (!p.on) {
-      el.removeAttribute("inputmode");
-      return;
-    }
-    el.setAttribute("inputmode", "none");
+    if (!p.on) return mode("text");
+    mode("none");
     const d = ensureDock(host);
     d.setOptions({ soundOn: p.sound, hapticLevel: p.haptic });
-    cur = { el, sink };
+    cur = { el, sink, mode };
     d.suggestions.clear();
     d.attach(el);
     mark();
@@ -183,14 +184,14 @@ export function bind(el: HTMLElement, spec: Sink | EditorSpec, host: Host): () =
       if (focused(el)) return;
       if (system === el) {
         system = undefined;
-        el.setAttribute("inputmode", "none");
+        mode("none");
       }
       dock?.detach(el);
       if (cur?.el === el) cur = undefined;
       mark();
     });
   };
-  if (kbPrefs().on) el.setAttribute("inputmode", "none");
+  if (kbPrefs().on) mode("none");
   el.addEventListener("focus", onFocus);
   el.addEventListener("blur", onBlur);
   if (focused(el)) onFocus();
@@ -198,7 +199,8 @@ export function bind(el: HTMLElement, spec: Sink | EditorSpec, host: Host): () =
     off3();
     el.removeEventListener("focus", onFocus);
     el.removeEventListener("blur", onBlur);
-    el.removeAttribute("inputmode");
+    if (sink.inputMode) sink.inputMode("text");
+    else el.removeAttribute("inputmode");
     dock?.detach(el);
     if (cur?.el === el) cur = undefined;
     if (system === el) system = undefined;

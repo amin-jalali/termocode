@@ -7,3 +7,7 @@
 html:is(.tk-on, .tk-off) .shell:not(.layout-desktop) { height: calc(var(--vvh, 100dvh) - var(--tk-dock-h, 0px)); }
 html.tk-on .layout-phone .tabbar,
 html.tk-on .layout-phone .pill-wrap { display: none; }
+/* The phone terminal's key bar hides while the keyboard is up: the
+   keyboard has its keys (Esc is fn + `, Home/End fn + ← →, PgUp/PgDn
+   fn + ↑ ↓). */
+html.tk-on .pterm-keys { display: none; }
