@@ -293,6 +293,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 	base := m.aiChatBasePrompt(root, rules, memBlock)
 	hist := m.aiChatHistoryN("", msgIdx)
 	user := hist[len(hist)-1].Content
+	cliMem := s.aiCLIMemoryOf(run, prof, msgIdx, hist) // a chat's CLI steps go on in their own sessions
 	mcpTools := m.aiMCPTurn(gen, ch)
 	mcpLines := ""
 	if mcpTools != nil {
@@ -439,8 +440,10 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 			// where the CLI's own skills and sandbox text cannot win
 			spec.Instructions = aiCLIInstructions(root, served, spec.Write)
 			// termocode's context first, then the step (CS-1 got only the step)
-			prompt := aiCLIPrompt(ctx, dir, aiWithToolGuide(nodeBase, served, true)+sys, input+wts.othersNote(n.ID), handoff)
-			res, err := aiCLIRun(ctx, spec, prompt, emit)
+			mkPrompt := func(earlier string) string {
+				return aiCLIPrompt(ctx, dir, aiWithToolGuide(nodeBase, served, true)+sys, earlier+input+wts.othersNote(n.ID), handoff)
+			}
+			res, err := cliMem.run(ctx, n, spec, mkPrompt, emit, call)
 			return res.Text, res.Usage, err
 		},
 		Build: func(ctx context.Context, n agentdag.Node, input string) (*ai.Agent, []ai.Message, error) {

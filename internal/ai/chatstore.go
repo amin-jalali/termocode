@@ -186,6 +186,12 @@ type StoredStep struct {
 	// Blocks are the visual blocks of the step's tool calls (MOB-10, as
 	// StoredMessage.Block of a tool line), the newest MaxStepBlocks.
 	Blocks []blocks.Block `json:"blocks,omitempty"`
+	// CLISession is the CLI's own session id of this step's last run
+	// (Codex's thread id, Claude Code's session_id; "": none) and
+	// CLISessionKey what it ran with (CLI, model, profile): the chat's
+	// next turn resumes the session while the key is the same.
+	CLISession    string `json:"cli_session,omitempty"`
+	CLISessionKey string `json:"cli_session_key,omitempty"`
 }
 
 // MaxStepBlocks is how many tool blocks a step keeps (webproto
@@ -217,9 +223,11 @@ type Conversation struct {
 	Reasoning string `json:"reasoning,omitempty"`
 	// Todos is the AI's todo list for this chat (todo_write, OMX-7) and
 	// KeepGoing whether a turn that ends with open todos sends the next
-	// "keep going" message by itself (AI: Toggle Keep Going).
-	Todos     []Todo `json:"todos,omitempty"`
-	KeepGoing bool   `json:"keep_going,omitempty"`
+	// "keep going" message by itself (AI: Toggle Keep Going): on when
+	// KeepGoing is set, off when KeepGoingOff is, else ai_keep_going.
+	Todos        []Todo `json:"todos,omitempty"`
+	KeepGoing    bool   `json:"keep_going,omitempty"`
+	KeepGoingOff bool   `json:"keep_going_off,omitempty"`
 	// Schedule makes the chat run again by itself (CMP-43, chatsched.go).
 	Schedule *ChatSchedule `json:"schedule,omitempty"`
 	// Home marks the background chat of a paired phone (MOB-16: the web's

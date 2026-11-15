@@ -1210,6 +1210,17 @@ answer and the work so far as a git diff (`git status --short` and
 A verify step ends with `VERDICT: PASS` or `VERDICT: FAIL`, as in
 [Work until done](#work-until-done).
 
+**The next turn.** Each chat turn starts the CLI again. So that it
+knows the earlier turns, a step goes on in the CLI's own session: Codex
+as `codex exec resume <id>`, Claude Code with `--resume <id>`. The id is
+kept with the step in the chat. When there is no session yet, the
+resume fails, or the step now runs another CLI, model or profile, the
+step starts a new session and gets the recent turns (your messages and
+the answers, the newest kept, at most 16 KB) before the new message. When
+a resume fails, the card says the earlier session could not go on. Set
+`"ai_cli_resume": "off"` in config.json to start a new session on every
+turn (the recent turns still go in the prompt).
+
 **Cost.** A subscription step shows its time and the tokens the CLI
 reports. Its cost says **subscription**, not dollars. It does not count
 in `budget_usd` or the day budget.
@@ -1374,12 +1385,13 @@ you change an answer.
 | `ai_router` | `{}` | [Auto model pick](#auto-model-pick) of plain chat turns: `mode` auto or off, `quick` and `deep` slots, word `rules`. |
 | `ai_parallel_max` | `1` | How many steps may run at the same time (at most 8). With 1, steps run in order and `deps` is refused. A planned run uses 3 when this is not set. |
 | `ai_worktrees` | `auto` | `auto`: writing steps that run at the same time get [their own worktree](#own-worktrees-for-parallel-steps). `off`: every step works in your tree. |
+| `ai_cli_resume` | `on` | [Subscription steps](#subscription-steps-claude-code-and-codex): the next chat turn goes on in the CLI's own session. `off`: a new session each turn, with the recent turns in the prompt. |
 | `ai_team_mode` | `false` | [Team mode](#team-mode-experimental): steps that run at the same time get notes between them and a shared claim list. |
 | `ai_computer_use` | `false` | [Computer use](ai-use.md#computer-use-experimental): the chat may take screenshots, click and type on your desktop. Every action asks. |
 | `ai_plan_approval` | `ask` | [Approve the plan](#approve-the-plan): `ask` before steps that change files or run commands, `always` for every plan, `auto` never. |
 | `ai_prices` | `{}` | Price overrides, $ per million tokens. |
 | `ai_context_windows` | `{}` | Context window overrides, in tokens. |
-| `ai_max_steps` | `25` | Tool steps per step (a step's `max_steps` wins). |
+| `ai_max_steps` | `100` | Tool steps per step (a step's `max_steps` wins). |
 | `ai_until_done_rounds` | `3` | [Work until done](#work-until-done): how many times verify runs at most (1 to 10). A profile's `loop.max_rounds` wins. |
 | `ai_until_done_budget_usd` | `2` | Work until done: the budget of a run (0 = no budget). A profile's `budget_usd` wins. |
 

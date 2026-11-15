@@ -276,17 +276,20 @@ files, so it asks nothing.
 - It is saved with the chat and sent to the model with every message,
   also after the chat was summarised.
 
-**Keep going** (off by default) makes the AI go on by itself while
-todos are open. Run **AI: Toggle Keep Going While Todos Are Open**; it
-is set per chat.
+**Keep going** (on by default) makes the AI go on by itself while
+todos are open. **AI: Toggle Keep Going While Todos Are Open** turns it
+off or on for one chat; `"ai_keep_going": false` in config.json turns
+it off for every chat that did not turn it on itself.
 
 - When a turn ends with open todos, termocode sends "Keep going: N todos
   are still open" for you. These messages have an **↻ auto · keep going
-  1/3** chip.
-- It stops when every todo is done, after the "work until done" rounds
-  (`ai_until_done_rounds`, default 3), when the auto turns cost the
-  "work until done" budget (`ai_until_done_budget_usd`), when a turn did
-  not change the list, or when a turn failed. The chat says why.
+  1/10** chip.
+- It stops when every todo is done, after `ai_keep_going_turns` auto
+  turns (default 10), when the auto turns cost the "work until done"
+  budget (`ai_until_done_budget_usd`), after 3 auto turns in a row that
+  did not change the list, when the answer ends with a question to you,
+  or when a turn failed. The chat says why.
+- The desktop notice "AI run ended" comes once, when the last turn ends.
 - **Stop** (`Ctrl+C` or **AI: Stop Generating**) ends it at once. Your
   next message starts it again.
 - The AI can not turn it on. Each auto turn costs like a normal one.
@@ -1070,8 +1073,9 @@ tab, and a written one shows the new text (undo with `u`). Git and shell tools
 refresh the git panel, the branch and open files. The agent never overwrites,
 deletes or saves a file whose tab has unsaved edits; it asks you to save first.
 
-The agent stops after 25 tool steps per message and says so. Send "continue"
-to go on. Change the limit with `ai_max_steps` in `config.json`.
+The agent stops after 100 tool steps per message and says so. With keep
+going on (the default) it goes on by itself; else send "continue". Change
+the limit with `ai_max_steps` in `config.json`.
 
 ## Project rules file
 
@@ -1585,4 +1589,4 @@ type and press keys. It is off. Turn it on by hand with
     install the Termux:API app and run `pkg install termux-api`.
 
 **The agent stopped in the middle**
-:   It hit the step limit (25 by default, `ai_max_steps`). Send "continue".
+:   It hit the step limit (100 by default, `ai_max_steps`). With keep going on it goes on by itself; else send "continue".

@@ -70,9 +70,9 @@ func waitAIChat(ch chan tea.Msg) tea.Cmd {
 	}
 }
 
+// aiChatSystemPrompt is the chat's own short rules. How to change the
+// open file when the turn has no edit tools is in aiDoctrine.
 const aiChatSystemPrompt = "Be concise and concrete.\n" +
-	"When the user asks you to change the OPEN FILE, reply with the COMPLETE updated file in ONE fenced code block " +
-	"(real code, not json) — the user reviews it in a side-by-side diff and applies it with one click. " +
 	"For questions, answer in prose (short code snippets are fine). " +
 	"To show data (lists, tables, status), prefer view_show with a spec from view_catalog over writing it out."
 
@@ -257,6 +257,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	if !s.keep.pushing { // OMX-7: a message of the user starts a new keep-going chain
 		s.keep = aiKeepGoingRun{}
 	}
+	s.keep.stepLimit = false
 	prof := s.activeProfile()
 	if name := s.kwProfile; name != "" { // OMX-17: the keyword chip the user kept
 		s.kwProfile = ""
@@ -588,6 +589,7 @@ func (m *Model) onAIChatEvent(msg aiChatEventMsg) tea.Cmd {
 	case ai.EventDone:
 		m.aiAuditUsage(msg.ev)
 		s.aiKeepGoingUsage(msg.ev.Usage)
+		s.keep.stepLimit = msg.ev.StepLimit
 	case ai.EventCompacted: // OMX-3
 		s.aiMarkCompacted(msg.ev.Detail)
 	}
@@ -770,7 +772,11 @@ func (m *Model) onAIChatDone(msg aiChatDoneMsg) tea.Cmd {
 			more = m.aiKeepGoingNext() // OMX-7: open todos, keep going on
 		}
 	}
-	return tea.Batch(cmd, mem, m.notifyOS("AI run ended"), queued, more, m.aiShipOnChatDone()) // OMX-15: ship mode
+	var notice tea.Cmd
+	if !s.streaming { // a stop hook or keep going sent the next turn: the run goes on
+		notice = m.notifyOS("AI run ended")
+	}
+	return tea.Batch(cmd, mem, notice, queued, more, m.aiShipOnChatDone()) // OMX-15: ship mode
 }
 
 // persistAIState stores the open chat id + scroll in session.json.
