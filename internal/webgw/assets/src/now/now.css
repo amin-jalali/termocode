@@ -1,0 +1,76 @@
+/* The phone's Now (now.js): the Home's top, See all, Rules, setup. */
+.now-home { display: flex; flex-direction: column; gap: 12px; padding: 4px 0 8px; }
+.now-sum { margin: 0; padding: 4px 4px 0; font-size: 15px; color: var(--muted); }
+.now-sum strong { color: var(--text); }
+.now-sum-sub { display: block; font-size: 13px; color: var(--muted); }
+.now-note { margin: 0; padding: 8px 12px; border-radius: 10px; background: var(--bg-2); font-size: 13px; color: var(--text-2); }
+.now-note::first-letter { color: var(--blue); }
+.now-sec-h { display: flex; align-items: baseline; gap: 8px; margin: 4px 2px 6px; }
+.now-sec-h h2 { flex: 1; margin: 0; font-size: 16px; }
+.now-n { font-family: var(--font-mono); font-size: 12px; font-weight: 400; color: var(--muted); }
+.now-all { min-height: 32px; padding: 0 4px; background: none; border: 0; color: var(--blue); font: inherit; font-size: 13px; }
+.now-list { margin: 0; padding: 0; list-style: none; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--bg-panel); }
+.now-row + .now-row, .now-rulerow + .now-rulerow { border-top: 1px solid var(--border); }
+.now-row { position: relative; padding: 0 0 8px; }
+.now-line { position: relative; display: flex; }
+.now-open { flex: 1; display: flex; align-items: flex-start; gap: 8px; min-width: 0; min-height: 44px; padding: 10px 12px 2px 8px; background: none; border: 0; color: inherit; font: inherit; text-align: start; }
+.now-open:focus-visible, .now-rule:focus-visible, .now-fix:focus-visible, .now-all:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.now-mark { width: 10px; padding-top: 6px; font-size: 10px; color: var(--amber); }
+.now-tile { font-size: 14px; color: var(--bg); }
+.home-tile.now-tile[data-t="ai"] { background: var(--ai); color: var(--on-ai); }
+.now-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.now-title { font-weight: 600; }
+.now-sub { font-size: 12px; color: var(--muted); }
+.now-age { flex: none; padding-top: 2px; font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.now-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 12px 0 56px; }
+.now-why { padding: 2px 8px; border: 1px solid color-mix(in srgb, var(--amber) 45%, transparent); border-radius: 999px; background: color-mix(in srgb, var(--amber) 14%, transparent); font-size: 12px; color: var(--text); }
+.now-why[data-k="ci_red"] { border-color: color-mix(in srgb, var(--red) 45%, transparent); background: color-mix(in srgb, var(--red) 12%, transparent); }
+.now-rule { padding: 1px 8px; border: 1px dashed var(--ai); border-radius: 999px; background: none; color: var(--ai); font-family: var(--font-mono); font-size: 11px; }
+.now-fix { padding: 2px 10px; border: 0; border-radius: 999px; background: var(--ai); color: var(--on-ai); font: inherit; font-size: 12px; font-weight: 600; }
+.now-whyp { margin: 8px 12px 2px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-2); font-size: 13px; }
+.now-whyp p { margin: 0 0 8px; }
+.now-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.now-acts .btn { min-height: 36px; padding: 0 12px; font-size: 13px; }
+.now-swipe { display: flex; }
+.now-swipe button { width: 72px; border: 0; color: #fff; font: inherit; font-size: 13px; font-weight: 600; }
+.now-sw-later { background: var(--amber); }
+.now-sw-done { background: var(--green); }
+.now-setup { padding: 12px; border: 1px dashed var(--ai); border-radius: 12px; background: var(--bg-panel); }
+.now-setup h2 { margin: 0 0 6px; font-size: 15px; }
+.now-setup ul { margin: 0 0 10px; padding: 0; list-style: none; font-size: 14px; line-height: 1.7; }
+.now-clear { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 48px 12px; text-align: center; }
+.now-clear strong { font-size: 20px; }
+.now-clear p { margin: 0 0 8px; color: var(--muted); }
+.now-check { font-size: 28px; color: var(--green); }
+.now-picks { display: flex; flex-wrap: wrap; gap: 8px; }
+.now-picks .chip { border-radius: 999px; font-family: inherit; }
+.now-page { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; background: var(--bg); }
+.now-head { display: flex; align-items: center; gap: 4px; min-height: 52px; padding: 0 8px; border-bottom: 1px solid var(--border); }
+.now-head h1 { flex: 1; margin: 0; font-size: 18px; }
+.now-back, .now-gear { width: 44px; height: 44px; background: none; border: 0; color: var(--blue); font-size: 22px; }
+.now-tabs { display: flex; gap: 8px; padding: 10px 12px 4px; }
+.now-tabs button { min-height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; background: none; color: var(--text); font: inherit; font-size: 13px; }
+.now-tabs button[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: var(--bg); }
+.now-tabs button[aria-pressed="true"] .now-n { color: inherit; }
+.now-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 8px 12px 24px; }
+.now-navs { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--bg-panel); }
+.now-nav { display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding: 0 12px; background: none; border: 0; color: inherit; font: inherit; }
+.now-nav + .now-nav { border-top: 1px solid var(--border); }
+.now-later { display: flex; flex-direction: column; gap: 10px; padding: 4px 4px 12px; }
+.now-later h2 { margin: 0; font-size: 16px; }
+.now-input { min-height: 44px; padding: 0 12px; border: 1px solid var(--focus); border-radius: 8px; background: var(--bg-panel); color: var(--text); font: inherit; }
+.now-hint { margin: 0; font-size: 12px; color: var(--muted); }
+.now-rulerow { display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
+.now-lvl { font-family: var(--font-mono); font-size: 11px; font-weight: 400; color: var(--muted); }
+.now-switch { flex: none; position: relative; width: 40px; height: 24px; border: 0; border-radius: 12px; background: var(--border); }
+.now-switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: left var(--t-fast); }
+.now-switch[aria-checked="true"] { background: var(--strip); }
+.now-switch[aria-checked="true"]::after { left: 19px; }
+.now-tip { padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--ai) 40%, transparent); border-radius: 12px; background: color-mix(in srgb, var(--ai) 8%, transparent); font-size: 13px; }
+.now-tip p { margin: 2px 0 0; color: var(--muted); }
+.now-qs fieldset { margin: 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-panel); }
+.now-qs legend { padding: 0 4px; font-weight: 600; }
+.now-check-row { display: flex; align-items: center; gap: 8px; min-height: 36px; }
+/* The count on the ✦ button (radial.js): what is on the user's turn. */
+.rm-fab::after { content: var(--now-badge); position: absolute; top: 2px; right: 2px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--red); color: #fff; font: 600 12px/20px var(--font-ui, sans-serif); text-align: center; }
+.now-toasts { position: fixed; left: 12px; right: 12px; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 40; }

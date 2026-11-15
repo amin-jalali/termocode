@@ -126,7 +126,6 @@ export const SP = {
   "ph.quiet_body": "No notifications between these times.",
   "ph.quiet_from": "From",
   "ph.quiet_to": "To",
-  "ph.quiet_same": "Start and end must differ.",
   "ph.lock": "Lock the app",
   "ph.lock_body": "Ask for this phone's fingerprint, face or PIN when the app opens.",
   "ph.lock_app": "Only in the termocode app.",

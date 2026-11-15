@@ -389,6 +389,31 @@ before.
 - Your files, chats and keys stay on the laptop. The phone only shows
   them.
 
+### Now: only what waits on you
+
+Before the first message the Home is **Now**: one line ("3 need you ·
+1 running"), then **Your turn**, the few things that wait on you, and
+what runs.
+
+- Each row says why it is there ("Waits for your OK", "Your branch is
+  red") and which of your rules put it on top (the dashed tag). It is
+  your turn when an agent waits for you, your branch is red, or someone
+  asks you; your own action hands the turn back. Bots never take a turn.
+- The order is fixed: your turn first, then P1 to P4, then what is due
+  today, then the oldest.
+- Tap a row for **Why this?**: its one fix (✦ Fix puts a request in the
+  box; nothing is sent until you send it), **Done**, **Later** ("in 2
+  hours", "tomorrow 9:00", "next week") and **Not important** (mute it
+  until someone asks you). A swipe left shows Later and Done. Each step
+  has **Undo**. None of them changes the agent, the CI run or the task.
+- **See all** has three tabs: Your turn, Waiting (on others) and All.
+- The first time, a card asks what goes on top. **Use these** keeps the
+  defaults (agents waiting, red CI, reviews; 5 on Home); **Change** asks
+  the 4 questions. The rules are rows you can turn on and off under ⚙
+  (at most 7; the top rule wins). They are kept per user on the laptop
+  (`now.json` in the config folder), Done for 30 days.
+- The ✦ button shows how many things are your turn.
+
 ### A sign-in code as well (optional)
 
 For a second step after the passkey, run **Web: Set Up Sign-in Code…**.
