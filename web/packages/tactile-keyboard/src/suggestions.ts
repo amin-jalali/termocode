@@ -2,7 +2,7 @@
 // height) when there is nothing to suggest. Tapping a chip runs the
 // accept callback and clears the strip.
 import type { Suggestion } from "./completion";
-import { svg } from "./icons";
+import { setIcon } from "./icons";
 
 export class SuggestionBar {
   readonly el: HTMLElement;
@@ -46,7 +46,7 @@ export class SuggestionBar {
       b.setAttribute("role", "option");
       const ic = this.doc.createElement("span");
       ic.className = "tk-chip-icon";
-      ic.innerHTML = svg("code");
+      setIcon(ic, "code");
       const l = this.doc.createElement("span");
       l.className = "tk-chip-label";
       l.textContent = it.label;

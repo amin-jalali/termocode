@@ -75,6 +75,8 @@ export class FakeElement {
   innerHTML = "";
   hidden = false;
   rect = { left: 0, top: 0, width: 0, height: 0 };
+  ownerDocument: FakeDocument | null = null;
+  namespaceURI = "";
   captured = new Set<number>();
   private ls = new Map<string, Listener[]>();
 
@@ -161,7 +163,14 @@ export class FakeElement {
 
 export class FakeDocument {
   createElement(tag: string): FakeElement {
-    return new FakeElement(tag);
+    const e = new FakeElement(tag);
+    e.ownerDocument = this;
+    return e;
+  }
+  createElementNS(ns: string, tag: string): FakeElement {
+    const e = this.createElement(tag);
+    e.namespaceURI = ns;
+    return e;
   }
 }
 

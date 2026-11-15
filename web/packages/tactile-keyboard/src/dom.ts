@@ -3,7 +3,7 @@
 // pointer, so chords and rollover work), redrawn from the engine's state.
 import { Engine, type Clock, type KeyEvent, type MediaAction } from "./engine";
 import { makeTick, webClick, webVibrate } from "./feedback";
-import { svg, type Glyph } from "./icons";
+import { setIcon, type Glyph } from "./icons";
 import { autoCompact, defaultHeight, type Placed } from "./layout";
 
 /** Colours of the board; the accent usually comes from the page theme. */
@@ -95,7 +95,7 @@ export function mount(host: HTMLElement, opts: MountOptions): TactileKeyboard {
   const keysLayer = el("div", "tk-keys", root);
   const glowLayer = el("div", "tk-glow", root);
   const badge = el("div", "tk-pad-badge", root);
-  badge.innerHTML = svg("touch");
+  setIcon(badge, "touch");
   el("span", "", badge).textContent = "TRACKPAD";
   badge.hidden = true;
 
@@ -142,7 +142,7 @@ export function mount(host: HTMLElement, opts: MountOptions): TactileKeyboard {
 
   function icon(parent: HTMLElement, g: Glyph, cls: string, size?: number): void {
     const s = el("span", cls, parent);
-    s.innerHTML = svg(g);
+    setIcon(s, g);
     if (size) s.style.setProperty("--tk-icon", `${size}px`);
   }
 

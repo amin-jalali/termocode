@@ -256,6 +256,15 @@ test("pointercancel clears the press", () => {
   ok(!b.el("A").classList.contains("is-down"));
 });
 
+test("icons are SVG elements, never markup (the page requires Trusted Types)", () => {
+  const b = board();
+  const svg = b.el("ai").all((e) => e.tagName === "SVG")[0];
+  ok(svg && svg.namespaceURI.endsWith("/2000/svg"), "an svg element");
+  eq(svg.getAttribute("viewBox"), "0 0 24 24");
+  ok(svg.children.length >= 1 && svg.children[0].getAttribute("d"), "with its shapes");
+  ok(b.root.all((e) => e.innerHTML !== "").length === 0, "no innerHTML anywhere");
+});
+
 test("destroy removes the board and its listeners", () => {
   const b = board(390, { layout: "auto" });
   b.kb.destroy();

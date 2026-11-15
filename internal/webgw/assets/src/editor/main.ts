@@ -4,7 +4,7 @@
 // laptop's buffer (lib/live.ts sends the user's changes and brings the
 // laptop's); colours are nvim's (buf.hl), undo is the page's own
 // (history.ts). Native selection and touch handles: phone friendly.
-import { Annotation, ChangeSet, EditorState, StateEffect, StateField, type Text, type Transaction } from "@codemirror/state";
+import { Annotation, ChangeSet, EditorSelection, EditorState, type SelectionRange, StateEffect, StateField, type Text, type Transaction } from "@codemirror/state";
 import { Decoration, type DecorationSet, EditorView, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, WidgetType } from "@codemirror/view";
 import type { EditorHandle, EditorHost, HlRow } from "./api";
 import { diff } from "../lib/textdiff";
@@ -210,6 +210,50 @@ export function mount(parent: HTMLElement, host: EditorHost): EditorHandle {
     canUndo: () => hist.canUndo(),
     canRedo: () => hist.canRedo(),
     focus: () => view.focus(),
+    input: () => view.contentDOM,
+    caret: () => view.state.selection.main.head,
+    type(text, del = 0, back = 0) {
+      const r = view.state.selection.main;
+      const from = r.empty ? Math.max(0, r.from - del) : r.from;
+      const at = from + text.length - back;
+      view.dispatch({ changes: { from, to: r.to, insert: text }, selection: { anchor: at }, scrollIntoView: true, userEvent: "input.type" });
+    },
+    key(k) {
+      // the editor's own keys first (a synthetic keydown reaches the keymap)
+      if (!view.contentDOM.dispatchEvent(new KeyboardEvent("keydown", { key: k.key, ctrlKey: k.ctrl, altKey: k.alt, shiftKey: k.shift, bubbles: true, cancelable: true }))) return;
+      const page = view.dom.clientHeight * 0.9;
+      const move = (f: (r: SelectionRange) => SelectionRange) => {
+        const ranges = view.state.selection.ranges.map((r) => (k.shift ? EditorSelection.range(r.anchor, f(r).head) : EditorSelection.cursor(f(r).head)));
+        view.dispatch({ selection: EditorSelection.create(ranges, view.state.selection.mainIndex), scrollIntoView: true, userEvent: "select" });
+      };
+      const r = view.state.selection.main;
+      switch (k.key) {
+        case "ArrowLeft":
+          return move((x) => view.moveByChar(x, false));
+        case "ArrowRight":
+          return move((x) => view.moveByChar(x, true));
+        case "ArrowUp":
+          return move((x) => view.moveVertically(x, false));
+        case "ArrowDown":
+          return move((x) => view.moveVertically(x, true));
+        case "PageUp":
+          return move((x) => view.moveVertically(x, false, page));
+        case "PageDown":
+          return move((x) => view.moveVertically(x, true, page));
+        case "Backspace":
+        case "Delete": {
+          const fwd = k.key === "Delete";
+          const to = r.empty ? view.moveByChar(r, fwd).head : fwd ? r.to : r.from;
+          const a = Math.min(r.empty ? r.head : r.from, to);
+          const b = Math.max(r.empty ? r.head : r.to, to);
+          if (a !== b) view.dispatch({ changes: { from: a, to: b }, scrollIntoView: true, userEvent: fwd ? "delete.forward" : "delete.backward" });
+          return;
+        }
+        case "Enter":
+          return void view.dispatch(view.state.replaceSelection("\n"), { scrollIntoView: true, userEvent: "input" });
+      }
+      if (k.key.length === 1 && !k.ctrl && !k.alt) view.dispatch(view.state.replaceSelection(k.key), { scrollIntoView: true, userEvent: "input.type" });
+    },
     destroy() {
       clearTimeout(flashTimer);
       view.destroy();

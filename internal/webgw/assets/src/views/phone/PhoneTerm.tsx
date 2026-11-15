@@ -23,6 +23,7 @@ import { go, route } from "../../lib/router";
 import { rowPx, usePinch } from "../../lib/rowfont";
 import { dropOlder, loadingOlder, loadOlder, older, stitch } from "../../lib/term";
 import { colorsOn, dropColors, paintLine, termColors, wantColors } from "../../lib/termcolors";
+import { tactile } from "../../lib/tactile";
 import { useWakeLock } from "../../lib/wakelock";
 import { loadTerm, type TermModule } from "../../lib/xterm";
 import { barKeys } from "../../lib/keys";
@@ -39,7 +40,7 @@ import { KeysSheet } from "../KeysSheet";
 import { Refused } from "../Placeholder";
 import { About, asRows, newTerm, Screen } from "../Term";
 import { KEYS, MAX_PASTE, PasteSheet, pasting } from "../TermInput";
-import { termInputMode, typeBuf, typeTerm } from "./termtype";
+import { pressTermKey, setTermInputMode, termInputMode, typeBuf, typeTerm } from "./termtype";
 
 type XTerm = ReturnType<TermModule["open"]>;
 
@@ -225,6 +226,13 @@ function Rows({ buf, item, canType, onEnd }: { buf: number; item: TermItem | und
     );
   });
   useEffect(() => xt.current?.setInputMode(termInputMode.value), [ready, termInputMode.value]);
+  // On a touch device the Tactile Code keyboard types into the shell
+  // (pressTermKey) instead of the system keyboard (TK-2).
+  useEffect(() => {
+    const input = ready ? host.current?.querySelector("textarea") : null;
+    if (!input) return;
+    return tactile(input, { key: (e) => void pressTermKey(e), pad: "arrows", inputMode: setTermInputMode });
+  }, [ready, buf]);
   // The text size follows the pinch and the ⓘ sheet's buttons.
   const px = prefs.value.rowPx;
   useEffect(() => {
