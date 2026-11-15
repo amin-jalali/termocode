@@ -112,7 +112,7 @@ func TestAgentStepCapAndUnknownTool(t *testing.T) {
 	for range DefaultMaxSteps {
 		p.replies = append(p.replies, loop)
 	}
-	a := &Agent{Provider: p, Native: true}
+	a := &Agent{Provider: p, Native: true, RepeatLimit: -1} // the same call each step: no repeat brake here
 	evs, _ := collectEvents(a, nil)
 	if p.calls != DefaultMaxSteps || evs[len(evs)-1].Kind != EventDone {
 		t.Fatalf("calls=%d", p.calls)

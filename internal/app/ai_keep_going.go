@@ -36,6 +36,7 @@ type aiKeepGoingRun struct {
 	// stepLimit: the last turn stopped at the step limit, not with an
 	// answer (it is pushed on even with no open todos).
 	stepLimit bool
+	stuck     bool // the repeat brake ended the last turn
 	stopped   bool // the user stopped the AI: no more pushes
 	pushing   bool // sendAIChat is called by the loop
 }
@@ -116,6 +117,8 @@ func (m *Model) aiKeepGoingNext() tea.Cmd {
 	switch {
 	case n > 0 && s.conv.Messages[n-1].Role == ai.StoredError:
 		why = "the last turn failed"
+	case k.stuck:
+		why = "the AI made the same call again and again"
 	case aiAsksTheUser(s.conv.Messages):
 		why = "the AI asked you a question"
 	case k.stale >= aiKeepGoingStall:

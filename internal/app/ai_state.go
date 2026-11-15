@@ -51,8 +51,12 @@ type aiState struct {
 	queueN    int
 	// follow is Follow Agent (ai_follow.go): the editor jumps to each
 	// agent edit; followAt is the last "rel:line" it jumped to.
-	follow           bool
-	followAt         string
+	follow   bool
+	followAt string
+	// readSeen is the files the chat readSeenChat has read or written
+	// (ai_write_guard.go): write_file needs one of them first.
+	readSeen         *ai.FileLedger
+	readSeenChat     string
 	answerCleaner    aiStreamCleaner
 	cleanAnswerIndex int
 	streamTranscript aiStreamTranscript

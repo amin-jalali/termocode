@@ -302,7 +302,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 	}
 	auto := s.settings.AutoApprove
 	policy := s.aiApprovalPolicy() // CMP-61: every step follows the same policy
-	maxSteps := s.settings.MaxSteps
+	maxSteps, repeat := s.settings.MaxSteps, s.settings.RepeatCallLimit
 	acts := func(n agentdag.Node) (bool, bool) { return aiNodeActs(tools, aiCategoryNode(n, cats)) } // G-PLAN
 	// Step numbers of the profile's steps (read-only below). A planned
 	// node (it has a Prompt) has none: in a resumed run the planned nodes
@@ -494,7 +494,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 			k := aiBgStepKey(run.ID, n.ID) // OMX-6: background runs this step starts hand their answers in
 			mail.openKey(k)
 			hooks := aiActiveHooks(dir)
-			return &ai.Agent{Provider: aiWithTemp(sl.p, aiCategoryTemp(n, cats)), Tools: aiWithHookList(dir, hooks, ts, out), Native: native, AutoApprove: own, Policy: policy, MaxSteps: maxSteps,
+			return &ai.Agent{Provider: aiWithTemp(sl.p, aiCategoryTemp(n, cats)), Tools: aiWithHookList(dir, hooks, ts, out), Native: native, AutoApprove: own, Policy: policy, MaxSteps: maxSteps, RepeatLimit: repeat,
 				PreTool:     aiPreToolHooks(dir, hooks, out), // CMP-59
 				BeforeCalls: aiBeforeCalls(dir, call), Confirm: aiChatConfirmFunc(gen, ch, own, n.Title),
 				Reasoning: aiCategoryReasoning(n, cats, reasoning(n.Slot, sl.cfg), think), Name: aiSlotLabel(n.Slot, sl.cfg), Fallbacks: aiFallbacksWithTemp(fallbacks[n.Slot], aiCategoryTemp(n, cats)),

@@ -288,7 +288,8 @@ it off for every chat that did not turn it on itself.
   turns (default 10), when the auto turns cost the "work until done"
   budget (`ai_until_done_budget_usd`), after 3 auto turns in a row that
   did not change the list, when the answer ends with a question to you,
-  or when a turn failed. The chat says why.
+  when the AI made the same tool call again and again
+  (`ai_repeat_call_limit`), or when a turn failed. The chat says why.
 - The desktop notice "AI run ended" comes once, when the last turn ends.
 - **Stop** (`Ctrl+C` or **AI: Stop Generating**) ends it at once. Your
   next message starts it again.
@@ -656,6 +657,13 @@ code action (`lsp_code_actions`) open the review card, and the agent waits
 until you decide (at most 30 minutes; **Stop** ends the wait at once).
 There is no extra "AI wants to" question for them: the review is the
 question.
+
+`write_file` replaces a whole file. On a file that already exists, it
+works only after the chat has read that file (`read_file`) or written it;
+otherwise the agent is told to read it first or to use `edit_file`, and
+no card opens. So the agent never replaces code it did not see. A new
+chat starts with nothing read. Set `ai_write_needs_read` to `false` in
+config.json to turn this off.
 
 The agent is told exactly what happened, for example *"The user accepted
 1 of 2 changes to main.go; only those were written. Rejected: change 2
@@ -1069,6 +1077,12 @@ deletes or saves a file whose tab has unsaved edits; it asks you to save first.
 The agent stops after 100 tool steps per message and says so. With keep
 going on (the default) it goes on by itself; else send "continue". Change
 the limit with `ai_max_steps` in `config.json`.
+
+When the agent makes the same tool call (same tool, same arguments) 4
+times in a row, termocode does not run it: the AI is told to try another
+way, and the chat shows **Same call 4 times in a row: not run**. If it
+makes the same call once more, the turn stops with a note. Change the
+count with `ai_repeat_call_limit` (a negative value turns it off).
 
 ## Project rules file
 

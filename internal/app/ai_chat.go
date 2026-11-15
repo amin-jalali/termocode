@@ -257,7 +257,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	if !s.keep.pushing { // OMX-7: a message of the user starts a new keep-going chain
 		s.keep = aiKeepGoingRun{}
 	}
-	s.keep.stepLimit = false
+	s.keep.stepLimit, s.keep.stuck = false, false
 	prof := s.activeProfile()
 	if name := s.kwProfile; name != "" { // OMX-17: the keyword chip the user kept
 		s.kwProfile = ""
@@ -345,7 +345,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 
 	call := newAIIDECaller(gen, ch)
 	fam := ai.ModelFamily(s.settings.ModelFamily, slot.cfg.Model) // a few prompt lines (and a small model's tools) per family
-	tools := aiFamilyTools(fam, aiFilterTools(m.aiChatTools(root, call), step.Tools))
+	tools := aiFamilyTools(fam, m.aiGuardWrites(aiFilterTools(m.aiChatTools(root, call), step.Tools), root)) // write_file reads first
 	if len(rules.Scoped) > 0 && aiRulesTrust(rules) == aiTrustUse {
 		tools = aiRulesOnRead(tools, root, rules, s.rulesInjector())
 	}
@@ -385,8 +385,9 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		Tools:       m.aiRecallTurn(root, text).wrap(aiWithHookList(root, hooks, tools, out)), // OMX-12, OMX-18
 		Native:      native,
 		AutoApprove: auto,
-		Policy:      s.aiApprovalPolicy(), // CMP-61 (ai_autopilot.go)
-		MaxSteps:    s.settings.MaxSteps,  // 0: ai.DefaultMaxSteps
+		Policy:      s.aiApprovalPolicy(),       // CMP-61 (ai_autopilot.go)
+		MaxSteps:    s.settings.MaxSteps,        // 0: ai.DefaultMaxSteps
+		RepeatLimit: s.settings.RepeatCallLimit, // 0: ai.DefaultRepeatLimit
 		BeforeCalls: aiBeforeCalls(root, call),
 		Confirm:     aiChatConfirmFunc(gen, ch, auto, ""),
 		Reasoning:   s.reasoningFor(slotName, slot.cfg, s.turnThink),
@@ -590,7 +591,7 @@ func (m *Model) onAIChatEvent(msg aiChatEventMsg) tea.Cmd {
 	case ai.EventDone:
 		m.aiAuditUsage(msg.ev)
 		s.aiKeepGoingUsage(msg.ev.Usage)
-		s.keep.stepLimit = msg.ev.StepLimit
+		s.keep.stepLimit, s.keep.stuck = msg.ev.StepLimit, msg.ev.RepeatStop
 	case ai.EventCompacted: // OMX-3
 		s.aiMarkCompacted(msg.ev.Detail)
 	}
