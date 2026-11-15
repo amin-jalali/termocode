@@ -14,7 +14,6 @@ import { t, tn } from "../strings";
 import { AskLaptop } from "../ui/AskLaptop";
 import { Sheet } from "../ui/Sheet";
 import { View } from "../views/View";
-import { DiffSheet } from "../views/git/DiffSheet";
 import { gitFailed } from "../views/git/errors";
 import { ShowSheet } from "../views/git/ShowSheet";
 import { stageFile } from "../views/git/GitView";
@@ -63,7 +62,6 @@ const host = (): GitHost => ({
   View,
   Sheet,
   AskLaptop,
-  DiffSheet,
   ShowSheet,
 });
 

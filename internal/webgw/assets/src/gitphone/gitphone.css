@@ -134,3 +134,35 @@
 .gp-cs-br { display: inline-flex; align-items: center; gap: 6px; height: 38px; max-width: 34vw; padding: 0 12px; border-radius: 8px; background: var(--text); color: var(--bg); font-family: var(--font-mono); font-size: 14px; font-weight: 600; position: relative; }
 .gp-cs-go { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; border-radius: 8px; background: var(--green); color: var(--bg-panel); font-size: 15px; font-weight: 600; white-space: nowrap; position: relative; }
 .gp-cs-go:disabled { opacity: 0.55; }
+
+/* a file's diff as a page (08) */
+.gp-counts { font-family: var(--font-mono); font-size: 13px; }
+.gp-add { color: var(--git-add); }
+.gp-del { color: var(--git-del); }
+.gp-diff-body.view-body { padding-bottom: 84px; }
+.gp-file-h { display: flex; align-items: center; gap: 4px; padding: 0 2px 0 6px; border-bottom: 1px solid var(--border); background: var(--bg-panel); position: sticky; top: 0; z-index: 1; }
+.gp-fold { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; min-height: var(--tap); text-align: start; color: var(--muted); }
+.gp-file-p { font-family: var(--font-mono); font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gp-side { margin-inline-start: 6px; font-family: var(--font-sans); }
+.gp-file-h .gp-circ { margin-inline-end: 0; }
+.gp-diff { font-family: var(--font-mono); font-size: 12.5px; line-height: 19px; overflow-x: auto; }
+.gp-dl { display: flex; min-width: max-content; }
+.gp-ln { flex: none; width: 30px; padding-inline-end: 4px; text-align: end; color: var(--dim); user-select: none; }
+.gp-mk { flex: none; width: 16px; text-align: center; color: var(--muted); user-select: none; }
+.gp-code { white-space: pre; padding-inline-end: 12px; }
+.gp-dl.is-add { background: var(--diff-add-bg); }
+.gp-dl.is-del { background: var(--diff-del-bg); }
+.gp-dl.is-add .gp-mk { color: var(--git-add); }
+.gp-dl.is-del .gp-mk { color: var(--git-del); }
+.gp-dl.is-hunk { background: color-mix(in srgb, var(--blue) 9%, var(--bg-panel)); color: var(--blue); padding: 4px 10px; margin-top: 6px; }
+.gp-hunk { -webkit-touch-callout: none; user-select: none; }
+.gp-more { display: flex; align-items: center; gap: 6px; width: 100%; min-height: var(--tap); padding: 0 10px; background: color-mix(in srgb, var(--blue) 6%, var(--bg-panel)); color: var(--blue); font-family: var(--font-sans); font-size: 13.5px; }
+.gp-file.is-folded .gp-file-h { border-bottom: 0; }
+/* the floating pill (08 D) */
+.gp-fpill { position: absolute; left: 14px; bottom: 12px; z-index: 4; display: flex; align-items: center; gap: 2px; height: 48px; padding: 0 6px; border-radius: 24px; background: var(--bg-float); border: 1px solid var(--border); box-shadow: var(--shadow-float); }
+.gp-fp-b { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 20px; color: var(--text-2); }
+.gp-fp-b:disabled { opacity: 0.4; }
+.gp-fp-n { font-family: var(--font-mono); font-size: 13px; color: var(--text-2); padding: 0 6px; white-space: nowrap; }
+.gp-fp-stage { display: inline-flex; align-items: center; gap: 5px; height: 38px; padding: 0 12px; border-radius: 19px; background: var(--strip); color: var(--on-strip); font-size: 14px; font-weight: 600; white-space: nowrap; }
+.gp-fp-ai { color: var(--ai); }
+[data-view="git-diff"] { position: relative; }

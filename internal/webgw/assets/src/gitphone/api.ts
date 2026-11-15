@@ -15,7 +15,6 @@ import type { ToastAction } from "../lib/toasts";
 import type { View as PView } from "../views/View";
 import type { AskLaptop as PAskLaptop } from "../ui/AskLaptop";
 import type { ShowSheet as PShowSheet } from "../views/git/ShowSheet";
-import type { DiffSheet as PDiffSheet } from "../views/git/DiffSheet";
 import type { Sheet as PSheet } from "../ui/Sheet";
 
 export interface GitHost {
@@ -50,6 +49,5 @@ export interface GitHost {
   View: typeof PView;
   Sheet: typeof PSheet;
   AskLaptop: typeof PAskLaptop;
-  DiffSheet: typeof PDiffSheet;
   ShowSheet: typeof PShowSheet;
 }
