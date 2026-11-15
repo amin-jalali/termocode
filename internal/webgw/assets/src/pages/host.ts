@@ -35,6 +35,12 @@ export interface PagesHost {
   pendingDraft: Signal<{ text: string; notChat: string } | null>;
   /** chatID is the laptop's open chat ("" while unknown). */
   chatID: () => string;
+  /** canAct: this browser may change things (not a viewer). */
+  canAct: () => boolean;
+  /** ask sends one op; a refusal is a toast with the hub's words. */
+  ask: (op: string, args?: unknown, then?: (data: unknown) => void) => void;
+  /** openAt opens a workspace file at a 1-based line. */
+  openAt: (path: string, line: number) => void;
   t: (key: string, vars?: Record<string, string | number>) => string;
   addStrings: (d: Readonly<Record<string, string>>) => void;
 }

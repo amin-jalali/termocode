@@ -15,7 +15,9 @@ import { errText } from "../ui/CardSheet";
 import { Sheet } from "../ui/Sheet";
 import { TopicBody } from "../views/Placeholder";
 import { View } from "../views/View";
+import { ask, canAct } from "../views/run/bits";
 import { addAttach } from "./attach";
+import { goTo } from "./lsp";
 import { pendingDraft } from "./drafts";
 import { go } from "./router";
 import { toast } from "./toasts";
@@ -44,6 +46,9 @@ const host = (): PagesHost => ({
   TopicBody,
   addAttach,
   pendingDraft,
+  canAct,
+  ask,
+  openAt: (path, line) => goTo(path, Math.max(0, line - 1), 0),
   chatID: () => readChat(store.topic("chat").peek()?.data)?.id ?? "",
   t: (k, v) => t(k as StringKey, v),
   addStrings,
