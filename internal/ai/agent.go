@@ -476,10 +476,11 @@ func (a *Agent) stream(ctx context.Context, req Request, buf *strings.Builder, p
 }
 
 // StepLimitText is the note shown when a turn hits the step limit. The
-// steps done so far stay in the chat, so "continue" goes on from there.
+// steps done so far stay in the chat: keep going (on by default) sends
+// the next turn by itself, and with it off "continue" goes on from there.
 func StepLimitText(steps int) string {
 	return fmt.Sprintf("\n\n**Paused: I reached the step limit (%d tool steps) for one message.** "+
-		"The work is not finished. Reply \"continue\" and I will go on from here.", steps)
+		"The work is not finished: it goes on by itself; when keep going is off, reply \"continue\" and I will go on from here.", steps)
 }
 
 // CallTool runs one call through the turn's gate (Validate, PreTool,

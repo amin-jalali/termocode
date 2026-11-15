@@ -160,7 +160,7 @@ func aiKeepGoingText(open int) string {
 
 // aiStepLimitPush is the push after a turn that hit the step limit
 // with no open todos.
-const aiStepLimitPush = "Continue: the step limit paused your last turn before it was finished. Go on from where you stopped."
+const aiStepLimitPush = "Continue: the step limit paused your last turn before it was finished. Go on from where you stopped. " + agentrun.DoneAudit
 
 // aiKeepGoingChip is the "auto" chip of a pushed message.
 func (s *aiState) aiKeepGoingChip(push int) string {
