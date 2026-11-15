@@ -1,0 +1,17 @@
+{
+  "name": "@termocode/tactile-keyboard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The Tactile Code on-screen keyboard: a laptop-style code keyboard for phones and tablets. Framework-free TypeScript + CSS.",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "style": "src/tactile-keyboard.css",
+  "files": ["src", "README.md"],
+  "sideEffects": ["*.css"],
+  "license": "MIT",
+  "scripts": {
+    "test": "cd ../../.. && go test ./internal/webgw/assets -run TestTactileKeyboardPackage -v",
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

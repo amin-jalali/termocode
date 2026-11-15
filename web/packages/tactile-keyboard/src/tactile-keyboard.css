@@ -125,3 +125,80 @@
 }
 .tk-pad-badge svg { width: 11px; height: 11px; }
 .tk-pad-badge[hidden] { display: none; }
+
+/* the dock: handle, suggestion strip, keyboard, safe-area filler */
+.tk-dock {
+  position: relative;
+  overflow: hidden;
+  flex: none;
+  background: #161616;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.tk-dock[hidden], .tk-dock [hidden] { display: none !important; }
+.tk-dock-body { position: absolute; left: 0; right: 0; top: 0; display: flex; flex-direction: column; }
+.tk-handle { position: relative; height: 26px; flex: none; background: #161616; display: flex; align-items: center; justify-content: center; cursor: grab; }
+.tk-grab { width: 40px; height: 4px; border-radius: 2px; background: #4a4a4a; }
+.tk-hide, .tk-system {
+  position: absolute;
+  top: 0;
+  height: 26px;
+  min-width: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #8d8d8d;
+  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.tk-hide { right: 6px; }
+.tk-system { left: 6px; }
+.tk-dock-kb { flex: none; }
+.tk-inset { flex: none; height: env(safe-area-inset-bottom, 0px); background: #161616; }
+.tk-collapsed {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
+  border: 0;
+  background: #161616;
+  color: #8d8d8d;
+  font: inherit;
+  font-size: 12px;
+}
+.tk-collapsed-icon { display: inline-flex; font-size: 16px; }
+
+.tk-sugg {
+  height: 40px;
+  flex: none;
+  box-sizing: border-box;
+  display: flex;
+  gap: 6px;
+  padding: 5px 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: #161616;
+  touch-action: pan-x;
+}
+.tk-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid #383838;
+  border-radius: 6px;
+  background: #252525;
+  color: #e8e8e8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.tk-chip-icon { display: inline-flex; font-size: 12px; color: var(--tk-accent, #007acc); }
+.tk-chip-detail { font-size: 10px; color: #8d8d8d; }
