@@ -267,7 +267,10 @@ func webChatKey(sm *ai.StoredMessage) string {
 	}
 	for i := range sm.Steps {
 		st := &sm.Steps[i]
-		fmt.Fprintf(&b, "\x00%s %s %s %s %d %d %s %d %d", st.ID, st.Title, st.State, st.Model, len(st.Text), len(st.Tools), st.Error, st.ElapsedMs, st.StartedAtMs)
+		fmt.Fprintf(&b, "\x00%s %s %s %s %d %d %s %d %d %d", st.ID, st.Title, st.State, st.Model, len(st.Text), len(st.Tools), st.Error, st.ElapsedMs, st.StartedAtMs, len(st.Blocks))
+		if n := len(st.Blocks); n > 0 {
+			b.WriteString(" " + st.Blocks[n-1].ID)
+		}
 		if u := st.Usage; u != nil {
 			fmt.Fprintf(&b, " %d %d %d %d", u.Input, u.CacheRead, u.CacheWrite, u.Output)
 		}
@@ -465,6 +468,11 @@ func webChatStep(st *ai.StoredStep) webproto.ChatStep {
 	out := webproto.ChatStep{ID: st.ID, Title: st.Title, State: st.State, Model: st.Model, Error: webChatRedact(st.Error), ElapsedMs: st.ElapsedMs}
 	for _, t := range st.Tools {
 		out.Tools = append(out.Tools, webChatRedact(t))
+	}
+	for i := range st.Blocks {
+		if b := webChatBlock(&st.Blocks[i]); b != nil && len(out.Blocks) < webproto.MaxMsgBlocks {
+			out.Blocks = append(out.Blocks, *b)
+		}
 	}
 	text, _ := webChatCut(webChatRedact(st.Text), webproto.MaxChatMsgText)
 	switch {

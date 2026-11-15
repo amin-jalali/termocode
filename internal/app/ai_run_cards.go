@@ -265,6 +265,11 @@ func (m Model) aiStepCard(msg ai.StoredMessage, k int, st ai.StoredStep, width, 
 		out = append(out, aiLine{text: ind + ansi.Truncate(aiWorktreeStatus(wt), max(inner-2, 4), "…"), style: aiStyle(theme.Fg(theme.TextSecondary))})
 		out = append(out, m.aiWorktreeButtons(msg, st, width)...)
 	}
+	for i := range st.Blocks { // a database card, shown folded too (ai_db_card_tui.go)
+		if b := &st.Blocks[i]; aiIsDBCard(b) {
+			out = append(out, aiDBCardLines(b, width)...)
+		}
+	}
 	if !expanded {
 		return out
 	}
