@@ -271,7 +271,33 @@ export function open(el: HTMLElement, o: XOpts): XTerm {
     }
   };
 
+  // The engine parses what it is written later (its writes queue), but
+  // reset() and the buffer's rows act at once: a redraw while writes are
+  // queued would move by stale rows or clear before the queued text
+  // lands, and draw the prompt again after the old one (the owner's
+  // phone: a new prompt line with each key). So one redraw at a time:
+  // lines that come while one is queued wait, and only the newest is
+  // drawn once the engine has parsed everything.
+  let queued = false;
+  let waiting: { lines: readonly XLine[]; cursor: boolean } | null = null;
   const show = (lines: readonly XLine[], cursor: boolean) => {
+    if (queued) {
+      waiting = { lines, cursor };
+      return;
+    }
+    if (!draw(lines, cursor)) return;
+    queued = true;
+    term.write("", () => {
+      queued = false;
+      const w = waiting;
+      waiting = null;
+      if (w) show(w.lines, w.cursor);
+    });
+  };
+
+  /** draw writes what changed; false: it wrote nothing. */
+  const draw = (lines: readonly XLine[], cursor: boolean): boolean => {
+    let wrote = false;
     let end = lines.length;
     while (end > 1 && lines[end - 1].text.trim() === "") end--; // the cursor sits after the last text
     const next = lines.slice(0, end).map((l) => ({ row: l.row, enc: encode(pal, l) }));
@@ -282,12 +308,13 @@ export function open(el: HTMLElement, o: XOpts): XTerm {
     if (cursor !== shownCursor) {
       term.write(cursor ? "\x1b[?25h" : "\x1b[?25l");
       shownCursor = cursor;
+      wrote = true;
     }
     const off = next.length ? prev.findIndex((p) => p.row === next[0].row) : -1;
     let d = 0;
     if (off >= 0) {
       while (d < next.length && d + off < prev.length && prev[d + off].row === next[d].row && prev[d + off].enc === next[d].enc) d++;
-      if (d === next.length && d + off === prev.length) return; // nothing new
+      if (d === next.length && d + off === prev.length) return wrote; // nothing new
     }
     const b = term.buffer.active;
     const start = off >= 0 && d < next.length ? starts[d + off] : undefined;
@@ -297,14 +324,14 @@ export function open(el: HTMLElement, o: XOpts): XTerm {
       // Back to the first changed line, clear below, write the rest.
       term.write(`\x1b[${start - b.baseY + 1};1H\x1b[J`);
       writeFrom(next, d);
-      return;
+      return true;
     }
     if (off >= 0 && d + off === prev.length && d > 0 && d < next.length) {
       // Only new lines below the old ones.
       starts = starts.slice(off);
       prev = next;
       writeFrom(next, d);
-      return;
+      return true;
     }
     const keepY = atEnd() ? -1 : b.viewportY;
     term.reset();
@@ -313,6 +340,7 @@ export function open(el: HTMLElement, o: XOpts): XTerm {
     prev = next;
     writeFrom(next, 0);
     term.write("", () => (keepY >= 0 ? term.scrollToLine(keepY) : term.scrollToBottom()));
+    return true;
   };
 
   /** rowAt is the buffer row shown at a page y. */
@@ -381,6 +409,7 @@ export function open(el: HTMLElement, o: XOpts): XTerm {
       return term.cols;
     },
     dispose: () => {
+      waiting = null;
       ro?.disconnect();
       cancelAnimationFrame(raf);
       vv?.removeEventListener("resize", later);
