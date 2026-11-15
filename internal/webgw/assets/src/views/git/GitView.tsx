@@ -59,6 +59,13 @@ export function GitView() {
   const canAct = !viewer && live.value;
   const [discard, setDiscard] = useState<string[] | null>(null);
   const [remote, setRemote] = useState(false);
+  // #/git?sheet=remote (the radial's branch) opens the remote sheet once.
+  useEffect(() => {
+    if (r.query.sheet === "remote" && g.repo) {
+      setRemote(true);
+      go({ tab: "git", rest: "", query: {} }, true);
+    }
+  }, [r.query.sheet, g.repo]);
   const action = gitAction.value;
   const setAction = (a: GitAction | null) => (gitAction.value = a);
 
