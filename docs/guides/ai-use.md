@@ -288,7 +288,8 @@ it off for every chat that did not turn it on itself.
   turns (default 10), when the auto turns cost the "work until done"
   budget (`ai_until_done_budget_usd`), after 3 auto turns in a row that
   did not change the list, when the answer ends with a question to you,
-  or when a turn failed. The chat says why.
+  when the AI made the same tool call again and again
+  (`ai_repeat_call_limit`), or when a turn failed. The chat says why.
 - The desktop notice "AI run ended" comes once, when the last turn ends.
 - **Stop** (`Ctrl+C` or **AI: Stop Generating**) ends it at once. Your
   next message starts it again.

@@ -51,8 +51,10 @@ type Event struct {
 	// of the turn (nil when the provider reported none).
 	Usage *Usage
 	// EventDone: the turn stopped at the step limit (MaxSteps), not
-	// with a final answer.
-	StepLimit bool
+	// with a final answer. RepeatStop: the repeat brake ended it (the
+	// model made the same call again after it was told not to).
+	StepLimit  bool
+	RepeatStop bool
 }
 
 // Gates of a tool call (Event.Gate).
@@ -348,7 +350,7 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 				msgs = append(msgs, toolResultMessage(a.Native, call, note, nil))
 			}
 			emit(Event{Kind: EventText, Text: RepeatStopText(name)})
-			emit(Event{Kind: EventDone, Usage: total()})
+			emit(Event{Kind: EventDone, Usage: total(), RepeatStop: true})
 			return msgs[start:]
 		}
 		run := calls
