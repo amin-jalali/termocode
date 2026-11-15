@@ -179,3 +179,12 @@ func TestRadialNeverOnDesktop(t *testing.T) {
 		}
 	}
 }
+
+// The button moves clear of a bar that comes without a route change (the
+// terminal's key bar) and of a tablet's rail on a phone turned sideways.
+func TestRadialClearOfBars(t *testing.T) {
+	p, c := openTerm(t, Phone)
+	showTerm(t, p, c, termSnap(3, 0, 80, "$ "), termItem(3, "zsh", false, true))
+	p.WaitJS(`document.querySelector(".keybar") && document.querySelector(".rm-fab")`)
+	p.WaitJS(`document.querySelector(".rm-fab").getBoundingClientRect().bottom <= document.querySelector(".keybar").getBoundingClientRect().top`)
+}
