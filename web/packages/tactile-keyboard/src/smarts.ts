@@ -2,7 +2,7 @@
 // indentation on newline and small keyword snippets. Pure functions; the
 // host applies the results to its own editor.
 
-const PAIRS: Record<string, string> = { "(": ")", "[": "]", "{": "}", '"': '"', "'": "'", "`": "`" };
+const PAIRS = new Map([["(", ")"], ["[", "]"], ["{", "}"], ['"', '"'], ["'", "'"], ["`", "`"]]);
 
 export interface PairInsert {
   /** Text to insert (empty when skip). */
@@ -16,9 +16,10 @@ export interface PairInsert {
 /** autoPair: what to insert for ch given the character after the caret,
  * or null to insert ch as it is. */
 export function autoPair(ch: string, charAfterCaret: string): PairInsert | null {
-  if (ch in PAIRS) {
+  const close = PAIRS.get(ch);
+  if (close) {
     if ((ch === '"' || ch === "'" || ch === "`") && charAfterCaret === ch) return { text: "", caretBackBy: 1, skip: true };
-    return { text: ch + PAIRS[ch], caretBackBy: 1, skip: false };
+    return { text: ch + close, caretBackBy: 1, skip: false };
   }
   if ((ch === ")" || ch === "]" || ch === "}") && charAfterCaret === ch) return { text: "", caretBackBy: 1, skip: true };
   return null;

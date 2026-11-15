@@ -38,12 +38,14 @@ var sourceRules = []rule{
 	// loads Add to AI Chat (aictx.js, lib/aictx.ts) and This device, Pair
 	// a Device… and Devices… (device.js, lib/device.tsx). Each is a
 	// fixed path.
-	{name: "dynamic import", re: regexp.MustCompile(`\bimport\s*\(`), allow: map[string]bool{"lib/lazy.ts": true, "monaco/frame.ts": true, "lib/device.tsx": true, "lib/aictx.ts": true, "lib/links.ts": true, "lib/coedit.ts": true, "lib/parquet.ts": true, "lib/queue.ts": true, "lib/xterm.ts": true}},
+	{name: "dynamic import", re: regexp.MustCompile(`\bimport\s*\(`), allow: map[string]bool{"lib/lazy.ts": true, "monaco/frame.ts": true, "lib/device.tsx": true, "lib/aictx.ts": true, "lib/links.ts": true, "lib/coedit.ts": true, "lib/parquet.ts": true, "lib/queue.ts": true, "lib/xterm.ts": true, "lib/tactile.ts": true}},
 	{name: "remote script/style", re: regexp.MustCompile(`(?i)@import|url\(\s*["']?(https?:)?//`)},
 	// Only the prefs module touches localStorage, and it never holds a
 	// secret; and the bookmark key of a remembered browser (WEBP-12), the
 	// one secret kept past the tab, in net/devicekey.ts alone.
-	{name: "localStorage", re: regexp.MustCompile(`\blocalStorage\b`), allow: map[string]bool{"lib/prefs.ts": true, "net/devicekey.ts": true, "relay/main.ts": true}},
+	// lib/tactileprefs.ts keeps the Tactile keyboard's three settings
+	// (on, sound, vibration) apart, so tactile.js reads them without the page.
+	{name: "localStorage", re: regexp.MustCompile(`\blocalStorage\b`), allow: map[string]bool{"lib/prefs.ts": true, "lib/tactileprefs.ts": true, "net/devicekey.ts": true, "relay/main.ts": true}},
 	// Only the auth module keeps the session token, in sessionStorage.
 	{name: "sessionStorage", re: regexp.MustCompile(`\bsessionStorage\b`), allow: map[string]bool{"net/auth.ts": true, "relay/main.ts": true}},
 	// Network: only the auth module fetches (POST /auth), only the link opens a socket.
@@ -208,6 +210,7 @@ func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
 			text = strings.Replace(text, `import("/assets/link.js")`, "", 1)   // a link's sheet (WEB-54)
 			text = strings.Replace(text, `import("/assets/coedit.js")`, "", 1) // live editing together (lib/coedit.ts), a fixed path
 			text = strings.Replace(text, `import("/assets/queue.js")`, "", 1)  // the phone remote's queue (lib/queue.ts), a fixed path
+			text = strings.Replace(text, `import("/assets/tactile.js")`, "", 1) // the Tactile keyboard (lib/tactile.ts), a fixed path
 		}
 		if pageFile(e.Path) || e.Path == "home.js" || e.Path == "workbench.js" { // the terminal engine (lib/xterm.ts), a fixed path
 			text = strings.Replace(text, `import("/assets/term.js")`, "", 1)
@@ -305,7 +308,10 @@ func TestRelativeImportsResolve(t *testing.T) {
 				t.Errorf("%s: import %q names no file", path, spec)
 			}
 			inside := strings.HasPrefix(target, srcAbs+string(filepath.Separator))
-			if !inside && (target != protoAbs || m[1] == "") {
+			// The Tactile keyboard is its own package (owner): tactile.js
+			// (src/tactile/main.ts) alone bundles it.
+			pkg := filepath.ToSlash(path) == "src/tactile/main.ts" && strings.HasPrefix(target, tactileAbs()+string(filepath.Separator))
+			if !inside && !pkg && (target != protoAbs || m[1] == "") {
 				t.Errorf("%s: import %q leaves src/ (only `import type` of webproto/proto may)", path, spec)
 			}
 		}

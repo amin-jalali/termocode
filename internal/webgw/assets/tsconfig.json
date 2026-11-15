@@ -39,6 +39,7 @@
       "/assets/aictx.js": ["./src/aictx/main.tsx"],
       "/assets/parquet.js": ["./src/parquet.ts"],
       "/assets/queue.js": ["./src/queue/main.tsx"],
+      "/assets/tactile.js": ["./src/tactile/main.ts"],
       "/assets/monaco-vim.js": ["./src/monaco/vim.ts"]
     }
   },

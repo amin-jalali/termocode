@@ -166,7 +166,24 @@ shell, as in a terminal app. The key bar sits right above the keyboard:
 Esc, Tab, Ctrl, Alt, -, the arrows, and more when you swipe it (`|`, `~`,
 `/`, Home, End, PgUp, PgDn). Ctrl and Alt hold for the next key; tap
 twice to lock. Swipe the terminal to read older rows. The shells are one
-slim row of tabs at the top, with ⓘ and + at its end. The easy way to reach it from your phone is
+slim row of tabs at the top, with ⓘ and + at its end.
+
+### The Tactile Code keyboard
+
+On a phone or tablet the terminal and the editor get termocode's own
+keyboard instead of the system one: a laptop layout with Esc, Tab, Ctrl,
+Alt, the arrows and an AI key. Tap Ctrl (or Shift, Alt, fn) and then a key
+for a shortcut: Ctrl, C stops the running command. fn with a number gives
+F1 to F12, fn with \` is Esc, fn with ← → is Home and End, fn with ↑ ↓ is
+PgUp and PgDn. Drag the spacebar to move the cursor. Backspace and the
+arrows repeat when you hold them. Pull the bar above the keyboard down to
+look at what is under it; the keyboard button on that bar hides it. The
+globe button switches to the phone's own keyboard (for other languages
+and dictation) until you leave the field. Turn it off, or change its
+sound and vibration, in **This phone → Keyboard**. A phone gets a compact
+layout; a tablet gets the function row too.
+
+The easy way to reach it from your phone is
 your own [Tailscale](https://tailscale.com) network (your *tailnet*).
 
 ### Turn on tailnet mode

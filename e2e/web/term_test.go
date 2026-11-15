@@ -23,6 +23,9 @@ func openTerm(t *testing.T, vp Viewport) (*Page, *HubConn) {
 	t.Helper()
 	s := StartServer(t)
 	p := NewPage(t, s, vp)
+	// These checks drive the system keyboard's path and the key bar; the
+	// Tactile keyboard's own path is tactile_test.go.
+	p.onNewDocument(`localStorage.setItem("termocode.tactile.v1", JSON.stringify({on: false}))`)
 	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
 	c := p.Login("c-1")
 	p.GoTab("term")
