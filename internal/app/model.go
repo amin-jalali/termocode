@@ -924,6 +924,9 @@ type Model struct {
 	// nowS is the user's Now choices: rules, Done / Later / Mute
 	// (web_now.go); made on first use.
 	nowS *now.Store
+	// nowAsks are the pull requests that ask for the user's review, as
+	// review.list read them last (web_review.go); Now shows them.
+	nowAsks []nowAsk
 	// mcpServeErr: why the listener did not start ("" when it did or was
 	// not asked to); the status screen shows it (mcp_serve_status.go).
 	mcpServeErr string

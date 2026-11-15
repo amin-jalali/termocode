@@ -252,6 +252,9 @@ var aiAgentsNotForAI = map[string]string{
 // tests, debug, LSP, HTTP, settings, layouts, keys, snippets, bookmarks
 // and the web devices list.
 var aiRestParity = map[string]string{
+	"review.list":                 "git_pr op list mine",
+	"review.get":                  "git_pr op view / diff / threads",
+	"review.act":                  "git_pr op review",
 	"bookmark-list":               "ide_op bookmarks.list",
 	"bookmarks.clear":             "ide_op",
 	"bookmarks.list":              "ide_op",

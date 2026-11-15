@@ -27,7 +27,7 @@ const reviewListText = `[{"number":412,"title":"Add retry to webhook","author":{
  {"number":418,"title":"Cache user list","author":{"login":"sara"},"headRefName":"feat/cache","baseRefName":"main","url":"https://github.com/o/r/pull/418","isDraft":false,"state":"OPEN","reviewDecision":"","statusCheckRollup":[]},
  {"number":420,"title":"Bump deps","author":{"login":"dependabot[bot]"},"headRefName":"dep/x","baseRefName":"main","url":"https://github.com/o/r/pull/420","isDraft":false,"state":"OPEN","reviewDecision":"","statusCheckRollup":[]}]`
 
-func webTestReview(t *testing.T) (*Model, *webConn, *prFakeGH) {
+func webTestReviewPR(t *testing.T) (*Model, *webConn, *prFakeGH) {
 	t.Helper()
 	f := &prFakeGH{answers: map[string]string{"pr view": reviewViewText, "run list": reviewRunsText, "pr list": reviewListText, "pr review": ""}}
 	m, c := webTestPR(t, f)
@@ -42,7 +42,7 @@ func webTestReview(t *testing.T) (*Model, *webConn, *prFakeGH) {
 // run is stale, a skipped check did not run), the risk with its reasons
 // and one short suggestion.
 func TestReviewGet(t *testing.T) {
-	m, c, _ := webTestReview(t)
+	m, c, _ := webTestReviewPR(t)
 	var r webproto.ReviewSnap
 	webTestData(t, webTestCallBg(t, m, c, webproto.OpReviewGet, `{"number":412}`), &r)
 	if r.Number != 412 || r.Head != "3f2a1c9aa11" || r.Author != "sara" || r.Title != "Add retry to webhook" {
@@ -70,7 +70,7 @@ func TestReviewGet(t *testing.T) {
 // the user saw: when new code came in it is refused, nothing is sent,
 // and the answer says both commits.
 func TestReviewActBoundToHead(t *testing.T) {
-	m, c, f := webTestReview(t)
+	m, c, f := webTestReviewPR(t)
 	if got := webTestErr(webTestCallBg(t, m, c, webproto.OpReviewAct, `{"number":412,"head":"3f2a1c9aa11","do":"approve"}`)); got != "" {
 		t.Fatalf("approve: %q", got)
 	}
@@ -97,7 +97,7 @@ func TestReviewActBoundToHead(t *testing.T) {
 // the user's review; they join the inbox as your turn ("sara asked
 // you", rule Reviews), a bot's pull request never takes a turn.
 func TestReviewListFeedsNow(t *testing.T) {
-	m, c, _ := webTestReview(t)
+	m, c, _ := webTestReviewPR(t)
 	var q webproto.ReviewQueue
 	webTestData(t, webTestCallBg(t, m, c, webproto.OpReviewList, `{}`), &q)
 	if len(q.Items) != 3 || q.Items[0].Number != 412 {
