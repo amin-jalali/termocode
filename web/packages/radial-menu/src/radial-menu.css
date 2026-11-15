@@ -74,6 +74,14 @@
   display: block;
   overflow: visible;
 }
+.rm-fab-disc {
+  fill: #0c0c11;
+  stroke: var(--rm-accent-dim);
+}
+.rm-accent,
+.rm-fab-ring {
+  color: var(--rm-accent);
+}
 .rm-fab-text {
   fill: var(--rm-dim);
   font-family: var(--rm-font);

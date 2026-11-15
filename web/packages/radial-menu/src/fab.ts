@@ -6,7 +6,7 @@
 // tap catcher (no dark scrim: the page stays visible); a tap outside
 // sucks the menu back into the button.
 import { FAB_SIZE, clampFab, defaultFab, placeMenu, type Insets, type Pt } from "./geometry";
-import { iconSVG } from "./icons";
+import { iconNodes } from "./icons";
 import { RadialMenu, STRINGS, type Category, type Clock, type Strings, type Theme } from "./menu";
 import { DUR, SLOP, springAt } from "./motion";
 
@@ -28,6 +28,9 @@ export interface MountOptions {
   reducedMotion?: boolean;
   /** the screen's safe areas; default read from env(safe-area-inset-*) */
   insets?: () => Insets;
+  /** more room the page keeps for itself (its own bottom bar), added to
+   * the safe areas: the button stays clear of it */
+  extraInsets?: () => Partial<Insets>;
   /** the visible layer (shrinks with an on-screen keyboard); default the
    * window and its visual viewport */
   viewport?: () => { w: number; h: number };
@@ -55,36 +58,56 @@ export interface RadialFab {
   destroy(): void;
 }
 
-/** hubMarkup is the closed hub drawn at d px (_ClosedHubPainter): the
- * dark disc with its accent ring, the hairline inner ring, the ✦ and
- * "menu". */
-function hubMarkup(d: number, menu: string): string {
-  const r = d / 2;
-  const ring = Math.max(1.2, (1.3 * d) / 100);
-  return (
-    `<svg class="rm-fab-hub" viewBox="0 0 ${d} ${d}" width="${d}" height="${d}" aria-hidden="true">` +
-    `<circle cx="${r}" cy="${r}" r="${r - 2}" fill="#0C0C11" stroke="var(--rm-accent-dim, #0E639C)" stroke-width="${ring}"/>` +
-    `<circle cx="${r}" cy="${r}" r="${r - 2 - d * 0.08}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="1"/>` +
-    `<g transform="translate(${r} ${r - d * 0.06}) scale(${(d / 100) * 1.5})">${iconSVG("ask", "var(--rm-accent, #007ACC)")}</g>` +
-    `<text x="${r}" y="${r + d * 0.22}" class="rm-fab-text" font-size="${d * 0.085}" letter-spacing="${d * 0.02}" text-anchor="middle" dominant-baseline="central">${menu}</text>` +
-    `</svg>`
-  );
+const NS = "http://www.w3.org/2000/svg";
+
+type Node = [tag: string, attrs: Record<string, string | number>, kids?: (Node | string)[]];
+
+/** build makes the element tree of n (no markup: the page's Trusted
+ * Types take none). */
+function build(doc: Document, n: Node): Element {
+  const [tag, attrs, kids] = n;
+  const svg = tag !== "span";
+  const e = svg ? doc.createElementNS(NS, tag) : doc.createElement(tag);
+  for (const k in attrs) e.setAttribute(k, String(attrs[k]));
+  for (const c of kids ?? []) {
+    if (typeof c === "string") e.textContent = c;
+    else e.appendChild(build(doc, c));
+  }
+  return e;
 }
 
-/** ringMarkup is the pick-up ring (_DragRingPainter): three 64° accent
+/** hubNodes is the closed hub drawn at d px (_ClosedHubPainter): the dark
+ * disc with its accent ring, the hairline inner ring, the ✦ and "menu". */
+function hubNodes(doc: Document, d: number, menu: string): Element {
+  const r = d / 2;
+  const sv = build(doc, [
+    "svg",
+    { class: "rm-fab-hub", viewBox: `0 0 ${d} ${d}`, width: d, height: d, "aria-hidden": "true" },
+    [
+      ["circle", { class: "rm-fab-disc", cx: r, cy: r, r: r - 2, "stroke-width": Math.max(1.2, (1.3 * d) / 100) }],
+      ["circle", { cx: r, cy: r, r: r - 2 - d * 0.08, fill: "none", stroke: "rgba(255,255,255,.08)", "stroke-width": 1 }],
+      ["g", { class: "rm-accent", transform: `translate(${r} ${r - d * 0.06}) scale(${(d / 100) * 1.5})` }],
+      ["text", { class: "rm-fab-text", x: r, y: r + d * 0.22, "font-size": d * 0.085, "letter-spacing": d * 0.02, "text-anchor": "middle", "dominant-baseline": "central" }, [menu]],
+    ],
+  ]);
+  sv.children[2].append(...iconNodes(doc, "ask", "currentColor"));
+  return sv;
+}
+
+/** ringNodes is the pick-up ring (_DragRingPainter): three 64° accent
  * arcs that spin, over a soft static glow. */
-function ringMarkup(d: number): string {
+function ringNodes(doc: Document, d: number): Element {
   const s = d + 22, c = s / 2, r = s / 2 - 3;
-  const arc = (a0: number): string => {
-    const a1 = a0 + 64;
-    const p = (a: number): string => `${c + r * Math.cos((a * Math.PI) / 180)},${c + r * Math.sin((a * Math.PI) / 180)}`;
-    return `<path d="M${p(a0)} A${r},${r} 0 0 1 ${p(a1)}" fill="none" stroke="var(--rm-accent, #007ACC)" stroke-width="2.6" stroke-linecap="round"/>`;
-  };
-  return (
-    `<svg class="rm-fab-ring" viewBox="0 0 ${s} ${s}" width="${s}" height="${s}" aria-hidden="true">` +
-    `<circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="rgba(0,122,204,.2)" stroke-width="3" class="rm-fab-ring-glow"/>` +
-    `<g class="rm-fab-spin">${arc(0)}${arc(120)}${arc(240)}</g></svg>`
-  );
+  const p = (a: number): string => `${c + r * Math.cos((a * Math.PI) / 180)},${c + r * Math.sin((a * Math.PI) / 180)}`;
+  const arc = (a0: number): Node => ["path", { d: `M${p(a0)} A${r},${r} 0 0 1 ${p(a0 + 64)}`, fill: "none", stroke: "currentColor", "stroke-width": 2.6, "stroke-linecap": "round" }];
+  return build(doc, [
+    "svg",
+    { class: "rm-fab-ring", viewBox: `0 0 ${s} ${s}`, width: s, height: s, "aria-hidden": "true" },
+    [
+      ["circle", { class: "rm-fab-ring-glow", cx: c, cy: c, r, fill: "none", stroke: "rgba(0,122,204,.2)", "stroke-width": 3 }],
+      ["g", { class: "rm-fab-spin" }, [arc(0), arc(120), arc(240)]],
+    ],
+  ]);
 }
 
 /** readInsets reads env(safe-area-inset-*) through a hidden probe. */
@@ -120,7 +143,11 @@ export function mount(el: HTMLElement, opts: MountOptions): RadialFab {
   const root = doc.createElement("div");
   root.className = "rm-root";
   el.appendChild(root);
-  const insets = o.insets ?? probeInsets(doc, root, win);
+  const safe = o.insets ?? probeInsets(doc, root, win);
+  const insets = (): Insets => {
+    const a = safe(), b = o.extraInsets?.() ?? {};
+    return { top: a.top + (b.top ?? 0), right: a.right + (b.right ?? 0), bottom: a.bottom + (b.bottom ?? 0), left: a.left + (b.left ?? 0) };
+  };
   const viewport =
     o.viewport ??
     ((): { w: number; h: number } => {
@@ -143,7 +170,9 @@ export function mount(el: HTMLElement, opts: MountOptions): RadialFab {
   button.setAttribute("aria-expanded", "false");
   button.style.setProperty("width", size + "px");
   button.style.setProperty("height", size + "px");
-  button.innerHTML = `<span class="rm-fab-glow" aria-hidden="true"></span><span class="rm-fab-body">${hubMarkup(size, s.menu)}</span>${ringMarkup(size)}`;
+  const body = build(doc, ["span", { class: "rm-fab-body" }]);
+  body.appendChild(hubNodes(doc, size, s.menu));
+  button.append(build(doc, ["span", { class: "rm-fab-glow", "aria-hidden": "true" }]), body, ringNodes(doc, size));
   root.appendChild(button);
 
   let saved: Pt | null = o.position ?? null; // the logical spot (null: default)

@@ -49,3 +49,17 @@ export const ICONS: Record<string, string> = {
 export function iconSVG(name: string, col: string): string {
   return (ICONS[name] ?? "").replace(/\{c\}/g, col);
 }
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+/** iconNodes builds icon name's shapes as elements (a page with Trusted
+ * Types takes no markup): each icon is a list of flat <tag a="v"/>. */
+export function iconNodes(doc: Document, name: string, col: string): SVGElement[] {
+  const out: SVGElement[] = [];
+  for (const m of iconSVG(name, col).matchAll(/<(\w+)([^>]*?)\/>/g)) {
+    const e = doc.createElementNS(SVG_NS, m[1]) as SVGElement;
+    for (const a of m[2].matchAll(/([\w-]+)="([^"]*)"/g)) e.setAttribute(a[1], a[2]);
+    out.push(e);
+  }
+  return out;
+}

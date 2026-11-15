@@ -6,7 +6,7 @@
 // (entrance, rings, the clockwise bloom, the hold, the flash, the close)
 // from a clock, so tests drive it with a fake clock and fake frames.
 import { ACT_GAP, ACT_ICON_R, ACT_ICON_S, C, CAT_GAP, CAT_ICON_R, CAT_ICON_S, GAP_RING, HUB, HUB_RING, MAX_ITEMS, PAD, PROG_INSET, PROG_R, RI1, RI2, RO1, RO2, actCentre, arcLength, arcPath, catCentre, hitTest, placeTip, polar, sectorPath, toDesign, type Insets, type Hit } from "./geometry";
-import { iconSVG } from "./icons";
+import { iconNodes } from "./icons";
 import { DUR, SLOP, collapseFrame, entranceFrame, flashScale, holdScale, petalFrame, ringsFrame, sparkFrame } from "./motion";
 
 /** Item is one action of a ring. */
@@ -555,7 +555,7 @@ export class RadialMenu {
 
   private icon(name: string, x: number, y: number, s: number, col: string): SVGGElement {
     const g = this.svgEl("g", { transform: `translate(${x} ${y}) scale(${s})`, "pointer-events": "none", "data-icon": name }) as SVGGElement;
-    g.innerHTML = iconSVG(name, col);
+    g.append(...iconNodes(this.doc, name, col));
     return g;
   }
 
@@ -563,13 +563,13 @@ export class RadialMenu {
     const d = this.svgEl("defs");
     const grad = (id: string, r: number, stops: [number, string][]): void => {
       const g = this.svgEl("radialGradient", { id: `rm${this.id}-${id}`, gradientUnits: "userSpaceOnUse", cx: C, cy: C, r });
-      for (const [o, c] of stops) g.appendChild(this.svgEl("stop", { offset: o, style: `stop-color:${c}` }));
+      for (const [o, c] of stops) g.appendChild(this.svgEl("stop", { offset: o, "stop-color": c }));
       d.appendChild(g);
     };
     // radial_menu.dart _paintInner / _paintOuter (mobocode-radial-v6.html: the darker originals)
     grad("cat", 116, [[0.4, "#24242F"], [1, "#131319"]]);
     grad("catHover", 116, [[0.4, "#2C2C38"], [1, "#1B1B22"]]);
-    grad("catActive", 116, [[0.3, "var(--rm-cat-active, #264F78)"], [1, "#15314C"]]);
+    grad("catActive", 116, [[0.3, "#264F78"], [1, "#15314C"]]);
     grad("wedge", 212, [[0.5, "#272732"], [1, "#111116"]]);
     grad("wedgeHot", 212, [[0.5, "#34343F"], [1, "#1C1C24"]]);
     grad("wedgeAcc", 212, [[0.5, "#16456E"], [1, "#0E2D49"]]);
@@ -646,7 +646,9 @@ export class RadialMenu {
       text("rm-cname", C - 1, this.cats()[this.active]?.label ?? "");
       text("rm-csub", C + 18, this.s.tapToClose);
     } else {
-      g.appendChild(this.icon("ask", C, C - 5, 1.5, "var(--rm-accent, #007ACC)"));
+      const ic = this.icon("ask", C, C - 5, 1.5, "currentColor");
+      ic.classList.add("rm-accent");
+      g.appendChild(ic);
       text("rm-csub", C + 20, this.s.menu);
     }
   }
@@ -785,7 +787,9 @@ export class RadialMenu {
     this.tipItem = it;
     this.tipGuard = true;
     this.clock.setTimeout(() => (this.tipGuard = false), DUR.tipGuard);
-    this.tipIcon.innerHTML = `<svg viewBox="-11.25 -11.25 22.5 22.5" aria-hidden="true">${iconSVG(it.icon, "currentColor")}</svg>`;
+    const sv = this.svgEl("svg", { viewBox: "-11.25 -11.25 22.5 22.5", "aria-hidden": "true" });
+    sv.append(...iconNodes(this.doc, it.icon, "currentColor"));
+    this.tipIcon.replaceChildren(sv);
     this.tipTitle.textContent = it.label;
     this.tipDesc.textContent = it.detail ?? "";
     this.tipDesc.hidden = !it.detail;

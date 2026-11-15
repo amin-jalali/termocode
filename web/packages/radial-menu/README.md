@@ -4,7 +4,9 @@ The owner's floating radial menu (the mobocode float_button design,
 `mobocode-radial-v6.html`, as shipped in its Flutter port) for touch
 pages: a floating button that opens a centre hub, an inner ring of
 categories and an outer ring of actions. Framework-free TypeScript, SVG
-and one CSS file; no dependencies, no build step of its own.
+and one CSS file; no dependencies, no build step of its own. It builds
+its DOM from nodes only (no markup, no style attributes), so it runs
+under a strict CSP with Trusted Types.
 
 ## Use
 
@@ -45,6 +47,7 @@ page: the closed hub first; the hub opens and folds the rings in place).
 | `size` | 64 | the button's diameter |
 | `reducedMotion` | `prefers-reduced-motion` | no entrance, bloom, breath or pulse |
 | `insets()` | `env(safe-area-inset-*)` | the screen's safe areas |
+| `extraInsets()` | – | room the page keeps for itself (its bottom bar), added to the safe areas |
 | `viewport()` | window + visual viewport | the visible layer (shrinks with an on-screen keyboard) |
 | `clock`, `doc`, `win` | real ones | for tests |
 

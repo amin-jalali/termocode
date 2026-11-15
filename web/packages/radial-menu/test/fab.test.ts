@@ -251,5 +251,6 @@ test("extraInsets keeps the button above the page's own bottom bar", () => {
   const r = rig({ extraInsets: () => ({ bottom: 56 }) });
   eq(r.fab.position, [752, 600 - 56 - 12 - 32]);
   drag(r, 0, 300);
+  r.clock.tick(500);
   eq(r.fab.position[1], 600 - 56 - 12 - 32, "a drop is kept above it too");
 });
