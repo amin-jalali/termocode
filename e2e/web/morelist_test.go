@@ -61,6 +61,7 @@ func TestMorePinnedCardsCountsEdit(t *testing.T) {
 	p := NewPage(t, s, Phone)
 	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
 	c := p.Login("c-morepins")
+	c.Send(t, Snap("chat", 1, chatWith(false)))
 	p.GoTab("more")
 	p.WaitJS(`document.querySelectorAll(".more-group").length >= 4`)
 	if !Eval[bool](p, `!!document.querySelector(".more-findbox svg") && !!document.querySelector(".more-findbox .more-find")`) {
