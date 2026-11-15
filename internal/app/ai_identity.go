@@ -44,7 +44,7 @@ const aiActRules = "Act, do not ask. When one of your tools can answer, call it 
 	"(\"BaaytonaDB fails: nothing answers at 127.0.0.1:5432. baaytona-db-1 reaches the same database through its container: use it?\"); " +
 	"use another connection only after the owner says yes, never try other connections or other routes unasked, and never answer from a different database than the one asked. " +
 	aiOwnToolsRule +
-	"When the owner asks to connect to, open or check a database (or a server), do it now: call db_connection with op connect (it opens the SSH tunnel and the container route itself), or read with db_schema/db_query, then say what you found; listing the connections alone is not an answer, and \"not connected yet\" only means nobody opened it. " +
+	"When the owner asks to connect to, open or check a database (or a server), do it now: call db_connection with op connect (it opens the SSH tunnel and the container route itself), or read with db_schema/db_query, then say what you found; listing the connections alone is not an answer, and \"ready to connect\" only means nobody opened it yet; when you list them, offer the next step of each row that needs one (its next:), the owner can press it on the card. " +
 	"Never give the owner a command to run in place of a tool. Ask only when two or more things fit and the tools cannot tell which one is meant. " +
 	"Answer in the same language as the owner. "
 

@@ -432,6 +432,7 @@ func dbAITake(ctx context.Context, call aiIDECaller, root string, c dbclient.Con
 // to the password used, so callers can keep it out of every text.
 func dbAIOpen(ctx context.Context, root string, c dbclient.Conn, snap *dbAISnapshot, readOnly bool) (dbclient.Session, error) {
 	sess, err := dbAIOpenAs(ctx, root, c, snap, readOnly, false)
+	dbAINoteOpen(ctx, c, snap, err)
 	if err != nil {
 		if p := dbConnectProblem(c, err); p != "" {
 			// The step that failed, with its configured values: the model
@@ -736,12 +737,18 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 
 	conns := ai.Tool{
 		Name: "db_connections",
-		Description: "List the database connections of the Databases view, from the project file and the owner's own file (containers on a remote docker context too): id, type, target, environment, read-only, state, " +
-			"where each one really points (an SSH tunnel's server, a container on an ssh:// context, a host, local), remote yes/no, and the suggested ones that are not added yet. Call it first for any question about a database or a remote one.",
+		Description: "List the database connections of the Databases view, from the project file and the owner's own file (containers on a remote docker context too): id, type, target, environment, read-only, " +
+			"its true status (connected, ready to connect, missing info and which field, unreachable or SSH tunnel down with the last error and when, a broken file entry) and the next step, " +
+			"where each one really points (an SSH tunnel's server, a container on an ssh:// context, a host, local), remote yes/no, and the suggested ones that are not added yet. " +
+			"It never dials: the status comes from the config, the secret store's index and the last connect of this run; only Test (db_connection op test, or the card's Test button) tries the network. " +
+			"The owner sees the list as a card with Connect, Open, List tables, New query, Test and Fix… on each row. Call it first for any question about a database or a remote one, " +
+			"then offer the next step for the row that needs it (\"rentcar-db-1 has no password: set it with Fix…, then Connect\"); never only report the states.",
 		Describe: func(map[string]any) string { return "List database connections" },
 		Run: func(ctx context.Context, _ map[string]any) (string, error) {
 			_, _, list := dbLoadConfigs(root)
-			state := map[string]string{}
+			live := map[string]dbStatusLive{}
+			env := dbStatusEnvNow(root)
+			env.typed = map[string]bool{}
 			var suggestions []string
 			if call != nil {
 				_, _ = call(ctx, func(m *Model) (string, tea.Cmd, error) {
@@ -749,13 +756,9 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 					s := m.databases
 					for _, c := range list {
 						n := s.nodes[c.ID]
-						switch {
-						case s.sessions[c.ID] != nil:
-							state[c.ID] = "connected"
-						case n.loading:
-							state[c.ID] = "connecting"
-						case n.problem != "":
-							state[c.ID] = "error: " + n.problem
+						live[c.ID] = dbStatusLive{connected: s.sessions[c.ID] != nil, connecting: n.loading, problem: n.problem}
+						if _, ok := s.passwords[c.ID]; ok {
+							env.typed[c.ID] = true
 						}
 					}
 					for _, row := range s.rows() {
@@ -779,7 +782,7 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 			if len(list) == 0 {
 				b.WriteString("no database connections; the user adds one in the Databases view (a in the view, or .termocode/databases.json)\n")
 			} else {
-				b.WriteString("id · target · environment · state · where: what it really reaches · remote · file (project: .termocode/databases.json, user: the owner's own file; project (default): the db_* tools use it when conn is not given). " +
+				b.WriteString("id · target · environment · status · next: the step to offer · where: what it really reaches · remote · file (project: .termocode/databases.json, user: the owner's own file; project (default): the db_* tools use it when conn is not given). " +
 					"remote: yes = not on this computer (a server); 127.0.0.1 through an SSH tunnel is the server's own. The db_* tools reach every one of them\n")
 			}
 			for _, c := range list {
@@ -794,14 +797,12 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 				if c.ReadOnly {
 					parts = append(parts, "read-only")
 				}
-				st := state[c.ID]
-				if c.Problem != "" {
-					st = "problem: " + dbFriendlyProblem(c.Problem)
+				last := dbLastConnErr(c.ID)
+				if lv := live[c.ID]; last == nil && lv.problem != "" {
+					last = &dbConnErr{Text: lv.problem} // the view's row says it failed (no time kept)
 				}
-				if st == "" {
-					st = aiDBNotConnectedState
-				}
-				parts = append(parts, st)
+				st := dbConnStatusOf(c, env, live[c.ID], last)
+				parts = append(parts, "status: "+st.Label(time.Now()), "next: "+dbStatusNext(st))
 				where, remote := dbAIWhere(c)
 				yes := "no"
 				if remote {
@@ -828,6 +829,7 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 			}
 			return dbAIClean(b.String(), ""), nil
 		},
+		View: dbConnectionsView, // the card: a row per connection with its actions (db_conn_card.go)
 	}
 
 	schema := ai.Tool{
