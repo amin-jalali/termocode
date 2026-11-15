@@ -41,6 +41,7 @@
       "/assets/queue.js": ["./src/queue/main.tsx"],
       "/assets/tactile.js": ["./src/tactile/main.ts"],
       "/assets/radial.js": ["./src/radial.ts"],
+      "/assets/gitphone.js": ["./src/gitphone/main.tsx"],
       "/assets/monaco-vim.js": ["./src/monaco/vim.ts"]
     }
   },

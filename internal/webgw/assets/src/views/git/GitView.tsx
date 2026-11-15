@@ -39,7 +39,7 @@ const groupTitles: Record<Side, StringKey> = {
 };
 
 /** stageFile stages or unstages one file and offers Undo. */
-function stageFile(path: string, stage: boolean, undo = true): void {
+export function stageFile(path: string, stage: boolean, undo = true): void {
   link.request(stage ? "git.stage" : "git.unstage", { paths: [path] }).then(() => {
     if (!undo) return;
     const name = splitPath(path).name;
