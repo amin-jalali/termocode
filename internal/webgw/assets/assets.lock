@@ -19,14 +19,14 @@ fonts/nf-powerline.woff2 sha384-dy+2FQMRiPODrEHw2cbFr4wK5XiPhoZfUFC6GTizk3TGJlR7
 fonts/nf-seti.woff2 sha384-SIRO07PrKQGKqZz8AqBLr5pTSfSdjHR93D+woV27NzC1QnmdQf6bYcCBljfRiMZh 41628
 gitphone.css sha384-pUytozMATfTA1SBrVWSxWuZEyXABvdmjyGUkPK/uGTIgO2h3lzBa6JZDtlTtnzqc 12269
 gitphone.js sha384-9fp/OJz+Eqr0yGWv0oBaVlpQyNkKCzun80G37gEUngS+1tL0+theqyeJ043qEJMA 35991
-home.js sha384-FCFBEx+ct4JwRF1qrHwcKk6IUteKSRlUZ/qeQwsPOKxt/IRVd3pZID9LugmdsILb 148365
+home.js sha384-wZvpUuBo3q9O6R5owTWtkWMx9XlL8Qa1HVUJE51kaGqFD4ojsVI9C4SUSlLOYua8 148431
 icon-maskable.svg sha384-jsUQFC456bVobLxEI3ZKbp9mW6SjO1Joa3U86iXD66qm+YF+smRbvNGYVLvYMqOf 201
 icon.svg sha384-1i6/INXc16ryIXQB25IUE2qoPWGgij99HXLf1+5KcACYRgURj9eQzm/tcozbgZjh 210
 icons/codicon.ttf sha384-ydwWqX1+Wu2d6/YNWz288+ntV4SOp+lwtNI+XWqY3797m8eIMAmbNR5P9SCqdB5N 125828
 index.html sha384-f5iCR3f8G/Gp8tfywl5/Gi3k2Jvd6Qy7fjXaW08mtgSsICsLWpdV1WQG2Gz9oPI5 1274
 kit.css sha384-t+a0vg155DQ9DIdZ+YQ5LZDJlwPmIFGNqf/sTiFEe1uf5p73ZVsMZYctjb/taujy 105617
-kit.html sha384-aZGwqy4RtNBjaT/k/Tji7n5tAR5F61NWpXChjiRQTcz8M1L+kOB5zWzys8/xaoF2 719
-kit.js sha384-X4aj3Z/i+2xIW9WiyvolrOww+Aham0wF0+KugNkAfswHN4sDCmBq+FY93g/79lDH 220948
+kit.html sha384-M1YRo6/3Ee2BMrqf61g1tjahTuN1A3/lOvyCBMXLr5uHDo9PbQknGGNlOejZ1o4f 719
+kit.js sha384-GfxKnnbIM39EbULLHykP/Xy1NKJhI9TPbqvv5s9zHXlzbX8OOlJKyYOTkjtsUZnH 220903
 licenses.txt sha384-I+Nc44J3OrTgczbVBViDDe36JGZglGXOioj6+QL77LrTyXNryNwB1JjpM7F/VA8m 106567
 link.js sha384-VdpX82usD2wm/HjJYRbwFfRepWZbuOG4VUI49tLaoPkPZOx+uQjkfLdEyV3/YXBS 2330
 manifest.webmanifest sha384-htzOsTi8uFVd95zW2M5lEXdIoAWMeBdEMGSldKfQJLZEPsLRO8noLsm/OCCk+WgL 478
@@ -39,6 +39,8 @@ monaco/editor-contrib.js sha384-zovZc9/8c8IF6IlccJXAp+iG87TnOpWjJGqruAwc0mBMA0kL
 monaco/editor-host.js sha384-rIPG+WRVloxnbIjzdw7y2Okz9CDO0u8Vi8Gp09YBtnrkMwRn5dEhgAkE5greTXHf 361750
 monaco/editor.css sha384-h3Pml8012xDelgjWIfvjv8T/9ptDUnH1yJrSjj78OtB8P1yT/3pmrp6Y7S2cNUV4 390829
 monaco/editor.js sha384-n5VxbIFjdhl1sERXQHN52h87EGviSdsndgKg9eRxZVuVsFtoxtLJDuY2UxnnGx/r 2472349
+now.css sha384-FxPmWLaAzob5wT+NBVW7JoVv/m7Ji8qrwhzdrp2OuWGpPwuoeKi2AI1QNswhxAfS 6324
+now.js sha384-BKonvBg5rxZueFnXGmLjpAn3JBJIQJY23amX+EIc87RVwONAD4nWzNfi+GEHzOde 14673
 pages.css sha384-5dcWA5H4VJE12niR9c6vW5I/reYwaJk1mxnnuZi0ZYOlxq13Hx4cuQNFKOPv/hcr 8256
 pages.js sha384-eNd78MhgZ9jeBxVsxP8czeCq4OGy2S52KWTP6ALtin3kw8cN2mP4DM2o9ucqv4ZJ 26025
 parquet.js sha384-pV/P0aOmc1JcLh1AJcIyqJjQw2BZVV7l9XbBJL3ddZfiU4LN8ZwrRj4xxRdYo0Pu 605

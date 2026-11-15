@@ -20,6 +20,7 @@ import { addQuick, boardBlock, dropQuick, gitBlock, homeSummary, lastIndex, merg
 import { readGit } from "../state/git";
 import { readRuns, readTasks } from "../state/tasks";
 import type { Signal } from "@preact/signals";
+import type * as NowMain from "../now/main";
 
 /** PAGE is how many chat messages the Home draws (older ones: the Chat tab). */
 const PAGE = 60;
@@ -127,6 +128,11 @@ export function openItem(id: string): void {
     // "project": the project page comes with MOBUX-7; the row stays put.
   }
 }
+
+// Now (now.js): loaded once the laptop's inbox carries the Now info; the
+// Home's top while the stream is empty (the old top until it is in, or
+// when it does not load), and its pages over it.
+let N: typeof NowMain.Now | undefined, P: unknown;
 
 function focusBox(): void {
   const el = document.querySelector<HTMLTextAreaElement>(".home .composer-box");
@@ -345,11 +351,15 @@ export function Home() {
     if (c) onChip(c);
   };
   const busy = laptop?.busy ?? false;
+  const now = (data("inbox") as { now?: unknown } | undefined)?.now;
+  const tick = H.useState<unknown>(0)[1];
+  if (now) P ??= import("/assets/now.js").then((m: typeof NowMain) => tick([(N = m.init(H))]));
   return (
     <section class="home" data-view="home" aria-label={hs("title")}>
       <TopBar panels={panels} />
       <div class="home-stream" ref={body} role="log" aria-live="polite">
-        {stream.length === 0 && (
+        {N && <N n={stream.length} />}
+        {!N && stream.length === 0 && (
           <HomeStart
             sum={homeSummary(readInbox(data("inbox")), H.cards.value, Date.now())}
             chat={chatId}

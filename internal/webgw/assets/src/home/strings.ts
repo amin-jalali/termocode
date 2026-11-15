@@ -79,7 +79,6 @@ export const HS = {
   "views.loading": "Asking the laptop for its views…",
   "views.back": "Back",
   "views.show": "Show",
-  "views.cancel": "Cancel",
   "views.need": "{label} is needed.",
   "views.choose": "Choose…",
   "views.live": "live",
