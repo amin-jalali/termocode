@@ -30,7 +30,7 @@ export const SD = {
   "wfv.body_laptop": "Run, turn on or off, edit and allow a workflow on the laptop.",
   "wfv.gone": "This run is no longer in the list.",
   // Terminal
-  "term.close": "Close this shell…",
+  "term.copy_row": "Copy this row",
   "term.close_body": "Close terminal {n}? Anything running in it stops.",
   "outline.title": "Outline",
   "outline.no_file": "Open a file to see its symbols.",

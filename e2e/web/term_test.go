@@ -320,7 +320,7 @@ func TestTermScreenModeGrid(t *testing.T) {
 				p.TapJS(`document.querySelector(".toast-x")`)
 				p.WaitJS(`!document.querySelector(".toast")`)
 			}
-			p.TapJS(`document.querySelector(".term-info-btn")`)
+			tapAbout(p)
 			p.WaitJS(`document.querySelector(".sheet .term-about")?.innerText.includes("the laptop's (100 columns)")`)
 			p.TapJS(`[...document.querySelectorAll(".sheet .term-toggles .chip")].find((b) => b.textContent === "Screen mode")`)
 			p.WaitJS(termView + `.querySelector(".term-screen")`)

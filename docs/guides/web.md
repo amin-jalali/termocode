@@ -166,7 +166,17 @@ shell, as in a terminal app. The key bar sits right above the keyboard:
 Esc, Tab, Ctrl, Alt, -, the arrows, and more when you swipe it (`|`, `~`,
 `/`, Home, End, PgUp, PgDn). Ctrl and Alt hold for the next key; tap
 twice to lock. Swipe the terminal to read older rows. The shells are one
-slim row of tabs at the top, with ⓘ and + at its end.
+slim row of pills at the top: tap one to show it, × closes the shown one
+(the laptop asks first), + opens a new one, and ⋯ has About, Show on the
+laptop and Close.
+
+Above the key bar, **Ask AI to write a command** sends what you want to
+the laptop's AI with the shell's last lines; it types the command into
+the shell without running it. After a failure, chips offer **Fix it**,
+**Explain this** and **Run** for the failed Go test. Long press a line
+(or select some) for **Ask AI about this**, **Add to chat**, **Copy** and
+**Run again** (on a prompt line). The lines go to the chat as a reference:
+the laptop reads them from the shell.
 
 ### The Tactile Code keyboard
 

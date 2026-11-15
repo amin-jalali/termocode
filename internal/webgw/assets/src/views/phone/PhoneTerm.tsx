@@ -16,7 +16,6 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { TermItem } from "../../../../../webproto/proto";
 import { rang } from "../../lib/attention";
 import { copyText as copy } from "../../lib/clip";
-import { linkItems } from "../../lib/links";
 import { useLongPress } from "../../lib/longpress";
 import { prefs } from "../../lib/prefs";
 import { go, route } from "../../lib/router";
@@ -38,7 +37,10 @@ import { Sheet } from "../../ui/Sheet";
 import { SkeletonRows } from "../../ui/Skeleton";
 import { KeysSheet } from "../KeysSheet";
 import { Refused } from "../Placeholder";
-import { About, asRows, newTerm, Screen } from "../Term";
+import { About, asRows, newTerm, Screen, showOnLaptop } from "../Term";
+import { toast } from "../../lib/toasts";
+import { loadPTerm, ptermMod } from "../../lib/pterm";
+import { errText } from "../../ui/CardSheet";
 import { KEYS, MAX_PASTE, PasteSheet, pasting } from "../TermInput";
 import { pressTermKey, setTermInputMode, termInputMode, typeBuf, typeTerm } from "./termtype";
 
@@ -72,35 +74,53 @@ function showTerm(buf: number): void {
   go({ tab: "term", rest: String(buf), query: {} });
 }
 
-/** Strip is the shells as one slim line of tabs, ⓘ and + at its end. */
-function Strip({ terms, cur, controller, info, ring }: { terms: TermItem[]; cur: number | undefined; controller: boolean; info: (() => void) | null; ring: boolean }) {
+/** name is a shell's name on the page. */
+const name = (x: TermItem | undefined): string => (x ? x.task || x.title : t("tab.term"));
+
+/** Strip is the shells as one slim line of pills (›_ name, number, ×
+ * on the shown one) with + among them and ⋯ at the end (About, Show on
+ * the laptop, Close). */
+function Strip({ terms, cur, controller, more, ring }: { terms: TermItem[]; cur: number | undefined; controller: boolean; more: (() => void) | null; ring: boolean }) {
   return (
     <div class="pterm-strip">
-      <div class="term-chips" role="tablist" aria-label={t("tab.term")}>
+      <div class="term-chips term-pills" role="tablist" aria-label={t("tab.term")}>
         {terms.map((x, i) => (
-          <span key={x.buf} class="term-chip" data-buf={x.buf}>
+          <span key={x.buf} class={`term-chip term-pill${x.buf === cur ? " is-on" : ""}`} data-buf={x.buf}>
             <Chip tab on={x.buf === cur} dot={x.busy ? "busy" : x.exited ? "warn" : undefined} onClick={() => showTerm(x.buf)}>
+              <span class="pterm-ic" aria-hidden="true">
+                ›_
+              </span>
               <span class="trunc term-chip-title" dir="auto">
-                {x.task || x.title}
+                {name(x)}
               </span>
               <span class="term-chip-n">{i + 1}</span>
             </Chip>
+            {x.buf === cur && controller && (
+              <button type="button" class="pterm-close" aria-label={t("ph.term.close_n", { name: name(x) })} onClick={() => closeTerm(x.buf)}>
+                ×
+              </button>
+            )}
           </span>
         ))}
+        {controller && terms.length > 0 && (
+          <button type="button" class="chip pterm-new" aria-label={t("term.new")} onClick={newTerm}>
+            +
+          </button>
+        )}
       </div>
       {ring && <span class="bell-dot" role="status" aria-label={t("term.bell")} />}
-      {info && (
-        <button type="button" class="head-btn term-info-btn" aria-label={t("term.about")} onClick={info}>
-          ⓘ
+      {more && (
+        <button type="button" class="head-btn pterm-more" aria-label={t("ph.term.more")} onClick={more}>
+          ⋯
         </button>
-      )}
-      {controller && terms.length > 0 && (
-        <Button kind="quiet" small needsLink label={t("term.new")} onClick={newTerm}>
-          +
-        </Button>
       )}
     </div>
   );
+}
+
+/** closeTerm asks the laptop to close a shell (it confirms there). */
+function closeTerm(buf: number): void {
+  link.request("term.close", { buf }).catch((e: unknown) => toast("warn", errText(e)));
 }
 
 /** PasteAsk asks before a paste of several lines goes to the shell. */
@@ -145,7 +165,8 @@ function Rows({ buf, item, canType, onEnd }: { buf: number; item: TermItem | und
   const prev = useRef<{ first: number; rows: readonly string[] } | null>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [menu, setMenu] = useState<string | null>(null);
+  const [menu, setMenu] = useState<[number, number] | null>(null);
+  const PT = ptermMod.value;
   const [ask, setAsk] = useState<string | null>(null);
   const [said, setSaid] = useState("");
   const lastY = useRef(0);
@@ -255,7 +276,7 @@ function Rows({ buf, item, canType, onEnd }: { buf: number; item: TermItem | und
     mq.addEventListener("change", again);
     return () => (mo.disconnect(), mq.removeEventListener("change", again));
   }, [ready]);
-  useLongPress(host, () => setMenu(xt.current?.lineAt(lastY.current) ?? ""));
+  useLongPress(host, () => xt.current && setMenu(xt.current.pick(lastY.current)));
 
   if (!snap) {
     const r = link.refused.value.get(topic);
@@ -306,19 +327,7 @@ function Rows({ buf, item, canType, onEnd }: { buf: number; item: TermItem | und
           </Button>
         </p>
       )}
-      {menu !== null && (
-        <RowMenu
-          title={menu || t("tab.term")}
-          items={[
-            ...(xt.current?.selection() ? [{ label: t("term.copy_row"), pick: () => copy(xt.current?.selection() ?? "") }] : []),
-            { label: t("term.copy_row"), pick: () => copy(menu) },
-            { label: t("term.copy_all"), pick: () => copy(xt.current?.text() ?? lines.map((l) => l.text).join("\n")) },
-            ...(canType ? [{ label: t("term.paste"), pick: () => (pasting.value = true) }] : []),
-            ...linkItems(menu),
-          ]}
-          onClose={() => setMenu(null)}
-        />
-      )}
+      {menu !== null && PT && <PT.LineMenu paste={() => (pasting.value = true)} buf={buf} label={name(item)} lines={lines} end={first + all.length} at={menu} canType={canType} copyAll={() => copy(xt.current?.text() ?? lines.map((l) => l.text).join("\n"))} onClose={() => setMenu(null)} />}
       {ask !== null && <PasteAsk text={ask} onClose={() => setAsk(null)} />}
     </div>
   );
@@ -389,6 +398,7 @@ export function PhoneTermView() {
   const body = useRef<HTMLDivElement | null>(null);
   usePinch(body);
   useEffect(() => link.subscribe("terms"), []);
+  useEffect(loadPTerm, []); // the chips, the Ask AI field and the line menu (pterm.js)
   const termsTopic = store.topic("terms").value;
   const terms = readTerms(termsTopic?.data);
   const r = route.value;
@@ -405,6 +415,7 @@ export function PhoneTermView() {
   const controller = link.meta.value?.role === "controller";
   const [ring, setRing] = useState(false);
   const [about, setAbout] = useState(false);
+  const [more, setMore] = useState(false);
   const [atEnd, setAtEnd] = useState(true);
   const bells = rang.value;
   useEffect(() => {
@@ -427,7 +438,7 @@ export function PhoneTermView() {
       <h1 class="sr-only" id="vh-term">
         {t("tab.term")}
       </h1>
-      {terms.length > 0 && <Strip terms={terms} cur={buf} controller={controller} ring={ring} info={buf !== undefined && ts ? () => setAbout(true) : null} />}
+      {terms.length > 0 && <Strip terms={terms} cur={buf} controller={controller} ring={ring} more={buf !== undefined && ts ? () => setMore(true) : null} />}
       <div class="view-body term-body pterm-body" ref={body}>
         {refused ? (
           <Refused topic="terms">{refused.msg}</Refused>
@@ -451,7 +462,19 @@ export function PhoneTermView() {
           </span>
         )}
       </div>
+      {ts && buf !== undefined && controller && snap && !ended && ptermMod.value && <ptermMod.value.AIBar buf={buf} label={name(item)} rows={snap.rows} first={snap.first} />}
       {ts && buf !== undefined && (controller ? <KeyBar buf={buf} off={!live.value || ended} /> : <div class="composer"><p class="composer-note">{t("viewonly")}</p></div>)}
+      {more && buf !== undefined && (
+        <RowMenu
+          title={name(item)}
+          items={[
+            { label: t("term.about"), pick: () => setAbout(true) },
+            { label: t("ph.term.laptop"), pick: () => showOnLaptop(buf) },
+            ...(controller ? [{ label: t("term.close"), pick: () => closeTerm(buf) }] : []),
+          ]}
+          onClose={() => setMore(false)}
+        />
+      )}
       {about && buf !== undefined && <About buf={buf} cols={snap?.cols ?? 0} screen={snap?.screen === true} wrap={false} onClose={() => setAbout(false)} />}
     </section>
   );
