@@ -85,6 +85,10 @@ test("S16 S14 the button's default corner and the clamp", () => {
   eq(clampFab([900, 900], 800, 600), [800 - 44, 600 - 44], "12 px inside");
   eq(clampFab([-50, -50], 800, 600, { top: 30, right: 0, bottom: 0, left: 0 }), [44, 74]);
   eq(clampFab([400, 300], 800, 600), [400, 300], "inside stays");
+  const side = { top: 0, right: 47, bottom: 21, left: 47 };
+  eq(defaultFab(844, 390, side), [844 - 47 - 16 - 32, 390 - 21 - 12 - 32], "landscape: clear of the notch side");
+  eq(clampFab([5, 100], 844, 390, side), [47 + 44, 100]);
+  eq(clampFab([840, 100], 844, 390, side), [844 - 47 - 44, 100]);
 });
 
 test("D7 the card: above, flipped below without room, never off screen", () => {
