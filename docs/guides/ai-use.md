@@ -1064,6 +1064,23 @@ first request.
 The same approval rules apply to every tool, loaded or not. To send every
 tool on every request again, set `"ai_tool_groups": "off"` in config.json.
 
+### Abilities: on, on demand, off
+
+Each group has one of three states. Change them with **AI: Abilities…**
+(Enter moves a group on → on demand → off); they are saved as
+`ai_abilities` in config.json.
+
+- **on**: the group's tools are in every request.
+- **on demand** (the default): the AI loads the group with `tool_search`.
+- **off**: the AI cannot load it. When a task needs it, the AI asks with a
+  card ("turn on the AI's kube tools: …"). Deny keeps it off; Allow turns
+  it to on demand and the AI goes on.
+
+`db`, `containers` and `kube` start off when termocode finds nothing for
+them in this project or on this computer: no saved database connection or
+`.termocode/databases.json`, no compose file or Dockerfile, no kubeconfig.
+A database attachment counts as found. Your own setting always wins.
+
 When an answer hits the model's output token limit, its last tool call
 may be cut short (a long `write_file`). Then none of that answer's tool
 calls run: the AI is told to send them again with complete arguments

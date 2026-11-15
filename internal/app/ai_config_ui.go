@@ -70,6 +70,8 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onCheckpointPicked(id), true
 	case pickerKindAIAutoApprove:
 		return m.onAIAutoApproveToggled(id), true
+	case pickerKindAIAbilities: // ai_abilities.go
+		return m.onAIAbilityPicked(id), true
 	case pickerKindMCPServeStatus: // mcp_serve_status.go
 		return m.onMCPServeStatusPicked(id), true
 	case pickerKindAIAttach:
