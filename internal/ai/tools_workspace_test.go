@@ -72,7 +72,7 @@ func TestReadFileToolReadsAndRefuses(t *testing.T) {
 	writeFile(t, filepath.Join(dir, "sub", "x.go"), "package x\n")
 
 	out, err := runTool(t, w, "read_file", map[string]any{"path": "sub/x.go"})
-	if err != nil || out != "package x\n" {
+	if err != nil || out != "sub/x.go (1 line)\n1|package x\n" {
 		t.Fatalf("read = %q, %v", out, err)
 	}
 	if _, err := runTool(t, w, "read_file", map[string]any{"path": "nope.go"}); !errors.Is(err, os.ErrNotExist) {
@@ -93,8 +93,8 @@ func TestReadFileToolCapsHugeFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasSuffix(out, "[truncated, 10 more bytes]") || len(out) > maxReadBytes+100 {
-		t.Errorf("not capped: len %d, tail %q", len(out), out[len(out)-40:])
+	if !strings.Contains(out, "line cut") || len(out) > maxReadBytes+200 {
+		t.Errorf("not capped: len %d, tail %q", len(out), out[len(out)-60:])
 	}
 }
 
