@@ -53,6 +53,12 @@ type StoredMessage struct {
 	// Lessons is how many memory lessons (OM-2) went into the prompt of
 	// this user message's turn. Only shown.
 	Lessons int `json:"lessons,omitempty"`
+	// Note (on a user message) is the turn's changing context the model
+	// got after the message: the open file, the memory lessons and the
+	// todo list as they were then. It rides on the message, not in the
+	// system prompt, so the prompt stays the same from turn to turn; it
+	// is kept so the message is sent again byte for byte. Not shown.
+	Note string `json:"note,omitempty"`
 	// Native (on a user message) is what the model and its tools said in
 	// that turn as the provider saw it: the assistant messages with their
 	// tool calls and the tool results (secrets redacted, results cut),

@@ -1253,9 +1253,11 @@ small request; **AI: Usage** lists it as the agent `memory`. Without a
 quick slot, one toast says lessons are not saved.
 
 **When lessons are used.** With memory on, each message sends up to 10
-lessons (about 2 KB) in the system prompt, after the project rules:
-lessons about the open or attached file first, then lessons that share
-words with your message, then the newest ones. The line under your message
+lessons (about 2 KB) with that message (not in the system prompt, so the
+system prompt stays the same from turn to turn and the provider's prompt
+cache keeps it; the open file's name and the open todo list go the same
+way): lessons about the open or attached file first, then lessons that
+share words with your message, then the newest ones. The line under your message
 says `memory: 3 lessons`; click it to see them.
 
 **View, edit, forget.** **AI: Memory…** lists the lessons, newest first.

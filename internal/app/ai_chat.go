@@ -156,6 +156,9 @@ func (m *Model) aiChatHistoryWith(system string, n int, native func(i int) []ai.
 			if sm.Context != "" {
 				c = sm.Context + "\n\n" + sm.Text
 			}
+			if sm.Note != "" { // the turn's open file, lessons and todos, as sent then
+				c += "\n\n" + sm.Note
+			}
 			um := ai.Message{Role: ai.RoleUser, Content: c}
 			if len(sm.Images) > 0 {
 				if s.provider != nil && ai.SupportsImages(s.provider) {
@@ -379,7 +382,8 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		tools, autoRules = append(tools, rt...), aiRulesAutoPrompt(rules)
 	}
 	native := slot.p.SupportsTools()
-	base := aiWithToolGuideFor(m.aiChatBasePrompt(root, rules, memBlock), tools, false, fam) + autoRules + aiStepSystem(step.System)
+	base := aiWithToolGuideFor(m.aiChatStablePrompt(root, rules), tools, false, fam) + autoRules + aiStepSystem(step.System)
+	s.conv.Messages[userIdx].Note = m.aiChatTurnNote(memBlock) // the changing part rides on the message
 	form := aiNativeFor(slot.cfg.Kind, native)
 	history := m.aiChatTurnHistory(aiFamilySystem(fam, ai.SystemPrompt(base, tools, native)), native, slot.cfg.Kind) // earlier turns' tool results too
 	sent := s.aiDeferTurnTools(tools, native, preload)                                                               // the prompt above names every tool: it stays the same as groups load
@@ -503,6 +507,34 @@ func (m *Model) aiChatBasePrompt(root string, rules ai.Rules, memory string) str
 	}
 	return base + aiRulesPrompt(rules) + memory + aiSkillsPrompt(aiOfferedSkills(aiLoadSkills(root))) + ai.TodosPrompt(m.aiS().conv.Todos)
 }
+
+// aiChatStablePrompt is the system prompt of a plain chat turn before
+// the tool protocol: aiChatBasePrompt without what changes between turns
+// (the open file, the memory lessons, the todo list: aiChatTurnNote), so
+// it is the same on every turn and the provider's prompt cache keeps it.
+func (m *Model) aiChatStablePrompt(root string, rules ai.Rules) string {
+	return aiIdentityPrompt(root) + aiChatSystemPrompt + "\nWorkspace root: " + root + "\n" + ai.EnvBlock(aiEnvInfo()) + m.aiServicesPromptLine(root) +
+		m.aiContainersPromptLine() + aiDBPromptLine(root) + m.aiWorkflowsPromptLine(root) +
+		aiRulesPrompt(rules) + aiSkillsPrompt(aiOfferedSkills(aiLoadSkills(root)))
+}
+
+// aiChatTurnNote is what changes between turns, for the turn's user
+// message ("" when there is nothing): the open file, the memory lessons
+// (OM-2) and the open todo list (OMX-7).
+func (m *Model) aiChatTurnNote(memory string) string {
+	note := ""
+	if p := m.editor.Path(); p != "" {
+		note += "\n\nThe open file is: " + p
+	}
+	note += memory + ai.TodosPrompt(m.aiS().conv.Todos)
+	if note == "" {
+		return ""
+	}
+	return aiTurnNoteHead + strings.TrimLeft(note, "\n")
+}
+
+// aiTurnNoteHead opens a turn note after the user's text.
+const aiTurnNoteHead = "[termocode's context for this message, not written by the owner]\n"
 
 // autoApproveSet is ai_auto_approve as a set (one per agent: "Always
 // allow" adds to it while the agent runs).
