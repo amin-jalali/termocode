@@ -80,19 +80,32 @@ function ask(): void {
   );
 }
 
-/** fold keeps the spans of rows the page has, with their text. */
+/** fold keeps the spans of rows the page has, with their text. The
+ * background most of the coloured text has is the laptop terminal's own
+ * (its panel paints every cell): it is left out, so the page's terminal
+ * keeps one background in either theme, never a box behind the text. */
 export function fold(buf: number, first: number, rows: readonly string[], res: TermColorsRes): ColorsState {
   const out = new Map<number, Row>();
+  const by = new Map<string, number>();
+  let all = 0;
+  for (const s of res.spans) {
+    const n = s.length === 4 ? s[2] - s[1] : 0;
+    const b = res.styles[s[3]]?.bg;
+    all += n;
+    if (b) by.set(b, (by.get(b) ?? 0) + n);
+  }
+  const base = [...by].find(([, n]) => n * 2 > all)?.[0];
+  const styles = base ? res.styles.map((st) => (st.bg === base ? { ...st, bg: undefined } : st)) : res.styles;
   for (const s of res.spans) {
     if (s.length !== 4) continue;
     const [row, a, b, st] = s;
     const text = rows[row - first];
-    if (text === undefined || !res.styles[st]) continue;
+    if (text === undefined || !styles[st]) continue;
     let r = out.get(row);
     if (!r) out.set(row, (r = { text, spans: [] }));
     r.spans.push([a, b, st]);
   }
-  return { buf, tick: res.tick, shown: res.shown, rows: out, styles: res.styles };
+  return { buf, tick: res.tick, shown: res.shown, rows: out, styles };
 }
 
 /** dropColors forgets them (the view closed or the switch went off). */
