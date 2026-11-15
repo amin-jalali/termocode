@@ -1064,6 +1064,11 @@ first request.
 The same approval rules apply to every tool, loaded or not. To send every
 tool on every request again, set `"ai_tool_groups": "off"` in config.json.
 
+When an answer hits the model's output token limit, its last tool call
+may be cut short (a long `write_file`). Then none of that answer's tool
+calls run: the AI is told to send them again with complete arguments
+(a long file in parts), and the chat shows a short note.
+
 ### Autopilot and approval rules
 
 termocode rates every change the agent wants to make as **low**, **medium**

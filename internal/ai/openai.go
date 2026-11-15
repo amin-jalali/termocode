@@ -230,8 +230,9 @@ func parseOpenAISSE(ctx context.Context, r io.Reader, ch chan<- Chunk) Chunk {
 	calls := map[int]*partial{}
 	var model string
 	var usage *Usage
+	cut := false // finish_reason "length": the answer hit the output limit
 	finish := func() Chunk {
-		out := Chunk{Done: true, Usage: usage}
+		out := Chunk{Done: true, Usage: usage, Cut: cut}
 		if usage != nil && usage.Model == "" {
 			usage.Model = model
 		}
@@ -284,6 +285,7 @@ func parseOpenAISSE(ctx context.Context, r io.Reader, ch chan<- Chunk) Chunk {
 						} `json:"function"`
 					} `json:"tool_calls"`
 				} `json:"delta"`
+				FinishReason string `json:"finish_reason"`
 			} `json:"choices"`
 			Error any          `json:"error"`
 			Model string       `json:"model"`
@@ -307,6 +309,9 @@ func parseOpenAISSE(ctx context.Context, r io.Reader, ch chan<- Chunk) Chunk {
 		}
 		if len(ev.Choices) == 0 {
 			continue
+		}
+		if f := ev.Choices[0].FinishReason; f != "" {
+			cut = f == "length"
 		}
 		d := ev.Choices[0].Delta
 		if d.Content != "" {

@@ -339,6 +339,14 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 			emit(Event{Kind: EventDone, Usage: total()})
 			return msgs[start:]
 		}
+		if last.Cut { // the answer hit the output limit: a call may be cut short, so none runs
+			for _, call := range calls {
+				msgs = append(msgs, toolResultMessage(a.Native, call, CutCallNote, nil))
+			}
+			emit(Event{Kind: EventToolNote, Detail: "The answer hit the output token limit: its tool calls were not run; the AI sends them again."})
+			msgs = append(msgs, a.inbox()...)
+			continue
+		}
 		blocked, stop := guard.check(calls)
 		if stop { // the same call again after the note: end the turn
 			name := ""
@@ -394,6 +402,11 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 	emit(Event{Kind: EventDone, Usage: total(), StepLimit: true})
 	return msgs[start:]
 }
+
+// CutCallNote is the result of each tool call of an answer that hit the
+// output token limit.
+const CutCallNote = "not run: your answer hit the output token limit, so this call's arguments may be cut short. " +
+	"Send the call again with complete arguments; write a long file in parts (create it, then edit_file to add the rest)."
 
 // toolResultMessage is the message that gives the model a call's result.
 func toolResultMessage(native bool, call ToolCall, result string, images []Image) Message {
