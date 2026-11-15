@@ -6250,7 +6250,8 @@
             "block",
             "project",
             "view",
-            "item"
+            "item",
+            "term"
           ]
         },
         "label": {

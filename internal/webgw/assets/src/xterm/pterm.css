@@ -1,0 +1,18 @@
+/* The phone's Term page (page-designs 01-term), in term.css: only a page
+   with a terminal loads it, so app.css does not grow. */
+.term-pills { display: flex; flex: 1; min-width: 0; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.term-pill { position: relative; display: inline-flex; flex: none; align-items: center; }
+.term-pill button.chip, .term-pills button.pterm-new { height: 30px; min-height: 30px; padding: 0 10px; gap: 4px; border: 0; border-radius: 15px; background: var(--bg-2); font: 13px var(--font-mono); color: var(--text); }
+.term-pill.is-on button.chip { padding-inline-end: 28px; background: var(--sel); }
+.pterm-ic, .term-pill .term-chip-n { color: var(--muted); }
+.pterm-close { position: absolute; inset-inline-end: 4px; width: 22px; height: 22px; border: 0; border-radius: 11px; background: none; color: var(--muted); font-size: 15px; }
+.term-pills button.pterm-new { min-width: 34px; font-size: 16px; }
+.pterm-strip .pterm-more { min-height: 40px; color: var(--blue); font-size: 20px; }
+.pterm-ai { padding: 6px 10px; border-top: 1px solid var(--border); background: var(--bg); }
+.pterm-chips { display: flex; gap: 6px; margin-bottom: 6px; overflow-x: auto; scrollbar-width: none; }
+.pterm-chips .chip { min-height: 28px; height: 28px; border-radius: 14px; white-space: nowrap; font: 13px var(--font-sans); }
+.pterm-ask { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border: 1px dashed var(--ai); border-radius: 18px; background: var(--bg-panel); }
+.pterm-ask-ic { color: var(--ai); }
+.pterm-ask input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--text); font-size: 16px; }
+/* While a keyboard is up the terminal keeps the room, unless the field is the one typed in. */
+html:is([data-kb="up"], .tk-on) .pterm-ai:not(:focus-within) { display: none; }

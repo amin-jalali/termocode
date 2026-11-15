@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -46,6 +47,7 @@ type webAttachJob struct {
 	untracked   bool
 	tree        []git.FileStatus       // diff of the whole tree: the changed files
 	tailBuf     int                    // task: its terminal (0: none)
+	termBuf     int                    // term: the shell whose rows from..to go
 	read        func() (string, error) // issue, pr: read off the UI thread (MOB-55)
 }
 
@@ -180,6 +182,12 @@ func (m *Model) webAttachPlan(a *webproto.Attach) (webAttachJob, error) {
 			}
 		}
 		return j, gone("That task")
+	case webproto.AttachTerm: // the phone's terminal: a long press on its lines
+		buf, _ := strconv.Atoi(a.ID)
+		if _, ok := m.webTermTab(buf); !ok {
+			return j, gone("That terminal")
+		}
+		j.termBuf, j.from, j.to = buf, a.From, a.To
 	case webproto.AttachRun:
 		for _, r := range m.webRunsBuild(clock.Now()).Runs {
 			if r.Key == a.ID {
@@ -331,6 +339,8 @@ func webAttachRead(jobs []webAttachJob, c *nvim.Client) ([]aiAttachment, error) 
 			text, err = webAttachFileText(j)
 		case j.tailBuf > 0:
 			text += webAttachTail(c, j.tailBuf)
+		case j.termBuf > 0:
+			text, err = webAttachTermText(c, j)
 		}
 		if err != nil {
 			return nil, err
@@ -461,6 +471,28 @@ func webAttachDiff(j webAttachJob) (string, error) {
 
 // webAttachTail is the end of a task's terminal for a task attach ("" when
 // it cannot be read now: the task's line still goes).
+// webTermLines reads rows from..to (from 1) of a shell's buffer, off the
+// UI thread. Tests swap it.
+var webTermLines = func(c *nvim.Client, buf, from, to int) ([]string, error) {
+	if c == nil {
+		return nil, errors.New("the editor is not ready")
+	}
+	var lines []string
+	err := c.EvalLuaArgs(`local b, f, t = ...
+		if not vim.api.nvim_buf_is_loaded(b) then return {} end
+		return vim.api.nvim_buf_get_lines(b, f - 1, t, false)`, &lines, buf, from, to)
+	return lines, err
+}
+
+// webAttachTermText is the shell's rows the user picked on the phone.
+func webAttachTermText(c *nvim.Client, j webAttachJob) (string, error) {
+	lines, err := webTermLines(c, j.termBuf, j.from, j.to)
+	if err != nil || len(lines) == 0 {
+		return "", webErr(webproto.CodeNotFound, "Those terminal lines are gone.")
+	}
+	return fmt.Sprintf("Terminal lines %d–%d (%s, buffer %d):\n%s", j.from, j.from+len(lines)-1, j.label, j.termBuf, strings.Join(lines, "\n")), nil
+}
+
 func webAttachTail(c *nvim.Client, buf int) string {
 	lines, err := webTaskLines(c, buf, webproto.MaxTailLines+webTailSpare)
 	if err != nil {

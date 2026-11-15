@@ -83,6 +83,19 @@ func typeLetters(p *Page, s string) {
 	}
 }
 
+// tapAbout opens About this terminal: on the phone from the strip's ⋯
+// menu, on the desktop from ⓘ in the panel title.
+func tapAbout(p *Page) {
+	p.T.Helper()
+	if Eval[bool](p, `!!document.querySelector('[data-view="term"] .pterm-more')`) {
+		p.TapJS(`document.querySelector('[data-view="term"] .pterm-more')`)
+		p.WaitJS(rowMenu)
+		pickItem(p, "About this terminal")
+		return
+	}
+	p.TapJS(`document.querySelector('[data-view="term"] .term-info-btn, .wb-panel .term-info-btn')`)
+}
+
 func termShot(t *testing.T, p *Page, name string) {
 	t.Helper()
 	if dir := os.Getenv(shotsEnv); dir != "" {
@@ -100,7 +113,7 @@ func TestPhoneTermFillsTheScreen(t *testing.T) {
 	if got := strings.Join(xtermRows(p), "|"); got != "$ ls|a.go  b.go|$" {
 		t.Errorf("terminal rows %q", got)
 	}
-	for _, sel := range []string{".term-line", ".view-head", ".send", "input"} {
+	for _, sel := range []string{".term-line", ".view-head", ".send", "input:not(.pterm-ask input)"} {
 		if Eval[bool](p, termView+`.querySelector(`+jsq(sel)+`) !== null`) {
 			t.Errorf("the terminal still has %s", sel)
 		}
@@ -108,10 +121,10 @@ func TestPhoneTermFillsTheScreen(t *testing.T) {
 	if h := Eval[float64](p, termView+`.querySelector(".pterm-strip").getBoundingClientRect().height`); h > 46 {
 		t.Errorf("the shells strip is %.0f px tall, want one slim line", h)
 	}
-	if !Eval[bool](p, `!!(`+termView+`.querySelector('.pterm-strip .term-chip[data-buf="9"]') && `+termView+`.querySelector(".pterm-strip .term-info-btn"))`) {
+	if !Eval[bool](p, `!!(`+termView+`.querySelector('.pterm-strip .term-chip[data-buf="9"]') && `+termView+`.querySelector(".pterm-strip .pterm-more"))`) {
 		t.Error("the strip has not every shell and ⓘ")
 	}
-	gap := Eval[float64](p, `(() => { const x = `+termView+`.querySelector(".pterm-x").getBoundingClientRect(), k = `+termView+`.querySelector(".keybar").getBoundingClientRect(); return k.top - x.bottom; })()`)
+	gap := Eval[float64](p, `(() => { const x = `+termView+`.querySelector(".pterm-x").getBoundingClientRect(), k = (`+termView+`.querySelector(".pterm-ai") ?? `+termView+`.querySelector(".keybar")).getBoundingClientRect(); return k.top - x.bottom; })()`)
 	if gap > 24 || gap < -1 {
 		t.Errorf("%.0f px between the terminal and the key bar, want the terminal to fill the space", gap)
 	}

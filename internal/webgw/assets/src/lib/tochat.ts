@@ -14,6 +14,9 @@ export interface ChatRef {
   id?: string;
   path?: string;
   line?: number;
+  /** from, to: a term ref's rows (from 1). */
+  from?: number;
+  to?: number;
 }
 
 /** RefChip is a ref waiting in the composer, with the label it shows. The
@@ -25,7 +28,7 @@ export interface RefChip {
 }
 
 /** The attach kinds of the plan (3.3). */
-const KINDS = new Set(["task", "ptask", "issue", "pr", "file", "lines", "diff", "worktree", "run", "race", "workflow", "card", "resource", "block", "project", "view"]);
+const KINDS = new Set(["task", "ptask", "issue", "pr", "file", "lines", "diff", "worktree", "run", "race", "workflow", "card", "resource", "block", "project", "view", "term"]);
 
 export const MAX_REFS = 8;
 const MAX_PATH = 512; // blocks.MaxPath
@@ -83,6 +86,12 @@ export function cleanRef(r: ChatRef | null | undefined): ChatRef | null {
     out.path = p;
   }
   if (typeof r.line === "number" && Number.isInteger(r.line) && r.line > 0) out.line = r.line;
+  if (r.kind === "term") {
+    const { from: f, to } = r;
+    if (!/^[1-9]\d*$/.test(out.id ?? "") || !Number.isInteger(f) || !Number.isInteger(to) || f! < 1 || to! < f! || to! - f! >= 2000) return null;
+    out.from = f;
+    out.to = to;
+  }
   if (!out.id && !out.path && out.kind !== "diff") return null;
   return out;
 }
@@ -110,13 +119,14 @@ export function toAttach(r: ChatRef, label: string): Attach | null {
     return { kind: r.kind === "lines" ? "file" : r.kind, path: r.path, ...name };
   }
   if (r.kind === "view" || !r.id) return null;
+  if (r.kind === "term") return { kind: "term", id: r.id, from: r.from, to: r.to, ...name };
   if (r.kind === "ptask") return r.path ? { kind: "ptask", id: r.id, path: r.path, ...name } : null;
   return { kind: r.kind, id: r.id, ...name };
 }
 
 /** refKey is one ref's identity: the same thing is never attached twice. */
 export function refKey(r: ChatRef): string {
-  return [r.kind, r.id ?? "", r.path ?? "", r.line ?? 0].join("\u0000");
+  return [r.kind, r.id ?? "", r.path ?? "", r.line ?? 0, r.from ?? 0, r.to ?? 0].join("\u0000");
 }
 
 function base(path: string): string {
