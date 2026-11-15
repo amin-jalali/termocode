@@ -915,7 +915,13 @@ tools never ask (`DEBIAN_FRONTEND=noninteractive`, `npm_config_yes=true`,
 `PIP_NO_INPUT=1`, `HOMEBREW_NO_AUTO_UPDATE=1`), nor does Git Credential
 Manager (`GCM_INTERACTIVE=never`). A long output (over 16 KB) keeps
 its first quarter and its end, where test failures and build errors
-are, with a "… N lines cut …" note in the middle. The
+are, with a "… N lines cut …" note in the middle. The full output
+(up to 5 MB, secrets hidden) is saved outside the project in
+`~/.cache/termocode/ai-output/` (one folder per chat, removed after
+7 days), and the note names the file and the cut lines, so the agent
+can read the middle with `read_file` and an offset. `read_file` may
+read that folder but no tool can change it; container runs are saved
+on your machine too. The
 agent's system prompt also says today's date, your OS and your shell.
 
 When a turn gets near the model's context window, big tool results are
@@ -1063,6 +1069,23 @@ first request.
 
 The same approval rules apply to every tool, loaded or not. To send every
 tool on every request again, set `"ai_tool_groups": "off"` in config.json.
+
+### Abilities: on, on demand, off
+
+Each group has one of three states. Change them with **AI: Abilities…**
+(Enter moves a group on → on demand → off); they are saved as
+`ai_abilities` in config.json.
+
+- **on**: the group's tools are in every request.
+- **on demand** (the default): the AI loads the group with `tool_search`.
+- **off**: the AI cannot load it. When a task needs it, the AI asks with a
+  card ("turn on the AI's kube tools: …"). Deny keeps it off; Allow turns
+  it to on demand and the AI goes on.
+
+`db`, `containers` and `kube` start off when termocode finds nothing for
+them in this project or on this computer: no saved database connection or
+`.termocode/databases.json`, no compose file or Dockerfile, no kubeconfig.
+A database attachment counts as found. Your own setting always wins.
 
 When an answer hits the model's output token limit, its last tool call
 may be cut short (a long `write_file`). Then none of that answer's tool

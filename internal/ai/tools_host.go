@@ -80,12 +80,12 @@ func (w Workspace) hostRun(ctx context.Context, timeout time.Duration, argv ...s
 	full = append(full, argv...)
 	out, stderr, code, err := w.Exec.Capture(ctx, w.Root, full...)
 	if ctx.Err() == context.DeadlineExceeded {
-		return capHeadTail(out+stderr, maxOutBytes) + "\n[timed out]", nil
+		return w.capRun(out+stderr) + "\n[timed out]", nil
 	}
 	if err != nil {
 		return "", err
 	}
-	s := capHeadTail(out+stderr, maxOutBytes)
+	s := w.capRun(out + stderr)
 	if code != 0 {
 		return fmt.Sprintf("%s\n[exit status %d]", s, code), nil
 	}
@@ -133,7 +133,7 @@ func hostRuns(w Workspace) map[string]func(context.Context, map[string]any) (str
 		"read_file": func(ctx context.Context, a map[string]any) (string, error) {
 			abs, err := w.Resolve(p(a))
 			if err != nil {
-				return "", err
+				return readOutsideOrSaved(p(a), a, err) // a saved command output is on this machine
 			}
 			if SecretFile(abs) {
 				return "", errSecretFile(w.rel(abs))
@@ -240,7 +240,7 @@ func hostRuns(w Workspace) map[string]func(context.Context, map[string]any) (str
 		"edit_file": func(ctx context.Context, a map[string]any) (string, error) {
 			abs, err := w.Resolve(p(a))
 			if err != nil {
-				return "", err
+				return readOutsideOrSaved(p(a), a, err) // a saved command output is on this machine
 			}
 			if SecretFile(abs) {
 				return "", errSecretFile(w.rel(abs))

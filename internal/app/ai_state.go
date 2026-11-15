@@ -628,6 +628,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-pick-model", "AI: Pick Model…", ""},
 		{"ai-auto-model", "AI: Toggle Auto Model Pick (quick / main per turn)", ""},
 		{"ai-auto-approve", "AI: Agent Auto-Approve…", ""},
+		{"ai-abilities", "AI: Abilities…", ""},
 		{"ai-profile-switch", "AI: Switch Profile…", ""},
 		{"ai-profile-next", "AI: Next Profile", "Alt+Shift+P"},
 		{"ai-profile-show", "AI: Show Profile", ""},
@@ -709,7 +710,7 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 	// the configure / sign-in / credentials entries are the way out.
 	switch id {
 	case "ai-configure", "ai-sign-in-claude", "ai-sign-out-claude", "ai-credentials",
-		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-review-order", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
+		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-review-order", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve", "ai-abilities",
 		"ai-history-rename", "ai-history-delete", "ai-history-clear", "ai-fork-chat", aiHistorySearchID, aiShareChatID, aiChatCommentsID,
 		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reconnect-all", "ai-mcp-profile", "ai-mcp-accounts", "ai-mcp-catalog", "ai-mcp-bundle", "ai-mcp-updates", "ai-mcp-reset-cache",
 		"ai-chat-unschedule",               // CMP-43: stopping paid runs needs no provider
@@ -802,6 +803,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.toggleAIRouter(), true
 	case "ai-auto-approve":
 		return m.openAIAutoApprovePicker(), true
+	case "ai-abilities": // ai_abilities.go
+		return m.openAIAbilitiesPicker(), true
 	case "ai-sign-in-claude":
 		return m.startClaudeSignIn(), true
 	case "ai-sign-out-claude":

@@ -486,6 +486,7 @@ excluded	workflow-edit-file	laptop only: workflow files are edited and trusted o
 excluded	workflow-enable	laptop only: turning a schedule on changes what runs unattended (plan §5.7)
 excluded	workflow-undo-write	laptop only: an undo writes to outside systems again, behind the laptop's card (plan §5.7)
 missing	acp-thread	Agents|M
+missing	ai-abilities	AI|S
 missing	ai-board	AI|M
 missing	ai-chat-comments	AI|S
 missing	ai-chat-doc-revisions	AI|S

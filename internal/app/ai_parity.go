@@ -149,6 +149,7 @@ var aiAgentsNotForAI = map[string]string{
 	"ai-agent-packs":             "it writes many files into other apps' config folders: the user decides after the preview",
 	"ai-apply-proposal":          "the user reviews proposed edits",
 	"ai-auto-approve":            "the AI's own safety setting: only the user changes it, never the AI (owner 2026-11-09)",
+	"ai-abilities":               "the AI's tool groups: only the user changes them; the AI asks with ability_request",
 	"ai-auto-model":              "AI provider, credentials and approvals stay with the user; the AI never picks its own model",
 	"ai-autopilot":               "the AI's own safety setting: only the user changes it, never the AI (owner 2026-11-09)",
 	"ai-cancel":                  "the AI is the chat: it answers in this chat instead (it ends its own turn by finishing its answer)",

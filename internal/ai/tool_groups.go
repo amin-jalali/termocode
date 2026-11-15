@@ -105,19 +105,63 @@ func ToolGroupOf(groups []ToolGroup, name string) string {
 	return ToolGroupOther
 }
 
+// Ability states of a tool group (ai_abilities): on (its tools are in
+// every request), on demand (deferred: the AI loads them with
+// tool_search, the default) and off (the AI cannot load them; it asks the
+// user with ability_request).
+const (
+	AbilityOn     = "on"
+	AbilityDemand = "demand"
+	AbilityOff    = "off"
+)
+
+// AbilityStates are the states ai_abilities may hold.
+var AbilityStates = []string{AbilityOn, AbilityDemand, AbilityOff}
+
+// AbilityRequestTool is the tool the AI asks with to turn an off group on.
+const AbilityRequestTool = "ability_request"
+
+// GroupPolicy says what each group's ability state is and how an off
+// group is turned on. A nil State is "on demand" for every group.
+type GroupPolicy struct {
+	State func(group string) string
+	// Enable turns group on (on demand) after the user allowed it on the
+	// ability_request card. Nil: no ability_request tool.
+	Enable func(ctx context.Context, group string) error
+}
+
+func (p GroupPolicy) state(g string) string {
+	if p.State == nil {
+		return AbilityDemand
+	}
+	return p.State(g)
+}
+
 // DeferToolGroups hides every tool of tools that is not in core (and not
 // an MCP tool: those have their own search) until its group is loaded,
 // and adds tool_search. With nothing to hide it returns tools unchanged.
 func DeferToolGroups(tools []Tool, core []string, groups []ToolGroup, loaded *LoadedGroups) []Tool {
+	return DeferToolGroupsWith(tools, core, groups, loaded, GroupPolicy{})
+}
+
+// DeferToolGroupsWith is DeferToolGroups with ability states: an "on"
+// group is loaded at once, an "off" group's tools are never sent and do
+// not run (tool_search and a call by name say to ask the user), and
+// ability_request asks the user to turn an off group on.
+func DeferToolGroupsWith(tools []Tool, core []string, groups []ToolGroup, loaded *LoadedGroups, pol GroupPolicy) []Tool {
 	byName := map[string]*deferredGroup{}
 	var order []*deferredGroup
-	out := make([]Tool, 0, len(tools)+1)
+	out := make([]Tool, 0, len(tools)+2)
+	off := func(g string) bool { return pol.state(g) == AbilityOff }
 	for _, t := range tools {
-		if slices.Contains(core, t.Name) || strings.HasPrefix(t.Name, "mcp__") || t.Name == "mcp_tool_search" || t.Name == ToolSearchTool || t.Hidden != nil {
+		if slices.Contains(core, t.Name) || strings.HasPrefix(t.Name, "mcp__") || t.Name == "mcp_tool_search" || t.Name == ToolSearchTool || t.Name == AbilityRequestTool || t.Hidden != nil {
 			out = append(out, t)
 			continue
 		}
 		g := ToolGroupOf(groups, t.Name)
+		if pol.state(g) == AbilityOn {
+			loaded.Load(g)
+		}
 		mb := byName[g]
 		if mb == nil {
 			mb = &deferredGroup{name: g}
@@ -133,9 +177,12 @@ func DeferToolGroups(tools []Tool, core []string, groups []ToolGroup, loaded *Lo
 			order = append(order, mb)
 		}
 		mb.tools = append(mb.tools, t)
-		t.Hidden = func() bool { return !loaded.Has(g) }
+		t.Hidden = func() bool { return off(g) || !loaded.Has(g) }
 		if run := t.Run; run != nil {
 			t.Run = func(ctx context.Context, args map[string]any) (string, error) {
+				if off(g) {
+					return "", fmt.Errorf("the %s tools are off (the user's ai_abilities); call %s with group %q and why, and the user decides", g, AbilityRequestTool, g)
+				}
 				loaded.Load(g) // called by name: its group comes along from the next step
 				return run(ctx, args)
 			}
@@ -157,8 +204,16 @@ func DeferToolGroups(tools []Tool, core []string, groups []ToolGroup, loaded *Lo
 	}
 	sort.SliceStable(order, func(i, j int) bool { return rank(order[i].name) < rank(order[j].name) })
 	var list strings.Builder
+	var offNames []string
 	for _, mb := range order {
+		if off(mb.name) {
+			offNames = append(offNames, mb.name)
+			continue
+		}
 		fmt.Fprintf(&list, "\n- %s (%d): %s", mb.name, len(mb.tools), mb.about)
+	}
+	if len(offNames) > 0 && pol.Enable != nil {
+		fmt.Fprintf(&list, "\nOff (the user turned these off; to use one, call %s and the user decides): %s", AbilityRequestTool, strings.Join(offNames, ", "))
 	}
 	search := Tool{
 		Name: ToolSearchTool,
@@ -191,6 +246,10 @@ func DeferToolGroups(tools []Tool, core []string, groups []ToolGroup, loaded *Lo
 			}
 			var b strings.Builder
 			for _, mb := range hit {
+				if off(mb.name) {
+					fmt.Fprintf(&b, "The %s group is off. To use it, call %s with group %q and why; the user decides.\n", mb.name, AbilityRequestTool, mb.name)
+					continue
+				}
 				loaded.Load(mb.name)
 				fmt.Fprintf(&b, "Loaded %s:\n", mb.name)
 				for _, t := range mb.tools {
@@ -201,7 +260,63 @@ func DeferToolGroups(tools []Tool, core []string, groups []ToolGroup, loaded *Lo
 			return b.String(), nil
 		},
 	}
-	return append(out, search)
+	out = append(out, search)
+	if len(offNames) > 0 && pol.Enable != nil {
+		out = append(out, abilityRequestTool(byName, loaded, pol))
+	}
+	return out
+}
+
+// abilityRequestTool asks the user to turn an off group on. It is a
+// mutating tool with no class: every call shows the Deny-first card and
+// there is no "Always allow".
+func abilityRequestTool(byName map[string]*deferredGroup, loaded *LoadedGroups, pol GroupPolicy) Tool {
+	return Tool{
+		Name: AbilityRequestTool,
+		Description: "Ask the user to turn on a tool group that is off (listed as off in tool_search). " +
+			"The user sees a card with your reason and decides. Use it only when the task needs that group.",
+		Params: map[string]any{
+			"group": map[string]any{"type": "string", "description": "the off group's name"},
+			"why":   map[string]any{"type": "string", "description": "one short sentence: why the task needs it"},
+		},
+		Required: []string{"group", "why"},
+		Mutating: true,
+		Describe: func(args map[string]any) string {
+			g, _ := args["group"].(string)
+			why, _ := args["why"].(string)
+			d := "turn on the AI's " + g + " tools"
+			if mb := byName[g]; mb != nil && mb.about != "" {
+				d += " (" + mb.about + ")"
+			}
+			if why != "" {
+				d += ": " + why
+			}
+			return d
+		},
+		Validate: func(args map[string]any) error {
+			g, _ := args["group"].(string)
+			if byName[g] == nil {
+				return fmt.Errorf("no tool group %q", g)
+			}
+			if pol.state(g) != AbilityOff {
+				return fmt.Errorf("the %s group is not off: load it with tool_search", g)
+			}
+			return nil
+		},
+		Run: func(ctx context.Context, args map[string]any) (string, error) {
+			g, _ := args["group"].(string)
+			if err := pol.Enable(ctx, g); err != nil {
+				return "", err
+			}
+			loaded.Load(g)
+			var b strings.Builder
+			fmt.Fprintf(&b, "The user turned on the %s group. Its tools, from your next step:\n", g)
+			for _, t := range byName[g].tools {
+				fmt.Fprintf(&b, "- %s: %s\n", t.Name, firstSentence(t.Description))
+			}
+			return b.String(), nil
+		},
+	}
 }
 
 // searchGroups ranks the groups by query words found in their tools'
