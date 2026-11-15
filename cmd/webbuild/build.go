@@ -156,6 +156,14 @@ var tactileChunk = page{Name: "tactile", Entry: "tactile/main.ts"}
 // radial.css itself): it imports no value of the page.
 var radialChunk = page{Name: "radial", Entry: "radial.ts"}
 
+// gitphoneChunk is the phone's Git pages (gitphone.js and gitphone.css):
+// the changes, the commit sheet, branches and history, a file's diff.
+// Built alone: home.js loads it with its one dynamic import
+// (lib/gitphone.ts) when the phone opens Git, links gitphone.css then,
+// and gives it the page's Preact, link, router and sheets (gitphone/api.ts),
+// so it imports no value of the page and neither app.js nor home.js grows.
+var gitphoneChunk = page{Name: "gitphone", Entry: "gitphone/main.tsx"}
+
 // deskChunk is the desktop workbench's stylesheet (desk.css): index.html
 // links it for wide screens only (media="(min-width: 1200px)"), so a
 // phone neither waits for it nor counts it in its budget.
@@ -169,7 +177,7 @@ var deskChunk = page{Name: "desk", Entry: "desk.ts", CSSOnly: true}
 var relayPage = page{Name: "relay", Entry: "relay/main.ts", Template: "relay/relay.html", HTML: "relay.html"}
 
 // chunkPaths are the only dynamic imports a page may make.
-var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true, "/assets/" + workbenchChunk.Name + ".js": true, "/assets/" + homeChunk.Name + ".js": true, "/assets/" + linkChunk.Name + ".js": true, "/assets/" + persianChunk.Name + ".js": true, "/assets/" + monacoVim.Name + ".js": true, "/assets/" + deviceChunk.Name + ".js": true, "/assets/" + aictxChunk.Name + ".js": true, "/assets/" + pickerChunk.Name + ".js": true, "/assets/" + coeditChunk.Name + ".js": true, "/assets/" + parquetChunk.Name + ".js": true, "/assets/" + queueChunk.Name + ".js": true, "/assets/" + termChunk.Name + ".js": true, "/assets/" + tactileChunk.Name + ".js": true, "/assets/" + radialChunk.Name + ".js": true, "/assets/" + pagesChunk.Name + ".js": true}
+var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true, "/assets/" + workbenchChunk.Name + ".js": true, "/assets/" + homeChunk.Name + ".js": true, "/assets/" + linkChunk.Name + ".js": true, "/assets/" + persianChunk.Name + ".js": true, "/assets/" + monacoVim.Name + ".js": true, "/assets/" + deviceChunk.Name + ".js": true, "/assets/" + aictxChunk.Name + ".js": true, "/assets/" + pickerChunk.Name + ".js": true, "/assets/" + coeditChunk.Name + ".js": true, "/assets/" + parquetChunk.Name + ".js": true, "/assets/" + queueChunk.Name + ".js": true, "/assets/" + termChunk.Name + ".js": true, "/assets/" + tactileChunk.Name + ".js": true, "/assets/" + radialChunk.Name + ".js": true, "/assets/" + pagesChunk.Name + ".js": true, "/assets/" + gitphoneChunk.Name + ".js": true}
 
 // kitPage is the component kit (WEB-UX-1). It is always built, so CI keeps
 // it fresh, but only a webdev build embeds and serves it.
@@ -199,7 +207,7 @@ func Build(dir string) (map[string][]byte, error) {
 	if err := copyServed(vendorDir, pkgs, out); err != nil {
 		return nil, err
 	}
-	for _, p := range []page{deskChunk, appPage, relayPage, editorChunk, persianChunk, deviceChunk, aictxChunk, pickerChunk, linkChunk, coeditChunk, parquetChunk, queueChunk, termChunk, tactileChunk, radialChunk, pagesChunk, monacoAMD, monacoVim, monacoFrame, kitPage} {
+	for _, p := range []page{deskChunk, appPage, relayPage, editorChunk, persianChunk, deviceChunk, aictxChunk, pickerChunk, linkChunk, coeditChunk, parquetChunk, queueChunk, termChunk, tactileChunk, radialChunk, pagesChunk, gitphoneChunk, monacoAMD, monacoVim, monacoFrame, kitPage} {
 		if p.Name != appPage.Name {
 			if _, err := os.Stat(filepath.Join(abs, "src", p.Entry)); errors.Is(err, os.ErrNotExist) {
 				continue // a folder without the kit or the editor (test fixtures)

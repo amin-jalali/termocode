@@ -33,6 +33,7 @@ import { SubView } from "./more/SubView";
 import { FileView } from "./FileView";
 import { home as phone, homeFailed as phoneFailed, loadHome } from "../lib/lazy";
 import { TreeView } from "./Files";
+import { GitView as DeskGitView } from "./git/GitView";
 import { PhoneHost } from "./PhoneHost";
 import { loadRadial, radial, radialHost } from "../lib/radial";
 
@@ -49,7 +50,11 @@ export function TermView() {
   return <PhoneLazy tkey="tab.term" name="term" draw={(m) => <m.PhoneTermView />} />;
 }
 
-export { GitView } from "./git/GitView";
+/** GitView is the Git tab: the phone's pages from home.js and
+ * gitphone.js, the tablet's and the desktop's own view. */
+export function GitView() {
+  return layout.value === "phone" ? <PhoneLazy tkey="tab.git" name="git" draw={(m) => <m.GitPhoneView />} /> : <DeskGitView />;
+}
 
 /** ToolsView is the "All tools" menu (MOBUX-5), from the phone chunk
  * (home.js since the merge), loaded on first open. */
