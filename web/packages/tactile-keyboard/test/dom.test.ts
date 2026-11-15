@@ -91,6 +91,20 @@ test("A15 A16 height defaults to width*0.4 and compact relayouts", () => {
   eq(b.root.style.height, "300px");
 });
 
+test("the upright phone's backspace shows the symbol, as big as a letter; landscape keeps the word", () => {
+  const up = board(390, { layout: "compact" });
+  const k = up.el("backspace");
+  eq(k.getAttribute("aria-label"), "backspace");
+  eq(k.byClass("tk-label").length, 0, "no word label upright");
+  const m = k.byClass("tk-main");
+  eq(m.length, 1);
+  eq(m[0].textContent, "\u232b");
+  eq(m[0].className, up.el("A").byClass("tk-main")[0].className, "the letters' legend class");
+  const side = board(700, { layout: "compact" });
+  eq(side.el("backspace").byClass("tk-label")[0].textContent, "backspace");
+  eq(side.el("backspace").byClass("tk-main").length, 0);
+});
+
 test("A17 auto layout follows the window's short side", () => {
   const b = board(390, { layout: "auto" });
   eq(b.kb.compact, true, "390x844");

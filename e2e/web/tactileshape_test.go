@@ -152,6 +152,15 @@ func TestTactileKeyboardPortraitProportions(t *testing.T) {
 	if len(bad) > 0 {
 		t.Errorf("labels that wrap or spill on the upright phone: %v", bad)
 	}
+	// Backspace upright: the symbol, as big as the letters' legends.
+	bk := Eval[[]string](p, `(() => {
+	  const q = (k) => document.querySelector('.tk-dock:not([hidden]) .tk-key[data-key="' + k + '"]');
+	  const b = q("backspace"), a = q("A").querySelector(".tk-main"), m = b.querySelector(".tk-main");
+	  return [b.getAttribute("aria-label"), m ? m.textContent : "", m ? getComputedStyle(m).fontSize : "none", getComputedStyle(a).fontSize];
+	})()`)
+	if bk[0] != "backspace" || bk[1] != "\u232b" || bk[2] != bk[3] {
+		t.Errorf("upright backspace: aria-label %q, legend %q at %s, want \"backspace\", \"\u232b\" at the letters' %s", bk[0], bk[1], bk[2], bk[3])
+	}
 	if probs := p.Problems(); len(probs) > 0 {
 		t.Errorf("problems (CSP, console): %v", probs)
 	}
