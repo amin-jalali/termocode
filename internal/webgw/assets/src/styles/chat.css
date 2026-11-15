@@ -2,7 +2,8 @@
 .chat { min-height: 100%; }
 .msgs { display: flex; flex-direction: column; gap: var(--s3); }
 .msg { max-width: 100%; min-width: 0; font-size: var(--fs-body); line-height: var(--lh-body); overflow-wrap: anywhere; }
-.msg-user { display: flex; justify-content: flex-end; }
+/* The bubble, then what came with it (images, rules) under it. */
+.msg-user { display: flex; flex-direction: column; align-items: flex-end; }
 .msg-user .bubble { max-width: 85%; padding: var(--s2) var(--s3); border-radius: var(--r-card); background: var(--sel); color: var(--text); }
 .layout-phone .msg-user .bubble { max-width: 92%; }
 .msg-label { display: flex; align-items: baseline; gap: var(--s2); margin-bottom: var(--s1); font-size: var(--fs-hint); color: var(--muted); }
