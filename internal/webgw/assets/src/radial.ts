@@ -116,6 +116,14 @@ function show(host: RadialHost): () => void {
       if (!fab.dragging) fab.relayout();
     }
   }, 500);
+  // A sheet or a card over the page hides the button (it would sit on
+  // the sheet's own buttons): looked at whenever the page's tree changes.
+  const sheets = new MutationObserver(() => {
+    const on = !!document.querySelector(".sheet-layer");
+    fab.root.style.setProperty("display", on ? "none" : "");
+    if (on && fab.isOpen) fab.close();
+  });
+  sheets.observe(document.body, { childList: true, subtree: true });
   const offs = [
     host.route.subscribe(again),
     host.layout.subscribe((l) => {
@@ -127,6 +135,7 @@ function show(host: RadialHost): () => void {
     offs.forEach((f) => f());
     cancelAnimationFrame(raf);
     clearInterval(watch);
+    sheets.disconnect();
     fab.destroy();
   };
 }
