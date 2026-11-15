@@ -57,6 +57,9 @@ type Settings struct {
 	// off): an agent step whose model sends nothing this long is stopped
 	// and started once more (StepStall).
 	StepStallMinutes *int `json:"ai_step_stall_minutes,omitempty"`
+	// ModelFamily is ai_model_family: the model family the prompt is
+	// tuned for ("" or auto: from the model id, ModelFamily).
+	ModelFamily string `json:"ai_model_family,omitempty"`
 	// Categories is ai_categories (OMX-16, categories.go): built-in
 	// categories changed, or new ones, by name.
 	Categories map[string]CategoryConfig `json:"ai_categories,omitempty"`

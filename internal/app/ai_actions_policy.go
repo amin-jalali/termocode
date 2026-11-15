@@ -945,6 +945,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_keep_going":         aiNever(aiNoAIConfig),
 	"ai_keep_going_turns":   aiNever(aiNoAIConfig),
 	"ai_step_stall_minutes": aiNever(aiNoAIConfig),
+	"ai_model_family":       aiNever(aiNoAIConfig),
 	"ai_team_mode":          aiNever(aiNoAIConfig),
 	"ai_computer_use":       aiNever(aiNoAIConfig + "; the AI never turns on its own desktop control"),
 	"ai_memory_recall":      aiNever(aiNoAIConfig),

@@ -2,6 +2,7 @@ package app
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/agentrun"
@@ -140,6 +141,12 @@ func aiToolGuide(tools []ai.Tool, viaMCP bool) string {
 // the project folder). Its own docs and skills never answer who it is,
 // and its read-only shell never hides termocode's tools.
 func aiCLIInstructions(root string, served []ai.Tool, write bool) string {
+	return aiCLIInstructionsFor(root, served, write, "")
+}
+
+// aiCLIInstructionsFor is aiCLIInstructions for a model of family fam
+// (ai.CLIModelFamily).
+func aiCLIInstructionsFor(root string, served []ai.Tool, write bool, fam string) string {
 	var b strings.Builder
 	b.WriteString(aiIdentityPrompt(root))
 	b.WriteString(aiToolGuide(served, true))
@@ -156,7 +163,7 @@ func aiCLIInstructions(root string, served []ai.Tool, write bool) string {
 		b.WriteString("This step only reads (its Tools setting): your own tools are read-only.\n")
 	}
 	b.WriteString("Your own shell has no network: the only way to servers, containers and databases is termocode's tools.\n")
-	b.WriteString(aiDoctrine(served, true, write))
+	b.WriteString(aiDoctrine(served, true, write) + aiFamilyPrompt(fam))
 	return b.String()
 }
 
@@ -165,9 +172,15 @@ func aiCLIInstructions(root string, served []ai.Tool, write bool) string {
 // gets the doctrine after the guide; a CLI step (viaMCP) has it in its
 // instructions (aiCLIInstructions).
 func aiWithToolGuide(base string, tools []ai.Tool, viaMCP bool) string {
+	return aiWithToolGuideFor(base, tools, viaMCP, "")
+}
+
+// aiWithToolGuideFor is aiWithToolGuide for a model of family fam: its
+// line ends the doctrine.
+func aiWithToolGuideFor(base string, tools []ai.Tool, viaMCP bool, fam string) string {
 	g := aiToolGuide(tools, viaMCP)
 	if !viaMCP {
-		g += aiDoctrine(tools, false, false)
+		g += aiDoctrine(tools, false, false) + aiFamilyPrompt(fam)
 	}
 	if g == "" {
 		return base
@@ -230,4 +243,60 @@ func aiDoctrine(tools []ai.Tool, cli, write bool) string {
 			"(real code, not json): the owner reviews it in a side-by-side diff and applies it with one click.\n")
 	}
 	return b.String()
+}
+
+// aiFamilyPrompt is the doctrine line of a model family (ai.ModelFamily;
+// "" for Claude and the rest: the default prompt).
+func aiFamilyPrompt(fam string) string {
+	switch fam {
+	case ai.FamilyGPT:
+		return "- For this model: finish all steps in this turn; only a real question to the owner ends the turn. " +
+			"Do not stop to say what you will do next: do it.\n"
+	case ai.FamilySmall:
+		return "- For this model: keep answers short and use only the tools listed here; when a call fails, read its error before you try again.\n"
+	}
+	return ""
+}
+
+// aiSmallToolGroups are the tool groups (aiToolGroups titles) a small
+// model keeps, with aiSmallToolExtra; it drops the rest, a long tool
+// list buries the task for it.
+var (
+	aiSmallToolGroups = []string{"Files", "Terminal", "Git", "Databases", "Tests and tasks", "Code intelligence"}
+	aiSmallToolExtra  = []string{"open_file", "get_editor_state", "todo_write"}
+)
+
+// aiFamilyTools is the tool set of a model of family fam: a small model
+// gets the smaller set (and the owner's MCP servers' tools), every other
+// family all of tools.
+func aiFamilyTools(fam string, tools []ai.Tool) []ai.Tool {
+	if fam != ai.FamilySmall {
+		return tools
+	}
+	pats := []string{"mcp__"}
+	for _, g := range aiToolGroups {
+		if slices.Contains(aiSmallToolGroups, g.title) {
+			pats = append(pats, g.names...)
+		}
+	}
+	pats = append(pats, aiSmallToolExtra...)
+	var out []ai.Tool
+	for _, t := range tools {
+		for _, p := range pats {
+			if aiToolMatch(t.Name, p) {
+				out = append(out, t)
+				break
+			}
+		}
+	}
+	return out
+}
+
+// aiFamilySystem caps the whole system prompt of a small model
+// (ai.SmallPromptTokens); other families keep it whole.
+func aiFamilySystem(fam, sys string) string {
+	if fam != ai.FamilySmall {
+		return sys
+	}
+	return ai.CapSystemPrompt(sys, ai.SmallPromptTokens)
 }

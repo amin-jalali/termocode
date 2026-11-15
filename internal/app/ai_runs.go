@@ -281,6 +281,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 	prof, cats, _ := s.aiProfileCategories(prof) // OMX-16 (checked when the run started)
 	catSlots, catErr := s.aiResolveCategorySlots(run, aiCategorySlots(prof, cats), slots)
 	escalate := aiEscalateTo(s.settings, catSlots)
+	famSet := s.settings.ModelFamily // ai_model_family, read here: the steps run on goroutines
 	by := s.conv.Messages[msgIdx].Run.By
 	budget := aiRunBudget(prof, by)
 	caller := aiRunCaller{parentRun: run.ID, budget: budget}
@@ -438,7 +439,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 			}
 			// who it is above the prompt (a developer / system message),
 			// where the CLI's own skills and sandbox text cannot win
-			spec.Instructions = aiCLIInstructions(root, served, spec.Write)
+			spec.Instructions = aiCLIInstructionsFor(root, served, spec.Write, ai.CLIModelFamily(famSet, n.CLI, n.Model))
 			// termocode's context first, then the step (CS-1 got only the step)
 			mkPrompt := func(earlier string) string {
 				return aiCLIPrompt(ctx, dir, aiWithToolGuide(nodeBase, served, true)+sys, earlier+input+wts.othersNote(n.ID), handoff)
@@ -468,7 +469,8 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 				wt, _ := wts.get(n.ID)
 				nodeTools, nodeBase = wtTools, aiWorktreePrompt(base, root, wt)
 			}
-			ts := aiFilterTools(append(nodeTools[:len(nodeTools):len(nodeTools)], extra...), n.Tools)
+			fam := ai.ModelFamily(famSet, sl.cfg.Model)
+			ts := aiFamilyTools(fam, aiFilterTools(append(nodeTools[:len(nodeTools):len(nodeTools)], extra...), n.Tools))
 			native := sl.p.SupportsTools()
 			msgs := append([]ai.Message(nil), hist...)
 			sys := aiStepPrompt(n, index[n.ID], total)
@@ -479,7 +481,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 				sys = aiFixStepPrompt + aiStepSystem(n.System)
 			}
 			sys += aiCategoryPrompt(n, cats, escalate != "" && n.Slot != catSlots[escalate] && !n.Plan && n.ID != verifyID && n.ID != fixID)
-			msgs[0] = ai.Message{Role: ai.RoleSystem, Content: ai.SystemPrompt(aiWithToolGuide(nodeBase, ts, false)+sys, ts, native)}
+			msgs[0] = ai.Message{Role: ai.RoleSystem, Content: aiFamilySystem(fam, ai.SystemPrompt(aiWithToolGuideFor(nodeBase, ts, false, fam)+sys, ts, native))}
 			last := msgs[len(msgs)-1]
 			last.Content = input + wts.othersNote(n.ID)
 			msgs[len(msgs)-1] = last
