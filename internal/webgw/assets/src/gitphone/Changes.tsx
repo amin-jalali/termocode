@@ -54,6 +54,7 @@ export function Changes({
   msg,
   setMsg,
   onCommit,
+  onAmend,
   onDiscard,
 }: {
   g: GitState;
@@ -62,6 +63,7 @@ export function Changes({
   msg: string;
   setMsg: (m: string) => void;
   onCommit: (all: boolean) => void;
+  onAmend: () => void;
   onDiscard: (path: string) => void;
 }) {
   const [chip, setChip] = H.useState<Side | "all">("all");
@@ -162,7 +164,20 @@ export function Changes({
 
   const dock = g.repo && !viewer && !g.op && g.files.length > 0 && (
     <form class="gp-dock" onSubmit={(e) => e.preventDefault()}>
-      <input class="gp-msg" dir="auto" value={msg} maxLength={1000} aria-label={H.t("git.subject")} placeholder={H.t("git.subject")} onInput={(e) => setMsg((e.currentTarget as HTMLInputElement).value.replace(/[\r\n]/g, " "))} />
+      <input
+        class="gp-msg"
+        dir="auto"
+        value={msg.split("\n")[0]}
+        maxLength={1000}
+        aria-label={H.t("git.subject")}
+        placeholder={H.t("git.subject")}
+        onInput={(e) => {
+          // The bar holds the subject; a description written in the sheet stays.
+          const i = msg.indexOf("\n");
+          setMsg((e.currentTarget as HTMLInputElement).value.replace(/[\r\n]/g, " ") + (i >= 0 ? msg.slice(i) : ""));
+        }}
+        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), onCommit(false))}
+      />
       <span class="gp-split">
         <button type="button" class="gp-commit" data-act="commit" disabled={!canAct} onClick={() => onCommit(false)}>
           {s("commit_n", { n: staged })}
@@ -181,6 +196,7 @@ export function Changes({
               title: s("commit_opts"),
               items: [
                 { label: s("stage_commit"), icon: "check", run: () => onCommit(true) },
+                { label: s("amend"), icon: "undo", run: onAmend, hidden: g.log.length === 0 },
                 { label: s("stage_all"), icon: "plus", run: () => stageAll(g.files.filter((f) => f.unstaged || f.untracked).map((f) => f.path), true) },
                 { label: s("unstage_all"), icon: "undo", run: () => stageAll(g.files.filter((f) => f.staged).map((f) => f.path), false), hidden: staged === 0 },
               ],

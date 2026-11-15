@@ -2927,6 +2927,10 @@ export interface AIInfoRow {
   header?: boolean;
 }
 
+export interface GitAIMessage {
+  message: string;
+}
+
 export interface GitPeek {
   path: string;
   line: number;
@@ -4197,6 +4201,7 @@ export interface OpArgs {
   "ai.action": AIActionArgs;
   "ai.info": AIInfoArgs;
   "chat.queue": ChatQueueArgs;
+  "git.ai_message": EmptyArgs;
   "git.peek": GitPeekArgs;
   "git.file_log": GitFileLogArgs;
   "git.text": GitTextArgs;
@@ -4542,6 +4547,7 @@ export interface OpResult {
   "ai.action": AIAction;
   "ai.info": AIInfo;
   "chat.queue": ChatQueueList;
+  "git.ai_message": GitAIMessage;
   "git.peek": GitPeek;
   "git.file_log": GitFileLog;
   "git.text": GitText;

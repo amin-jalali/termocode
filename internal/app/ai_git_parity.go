@@ -44,6 +44,7 @@ var aiGitParity = map[string]string{
 	"git-commit-history":  "git_history op search (the AI writes its own message)",
 	"git.commit":          "git_commit",
 	"git.amend":           "git_commit amend",
+	"git.ai_message":      "git_diff (the AI reads the staged diff and writes its own message)",
 	"git-uncommit":        "git_history op uncommit",
 	"git-hook-output":     "execute_action",
 	"git-split-guide":     "execute_action",
