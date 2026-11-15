@@ -35,7 +35,6 @@ func keepGoingModel(t *testing.T, replies ...ai.Chunk) (Model, *compactFake) {
 	p := &compactFake{replies: replies}
 	m.ai.provider = p
 	m.ai.cfg = ai.Config{Kind: ai.KindOllama, Model: "fake-1"}
-	m.ai.conv.KeepGoing = true
 	return m, p
 }
 
@@ -60,17 +59,62 @@ func TestAIKeepGoingPushesWhileTodosAreOpen(t *testing.T) {
 	if pushes[0] != 0 || pushes[1] != 1 || pushes[2] != 2 {
 		t.Fatalf("push numbers %v", pushes)
 	}
-	if got := aiTranscriptText(&m, 80); !strings.Contains(got, "keep going 1/3") {
+	if got := aiTranscriptText(&m, 80); !strings.Contains(got, "keep going 1/10") {
 		t.Fatalf("no auto chip:\n%s", got)
 	}
 }
 
-func TestAIKeepGoingIsOffByDefault(t *testing.T) {
+// Keep going is on by default; ai_keep_going false turns it off for
+// every chat that did not turn it on itself.
+func TestAIKeepGoingSettingOff(t *testing.T) {
+	off := false
 	m, _ := keepGoingModel(t, todoCall("1", [2]string{"a", "pending"}), ai.Chunk{Delta: "started"})
-	m.ai.conv.KeepGoing = false
+	m.ai.settings.KeepGoing = &off
 	runAIChain(t, &m, "do a")
 	if n := len(aiUserTexts(m.ai)); n != 1 {
 		t.Fatalf("%d user messages", n)
+	}
+	m.ai.conv.KeepGoing = true // AI: Toggle Keep Going in this chat
+	m.ai.provider = &compactFake{replies: []ai.Chunk{todoCall("2", [2]string{"a", "pending"}), {Delta: "again"}, todoCall("3", [2]string{"a", "done"}), {Delta: "done"}}}
+	runAIChain(t, &m, "do a")
+	if n := len(aiUserTexts(m.ai)); n != 3 {
+		t.Fatalf("the chat's own toggle did not win: %q", aiUserTexts(m.ai))
+	}
+}
+
+// A chain of pushes ends with one "AI run ended" notice, not one per turn.
+func TestAIKeepGoingNotifiesOnceAtTheEnd(t *testing.T) {
+	m, _ := keepGoingModel(t,
+		todoCall("1", [2]string{"a", "pending"}, [2]string{"b", "pending"}), ai.Chunk{Delta: "started"},
+		todoCall("2", [2]string{"a", "done"}, [2]string{"b", "pending"}), ai.Chunk{Delta: "a is done"},
+		todoCall("3", [2]string{"a", "done"}, [2]string{"b", "done"}), ai.Chunk{Delta: "all done"},
+	)
+	runAIChain(t, &m, "do a and b")
+	n := 0
+	for _, e := range m.recapS().events {
+		if strings.Contains(e.Text, "AI run ended") {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Fatalf("%d \"AI run ended\" notices, want 1", n)
+	}
+}
+
+// A reply that ends with a question to the user waits for the user.
+func TestAIKeepGoingStopsOnAQuestion(t *testing.T) {
+	for _, q := range []string{"Which file should I change?", "کدام فایل؟", "Shall I go on? **"} {
+		m, _ := keepGoingModel(t,
+			todoCall("1", [2]string{"a", "pending"}), ai.Chunk{Delta: q},
+			ai.Chunk{Delta: "never"},
+		)
+		runAIChain(t, &m, "do a")
+		if n := len(aiUserTexts(m.ai)); n != 1 {
+			t.Fatalf("%q: %d user messages, want 1", q, n)
+		}
+		if got := aiTranscriptText(&m, 80); !strings.Contains(got, "asked you a question") {
+			t.Fatalf("%q: no stop note:\n%s", q, got)
+		}
 	}
 }
 
@@ -79,7 +123,7 @@ func TestAIKeepGoingStopsAtTheRoundLimit(t *testing.T) {
 		todoCall("1", [2]string{"a", "pending"}, [2]string{"b", "pending"}), ai.Chunk{Delta: "started"},
 		todoCall("2", [2]string{"a", "done"}, [2]string{"b", "pending"}), ai.Chunk{Delta: "a is done"},
 	)
-	m.ai.settings.UntilDoneRounds = 1
+	m.ai.settings.KeepGoingTurns = 1
 	runAIChain(t, &m, "do a and b")
 	if n := len(aiUserTexts(m.ai)); n != 2 {
 		t.Fatalf("%d user messages, want 2", n)
@@ -89,15 +133,21 @@ func TestAIKeepGoingStopsAtTheRoundLimit(t *testing.T) {
 	}
 }
 
+// Three pushes in a row with no change on the todos end the chain; a
+// change in between starts the count again.
 func TestAIKeepGoingStopsWithoutProgress(t *testing.T) {
 	m, _ := keepGoingModel(t,
-		todoCall("1", [2]string{"a", "pending"}), ai.Chunk{Delta: "started"},
+		todoCall("1", [2]string{"a", "pending"}, [2]string{"b", "pending"}), ai.Chunk{Delta: "started"},
 		ai.Chunk{Delta: "I did nothing"},
+		todoCall("2", [2]string{"a", "done"}, [2]string{"b", "pending"}), ai.Chunk{Delta: "a is done"},
+		ai.Chunk{Delta: "nothing 1"},
+		ai.Chunk{Delta: "nothing 2"},
+		ai.Chunk{Delta: "nothing 3"},
 		ai.Chunk{Delta: "never"},
 	)
-	runAIChain(t, &m, "do a")
-	if n := len(aiUserTexts(m.ai)); n != 2 {
-		t.Fatalf("%d user messages, want 2", n)
+	runAIChain(t, &m, "do a and b")
+	if n := len(aiUserTexts(m.ai)); n != 6 {
+		t.Fatalf("%d user messages, want 6: %q", n, aiUserTexts(m.ai))
 	}
 	if got := aiTranscriptText(&m, 80); !strings.Contains(got, "no progress") {
 		t.Fatalf("no stop note:\n%s", got)
@@ -138,6 +188,7 @@ func TestAIKeepGoingEndsOnStop(t *testing.T) {
 		t.Fatal("stop not kept")
 	}
 	m.ai.conv.Todos = []ai.Todo{{Text: "a", Status: ai.TodoPending}}
+	m.ai.settings.KeepGoingTurns = 1
 	m.ai.provider = &compactFake{replies: []ai.Chunk{todoCall("2", [2]string{"a", "pending"}, [2]string{"b", "pending"}), {Delta: "more"}, {Delta: "x"}}}
 	runAIChain(t, &m, "go on")
 	if n := len(aiUserTexts(m.ai)); n != 3 {
@@ -148,20 +199,23 @@ func TestAIKeepGoingEndsOnStop(t *testing.T) {
 func TestAIKeepGoingToggle(t *testing.T) {
 	m := aiTestModel(t)
 	m.ai.provider = fakeAIProvider{}
-	m.toggleAIKeepGoing()
-	if !m.ai.conv.KeepGoing {
-		t.Fatal("not on")
+	if !m.ai.keepGoingOn() {
+		t.Fatal("not on by default")
 	}
 	m.toggleAIKeepGoing()
-	if m.ai.conv.KeepGoing {
+	if m.ai.keepGoingOn() || !m.ai.conv.KeepGoingOff {
 		t.Fatal("not off")
+	}
+	m.toggleAIKeepGoing()
+	if !m.ai.keepGoingOn() || m.ai.conv.KeepGoingOff {
+		t.Fatal("not on")
 	}
 }
 
 func TestAIKeepGoingPaletteEntry(t *testing.T) {
 	m := aiTestModel(t)
 	m.ai.provider = fakeAIProvider{}
-	if cmd, ok := m.dispatchAIPalette("ai-keep-going"); !ok || cmd == nil || !m.ai.conv.KeepGoing {
+	if cmd, ok := m.dispatchAIPalette("ai-keep-going"); !ok || cmd == nil || m.ai.keepGoingOn() {
 		t.Fatal("palette entry does not toggle keep going")
 	}
 }

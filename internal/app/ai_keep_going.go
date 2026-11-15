@@ -3,19 +3,26 @@ package app
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
 )
 
-// Keep going while todos are open (OMX-7, OMX-45). When it is on for a
-// chat (AI: Toggle Keep Going), a plain turn that ends with open todos
-// sends the next "keep going" message by itself. It stops when the list
-// is done, after the "work until done" rounds (ai_until_done_rounds),
-// when the pushed turns cost the "work until done" budget, when a turn
-// made no progress on the list, when a turn failed, and at once when the
-// user stops the AI. Every pushed message is shown with an "auto" chip.
+// Keep going while todos are open (OMX-7, OMX-45). It is on by default
+// (ai_keep_going; AI: Toggle Keep Going for one chat): a plain turn that
+// ends with open todos sends the next "keep going" message by itself. It
+// stops when the list is done, after ai_keep_going_turns pushes, when the
+// pushed turns cost the "work until done" budget, after
+// aiKeepGoingStall pushes in a row with no change on the list, when the
+// reply ends with a question to the user, when a turn failed, and at
+// once when the user stops the AI. Every pushed message is shown with an
+// "auto" chip.
+
+// aiKeepGoingStall is how many pushes in a row may leave the todos as
+// they were before the chain stops.
+const aiKeepGoingStall = 3
 
 // aiKeepGoingRun is the state of one keep-going chain (it starts again
 // with each message the user sends).
@@ -23,6 +30,7 @@ type aiKeepGoingRun struct {
 	pushes  int
 	spent   float64   // dollars the pushed turns cost
 	before  []ai.Todo // the list when the last push was sent
+	stale   int       // pushes in a row that did not change the list
 	stopped bool      // the user stopped the AI: no more pushes
 	pushing bool      // sendAIChat is called by the loop
 }
@@ -30,16 +38,18 @@ type aiKeepGoingRun struct {
 // toggleAIKeepGoing turns keep going on or off for the open chat.
 func (m *Model) toggleAIKeepGoing() tea.Cmd {
 	s := m.aiS()
-	s.conv.KeepGoing = !s.conv.KeepGoing
+	on := !s.keepGoingOn()
+	s.conv.KeepGoing, s.conv.KeepGoingOff = on, !on
 	if len(s.conv.Messages) > 0 {
 		if err := s.store.Save(&s.conv); err != nil {
 			recordError("[ai] save chat: " + err.Error())
 		}
 	}
-	if !s.conv.KeepGoing {
+	if !on {
 		return m.aiInfo("Keep going off in this chat")
 	}
-	rounds, budget, _ := s.settings.UntilDone()
+	rounds := s.settings.KeepGoingLimit()
+	_, budget, _ := s.settings.UntilDone()
 	text := fmt.Sprintf("Keep going on in this chat: up to %d more turn%s while todos are open", rounds, plural(rounds))
 	if budget > 0 {
 		text += fmt.Sprintf(" (budget $%.2f)", budget)
@@ -47,9 +57,18 @@ func (m *Model) toggleAIKeepGoing() tea.Cmd {
 	return m.aiInfo(text + " · Stop: Ctrl+C")
 }
 
+// keepGoingOn is whether keep going is on for the open chat: its own
+// toggle, else ai_keep_going.
+func (s *aiState) keepGoingOn() bool {
+	if s.conv.KeepGoing || s.conv.KeepGoingOff {
+		return s.conv.KeepGoing
+	}
+	return s.settings.KeepGoingOn()
+}
+
 // aiKeepGoingLabel is the todo card's " · keep going on" ("" when off).
 func (m Model) aiKeepGoingLabel() string {
-	if m.ai == nil || !m.ai.conv.KeepGoing {
+	if m.ai == nil || !m.ai.keepGoingOn() {
 		return ""
 	}
 	return " · keep going on"
@@ -70,7 +89,7 @@ func (s *aiState) aiKeepGoingUsage(u *ai.Usage) {
 func (m *Model) aiKeepGoingNext() tea.Cmd {
 	s := m.aiS()
 	k := &s.keep
-	if !s.conv.KeepGoing || k.stopped || s.streaming {
+	if !s.keepGoingOn() || k.stopped || s.streaming {
 		return nil
 	}
 	open := ai.TodosOpen(s.conv.Todos)
@@ -78,14 +97,24 @@ func (m *Model) aiKeepGoingNext() tea.Cmd {
 		*k = aiKeepGoingRun{}
 		return nil
 	}
-	rounds, budget, _ := s.settings.UntilDone()
+	rounds := s.settings.KeepGoingLimit()
+	_, budget, _ := s.settings.UntilDone()
 	n := len(s.conv.Messages)
+	if k.pushes > 0 {
+		if slices.Equal(k.before, s.conv.Todos) {
+			k.stale++
+		} else {
+			k.stale = 0
+		}
+	}
 	why := ""
 	switch {
 	case n > 0 && s.conv.Messages[n-1].Role == ai.StoredError:
 		why = "the last turn failed"
-	case k.pushes > 0 && slices.Equal(k.before, s.conv.Todos):
-		why = "no progress on the todos in the last turn"
+	case aiAsksTheUser(s.conv.Messages):
+		why = "the AI asked you a question"
+	case k.stale >= aiKeepGoingStall:
+		why = fmt.Sprintf("no progress on the todos in the last %d turns", k.stale)
 	case k.pushes >= rounds:
 		why = fmt.Sprintf("%d of %d turns used", k.pushes, rounds)
 	case budget > 0 && k.spent >= budget:
@@ -119,8 +148,23 @@ func aiKeepGoingText(open int) string {
 
 // aiKeepGoingChip is the "auto" chip of a pushed message.
 func (s *aiState) aiKeepGoingChip(push int) string {
-	rounds, _, _ := s.settings.UntilDone()
-	return fmt.Sprintf("↻ auto · keep going %d/%d", push, rounds)
+	return fmt.Sprintf("↻ auto · keep going %d/%d", push, s.settings.KeepGoingLimit())
+}
+
+// aiAsksTheUser is whether the last answer of the chat ends with a
+// question (Latin or Arabic-script question mark, after any closing
+// markdown or quotes): the user is to answer it, not a push.
+func aiAsksTheUser(msgs []ai.StoredMessage) bool {
+	for i := len(msgs) - 1; i >= 0; i-- {
+		switch msgs[i].Role {
+		case ai.StoredAssistant:
+			t := strings.TrimRight(msgs[i].Text, " \t\r\n*_`\"')»”’")
+			return strings.HasSuffix(t, "?") || strings.HasSuffix(t, "؟")
+		case ai.StoredUser:
+			return false
+		}
+	}
+	return false
 }
 
 // aiNote adds a display-only line to the chat and saves it.

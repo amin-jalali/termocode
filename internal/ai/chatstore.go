@@ -217,9 +217,11 @@ type Conversation struct {
 	Reasoning string `json:"reasoning,omitempty"`
 	// Todos is the AI's todo list for this chat (todo_write, OMX-7) and
 	// KeepGoing whether a turn that ends with open todos sends the next
-	// "keep going" message by itself (AI: Toggle Keep Going).
-	Todos     []Todo `json:"todos,omitempty"`
-	KeepGoing bool   `json:"keep_going,omitempty"`
+	// "keep going" message by itself (AI: Toggle Keep Going): on when
+	// KeepGoing is set, off when KeepGoingOff is, else ai_keep_going.
+	Todos        []Todo `json:"todos,omitempty"`
+	KeepGoing    bool   `json:"keep_going,omitempty"`
+	KeepGoingOff bool   `json:"keep_going_off,omitempty"`
 	// Schedule makes the chat run again by itself (CMP-43, chatsched.go).
 	Schedule *ChatSchedule `json:"schedule,omitempty"`
 	// Home marks the background chat of a paired phone (MOB-16: the web's
