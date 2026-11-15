@@ -1068,7 +1068,8 @@ When several files exist, all are used (in this order).
 More rules can apply to some files only:
 
 - An `AGENTS.md` or `CLAUDE.md` in a sub folder applies to the files in that
-  folder and below.
+  folder and below. termocode looks for these files in the background, so a
+  new one counts from the next turn or the one after.
 - A file in `.claude/rules/` (`*.md` or `*.mdc`) with `globs:` (or `paths:`)
   in its front matter applies to the files that match, for example
   `globs: "*.go, cmd/**"`. With `alwaysApply: true`, or with no front matter,

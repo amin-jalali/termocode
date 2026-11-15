@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/search"
 )
@@ -189,12 +190,7 @@ func rulesFrontMatterAll(text string) (fm ruleFront) {
 // loadFolderRules finds AGENTS.md and CLAUDE.md below the root (ignored,
 // hidden and dependency folders are skipped).
 func loadFolderRules(root, realRoot string, bytes *int) []ScopedRule {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	files, _, err := search.Files(ctx, root, []string{"AGENTS.md", "CLAUDE.md"}, rulesScopedMax)
-	if err != nil {
-		return nil
-	}
+	files := folderRulesFiles(root)
 	var out []ScopedRule
 	for _, f := range files {
 		dir := filepath.ToSlash(filepath.Dir(filepath.FromSlash(f)))
@@ -211,6 +207,71 @@ func loadFolderRules(root, realRoot string, bytes *int) []ScopedRule {
 		out = append(out, ScopedRule{File: f, Dir: dir, Text: rest, Review: rev})
 	}
 	return out
+}
+
+// The folders' rules files are found by a walk of the whole workspace
+// (13-17 ms in a big repo, more on a cold disk). Rules are read at the
+// start of every chat turn, on the UI thread, so a turn reuses the list
+// the last walk found (the files' text is read fresh each time) and a
+// new walk runs in the background: a rules file added or removed counts
+// from a later turn. The first turn in a workspace walks at once.
+type folderRulesList struct {
+	files   []string
+	ok      bool
+	at      time.Time // when the last walk ended
+	walking bool
+}
+
+var folderRules = struct {
+	sync.Mutex
+	by map[string]*folderRulesList
+}{by: map[string]*folderRulesList{}}
+
+// folderRulesAgain is how old a list may be before a turn walks again
+// (in the background).
+const folderRulesAgain = 500 * time.Millisecond
+
+func folderRulesWalk(root string) ([]string, bool) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	files, _, err := search.Files(ctx, root, []string{"AGENTS.md", "CLAUDE.md"}, rulesScopedMax)
+	return files, err == nil
+}
+
+// folderRulesFiles is the folder rules files of root: the last walk's
+// list (a fresh walk starts in the background when it is old), or a walk
+// now for the first turn.
+func folderRulesFiles(root string) []string {
+	folderRules.Lock()
+	l := folderRules.by[root]
+	if l == nil {
+		folderRules.Unlock()
+		files, ok := folderRulesWalk(root)
+		folderRules.Lock()
+		if folderRules.by[root] == nil {
+			folderRules.by[root] = &folderRulesList{files: files, ok: ok, at: time.Now()}
+		}
+		folderRules.Unlock()
+		if !ok {
+			return nil
+		}
+		return files
+	}
+	files, ok := l.files, l.ok
+	if !l.walking && time.Since(l.at) >= folderRulesAgain {
+		l.walking = true
+		crash.Go("finding the folders' rules files", func() {
+			f, fok := folderRulesWalk(root)
+			folderRules.Lock()
+			l.files, l.ok, l.at, l.walking = f, fok, time.Now(), false
+			folderRules.Unlock()
+		})
+	}
+	folderRules.Unlock()
+	if !ok {
+		return nil
+	}
+	return files
 }
 
 // ScopedFor returns the scoped rules for the file rel (relative to the
