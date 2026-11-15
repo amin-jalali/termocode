@@ -323,6 +323,7 @@ func TestAIStepLimitThenContinueKeepsToolSteps(t *testing.T) {
 	p := &scriptedAIProvider{replies: []ai.Chunk{loop, loop, {Delta: "went on"}}}
 	m, _, _ := aiSyncModel(t, p, map[string]string{"a.txt": "a\n"})
 	m.ai.settings.MaxSteps = 2
+	m.ai.conv.KeepGoingOff = true // the user sends "continue" (keep going on: TestAIKeepGoingContinuesAtTheStepLimit)
 	driveAIChat(t, m, m.sendAIChat("list a lot"), nil)
 	if p.calls != 2 {
 		t.Fatalf("provider called %d times, want the limit 2", p.calls)

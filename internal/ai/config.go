@@ -33,6 +33,10 @@ type Settings struct {
 	NextEdit    *bool    `json:"ai_next_edit,omitempty"`
 	AutoApprove []string `json:"ai_auto_approve,omitempty"`
 	MaxSteps    int      `json:"ai_max_steps,omitempty"` // 0: DefaultMaxSteps
+	// RepeatCallLimit is ai_repeat_call_limit (0: DefaultRepeatLimit; a
+	// negative value: off): the same tool call this many times in a row
+	// is not run. Edited by hand.
+	RepeatCallLimit int `json:"ai_repeat_call_limit,omitempty"`
 	// EditReview is "review" (default: the agent's file changes open as a
 	// diff to accept or reject) or "auto" (they are written after the
 	// confirm dialog, or at once when fileWrite is auto-approved).
@@ -75,6 +79,9 @@ type Settings struct {
 	// 5) and PlanFile ai_plan_file (nil: off): .termocode/plans/<slug>.md.
 	PlanReviewRounds int   `json:"ai_plan_review_rounds,omitempty"`
 	PlanFile         *bool `json:"ai_plan_file,omitempty"`
+	// WriteNeedsRead is ai_write_needs_read (nil: on): a chat turn's
+	// write_file refuses an existing file the chat has not read or written.
+	WriteNeedsRead *bool `json:"ai_write_needs_read,omitempty"`
 	// UntilDoneRounds (0: DefaultUntilDoneRounds) and UntilDoneBudgetUSD
 	// (nil: DefaultUntilDoneBudgetUSD; 0 set on purpose: no budget) are
 	// the limits of a "work until done" run whose profile does not set
@@ -305,6 +312,10 @@ func (s Settings) NextEditEnabled() bool {
 // ReviewEdits reports whether the agent's file changes are reviewed as a
 // diff (ai_edit_review, default review).
 func (s Settings) ReviewEdits() bool { return s.EditReview != EditReviewAuto }
+
+// WriteNeedsReadOn reports whether write_file needs a read of an existing
+// file first (ai_write_needs_read, default true).
+func (s Settings) WriteNeedsReadOn() bool { return s.WriteNeedsRead == nil || *s.WriteNeedsRead }
 
 // OAuthTokens is a stored Claude OAuth session.
 type OAuthTokens struct {

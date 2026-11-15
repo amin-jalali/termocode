@@ -1391,7 +1391,7 @@ you change an answer.
 | `ai_plan_approval` | `ask` | [Approve the plan](#approve-the-plan): `ask` before steps that change files or run commands, `always` for every plan, `auto` never. |
 | `ai_prices` | `{}` | Price overrides, $ per million tokens. |
 | `ai_context_windows` | `{}` | Context window overrides, in tokens. |
-| `ai_max_steps` | `25` | Tool steps per step (a step's `max_steps` wins). |
+| `ai_max_steps` | `100` | Tool steps per step (a step's `max_steps` wins). |
 | `ai_until_done_rounds` | `3` | [Work until done](#work-until-done): how many times verify runs at most (1 to 10). A profile's `loop.max_rounds` wins. |
 | `ai_until_done_budget_usd` | `2` | Work until done: the budget of a run (0 = no budget). A profile's `budget_usd` wins. |
 

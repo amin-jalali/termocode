@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/agentrun"
 	"github.com/amin-jalali/termocode/internal/ai"
 )
 
@@ -17,8 +18,9 @@ import (
 // pushed turns cost the "work until done" budget, after
 // aiKeepGoingStall pushes in a row with no change on the list, when the
 // reply ends with a question to the user, when a turn failed, and at
-// once when the user stops the AI. Every pushed message is shown with an
-// "auto" chip.
+// once when the user stops the AI. A turn that hit the step limit
+// (ai_max_steps) is pushed on too, todos or not. Every pushed message is
+// shown with an "auto" chip.
 
 // aiKeepGoingStall is how many pushes in a row may leave the todos as
 // they were before the chain stops.
@@ -27,12 +29,16 @@ const aiKeepGoingStall = 3
 // aiKeepGoingRun is the state of one keep-going chain (it starts again
 // with each message the user sends).
 type aiKeepGoingRun struct {
-	pushes  int
-	spent   float64   // dollars the pushed turns cost
-	before  []ai.Todo // the list when the last push was sent
-	stale   int       // pushes in a row that did not change the list
-	stopped bool      // the user stopped the AI: no more pushes
-	pushing bool      // sendAIChat is called by the loop
+	pushes int
+	spent  float64   // dollars the pushed turns cost
+	before []ai.Todo // the list when the last push was sent
+	stale  int       // pushes in a row that did not change the list
+	// stepLimit: the last turn stopped at the step limit, not with an
+	// answer (it is pushed on even with no open todos).
+	stepLimit bool
+	stuck     bool // the repeat brake ended the last turn
+	stopped   bool // the user stopped the AI: no more pushes
+	pushing   bool // sendAIChat is called by the loop
 }
 
 // toggleAIKeepGoing turns keep going on or off for the open chat.
@@ -93,7 +99,7 @@ func (m *Model) aiKeepGoingNext() tea.Cmd {
 		return nil
 	}
 	open := ai.TodosOpen(s.conv.Todos)
-	if open == 0 {
+	if open == 0 && !k.stepLimit {
 		*k = aiKeepGoingRun{}
 		return nil
 	}
@@ -111,6 +117,8 @@ func (m *Model) aiKeepGoingNext() tea.Cmd {
 	switch {
 	case n > 0 && s.conv.Messages[n-1].Role == ai.StoredError:
 		why = "the last turn failed"
+	case k.stuck:
+		why = "the AI made the same call again and again"
 	case aiAsksTheUser(s.conv.Messages):
 		why = "the AI asked you a question"
 	case k.stale >= aiKeepGoingStall:
@@ -125,10 +133,14 @@ func (m *Model) aiKeepGoingNext() tea.Cmd {
 		m.aiNote(fmt.Sprintf("↻ Keep going stopped: %s · %d todo%s open", why, open, plural(open)))
 		return nil
 	}
+	text := aiStepLimitPush
+	if open > 0 {
+		text = aiKeepGoingText(open)
+	}
 	k.pushes++
 	k.before = slices.Clone(s.conv.Todos)
 	k.pushing = true
-	cmd := m.sendAIChat(aiKeepGoingText(open))
+	cmd := m.sendAIChat(text)
 	k.pushing = false
 	if s.streaming && s.turnMsg < len(s.conv.Messages) {
 		s.conv.Messages[s.turnMsg].KeepGoing = k.pushes
@@ -143,8 +155,12 @@ func aiKeepGoingText(open int) string {
 		verb = "is"
 	}
 	return fmt.Sprintf("Keep going: %d todo%s %s still open. Work on the next one and update the list with todo_write. "+
-		"If you are blocked or need me, say so and stop.", open, plural(open), verb)
+		"If you are blocked or need me, say so and stop. "+agentrun.DoneAudit, open, plural(open), verb)
 }
+
+// aiStepLimitPush is the push after a turn that hit the step limit
+// with no open todos.
+const aiStepLimitPush = "Continue: the step limit paused your last turn before it was finished. Go on from where you stopped."
 
 // aiKeepGoingChip is the "auto" chip of a pushed message.
 func (s *aiState) aiKeepGoingChip(push int) string {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -49,6 +50,11 @@ type Event struct {
 	// EventDone / EventError: the summed token usage of every request
 	// of the turn (nil when the provider reported none).
 	Usage *Usage
+	// EventDone: the turn stopped at the step limit (MaxSteps), not
+	// with a final answer. RepeatStop: the repeat brake ended it (the
+	// model made the same call again after it was told not to).
+	StepLimit  bool
+	RepeatStop bool
 }
 
 // Gates of a tool call (Event.Gate).
@@ -73,9 +79,10 @@ func CallID(ctx context.Context) string {
 // (the TUI answers through a channel); return false to decline.
 type ConfirmFunc func(ctx context.Context, t Tool, human string) bool
 
-// DefaultMaxSteps caps tool round-trips per user turn (Cursor uses 25).
-// config.json "ai_max_steps" changes it.
-const DefaultMaxSteps = 25
+// DefaultMaxSteps caps tool round-trips per user turn. It is high: keep
+// going continues a turn that hits it, and the stall, budget and repeat
+// brakes end one that runs away. config.json "ai_max_steps" changes it.
+const DefaultMaxSteps = 100
 
 // Agent runs a tool-calling loop on top of a Provider. Port of mobocode's
 // ai_agent.dart: with Native it uses the provider's function calling
@@ -83,10 +90,13 @@ const DefaultMaxSteps = 25
 // per step with a fenced ```json {"tool":…,"args":…}``` block. Mutating
 // tools must clear Confirm unless their class is in AutoApprove.
 type Agent struct {
-	Provider    Provider
-	Tools       []Tool
-	Model       string
-	MaxSteps    int
+	Provider Provider
+	Tools    []Tool
+	Model    string
+	MaxSteps int
+	// RepeatLimit stops a loop: the same tool call this many times in a
+	// row is not run (agent_repeat.go; 0: DefaultRepeatLimit, < 0: off).
+	RepeatLimit int
 	AutoApprove map[string]bool
 	Confirm     ConfirmFunc
 	Native      bool
@@ -252,6 +262,7 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 	ctx, side := claimSideUsage(ctx)
 	total := func() *Usage { usage = usage.Add(side.take()); return usage } // with the side requests
 	compacted := false
+	guard := newRepeatGuard(a.RepeatLimit)
 	for step := 0; step < steps; step++ {
 		// Built for each step: a tool search can load a hidden tool.
 		var specs []ToolSpec
@@ -328,17 +339,49 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 			emit(Event{Kind: EventDone, Usage: total()})
 			return msgs[start:]
 		}
-		if a.BeforeCalls != nil {
-			a.BeforeCalls(ctx, calls)
+		blocked, stop := guard.check(calls)
+		if stop { // the same call again after the note: end the turn
+			name := ""
+			for i, call := range calls {
+				note := "not run: the turn was stopped"
+				if blocked[i] {
+					note, name = RepeatCallNote(call.Name, guard.same), call.Name
+				}
+				msgs = append(msgs, toolResultMessage(a.Native, call, note, nil))
+			}
+			emit(Event{Kind: EventText, Text: RepeatStopText(name)})
+			emit(Event{Kind: EventDone, Usage: total(), RepeatStop: true})
+			return msgs[start:]
 		}
-		results, images := a.runCalls(ctx, calls, emit)                                    // OMX-24: read-only calls at once
+		run := calls
+		if slices.Contains(blocked, true) {
+			run = nil
+			for i, call := range calls {
+				if !blocked[i] {
+					run = append(run, call)
+				}
+			}
+		}
+		if a.BeforeCalls != nil && len(run) > 0 {
+			a.BeforeCalls(ctx, run)
+		}
+		ran, ranImages := a.runCalls(ctx, run, emit) // OMX-24: read-only calls at once
+		results, images := ran, ranImages
+		if len(run) < len(calls) {
+			results, images = make([]string, len(calls)), make([][]Image, len(calls))
+			k := 0
+			for i, call := range calls {
+				if blocked[i] {
+					results[i] = a.repeatBlocked(call, guard.limit, emit)
+					continue
+				}
+				results[i], images[i] = ran[k], ranImages[k]
+				k++
+			}
+		}
 		results = fitToolResults(results, a.ContextWindow, promptTokens(last.Usage, msgs)) // OMX-25
 		for i, call := range calls {
-			if a.Native {
-				msgs = append(msgs, Message{Role: RoleTool, ToolCallID: call.ID, ToolName: call.Name, Content: results[i], Images: images[i]})
-			} else {
-				msgs = append(msgs, Message{Role: RoleUser, Content: "[tool result] " + call.Name + ":\n" + results[i]})
-			}
+			msgs = append(msgs, toolResultMessage(a.Native, call, results[i], images[i]))
 		}
 		if ctx.Err() != nil {
 			emit(Event{Kind: EventError, Detail: ctx.Err().Error(), Usage: total()})
@@ -348,8 +391,16 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 		msgs = append(msgs, a.inbox()...)
 	}
 	emit(Event{Kind: EventText, Text: StepLimitText(steps)})
-	emit(Event{Kind: EventDone, Usage: total()})
+	emit(Event{Kind: EventDone, Usage: total(), StepLimit: true})
 	return msgs[start:]
+}
+
+// toolResultMessage is the message that gives the model a call's result.
+func toolResultMessage(native bool, call ToolCall, result string, images []Image) Message {
+	if native {
+		return Message{Role: RoleTool, ToolCallID: call.ID, ToolName: call.Name, Content: result, Images: images}
+	}
+	return Message{Role: RoleUser, Content: "[tool result] " + call.Name + ":\n" + result}
 }
 
 // midAnswerError is err of an answer that broke off after some text (the

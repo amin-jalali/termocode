@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/amin-jalali/termocode/internal/agentrun"
 	"github.com/amin-jalali/termocode/internal/ai"
 )
 
@@ -217,6 +218,7 @@ func aiDoctrine(tools []ai.Tool, cli, write bool) string {
 	if len(proof) > 0 {
 		b.WriteString("- Never say done without proof: " + strings.Join(proof, ", ") + ".\n")
 	}
+	b.WriteString("- " + agentrun.DoneAudit + "\n")
 	edits := has("edit_file", "write_file", "create_file")
 	if len(edits) > 0 || (cli && write) {
 		b.WriteString("- After 2-3 fixes that fail: stop, undo them, think again or ask the owner.\n")

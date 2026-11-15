@@ -219,3 +219,53 @@ func TestAIKeepGoingPaletteEntry(t *testing.T) {
 		t.Fatal("palette entry does not toggle keep going")
 	}
 }
+
+// A turn that hits the step limit goes on by itself when keep going is
+// on, todos or not; with keep going off it waits for "continue".
+func TestAIKeepGoingContinuesAtTheStepLimit(t *testing.T) {
+	look := ai.Chunk{ToolCalls: []ai.ToolCall{{ID: "l1", Name: "todo_read", Args: map[string]any{}}}}
+	m, _ := keepGoingModel(t, look, ai.Chunk{Delta: "finished"}, ai.Chunk{Delta: "never"})
+	m.ai.settings.MaxSteps = 1
+	runAIChain(t, &m, "look")
+	users := aiUserTexts(m.ai)
+	if len(users) != 2 || m.ai.conv.Messages[len(m.ai.conv.Messages)-1].Text != "finished" {
+		t.Fatalf("no push after the step limit: %q", users)
+	}
+	m, _ = keepGoingModel(t, look, ai.Chunk{Delta: "never"})
+	m.ai.settings.MaxSteps = 1
+	m.ai.conv.KeepGoingOff = true
+	runAIChain(t, &m, "look")
+	if n := len(aiUserTexts(m.ai)); n != 1 {
+		t.Fatalf("%d user messages with keep going off", n)
+	}
+}
+
+// ai_repeat_call_limit reaches the chat's agent: the same call again
+// and again ends the turn.
+func TestAIRepeatCallLimitSetting(t *testing.T) {
+	look := ai.Chunk{ToolCalls: []ai.ToolCall{{ID: "l", Name: "todo_read", Args: map[string]any{}}}}
+	m, p := keepGoingModel(t, look, look, look, ai.Chunk{Delta: "never"})
+	m.ai.settings.RepeatCallLimit = 2
+	runAIChain(t, &m, "look")
+	if n := len(p.requests()); n != 3 {
+		t.Fatalf("%d model requests, want 3", n)
+	}
+	if got := aiTranscriptText(&m, 80); !strings.Contains(got, "Stopped") {
+		t.Fatalf("no stop note:\n%s", got)
+	}
+}
+
+// A turn the repeat brake stopped is not pushed on, even with open
+// todos: the AI is stuck and the user decides.
+func TestAIKeepGoingStopsAfterARepeatStop(t *testing.T) {
+	look := ai.Chunk{ToolCalls: []ai.ToolCall{{ID: "l", Name: "todo_read", Args: map[string]any{}}}}
+	m, _ := keepGoingModel(t, todoCall("1", [2]string{"a", "pending"}), look, look, look, ai.Chunk{Delta: "never"})
+	m.ai.settings.RepeatCallLimit = 2
+	runAIChain(t, &m, "do a")
+	if n := len(aiUserTexts(m.ai)); n != 1 {
+		t.Fatalf("%d user messages, want 1: %q", n, aiUserTexts(m.ai))
+	}
+	if got := aiTranscriptText(&m, 80); !strings.Contains(got, "same call") {
+		t.Fatalf("no stop note:\n%s", got)
+	}
+}
