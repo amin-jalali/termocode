@@ -76,7 +76,7 @@ termocode.
 | **Files** | Browse the workspace, read files, change lines and send them. Each row's **⋯** makes a new file or folder, renames, deletes, downloads a file or uploads into a folder. |
 | **Term** | The terminal itself: tap it and type, every key goes to the shell. A key bar above the keyboard has Esc, Tab, Ctrl, Alt, the arrows and more. |
 | **Git** | See changes and diffs, stage and unstage, commit. The **⇅** button pushes, pulls, stashes and switches branch. On a phone the changes are cards in groups: the chips at the top show one group, the round tick on a row stages it, and the commit box waits at the bottom. Hold a row for **Ask AI about this**, **Add to chat**, **Open diff**, **Stage** and **Discard…**. **⚙** on a group groups the files by folder or shows only some paths; a view the AI saved for the changes (`git.status`) shapes them too, with **Reset** on its banner. The clock button opens the history. |
-| **More** | Search, **New task** (start an agent on the laptop in a new worktree; see [Worktrees](worktrees.md#start-a-new-task-from-the-phone-or-the-page)), tasks, runs, databases, containers, the MCP server, settings (read only), the theme, text direction and language. |
+| **More** | Search, **New task** (start an agent on the laptop in a new worktree; see [Worktrees](worktrees.md#start-a-new-task-from-the-phone-or-the-page)), tasks, runs, databases, containers, the MCP server, settings (grouped rows: a switch turns a setting on or off, a tap opens its choices; a setting that lowers a safety check asks first; credential, trust and web settings stay on the laptop), the theme, text direction and language. |
 
 On a phone the tabs are at the bottom. On a wider screen the files and
 the chat sit side by side.
@@ -179,8 +179,10 @@ PgUp and PgDn. Drag the spacebar to move the cursor. Backspace and the
 arrows repeat when you hold them. Pull the bar above the keyboard down to
 look at what is under it; the keyboard button on that bar hides it. The
 globe button switches to the phone's own keyboard (for other languages
-and dictation) until you leave the field. Turn it off, or change its
-sound and vibration, in **This phone → Keyboard**. A phone gets a compact
+and dictation) until you leave the field. In the terminal, the ⌨ key at
+the start of the key row brings termocode's keyboard back in one tap.
+Turn it off, or change its sound and vibration, in **This phone →
+Keyboard**. A phone gets a compact
 layout; a tablet gets the function row too. Held upright, the phone's
 keyboard is lower, so its keys keep the shape they have on its side,
 and backspace shows ⌫.

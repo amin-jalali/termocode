@@ -17,7 +17,7 @@ import { RunsView } from "./more/RunsView";
 import { WorkflowsView } from "./more/WorkflowsView";
 import { RacesView } from "./more/RacesView";
 import { BoardRoute } from "./more/BoardRoute";
-import { SettingsView } from "./more/SettingsView";
+import { loadPages, pages, pagesFailed, type Pages } from "../lib/pages";
 import { AgentsView } from "./AgentsView";
 import { ItermocView } from "./ItermocView";
 import { MCPView } from "./more/MCPView";
@@ -121,6 +121,26 @@ function PhoneLazy({ tkey, name, draw }: { tkey: StringKey; name: string; draw: 
   );
 }
 
+/** PageLazy is a tool page from pages.js (UI pages), loaded on first use. */
+function PageLazy({ tkey, name, draw }: { tkey: StringKey; name: string; draw: (m: Pages) => ComponentChildren }) {
+  const m = pages.value;
+  useEffect(() => {
+    if (!m) loadPages().catch(() => undefined);
+  }, [m]);
+  if (m) return <>{draw(m)}</>;
+  return (
+    <SubView title={t(tkey)} name={name}>
+      {pagesFailed.value ? (
+        <button type="button" class="btn btn-neutral" onClick={() => loadPages().catch(() => undefined)}>
+          {t("retry")}
+        </button>
+      ) : (
+        <SkeletonRows rows={8} mono={false} />
+      )}
+    </SubView>
+  );
+}
+
 /** MoreLinks is the More list (RM-3) from radial.js: search, Recent, the
  * grouped views with their icons; a skeleton while it loads. */
 function MoreLinks() {
@@ -152,7 +172,7 @@ export function MoreView() {
   if (sub === "workflows") return <WorkflowsView />;
   if (sub === "races") return <RacesView />;
   if (sub === "board") return <BoardRoute />;
-  if (sub === "settings") return <SettingsView />;
+  if (sub === "settings") return <PageLazy tkey="more.settings" name="settings" draw={(m) => <m.SettingsPage />} />;
   if (sub === "mcp") return <MCPView />;
   if (sub === "agents") return <AgentsView />;
   if (sub === "itermoc") return <ItermocView />;

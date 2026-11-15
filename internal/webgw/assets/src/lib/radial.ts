@@ -19,9 +19,12 @@ import { editing } from "./live";
 import { go, route } from "./router";
 import { toast } from "./toasts";
 import { addRef } from "./tochat";
+import { pendingDraft } from "./drafts";
 
 export const radialHost: RadialModule.RadialHost = {
-  h, render, AskLaptop, go, route, layout, link, live, t, toast, addRef, newChat, newTerm, showOnLaptop, prefs, setPref, useState,
+  h, render, AskLaptop, go, route, layout, link, live, t, toast, addRef, newChat, newTerm, showOnLaptop, prefs, setPref, useState, useEffect,
+  topic: (n) => store.topic(n).value?.data,
+  askAI: (text) => ((pendingDraft.value = { text, notChat: "" }), go({ tab: "chat", rest: "", query: {} })),
   git: () => readGit(store.topic("git").peek()?.data),
   edit: (p) => (editing.value = p),
 };

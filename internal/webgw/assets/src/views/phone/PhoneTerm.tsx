@@ -23,7 +23,7 @@ import { go, route } from "../../lib/router";
 import { rowPx, usePinch } from "../../lib/rowfont";
 import { dropOlder, loadingOlder, loadOlder, older, stitch } from "../../lib/term";
 import { colorsOn, dropColors, paintLine, termColors, wantColors } from "../../lib/termcolors";
-import { tactile } from "../../lib/tactile";
+import { tactile, toTactile } from "../../lib/tactile";
 import { useWakeLock } from "../../lib/wakelock";
 import { loadTerm, type TermModule } from "../../lib/xterm";
 import { barKeys } from "../../lib/keys";
@@ -238,6 +238,23 @@ function Rows({ buf, item, canType, onEnd }: { buf: number; item: TermItem | und
   useEffect(() => {
     if (xt.current && host.current) xt.current.setLook(look(host.current));
   }, [px, ready]);
+  // The page's theme changes (the system's, the laptop's colours): the
+  // terminal takes the new background at once, never a stale box.
+  useEffect(() => {
+    if (!ready) return;
+    let bg = cssVar("--bg-panel", "");
+    const again = () => {
+      const now = cssVar("--bg-panel", "");
+      if (now === bg || !xt.current || !host.current) return;
+      bg = now;
+      xt.current.setLook(look(host.current));
+    };
+    const mo = new MutationObserver(again);
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ["style", "class", "data-theme"] });
+    const mq = matchMedia("(prefers-color-scheme: dark)");
+    mq.addEventListener("change", again);
+    return () => (mo.disconnect(), mq.removeEventListener("change", again));
+  }, [ready]);
   useLongPress(host, () => setMenu(xt.current?.lineAt(lastY.current) ?? ""));
 
   if (!snap) {
@@ -314,6 +331,10 @@ function KeyBar({ buf, off }: { buf: number; off: boolean }) {
   const keep = (e: Event) => e.preventDefault();
   return (
     <div class={`composer term-input pterm-keys${off ? " is-off" : ""}`}>
+      {/* tactile.css shows it, pinned before the keys, while the system keyboard is up. */}
+      <button type="button" class="key key-tk" hidden aria-label={t("key.tk")} title={t("key.tk")} onPointerDown={keep} onMouseDown={keep} onClick={toTactile}>
+        ⌨
+      </button>
       <div class="keybar" role="toolbar" aria-label={t("tab.term")}>
         {!live.value && <span class="chip keybar-off">{t("offline.input")}</span>}
         {barKeys(prefs.value.keys).map((id) => {

@@ -11,3 +11,9 @@ html.tk-on .layout-phone .pill-wrap { display: none; }
    keyboard has its keys (Esc is fn + `, Home/End fn + ← →, PgUp/PgDn
    fn + ↑ ↓). */
 html.tk-on .pterm-keys { display: none; }
+/* While a surface has the system keyboard (the globe key), the key bar
+   shows the ⌨ key first, pinned before the keys that scroll: one tap
+   brings this keyboard back. */
+html.tk-sys .pterm-keys { display: flex; gap: var(--s1); align-items: center; }
+html.tk-sys .pterm-keys > .keybar { flex: 1; min-width: 0; }
+html.tk-sys .key-tk[hidden] { display: inline-block; font-size: 1.4em; }

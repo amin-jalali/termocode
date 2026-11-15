@@ -38,7 +38,7 @@ var sourceRules = []rule{
 	// loads Add to AI Chat (aictx.js, lib/aictx.ts) and This device, Pair
 	// a Device… and Devices… (device.js, lib/device.tsx). Each is a
 	// fixed path.
-	{name: "dynamic import", re: regexp.MustCompile(`\bimport\s*\(`), allow: map[string]bool{"lib/lazy.ts": true, "monaco/frame.ts": true, "lib/device.tsx": true, "lib/aictx.ts": true, "lib/links.ts": true, "lib/coedit.ts": true, "lib/parquet.ts": true, "lib/queue.ts": true, "lib/xterm.ts": true, "lib/tactile.ts": true, "lib/radial.ts": true, "lib/gitphone.ts": true}},
+	{name: "dynamic import", re: regexp.MustCompile(`\bimport\s*\(`), allow: map[string]bool{"lib/lazy.ts": true, "monaco/frame.ts": true, "lib/device.tsx": true, "lib/aictx.ts": true, "lib/links.ts": true, "lib/coedit.ts": true, "lib/parquet.ts": true, "lib/queue.ts": true, "lib/xterm.ts": true, "lib/tactile.ts": true, "lib/radial.ts": true, "lib/pages.ts": true, "lib/gitphone.ts": true}},
 	{name: "remote script/style", re: regexp.MustCompile(`(?i)@import|url\(\s*["']?(https?:)?//`)},
 	// Only the prefs module touches localStorage, and it never holds a
 	// secret; and the bookmark key of a remembered browser (WEBP-12), the
@@ -212,6 +212,7 @@ func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
 			text = strings.Replace(text, `import("/assets/queue.js")`, "", 1)   // the phone remote's queue (lib/queue.ts), a fixed path
 			text = strings.Replace(text, `import("/assets/radial.js")`, "", 1)  // the floating radial menu (lib/radial.ts), a fixed path
 			text = strings.Replace(text, `import("/assets/tactile.js")`, "", 1) // the Tactile keyboard (lib/tactile.ts), a fixed path
+			text = strings.Replace(text, `import("/assets/pages.js")`, "", 1)   // the phone's tool pages (lib/pages.ts), a fixed path
 		}
 		if pageFile(e.Path) || e.Path == "home.js" || e.Path == "workbench.js" { // the terminal engine (lib/xterm.ts), a fixed path
 			text = strings.Replace(text, `import("/assets/term.js")`, "", 1)
