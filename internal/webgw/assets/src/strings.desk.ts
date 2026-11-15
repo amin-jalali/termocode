@@ -211,6 +211,7 @@ export const SD = {
   "dbv.resize": "Resize {col}",
   "dbv.page": "Rows {a}–{b}",
   "dbv.no_results": "Run the query ({keys}) to see its rows here.",
+  "mcp.no_calls": "No calls yet.",
   "mcpv.connected": "Connected since {time}",
   "mcpv.gone": "Not connected now.",
   "mcpv.counts": "{calls} calls, {asked} asked you first",
