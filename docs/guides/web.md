@@ -183,6 +183,20 @@ and dictation) until you leave the field. Turn it off, or change its
 sound and vibration, in **This phone → Keyboard**. A phone gets a compact
 layout; a tablet gets the function row too.
 
+### The radial menu and the More list
+
+On a touch phone or tablet a round ✦ button floats in the bottom-right
+corner, clear of the tab bar and the keyboard. Tap it for the radial
+menu: the inner ring picks a group (SAVED, EDIT, AI, GIT, RUN, VIEW,
+TOOLS), the outer ring holds its actions. Tap an action to run it; hold
+it for a moment to read what it does and to ★ save it to SAVED. A push,
+a pull or a stash asks first, as on the Git tab. Hold the button itself
+to pick it up and drag it where your thumb likes it; it stays there.
+Your saved actions and the button's place stay on this device.
+
+**More** lists every view in small groups with an icon each, the views
+you opened last on top, and a search box to find one by name.
+
 The easy way to reach it from your phone is
 your own [Tailscale](https://tailscale.com) network (your *tailnet*).
 
