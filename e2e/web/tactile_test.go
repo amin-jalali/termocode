@@ -161,3 +161,49 @@ func TestTactileKeyboardTypesInTheTerminal(t *testing.T) {
 		t.Errorf("problems (CSP, console): %v", probs)
 	}
 }
+
+// The way back from the system keyboard: after the System keyboard key,
+// the terminal's key bar shows a ⌨ key first; one tap closes the system
+// keyboard and docks the Tactile keyboard on the same terminal, the
+// focus stays, and its keys type into the shell again.
+func TestTactileKeyboardBackFromTheSystemKeyboard(t *testing.T) {
+	s := StartServer(t)
+	p := NewPage(t, s, Phone)
+	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+	c := p.Login("c-1")
+	p.GoTab("term")
+	c.Subs(t, "terms")
+	showTerm(t, p, c, termSnap(3, 0, 80, "$ "), termItem(3, "zsh", false, true))
+	back := `document.querySelector('[data-view="term"] .keybar .key-tk')`
+	p.TapJS(termView + `.querySelector(".pterm-x .xterm-screen")`)
+	p.WaitJS(tkDock + ` && !` + tkDock + `.hidden`)
+	if Eval[bool](p, `!!`+back+`?.offsetHeight`) {
+		t.Error("the ⌨ key shows while the Tactile keyboard is up")
+	}
+	p.TapJS(`document.querySelector(".tk-system")`)
+	p.WaitJS(tkDock + `.hidden && ` + xtermInput + `.getAttribute("inputmode") === "text"`)
+	p.WaitJS(`!!` + back + `?.offsetHeight`)
+	if !Eval[bool](p, `document.querySelector('[data-view="term"] .keybar').firstElementChild === `+back) {
+		t.Error("the ⌨ key is not the first key of the bar")
+	}
+	if got := Eval[string](p, back+`.getAttribute("aria-label") + "|" + `+back+`.title`); got != "Code keyboard|Code keyboard" {
+		t.Errorf("the ⌨ key's label and title are %q", got)
+	}
+	p.TapJS(back)
+	p.WaitJS(`!` + tkDock + `.hidden && ` + xtermInput + `.getAttribute("inputmode") === "none"`)
+	if !Eval[bool](p, `document.activeElement === `+xtermInput) {
+		t.Error("the ⌨ key took the focus from the terminal")
+	}
+	if Eval[bool](p, `!!`+back+`?.offsetHeight`) {
+		t.Error("the ⌨ key still shows with the Tactile keyboard back")
+	}
+	for i, k := range []string{"L", "S"} {
+		tapKeys(p, k)
+		if got, want := expectSend(t, c), []string{"l", "s"}[i]; got != want {
+			t.Errorf("key %s sent %q, want %q", k, got, want)
+		}
+	}
+	if probs := p.Problems(); len(probs) > 0 {
+		t.Errorf("problems (CSP, console): %v", probs)
+	}
+}
