@@ -144,11 +144,16 @@ func runWebIn(args []string, out, errw io.Writer, cwd string) int {
 	var r struct {
 		Port    int    `json:"port"`
 		URL     string `json:"url"`
+		LAN     bool   `json:"lan"`
 		Already bool   `json:"already"`
 	}
 	_ = json.Unmarshal(res, &r)
 	if r.Already {
 		webAlreadyRuns(out, r.Port, r.URL)
+		return webExitOK
+	}
+	if strings.HasPrefix(r.URL, "https://") && r.LAN {
+		fmt.Fprintf(out, "The web panel is open at %s for devices on this Wi-Fi; pair them with Web: Pair a Device… (the link opened in a browser on this computer).\n", cleanLine(r.URL))
 		return webExitOK
 	}
 	if strings.HasPrefix(r.URL, "https://") {

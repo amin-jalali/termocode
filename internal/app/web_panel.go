@@ -522,7 +522,7 @@ func (m *Model) webCtlReply(call *webCall) {
 	st := m.webPanel
 	args, _ := call.args.(*webproto.WebOpenArgs)
 	if st.sshPort == 0 || args == nil || args.SSHPort == 0 {
-		call.reply(webOpenReply{Port: st.port, URL: st.url})
+		call.reply(webOpenReply{Port: st.port, URL: st.url, LAN: st.fp != ""})
 		return
 	}
 	plain := st.plain
@@ -549,20 +549,22 @@ func (m *Model) webCtlReply(call *webCall) {
 func (m *Model) webCtlRunning(call *webCall, yes bool) tea.Cmd {
 	st := m.webPanel
 	if !yes {
-		call.reply(webOpenReply{Port: st.port, URL: st.url, Already: true})
+		call.reply(webOpenReply{Port: st.port, URL: st.url, LAN: st.fp != "", Already: true})
 		return nil
 	}
 	cmd := m.webNewLink(true, false)
-	call.reply(webOpenReply{Port: st.port, URL: st.url})
+	call.reply(webOpenReply{Port: st.port, URL: st.url, LAN: st.fp != ""})
 	return cmd
 }
 
 // webOpenReply is the answer to web.open: the port, and in tailnet mode
-// the https address browsers use. Already: the panel ran and no new link
-// opened (a script's call; the laptop opens one).
+// the https address browsers use (LAN: it is LAN mode, the address is
+// on this Wi-Fi). Already: the panel ran and no new link opened (a
+// script's call; the laptop opens one).
 type webOpenReply struct {
 	Port    int    `json:"port"`
 	URL     string `json:"url,omitempty"`
+	LAN     bool   `json:"lan,omitempty"`
 	Already bool   `json:"already,omitempty"`
 }
 
