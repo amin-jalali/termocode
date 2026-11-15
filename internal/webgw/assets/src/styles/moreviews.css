@@ -39,7 +39,9 @@
 .file-menu > .btn { min-height: var(--tap); }
 .name-form { display: flex; flex-direction: column; gap: var(--s2); }
 .name-bad { color: var(--red); font-size: 0.875rem; }
-.tree-line { display: flex; align-items: stretch; }
+/* A row out of view is not laid out or drawn (content-visibility): a
+   folder of 1,500 names opened at once was a 470 ms task on a phone. */
+.tree-line { display: flex; align-items: stretch; content-visibility: auto; contain-intrinsic-size: auto var(--tap); }
 .tree-line > .tree-row { flex: 1; min-width: 0; }
 .tree-more { flex: none; min-width: var(--tap); min-height: var(--tap); color: var(--muted); font-size: 1.1rem; }
 .tree-more:hover { color: var(--text); background: var(--bg-hover); }
