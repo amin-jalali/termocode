@@ -1,0 +1,18 @@
+
+                               c  Which remote databases do we have connected?
+  ⚙ List database connections → 4 connections
+    ≡ Databases · 4 connections
+    ✓ local  connected
+      postgres localhost:5432/app · local
+       Open   Tables   New query   Test   + Chat
+    ● prod  missing password
+      nothing saved · postgres db.example:5432/app · host db.example
+       Fix password…   Connect   Open   Tables   New query   Test   + Chat
+    ● mss  missing user
+      no user set · sqlserver mss.example:1433/shop · host mss.example
+       Fix user…   Connect   Open   Tables   New query   Test   + Chat
+    ● rentcar-db-1  missing password
+      nothing saved · postgres rentcar-db-1:5432/rentcar · container rentcar-d…
+       Fix password…   Connect   Open   Tables   New query   Test   + Chat
+    Tap a row to open it in Databases.
+
