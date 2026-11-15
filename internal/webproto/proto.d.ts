@@ -1156,6 +1156,11 @@ export interface AIUseArgs {
   name: string;
 }
 
+export interface SettingsSetArgs {
+  key: string;
+  value: string;
+}
+
 export interface AutoApproveArgs {
   id: string;
 }
@@ -1853,6 +1858,7 @@ export interface SettingItem {
   value: string;
   default: string;
   description?: string;
+  choices?: string[];
 }
 
 export interface DiagSnap {
@@ -4391,6 +4397,7 @@ export interface OpArgs {
   "chat.home": ChatHomeArgs;
   "ai.use_profile": AIUseArgs;
   "ai.use_model": AIUseArgs;
+  "settings.set": SettingsSetArgs;
   "ai.auto_approve": EmptyArgs;
   "ai.set_auto_approve": AutoApproveArgs;
   "mcp.views": EmptyArgs;
@@ -4723,6 +4730,7 @@ export interface OpResult {
   "chat.home": ChatSnap;
   "ai.use_profile": AskRef;
   "ai.use_model": AskRef;
+  "settings.set": SettingItem;
   "ai.auto_approve": AutoApprove;
   "ai.set_auto_approve": AskRef;
   "mcp.views": MCPViews;

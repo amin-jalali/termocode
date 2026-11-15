@@ -36,7 +36,11 @@ func runShots(vp Viewport) []runShot {
 	out := []runShot{{name: "testing", hash: "#/more/testing", ready: `document.querySelectorAll(".tx-row").length === 4`}}
 	out = append(out, runShot{name: "kube", hash: "#/more/kube", ready: `(document.querySelector('.kb-row[data-kube="pod/api-7d9f-x2"]')?.click(), document.querySelectorAll(".kb-text .trow").length === 2)`})
 	out = append(out, runShot{name: "services", hash: "#/more/services", ready: `document.querySelectorAll(".svc").length === 3`})
-	out = append(out, runShot{name: "debug", hash: "#/more/debug", ready: `document.querySelectorAll(".dv-frame").length === 2`})
+	frames := ".dv-frame"
+	if vp.Mobile { // the phone's Run and Debug page (pages.js)
+		frames = ".rd-frame"
+	}
+	out = append(out, runShot{name: "debug", hash: "#/more/debug", ready: `document.querySelectorAll("` + frames + `").length === 2`})
 	if !vp.Mobile {
 		out = append(out, runShot{name: "debug-console", hash: "#/more/debug", ready: `(document.querySelector('[data-act="console"]')?.click(), document.querySelectorAll(".dcon-row").length === 4)`})
 		out = append(out, runShot{name: "test-results", hash: "#/more/testing", ready: `(document.querySelector(".tx-sum .tx-link")?.click(), document.querySelectorAll(".tres-rows .trow").length === 7)`})

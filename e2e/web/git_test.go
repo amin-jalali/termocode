@@ -35,6 +35,16 @@ func gitSnap() webproto.GitSnap {
 // openGit logs in, opens the Git tab and sends the git snapshot.
 func openGit(t *testing.T, vp Viewport, snap webproto.GitSnap) (*Page, *HubConn) {
 	t.Helper()
+	return openGitViews(t, vp, snap, noViews)
+}
+
+// noViews is a view.list answer with no saved view.
+var noViews = map[string]any{"items": []any{}, "max": 32, "max_pinned": 8}
+
+// openGitViews is openGit; the phone's Git page then asks for the saved
+// views (a git.status view reshapes it) and gets views.
+func openGitViews(t *testing.T, vp Viewport, snap webproto.GitSnap, views any) (*Page, *HubConn) {
+	t.Helper()
 	s := StartServer(t)
 	p := NewPage(t, s, vp)
 	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
@@ -43,8 +53,17 @@ func openGit(t *testing.T, vp Viewport, snap webproto.GitSnap) (*Page, *HubConn)
 	waitGitSub(t, p, c)
 	c.Send(t, Snap("git", 1, snap))
 	// A phone's or tablet's rows, or the desktop's source control tree.
-	p.WaitJS(`document.querySelector('.git-row-wrap[data-path="b.go"], .wb-side [data-view="git"] .tr[data-path="b.go"]')`)
+	p.WaitJS(`document.querySelector('.git-row-wrap[data-path="b.go"], .gp-row[data-path="b.go"], .wb-side [data-view="git"] .tr[data-path="b.go"]')`)
+	gitViews(t, vp, c, views)
 	return p, c
+}
+
+// gitViews answers the phone Git page's view.list (other screens send none).
+func gitViews(t *testing.T, vp Viewport, c *HubConn, views any) {
+	t.Helper()
+	if vp == Phone {
+		reply(t, c, expectOp(t, c, webproto.OpViewList, ""), views)
+	}
 }
 
 // expectOp reads the page's messages until a req for op (subs and
@@ -106,7 +125,7 @@ func rowSel(path string) string {
 // The groups show what git says; Stage on a row stages it, the toast
 // offers Undo, which unstages it again.
 func TestGitGroupsAndStageWithUndo(t *testing.T) {
-	for _, vp := range RowViews {
+	for _, vp := range []Viewport{Tablet} { // the phone: gitphone_test.go
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openGit(t, vp, gitSnap())
 			got := Eval[[]string](p, `[...document.querySelectorAll(".git-group .group-title")].map((e) => e.textContent.trim())`)
@@ -130,7 +149,7 @@ func TestGitGroupsAndStageWithUndo(t *testing.T) {
 // in the subject commits nothing; Commit sends the message and the toast
 // names the new commit.
 func TestGitCommitBox(t *testing.T) {
-	for _, vp := range RowViews {
+	for _, vp := range []Viewport{Tablet} { // the phone: gitphone_test.go
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openGit(t, vp, gitSnap())
 			p.Tap(".commit-subject")
@@ -157,7 +176,7 @@ func TestGitCommitBox(t *testing.T) {
 
 // A commit of the log opens with its subject, author and rows.
 func TestGitShowCommit(t *testing.T) {
-	p, c := openGit(t, Phone, gitSnap())
+	p, c := openGit(t, Tablet, gitSnap()) // the phone: gitphone_test.go
 	p.TapJS(`document.querySelector(".git-commit")`)
 	r := expectOp(t, c, webproto.OpGitShow, `{"hash":"1a2b3c4"}`)
 	reply(t, c, r, webproto.GitDiff{Commit: &webproto.GitCommitInfo{Hash: "1a2b3c4", Subject: "first", Author: "Ann", When: time.Now().UnixMilli()},
@@ -202,7 +221,7 @@ func (p *Page) swipe(sel string, right bool) {
 // A swipe right past half the row stages it, a swipe left unstages a
 // staged row; a short swipe does nothing; the verb shows under the row.
 func TestGitSwipeStages(t *testing.T) {
-	p, c := openGit(t, Phone, gitSnap())
+	p, c := openGit(t, Tablet, gitSnap()) // the phone: gitphone_test.go
 	p.swipe(rowSel("new.txt")+" .git-row", true)
 	reply(t, c, expectOp(t, c, webproto.OpGitStage, `{"paths":["new.txt"]}`), nil)
 	p.WaitJS(`document.querySelector(".toasts .toast-title")?.textContent === "Staged new.txt"`)
@@ -220,7 +239,7 @@ func TestGitSwipeStages(t *testing.T) {
 // part" sends the exact header; more rows come page by page. (The
 // desktop opens a diff editor tab instead: diffeditor_test.go.)
 func TestGitDiffSheet(t *testing.T) {
-	for _, vp := range RowViews {
+	for _, vp := range []Viewport{Tablet} { // the phone: gitphone_test.go
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openGit(t, vp, gitSnap())
 			p.TapJS(`document.querySelector('` + rowSel("src/a.go") + ` .git-open')`)
@@ -253,7 +272,7 @@ func TestGitDiffSheet(t *testing.T) {
 // focused, the action arms), then the waiting state until the answered
 // event; Cancel there cancels the laptop's card.
 func TestDiscardWaitsForLaptop(t *testing.T) {
-	for _, vp := range RowViews {
+	for _, vp := range []Viewport{Tablet} { // the phone: gitphone_test.go
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openGit(t, vp, gitSnap())
 			p.TapJS(`document.querySelector('` + rowSel("src/a.go") + ` .git-open')`)
@@ -318,7 +337,7 @@ func TestGitViewerReadsOnly(t *testing.T) {
 
 // Not a repository, and the laptop still reading: say so.
 func TestGitEmptyStates(t *testing.T) {
-	p, c := openGit(t, Phone, gitSnap())
+	p, c := openGit(t, Tablet, gitSnap()) // the phone: gitphone_test.go
 	c.Send(t, Delta("git", 2, webproto.GitSnap{Repo: false, Files: []webproto.GitFile{}, Log: []webproto.GitCommit{}}))
 	p.WaitJS(`document.querySelector(".git .empty")?.textContent === "This workspace is not a git repository."`)
 	c.Send(t, Delta("git", 3, webproto.GitSnap{Repo: true, Branch: webproto.GitBranch{Name: "main"}, Files: []webproto.GitFile{},

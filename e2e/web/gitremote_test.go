@@ -25,7 +25,7 @@ func openRemote(t *testing.T, vp Viewport) (*Page, *HubConn) {
 }
 
 func TestGitPushWaitsForLaptop(t *testing.T) {
-	for _, vp := range RowViews {
+	for _, vp := range []Viewport{Tablet} { // the phone's branches: gitphone_test.go
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openRemote(t, vp)
 			if n := Eval[int](p, `document.querySelectorAll('.branch-row[data-branch="main"]').length`); n != 0 {
@@ -57,7 +57,7 @@ func TestGitPushWaitsForLaptop(t *testing.T) {
 
 // Pop shows when the stash has entries; stash when files changed.
 func TestGitStashButtons(t *testing.T) {
-	p, c := openRemote(t, Phone)
+	p, c := openRemote(t, Tablet)
 	p.TapJS(ButtonByText("Pop the stash"))
 	p.WaitJS(`document.querySelector(".ask .arm.is-armed")`)
 	p.TapJS(ButtonByText("Ask the laptop"))
@@ -77,7 +77,7 @@ func TestGitStashButtons(t *testing.T) {
 // A viewer gets no ⇅.
 func TestGitRemoteNotForViewer(t *testing.T) {
 	s := StartServer(t)
-	p := NewPage(t, s, Phone)
+	p := NewPage(t, s, Tablet)
 	m := Meta("c-v")
 	m.Role = webproto.RoleViewer
 	c := p.LoginMeta(m)
@@ -93,7 +93,7 @@ func TestGitRemoteNotForViewer(t *testing.T) {
 // Remote branches with no local branch are listed under their own title;
 // a tap asks to switch (a new local branch tracks it), then the laptop.
 func TestGitRemoteBranchTracks(t *testing.T) {
-	p, c := openGit(t, Phone, gitSnap())
+	p, c := openGit(t, Tablet, gitSnap())
 	p.TapJS(`document.querySelector(".head-remote")`)
 	reply(t, c, expectOp(t, c, webproto.OpGitBranches, `{}`), webproto.GitBranches{Current: "main", Branches: []string{"main"}, Remotes: []string{"origin/feat/far"}})
 	p.WaitJS(`document.querySelector('.branch-row[data-remote="origin/feat/far"]')?.textContent === "origin/feat/far"`)

@@ -281,7 +281,11 @@ func TestAxeViewsWithContent(t *testing.T) {
 				p.GoTab("git")
 				waitGitSub(t, p, c)
 				c.Send(t, Snap("git", 1, gitSnap()))
-				p.WaitJS(`document.querySelector('.git-row-wrap[data-path="b.go"], .tr[data-path="b.go"]')`)
+				p.WaitJS(`document.querySelector('.git-row-wrap[data-path="b.go"], .gp-row[data-path="b.go"], .tr[data-path="b.go"]')`)
+				gitViews(t, vp, c, noViews)
+				// The radial button moves clear of the phone's commit bar
+				// (it looks for new bars twice a second).
+				p.WaitJS(`!document.querySelector(".gp-dock") || !document.querySelector(".rm-fab") || document.querySelector(".rm-fab").getBoundingClientRect().bottom <= document.querySelector(".gp-dock").getBoundingClientRect().top`)
 				p.axe(src, "git with changes")
 
 				p.GoTab("term")

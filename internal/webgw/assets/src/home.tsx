@@ -27,3 +27,5 @@ phoneLook();
 // the key bar; on a phone and a tablet only.
 export { PhoneTermView } from "./views/phone/PhoneTerm";
 export { pressTermKey, setTermInputMode, termKeyBytes, typeTerm } from "./views/phone/termtype";
+// The phone's Git pages (gitphone.js, loaded on first open).
+export { GitPhoneView } from "./views/phone/GitDoor";
