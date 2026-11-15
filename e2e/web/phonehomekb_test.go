@@ -61,7 +61,8 @@ func TestPhoneHomeKeyboardKeepsTheComposerInView(t *testing.T) {
 	}
 
 	// The user's message, then its chip under it (not side by side).
-	st := Eval[struct{ Bubble, Chip struct{ Top, Bottom, Left, Right float64 } }](p, `(() => {
+	type box struct{ Top, Bottom, Left, Right float64 }
+	st := Eval[struct{ Bubble, Chip box }](p, `(() => {
 		const m = `+homeView+`.querySelector('.msg[data-i="8"]');
 		const box = (el) => { const r = el.getBoundingClientRect(); return { Top: r.top, Bottom: r.bottom, Left: r.left, Right: r.right }; };
 		return { Bubble: box(m.querySelector(".bubble")), Chip: box(m.querySelector(".msg-extras")) };
