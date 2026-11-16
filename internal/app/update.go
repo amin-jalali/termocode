@@ -121,6 +121,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	if c, ok := m.handleKubeMsg(msg); ok { // kube_state.go
 		return m, c
 	}
+	if c, ok := m.handleNowMsg(msg); ok { // now_tui.go
+		return m, c
+	}
 	if c, ok := m.handleDevPreviewMsg(msg); ok { // devpreview_ui.go
 		return m, c
 	}
@@ -816,6 +819,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	}
 	if m.reviewOpen {
 		return m.routeToReview(msg)
+	}
+	if m.nowPageOpen() { // now_tui.go
+		return m.routeToNowPage(msg)
 	}
 	if m.raceOpen() { // agent_race.go
 		return m.routeToRace(msg)

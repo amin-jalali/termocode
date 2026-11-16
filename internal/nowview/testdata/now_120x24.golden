@@ -1,0 +1,24 @@
+termocode · shop-api   ◉ Now   4 need you                                                ⎇ main  CI ✓ 12/13  ▶ 1 running
+ [Your turn 4]   Waiting on others 1   All 6    ? keys                                                                  
+                                                                                                                        
+ YOUR TURN · 3                                                                                                          
+ ▶ checkout-fix asks to run tests            agent · lane checkout-fix   Waits for your OK     [Agents]      12m        
+>▶ CI red on feat/retry-webhook              CI · e2e-linux failed       Your branch is red    [Red CI]      40m        
+     why: e2e-linux failed on your branch at 11:55   f ✦ fix with AI · e done · h later · m mute                        
+ ▶ #412 Add retry to webhook sender          PR · Sara asked you         asked to review       [Reviews]     1d         
+                                                                                                                        
+ OVERDUE · 1   T move all to tomorrow                                                                                   
+ ▶ ENG-198 Update API docs                   Linear · due Mon            3 days late                         3d         
+                                                                                                                        
+ › Waiting on others 1     › Everything else 1                                                                          
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+ j/k move   e done   h later   m mute   f fix   enter open   u undo   tab lists   esc close                             

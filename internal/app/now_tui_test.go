@@ -45,7 +45,7 @@ func TestNowTUIPage(t *testing.T) {
 	if !m.nowS.Hidden(now.Item{ID: "ci:main", Head: "abc1234def"}, time.Now()) {
 		t.Fatal("e did not mark the CI item done")
 	}
-	if out := ansi.Strip(m.nowLayer("")); strings.Contains(out, "CI · main") || !strings.Contains(out, "u undo") {
+	if out := ansi.Strip(m.nowLayer("")); !strings.Contains(out, "YOUR TURN · 1") || !strings.Contains(out, "✓ done: CI · main   u undo") {
 		t.Errorf("after done:\n%s", out)
 	}
 	m, _ = m.routeToNowPage(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("u")})

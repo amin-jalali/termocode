@@ -413,6 +413,11 @@ what runs.
   (at most 7; the top rule wins). They are kept per user on the laptop
   (`now.json` in the config folder), Done for 30 days.
 - The ✦ button shows how many things are your turn.
+- In the terminal app, **AI: Now (What Needs You)…** opens the same list
+  as a full page with the same keys: `j`/`k` move, `e` done, `h`
+  later, `m` mute, `f` fix, `u` undo, Enter open (a pull request
+  opens Review: `o` open, `s` skip, `c` comment, `a` approve & next
+  with 4 s to undo), Tab for the other lists, Esc closes.
 
 ### Review a pull request from Now
 

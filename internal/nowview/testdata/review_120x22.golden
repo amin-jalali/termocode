@@ -1,0 +1,22 @@
+ Review 1 of 5 · #412 Add retry to webhook sender                                                                       
+ MEDIUM RISK  Sara · 4 files +44 -6 · commit 3f2a1c9                                                                    
+                                                                                                                        
+ QUESTION  Webhooks fail on short network drops.  ENG-231                                                               
+ SOLUTION  Retry 3 times with backoff. Stop on 4xx errors.                                                              
+                                                                                                                        
+ CHANGES · main first                                                                                                   
+   1 Retry loop with backoff       webhook/send.go         +18 -2                                                       
+   2 Rest: config, test            2 files                 ‣ (enter)                                                    
+                                                                                                                        
+ PROOF · 3f2a1c9                                                                                                        
+   × e2e-linux 1 failed    3f2a1c9          f ✦ fix   l log                                                             
+   ◷ race test             old code 9b1e0d2   g run again                                                               
+   ✓ unit tests 212        3f2a1c9                                                                                      
+   – e2e-macos             not run                                                                                      
+                                                                                                                        
+ RISKS      network code (path rule) · retry can send twice                                                             
+ SUGGESTION 1 note approve after e2e is green   (on 3f2a1c9)                                                            
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+ o open full   s skip   c comment & next   a approve & next   approve ≠ merge · posts APPROVE on 3f2a1c9                

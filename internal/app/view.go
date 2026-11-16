@@ -199,6 +199,10 @@ func (m Model) viewFrame() string {
 		return m.reviewLayer(base)
 	}
 
+	if m.nowPageOpen() { // now_tui.go: the Now page fills the screen
+		return m.overlayToastsInEditor(m.nowLayer(""))
+	}
+
 	if m.raceOpen() { // agent_race.go
 		base := m.renderBase()
 		base = m.overlayToastsInEditor(base)
