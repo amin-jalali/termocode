@@ -655,6 +655,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-usage", "AI: Usage", ""},
 		{"ai-runs", "AI: Runs", ""},
 		{agentBoardPaletteID, "AI: Agent Board…", ""},
+		{nowPaletteID, "AI: Now (What Needs You)…", ""},
 		{"ai-profile-edit", "AI: Edit Profiles", ""},
 		{"ai-profile-new", "AI: New Profile from Current…", ""},
 		{"ai-profile-form", "AI: Edit Profile…", ""},

@@ -495,6 +495,8 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return cmd
 	}
 	switch id {
+	case nowPaletteID: // Now + Review (now_tui.go): no AI needed
+		return m.openNowPage()
 	case "save": // git status / markers refresh as after Ctrl+S
 		if err := m.editor.Save(); err != nil {
 			text := saveFailText(m.editor.Path(), err)
