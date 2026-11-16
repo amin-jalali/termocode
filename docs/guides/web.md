@@ -377,7 +377,8 @@ On a phone the page opens on the **Home**: one chat box at the bottom,
 with a row of chips above it. Type a question or tap a chip; the answer
 comes back in the same stream. The tabs (Files, Term,
 Git, More) are still one tap away. A wider screen opens the chat as
-before.
+before. To start on the tabs instead, turn off **Open the Home when the
+page starts** under ≡.
 
 - **Add it to your Home Screen**: in the phone's browser menu pick
   **Add to Home Screen** (or **Install app**). It then opens full screen,
@@ -417,7 +418,9 @@ what runs.
   the 4 questions. The rules are rows you can turn on and off under ⚙
   (at most 7; the top rule wins). They are kept per user on the laptop
   (`now.json` in the config folder), Done for 30 days.
-- The ✦ button shows how many things are your turn.
+- The ✦ button shows how many things are your turn. With a count, a
+  tap on ✦ opens Now; on Now, ✦ opens the menu as before. Without a
+  count, ✦ opens the menu.
 - In the terminal app, **AI: Now (What Needs You)…** opens the same list
   as a full page with the same keys: `j`/`k` move, `e` done, `h`
   later, `m` mute, `f` fix, `u` undo, Enter open (a pull request

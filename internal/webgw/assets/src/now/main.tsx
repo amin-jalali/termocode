@@ -12,7 +12,7 @@
 import "./now.css";
 import type { InboxItem, NowInfo, NowRule } from "../../../../webproto/proto";
 import { Fragment, H, h, setHost, type NowHost } from "./jsx";
-import { age, ruleName, sections, summary, type Sections } from "./state";
+import { age, count, ruleName, sections, summary, type Sections } from "./state";
 import { DEFAULTS, s, SOURCES, type NowKey } from "./strings";
 import { draft, fail, go, Head, initKit, req, say, Toast } from "./kit";
 import { Review } from "./review";
@@ -29,7 +29,21 @@ export function init(host: NowHost): typeof Now {
   l.rel = "stylesheet";
   l.href = "/assets/now.css";
   document.head.append(l);
+  document.addEventListener("pointerup", fabTap, true);
   return Now;
+}
+
+/** fabTap: with a count on ✦, a tap on it opens Now (the radial menu
+ * never sees the tap: it stops here, and the button's press is
+ * cancelled); on Now, or while the button is dragged, it opens the menu
+ * as before. radial.js has no room left, so the tap is taken here. */
+function fabTap(e: PointerEvent): void {
+  const b = (e.target as Element | null)?.closest?.(".rm-fab");
+  const r = H.route.peek();
+  if (!b || b.classList.contains("rm-dragging") || !document.documentElement.style.getPropertyValue("--now-badge") || (r.tab === "home" && r.rest.startsWith("now"))) return;
+  e.stopPropagation();
+  b.dispatchEvent(new PointerEvent("pointercancel", { pointerId: e.pointerId }));
+  go("now");
 }
 
 function read(): { items: InboxItem[]; info: NowInfo | null } {
@@ -310,7 +324,6 @@ function Home({ open }: { open: Open }) {
   const [c, sheet] = useRows(open, info);
   const sec = sections(items, c.now);
   const sum = summary(sec);
-  H.useEffect(() => badge(sum.need), [sum.need]);
   // The laptop learns the pull requests that ask for a review here.
   H.useEffect(() => void req("review.list", {}).catch(() => undefined), []);
   // A new item on the user's turn: one quiet line, no popup.
@@ -330,7 +343,8 @@ function Home({ open }: { open: Open }) {
       {info && !info.setup && <Setup />}
       {fresh && (
         <p class="now-note" dir="auto">
-          ● {s("new", { title: fresh.title })} · {age(fresh.why_at || fresh.since, c.now)}
+          ● {s("new", { title: fresh.title })}
+          {(fresh.why_at || fresh.since) > 0 && " · " + age(fresh.why_at || fresh.since, c.now)}
         </p>
       )}
       {mine.length === 0 ? (
@@ -344,7 +358,7 @@ function Home({ open }: { open: Open }) {
           c={c}
           extra={
             <button type="button" class="now-all" onClick={() => go("now")}>
-              {s("see_all", { n: items.length })}
+              {s("see_all", { n: count(sec) })}
             </button>
           }
         />
@@ -364,7 +378,7 @@ function All({ open, tab }: { open: Open; tab: string }) {
   const tabs: [string, NowKey, number][] = [
     ["turn", "turn", mine],
     ["waiting", "waiting", sec.waiting.length],
-    ["all", "all", items.length],
+    ["all", "all", count(sec)],
   ];
   const nav = (t: string, k: NowKey, n: number) => (
     <button type="button" class="now-nav" onClick={() => setTab(t)}>
@@ -530,6 +544,10 @@ function openItem(id: string): void {
 export function Now({ n }: { n: number }) {
   const open = openItem;
   const r = H.route.value;
+  // The ✦ count, with or without messages on the Home (a tap on ✦ with a
+  // count opens Now: radial.ts).
+  const need = summary(sections(read().items, Date.now())).need;
+  H.useEffect(() => badge(need), [need]);
   let page: El | null = null;
   if (r.tab === "home") {
     if (r.rest === "now/rules") page = <Rules />;
