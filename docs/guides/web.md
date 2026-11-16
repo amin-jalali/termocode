@@ -401,6 +401,11 @@ what runs.
   asks you; your own action hands the turn back. Bots never take a turn.
 - The order is fixed: your turn first, then P1 to P4, then what is due
   today, then the oldest.
+- Now lists only what waits on you, runs, or waits on others. A
+  finished run, task or green CI that waits on nobody is not on it. All
+  the turns of one AI chat are one row (the newest turn's title and
+  time). The CI row's time is its newest run's; without one it shows
+  no age.
 - Tap a row for **Why this?**: its one fix (✦ Fix puts a request in the
   box; nothing is sent until you send it), **Done**, **Later** ("in 2
   hours", "tomorrow 9:00", "next week") and **Not important** (mute it

@@ -71,6 +71,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Next Effort Mode | `ai-dial-next` |   |   |
 | AI: Next Profile | `ai-profile-next` | `Alt+Shift+P` / `Alt+N` | `Alt+Shift+P / Alt+N` |
 | AI: Next Reasoning Level | `ai-reasoning-next` |   |   |
+| AI: Now (What Needs You)… | `now-open` |   |   |
 | AI: Open Chat | `ai-open-chat` | `Alt+A` | `Alt+A` |
 | AI: Pick Model… | `ai-pick-model` |   |   |
 | AI: Powers Catalog… | `ai-powers` |   |   |
