@@ -39,7 +39,7 @@ effect(() => {
 
 // The phone's Home (MOB-4, #/home) is a phone's only: a wider screen shows
 // the chat. A phone whose This phone choice is the Home starts there.
-if (layout.peek() === "phone" && prefs.peek().phoneHome === "chat" && (location.hash === "" || location.hash === "#")) {
+if (layout.peek() === "phone" && prefs.peek().phoneStart === "chat" && (location.hash === "" || location.hash === "#")) {
   go({ tab: "home", rest: "", query: {} }, true);
 }
 effect(() => {

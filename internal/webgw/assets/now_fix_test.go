@@ -38,19 +38,19 @@ console.log("ok");
 }
 
 // Spec (Now fixes): a phone opens on the Home by default. A "tabs" kept
-// from the old default (no choice made) reads as the Home; a choice made
-// on This phone (phoneHomeSet) is kept.
+// from the old default (the old phoneHome key: no choice made) reads as
+// the Home; a choice made on This phone (phoneStart) is kept.
 func TestPhoneHomeDefault(t *testing.T) {
 	for _, tc := range []struct{ stored, want string }{
 		{``, "chat"},
 		{`{"theme":"dark","phoneHome":"tabs"}`, "chat"},
-		{`{"phoneHome":"tabs","phoneHomeSet":true}`, "tabs"},
-		{`{"phoneHome":"chat","phoneHomeSet":true}`, "chat"},
+		{`{"phoneStart":"tabs"}`, "tabs"},
+		{`{"phoneStart":"chat"}`, "chat"},
 	} {
 		out := runJS(t, `
 import "ls";
 import { prefs } from "./prefs";
-console.log("home=" + prefs.peek().phoneHome);
+console.log("home=" + prefs.peek().phoneStart);
 `, map[string]string{"ls": `const v = ` + "`" + tc.stored + "`" + `;
 const m = new Map<string, string>(v ? [["termocode.prefs.v1", v]] : []);
 (globalThis as any).localStorage = { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, x: string) => m.set(k, x), removeItem: (k: string) => m.delete(k) };

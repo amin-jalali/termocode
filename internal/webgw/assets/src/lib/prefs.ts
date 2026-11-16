@@ -33,8 +33,10 @@ export interface Prefs {
   keys: KeyId[];
   /** vim: the desktop editor's Vim mode (WEBP-1), off by default. */
   vim: boolean;
-  /** phoneHome: a phone opens on the tabs or on the Home (MOB-4). */
-  phoneHome: PhoneHome;
+  /** phoneStart: a phone opens on the tabs or on the Home (MOB-4); the
+   * Home by default. It was phoneHome, whose stored "tabs" was the old
+   * default, not a choice: that key is no longer read. */
+  phoneStart: PhoneHome;
   /** quiet: the phone's quiet hours "HH:MM-HH:MM" (MOBUX-20), "" for none;
    * no notification shows inside them. The laptop keeps a copy. */
   quiet: string;
@@ -53,7 +55,7 @@ export const QUIET = /^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$/;
 export const ROW_MIN = 10;
 export const ROW_MAX = 24;
 
-const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false, keysHintDone: false, rowPx: 0, wakeLock: false, notify: false, keys: [], vim: false, phoneHome: "tabs", quiet: "", motion: "system", haptics: true, moreRecent: [] };
+const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false, keysHintDone: false, rowPx: 0, wakeLock: false, notify: false, keys: [], vim: false, phoneStart: "chat", quiet: "", motion: "system", haptics: true, moreRecent: [] };
 
 function rowSize(v: unknown): number {
   return typeof v === "number" && Number.isInteger(v) && v >= ROW_MIN && v <= ROW_MAX ? v : 0;
@@ -79,7 +81,7 @@ function load(): Prefs {
       notify: v.notify === true,
       keys: readKeys(v.keys),
       vim: v.vim === true,
-      phoneHome: pick(v.phoneHome, ["tabs", "chat"], defaults.phoneHome),
+      phoneStart: pick(v.phoneStart, ["tabs", "chat"], defaults.phoneStart),
       quiet: typeof v.quiet === "string" && QUIET.test(v.quiet) ? v.quiet : "",
       motion: pick(v.motion, ["system", "reduce"], defaults.motion),
       haptics: v.haptics !== false,
