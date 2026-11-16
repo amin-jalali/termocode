@@ -265,3 +265,16 @@ test("extraInsets keeps the button above the page's own bottom bar", () => {
   r.clock.tick(500);
   eq(r.fab.position[1], 600 - 56 - 12 - 32, "a drop is kept above it too");
 });
+
+test("onTap: a tap the host takes opens no menu; a tap it leaves opens it", () => {
+  let take = true;
+  let taps = 0;
+  const r = rig({ onTap: () => (taps++, take) });
+  tapFab(r);
+  eq(taps, 1);
+  eq(r.fab.isOpen, false, "the host took the tap");
+  take = false;
+  tapFab(r, 3);
+  eq(taps, 2);
+  eq(r.fab.isOpen, true, "the host left the tap");
+});
