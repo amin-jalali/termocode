@@ -83,6 +83,12 @@ func nowCI(it *webproto.InboxItem) {
 	}
 }
 
+// nowShows reports whether Now lists it: what needs the user, runs or
+// waits on others; a finished item that waits on nobody is left out.
+func nowShows(it webproto.InboxItem) bool {
+	return it.State != webproto.InboxDone || it.Turn == now.TurnMe || it.Turn == now.TurnOthers
+}
+
 // nowItem is the model's view of an inbox item.
 func nowItem(it webproto.InboxItem) now.Item {
 	x := now.Item{ID: it.ID, Kind: it.Kind, Source: it.Source, Title: it.Title, Turn: it.Turn, Waiting: it.Waiting,

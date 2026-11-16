@@ -3632,6 +3632,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `next-buffer` | View: Next Editor | auto |   |
 | `next-diagnostic` | Go to Next Problem | auto |   |
 | `next-hunk` | Git: Go to Next Change | auto |   |
+| `now-open` | AI: Now (What Needs You)… | auto |   |
 | `open-docs` | Help: Open Documentation | auto |   |
 | `open-recent` | File: Open Recent... | never | opens a picker or prompt that only the user can answer; use a typed tool (open_file) |
 | `open-settings-ui` | Preferences: Open Settings (UI) | never | opens a picker or prompt that only the user can answer; use a typed tool |

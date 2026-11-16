@@ -106,6 +106,7 @@ type Run struct {
 	Conclusion string `json:"conclusion"` // success, failure, cancelled, …
 	HeadSHA    string `json:"headSha"`
 	URL        string `json:"url"`
+	Updated    string `json:"updatedAt"` // RFC 3339; "" from a fake or an older gh
 }
 
 // Pending reports a run that has not finished.
@@ -171,6 +172,17 @@ func (s Snapshot) State() State {
 	return st
 }
 
+// Updated is the newest last change of the runs (zero: none has a time).
+func (s Snapshot) Updated() time.Time {
+	var at time.Time
+	for _, r := range s.Runs {
+		if t, err := time.Parse(time.RFC3339, r.Updated); err == nil && t.After(at) {
+			at = t
+		}
+	}
+	return at
+}
+
 // FailedRuns lists the failed runs.
 func (s Snapshot) FailedRuns() []Run {
 	var out []Run
@@ -190,7 +202,7 @@ func Fetch(ctx context.Context, run Runner, dir, branch string) (Snapshot, error
 		return snap, nil // detached HEAD or no branch: nothing to ask
 	}
 	out, errOut, err := run(ctx, dir, "run", "list", "--branch", branch, "--limit", "20",
-		"--json", "databaseId,workflowName,displayTitle,status,conclusion,headSha,url")
+		"--json", "databaseId,workflowName,displayTitle,status,conclusion,headSha,url,updatedAt")
 	if err != nil {
 		return snap, classify(err, errOut)
 	}

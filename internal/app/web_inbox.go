@@ -165,14 +165,7 @@ func (m *Model) webInboxItems(p webInboxPaths) []webproto.InboxItem {
 		}
 	}
 	if m.ai != nil {
-		for _, r := range m.webRunsBuild(clock.Now()).Runs {
-			st := webInboxRunState(r)
-			if st == "" {
-				continue
-			}
-			it := webproto.InboxItem{Kind: webproto.InboxRun, Ref: r.Key, Title: r.Title, Chat: p.title(r.Chat), Since: r.Started,
-				State: st, Can: append([]string(nil), r.Can...)}
-			nowByState(&it, "Run failed")
+		for _, it := range nowRunItems(m.webRunsBuild(clock.Now()).Runs, p) {
 			add(it)
 		}
 	}
@@ -248,9 +241,50 @@ func (m *Model) webInboxItems(p webInboxPaths) []webproto.InboxItem {
 			ghci.StatePass: webproto.InboxDone}[w.snap.State()]
 		if st != "" {
 			it := webproto.InboxItem{Kind: webproto.InboxCI, Ref: webName(w.branch), Title: "CI · " + w.branch, State: st, Head: webName(w.snap.HeadSHA)}
+			if at := w.snap.Updated(); !at.IsZero() {
+				it.Since = at.UnixMilli()
+			}
 			nowCI(&it)
 			add(it)
 		}
+	}
+	return out
+}
+
+// nowRunItems makes the runs' inbox items: one per chat (the turns of
+// one chat are one row), with the newest turn's title and time; a turn
+// that waits for the user or runs gives the row its state and key (Stop
+// stops that one), else the newest turn does. Rows keep the order of
+// each chat's first run.
+func nowRunItems(runs []webproto.RunItem, p webInboxPaths) []webproto.InboxItem {
+	rank := map[string]int{webproto.InboxNeedsYou: 2, webproto.InboxWorking: 1}
+	var out []webproto.InboxItem
+	row := map[string]int{}
+	for _, r := range runs {
+		st := webInboxRunState(r)
+		if st == "" {
+			continue
+		}
+		chat, _, _ := strings.Cut(r.Key, "/")
+		it := webproto.InboxItem{Kind: webproto.InboxRun, Ref: r.Key, Title: r.Title, Chat: p.title(r.Chat), Since: r.Started,
+			State: st, Can: append([]string(nil), r.Can...)}
+		nowByState(&it, "Run failed")
+		i, seen := row[chat]
+		if !seen {
+			row[chat] = len(out)
+			out = append(out, it)
+			continue
+		}
+		g := &out[i]
+		newer := it.Since > g.Since
+		title, since := g.Title, g.Since
+		if newer {
+			title, since = it.Title, it.Since
+		}
+		if rank[st] > rank[g.State] || (rank[st] == rank[g.State] && newer) {
+			*g = it
+		}
+		g.Title, g.Since = title, since
 	}
 	return out
 }

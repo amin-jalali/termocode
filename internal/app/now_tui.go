@@ -78,6 +78,9 @@ func (m *Model) nowData() nowview.Data {
 	xs := make([]now.Item, 0, len(items))
 	d := nowview.Data{Project: webName(filepath.Base(m.ws.Root)), Branch: m.nowBranch()}
 	for _, it := range items {
+		if !nowShows(it) {
+			continue
+		}
 		byID[it.ID] = it
 		xs = append(xs, nowItem(it))
 		if it.State == webproto.InboxWorking {
