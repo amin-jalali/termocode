@@ -73,6 +73,8 @@ export interface TactileKeyboard {
 }
 
 const ICON_SIZE = { func: 12, other: 13 };
+/** LABEL_PX is a word label's size at most (.tk-label in the CSS). */
+const LABEL_PX = 11;
 
 export function mount(host: HTMLElement, opts: MountOptions): TactileKeyboard {
   let o: MountOptions = { soundOn: true, hapticLevel: 2, tilt: true, ...opts };
@@ -143,7 +145,9 @@ export function mount(host: HTMLElement, opts: MountOptions): TactileKeyboard {
 
   // emWidth is a label's width in em in the board's font (a canvas
   // measure, cached), with a little room to spare; without a canvas, a
-  // generous 0.62 em a letter.
+  // generous 0.62 em a letter. It measures at the labels' own size
+  // (11px): a system font with optical sizes (macOS, iOS) draws small
+  // text in a wider cut than at 100px, which let "caps lock" spill.
   const ems = new Map<string, number>();
   let ctx: CanvasRenderingContext2D | null | undefined;
   function emWidth(text: string): number {
@@ -152,10 +156,10 @@ export function mount(host: HTMLElement, opts: MountOptions): TactileKeyboard {
     if (ctx === undefined) {
       const c = doc.createElement("canvas") as HTMLCanvasElement;
       ctx = typeof c.getContext === "function" ? c.getContext("2d") : null;
-      if (ctx) ctx.font = `400 100px ${(win?.getComputedStyle?.(root).fontFamily) || "system-ui, sans-serif"}`;
+      if (ctx) ctx.font = `400 ${LABEL_PX}px ${(win?.getComputedStyle?.(root).fontFamily) || "system-ui, sans-serif"}`;
     }
     const m = ctx?.measureText(text).width;
-    v = m ? (m / 100) * 1.08 : text.length * 0.62;
+    v = m ? (m / LABEL_PX) * 1.08 : text.length * 0.62;
     ems.set(text, v);
     return v;
   }
