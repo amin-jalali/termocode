@@ -63,6 +63,8 @@ func TestAIUnconfiguredEntriesOnlyToast(t *testing.T) {
 			"ai-discard-proposal", "ai-history", "ai-pick-model", "ai-auto-approve",
 			"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reconnect-all",
 			"ai-mcp-profile", "ai-mcp-catalog", "ai-mcp-bundle", // MCP setup works before a provider
+			"ai-abilities",                     // the tool groups are settings only
+			nowPaletteID,                       // Now + Review lists what needs the user; no AI call (palette.go)
 			"ai-agent-hooks", "ai-agent-packs", // agent CLI files need no provider
 			aiHistorySearchID, aiShareChatID, aiChatCommentsID, // saved chats need no provider
 			"ai-checkpoint-save",            // CMP-62: files and chats only

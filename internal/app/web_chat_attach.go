@@ -469,6 +469,11 @@ func webAttachDiff(j webAttachJob) (string, error) {
 	return b.String(), nil
 }
 
+// luaWebTermLines reads rows f..t of buffer b ({} when it is not loaded).
+const luaWebTermLines = `local b, f, t = ...
+		if not vim.api.nvim_buf_is_loaded(b) then return {} end
+		return vim.api.nvim_buf_get_lines(b, f - 1, t, false)`
+
 // webAttachTail is the end of a task's terminal for a task attach ("" when
 // it cannot be read now: the task's line still goes).
 // webTermLines reads rows from..to (from 1) of a shell's buffer, off the
@@ -478,9 +483,7 @@ var webTermLines = func(c *nvim.Client, buf, from, to int) ([]string, error) {
 		return nil, errors.New("the editor is not ready")
 	}
 	var lines []string
-	err := c.EvalLuaArgs(`local b, f, t = ...
-		if not vim.api.nvim_buf_is_loaded(b) then return {} end
-		return vim.api.nvim_buf_get_lines(b, f - 1, t, false)`, &lines, buf, from, to)
+	err := c.EvalLuaArgs(luaWebTermLines, &lines, buf, from, to)
 	return lines, err
 }
 
