@@ -20,9 +20,15 @@ func TestAxeRunViews(t *testing.T) {
 				p.Media(map[string]string{"prefers-color-scheme": theme, "prefers-reduced-motion": "reduce"})
 				c := p.Login("c-1")
 				shotLike(t, c)
+				// The phone's Run and Debug is its own page (sheet 11): the
+				// call stack rows are .rd-frame there, .dv-frame on the desk.
+				frame := ".dv-frame"
+				if vp.Mobile {
+					frame = ".rd-frame"
+				}
 				for _, v := range []struct{ hash, ready string }{
 					{"#/more/testing", `document.querySelectorAll(".tx-row").length === 4`},
-					{"#/more/debug", `document.querySelectorAll(".dv-frame").length === 2`},
+					{"#/more/debug", `document.querySelectorAll("` + frame + `").length === 2`},
 					{"#/more/services", `document.querySelectorAll(".svc").length === 3`},
 					{"#/more/kube", `document.querySelectorAll(".kb-row").length === 5`},
 				} {

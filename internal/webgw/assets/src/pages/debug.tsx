@@ -46,16 +46,24 @@ export function DebugPage() {
   useChat();
   H.useEffect(() => H.link.subscribe("debug"), []);
   const s = snapOf(H.store.topic("debug").value?.data);
+  const [sheet, setSheet] = H.useState<Sheet>("");
+  // The console bar is the view's foot: under the scrolling body, so it
+  // never lies over a row (or its ✕) the way a sticky bar did.
   return (
-    <H.View tab="more" name="debug" title={tx("rd.title")} back={{ label: tx("pg.back"), onClick: () => H.go({ tab: "more", rest: "", query: {} }) }}>
-      {s ? <Debug s={s} /> : <div class="pg-empty">…</div>}
+    <H.View
+      tab="more"
+      name="debug"
+      title={tx("rd.title")}
+      back={{ label: tx("pg.back"), onClick: () => H.go({ tab: "more", rest: "", query: {} }) }}
+      foot={s ? <ConsoleBar s={s} onOpen={() => setSheet("console")} /> : undefined}
+    >
+      {s ? <Debug s={s} sheet={sheet} setSheet={setSheet} /> : <div class="pg-empty">…</div>}
       <PressMenu />
     </H.View>
   );
 }
 
-function Debug({ s }: { s: DebugSnap }) {
-  const [sheet, setSheet] = H.useState<Sheet>("");
+function Debug({ s, sheet, setSheet }: { s: DebugSnap; sheet: Sheet; setSheet: (v: Sheet) => void }) {
   const act = H.canAct();
   const cfg = s.configs.find((c) => c.name === s.selected);
   const close = () => setSheet("");
@@ -126,7 +134,6 @@ function Debug({ s }: { s: DebugSnap }) {
           </div>
         </Section>
       )}
-      <ConsoleBar s={s} onOpen={() => setSheet("console")} />
       {sheet === "cfg" && <ConfigSheet s={s} onClose={close} />}
       {sheet === "bp" && <AddBreakpoint onClose={close} />}
       {sheet === "watch" && <WatchSheet s={s} act={act} onClose={close} />}
