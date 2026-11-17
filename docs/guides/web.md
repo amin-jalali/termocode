@@ -418,6 +418,9 @@ page starts** under ≡.
 
 ### Now: only what waits on you
 
+![Now on the phone: why an item is there, Done with Undo, then a pull request in Review and Approve and next](../assets/gifs/phone-now.gif){ .tc-shot }
+*Now and Review on the phone (sample data).*
+
 Before the first message the Home is **Now**: one line ("3 need you ·
 1 running"), then **Your turn**, the few things that wait on you, and
 what runs.

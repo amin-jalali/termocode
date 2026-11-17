@@ -173,6 +173,9 @@ The AI's instructions name each connected service and its access
 
 ### After you connect: the check card
 
+![The check card of a new MCP server: what was found and one next step](../assets/gifs/after-add.gif){ .tc-shot }
+*The check card after you add a server (a made-up server).*
+
 When the **Connected** card closes, termocode checks the new server once.
 It never calls one of the server's tools. One card shows what it found:
 

@@ -1,0 +1,6 @@
+# phone-now.gif - 13.9 s, loops. Captions are not burned into the frames.
+# Recorded with a fake hub (sample data).
+ 0.0- 2.7 s  Now: what waits on you, on your phone.
+ 2.7- 7.0 s  Each item says why it is there.
+ 7.0-11.5 s  Review: one pull request, in one fixed order.
+11.5-13.9 s  Approve & next, with Undo.
