@@ -397,5 +397,3 @@ func TestCovAIDBShowRunKeepsUserRun(t *testing.T) {
 		t.Error("the AI run took the page from the user's run")
 	}
 }
-
-func intPtr(n int) *int { return &n }
