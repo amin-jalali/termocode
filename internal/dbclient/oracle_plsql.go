@@ -146,7 +146,7 @@ func splitOracle(sql string) ([]string, error) {
 	}
 	chunks = append(chunks, sql[start:])
 	for _, chunk := range chunks {
-		parts, err := Split(chunk, "")
+		parts, err := splitDelimited(chunk, "oracle")
 		if err != nil {
 			return nil, err
 		}

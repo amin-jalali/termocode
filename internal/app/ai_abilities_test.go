@@ -105,10 +105,13 @@ func TestAIAbilityChatTurn(t *testing.T) {
 }
 
 // Spec (abilities): AI: Abilities… lists every group with its state;
-// Enter moves on → on demand → off → on and saves it.
+// Enter moves on → on demand → off → on and saves it. The palette entry
+// (ai-abilities) opens it with no provider set up.
 func TestAIAbilitiesPicker(t *testing.T) {
 	m := aiTestModel(t)
-	m.openAIAbilitiesPicker()
+	if _, ok := m.dispatchAIPalette("ai-abilities"); !ok {
+		t.Fatal("ai-abilities is not an AI palette entry")
+	}
 	if !m.pickerOpen || m.pickerKind != pickerKindAIAbilities {
 		t.Fatal("no picker")
 	}

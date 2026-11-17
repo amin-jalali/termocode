@@ -600,6 +600,13 @@ func Split(sql string, dialectName string) ([]string, error) {
 	if strings.EqualFold(dialectName, "oracle") {
 		return splitOracle(sql) // PL/SQL units and "/" lines (DBX-63)
 	}
+	return splitDelimited(sql, dialectName)
+}
+
+// splitDelimited splits at the delimiter (";" or a DELIMITER line) with
+// the quoting rules of the dialect. splitOracle uses it for the chunks
+// between its "/" lines.
+func splitDelimited(sql string, dialectName string) ([]string, error) {
 	dialect := dialectArg([]string{dialectName})
 	var out []string
 	start := 0

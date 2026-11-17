@@ -299,6 +299,7 @@ web	mcp-serve-status	op:ai.info
 web	next-buffer	cmd:nextEditor
 web	next-diagnostic	cmd:problems
 web	next-hunk	cmd:nextChange
+web	now-open	op:now.act
 web	open-recent	cmd:openRecent
 web	open-settings-ui	cmd:settings
 web	open-url	cmd:openUrl

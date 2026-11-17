@@ -392,6 +392,7 @@ var aiRestParity = map[string]string{
 	"services.start_all":          "services_start",
 	"services.stop":               "services_stop",
 	"services.stop_all":           "services_stop",
+	"settings.set":                "settings_set",
 	"snippet-picker":              "ide_op snippets.list",
 	"snippets-manage":             "ide_op snippets.user / save / delete",
 	"snippets.delete":             "ide_op",
