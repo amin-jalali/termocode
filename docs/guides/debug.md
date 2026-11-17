@@ -121,6 +121,12 @@ with the same name are hidden.
 | `pubspec.yaml` | Dart: run |
 | `Makefile` | make |
 
+## From the phone
+
+The web panel on a phone has its own **Run and Debug** page: start a
+configuration, add breakpoints, step, and read variables and the call
+stack. See [Run and Debug on the phone](web.md#run-and-debug-on-the-phone).
+
 ## Keys at a glance
 
 | Key | Action |
