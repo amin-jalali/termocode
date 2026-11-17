@@ -208,8 +208,32 @@ a pull or a stash asks first, as on the Git tab. Hold the button itself
 to pick it up and drag it where your thumb likes it; it stays there.
 Your saved actions and the button's place stay on this device.
 
-**More** lists every view in small groups with an icon each, the views
-you opened last on top, and a search box to find one by name.
+**More** lists every view in small groups with an icon each, and a
+search box to find one by name. **Pinned** comes first: the views you
+pinned on this device, else the views you opened last. A pinned view
+shows a live count (Testing: 1 failed). Hold a row for **✦ Ask AI about
+this** (it puts a draft in the chat box; nothing is sent) or **Pin** /
+**Unpin**. **⋯** on Pinned opens **Edit Pinned**: ✕ removes a row, the
+grip moves it, **Done** keeps the order.
+
+### Run and Debug on the phone
+
+**More → Run and Debug** opens it as a page:
+
+- A pill on top picks the launch configuration. **▶ Start** starts it;
+  **▾** next to it has **Run without debugging**.
+- **Breakpoints** are rows (file:line and its code). A tick shows when
+  the debugger verified one. **+ Add breakpoint** asks for a file in the
+  workspace and a line.
+- **Watch** and **Variables · Call stack** stay folded until the
+  program pauses.
+- While it runs, a floating pill has Continue, Pause, the three steps,
+  Restart and Stop. When it pauses, the page shows where it stopped, the
+  variables and the call stack. Tap a frame to pick it and open its line.
+- Hold a variable, a frame or a breakpoint for **Ask AI about this** or
+  **Add to chat**. A variable also has **Watch it** and **Copy value**.
+- The **Debug console** sits at the bottom. Tap it to open it as a
+  sheet; it evaluates in the paused frame.
 
 The easy way to reach it from your phone is
 your own [Tailscale](https://tailscale.com) network (your *tailnet*).
@@ -384,9 +408,11 @@ page starts** under ≡.
   **Add to Home Screen** (or **Install app**). It then opens full screen,
   straight on the Home. This needs tailnet mode: the address must stay
   the same.
-- It is still the same page from your laptop. Nothing is installed in
-  the background: there is no service worker, so nothing runs when the
-  page is closed, and no file of the page is kept on the phone.
+- It is still the same page from your laptop. No file of the page is
+  kept on the phone. The only code that stays is a small push worker,
+  and only when you turn on [notifications](#notifications-on-the-phone)
+  on an https address: it shows the push text and opens the page on a
+  tap. It has no cache and makes no network calls.
 - Your files, chats and keys stay on the laptop. The phone only shows
   them.
 
