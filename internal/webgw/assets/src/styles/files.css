@@ -58,8 +58,10 @@
 .term-chip .chip { gap: var(--s2); max-width: 12rem; min-height: 32px; }
 .pterm-body { display: flex; flex-direction: column; padding: 0; overflow: hidden; background: var(--bg-panel); }
 .pterm { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.pterm-x { flex: 1; min-height: 0; min-width: 0; overflow: hidden;padding: 2px 0 0 4px; font-family: "termocode symbols", var(--font-mono); -webkit-touch-callout: none; }
-.pterm-x .xterm { height: 100%; }
+.pterm-x { flex: 1; min-height: 0; min-width: 0; overflow: hidden; padding-left: 4px; font-family: "termocode symbols", var(--font-mono); -webkit-touch-callout: none; }
+/* The top inset is on .xterm, not .pterm-x: the fit reads the parent's border-box
+   height and takes off only .xterm's padding (a top padding on .pterm-x let the last row run past the bottom). */
+.pterm-x .xterm { height: 100%; padding-top: 2px; }
 .pterm-x .xterm .xterm-viewport { background-color: var(--bg-panel); }
 .pterm-keys { padding-block: var(--s1); }
 .pterm-keys .keybar { margin-top: 0; }
