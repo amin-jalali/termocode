@@ -301,7 +301,7 @@ a handoff. The AI chat has its own **AI: Handoff to a New Chat**.
 A task often needs a change in more than one repository: a frontend and
 a backend, or several services in one folder. When the folders of this
 window hold two or more git repositories (a folder of projects, or
-repositories added with **File: Add Folder…**),
+repositories added with **Workspace: Add Folder...**),
 **Worktree: New in Each Repository…** (`E` in the view) makes one
 worktree in each of them, on the same branch, in one step.
 
