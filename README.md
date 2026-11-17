@@ -41,11 +41,11 @@ A fast, full-featured IDE that runs entirely in your terminal. Code, debug, test
 - **A full IDE, in your terminal** — explorer, tabs, command palette (`F1`), multi-cursor, an integrated terminal with tabs, project-wide search, tasks and a Problems panel. Mouse works everywhere.
 - **AI agents in your workflow** — agents create files, edit code and run commands inside the IDE. You review and approve each change, hunk by hunk. Chat, ghost-text completion and Explain / Fix / Edit. Hosted providers or a local model.
 - **Disconnect, keep working** — lose your SSH connection and the editor, terminals, running jobs and AI agents keep going. Run `termocode` again in the same folder to get everything back. On by default over SSH; turn on `persistent_session` to get the same when you close a local terminal.
-- **A second screen in the browser** *(experimental)* — open the same session in a browser tab, on this computer or from a server with `termocode ssh --web`: chat with the AI and answer its cards, read files, type in terminals, stage and commit. One-time links and no open network port.
+- **A second screen in the browser** *(experimental)* — open the same session in a browser tab, on this computer or from a server with `termocode ssh --web`: chat with the AI and answer its cards, read files, type in terminals, stage and commit. On a phone, the Home shows **Now**: only what waits on you. One-time links; by default it listens only on this computer.
 - **MCP** — local and remote MCP servers, and a *Connect a service* wizard for GitHub, GitLab, Linear, Notion, Sentry, Slack, ClickUp and Atlassian.
 - **Git** — stage hunks, commit, sync, stash, blame, a commit graph, a merge-conflict resolver and clone.
 - **Debug and test** — breakpoints, watch, call stack and a Debug Console for Go, Python and Node; a test explorer for Go, pytest, Rust, Jest and Vitest.
-- **Your dev stack** — Docker Compose services (start, stop, logs, shell in a container) and an HTTP client for `.http` files.
+- **Your dev stack** — Docker and Podman containers, Docker Compose services (start, stop, logs, shell in a container), a Kubernetes view, a Databases view (PostgreSQL, MySQL, SQLite, SQL Server, Redis, MongoDB and many more) and an HTTP client for `.http` files.
 - **Language servers** for Go, Python, JS/TS, Rust, C/C++, Lua and more, with a built-in installer.
 - **Fast and light** — one binary, starts in under 70 ms, about 60 MB of RAM with its editor engine, near-zero CPU when idle ([benchmarks](https://amin-jalali.github.io/termocode/benchmarks/)).
 - **Works where you do** — Linux, macOS, over SSH (with file upload and download) and Android via Termux.

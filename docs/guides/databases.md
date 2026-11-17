@@ -1,6 +1,6 @@
 # Browse databases
 
-The **Databases** view manages connections to PostgreSQL, MySQL or MariaDB, SQLite, and Redis or Valkey. You can browse the schema, run SQL in a console, read and edit rows, export and import data, and let the AI help with safe rules.
+The **Databases** view manages connections to PostgreSQL, MySQL or MariaDB, SQLite, SQL Server, Oracle, Redis or Valkey, MongoDB, Cassandra, ClickHouse, DuckDB and many more: see [Add a connection](#add-a-connection) for the full list. You can browse the schema, run SQL in a console, read and edit rows, export and import data, and let the AI help with safe rules.
 
 A connection opens only when you expand it. Schema details load as you move down the tree.
 
@@ -44,7 +44,7 @@ If both files use the same `id`, the project entry wins. Press `e` on a connecti
 | --- | --- |
 | `id` | Required. Lower-case letters, digits, `_` and `-`. |
 | `name` | Label in the tree. |
-| `driver` | `postgres`, `mysql` (also `mariadb`), `sqlite`, `redis`, `firebird`, `vertica`, `exasol` or `hana` (SAP HANA). |
+| `driver` | For example `postgres`, `mysql` (also `mariadb`), `sqlite`, `redis`, `sqlserver`, `oracle`, `mongodb`, `cassandra`, `clickhouse` or `duckdb`. Each engine on this page names its own value. |
 | `host`, `port`, `user`, `database` | Network connections. The port defaults to 5432, 3306 or 6379. |
 | `path` | SQLite file. In a project file it must stay inside the workspace. |
 | `preset` | Server family, for example `tidb`. On `sqlite`, `"preset": "sqlcipher"` opens an encrypted file (see [Encrypted SQLite](#encrypted-sqlite-sqlcipher)). |
