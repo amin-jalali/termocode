@@ -295,6 +295,10 @@ the same way on `http://localhost:1234/v1`.
     Inline completion runs on every pause in typing. A small model such as
     `qwen2.5-coder:1.5b` feels faster.
 
+A chat model of 14B parameters or less (by its id) gets fewer tools and a
+shorter system prompt by itself. See
+[Model family](ai-use.md#model-family-gpt-claude-and-small-models).
+
 ## Claude sign-in (opt-in)
 
 **AI: Sign in with Claude (OAuth, opt-in)…** uses your Claude subscription

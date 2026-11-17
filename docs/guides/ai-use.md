@@ -1092,6 +1092,28 @@ may be cut short (a long `write_file`). Then none of that answer's tool
 calls run: the AI is told to send them again with complete arguments
 (a long file in parts), and the chat shows a short note.
 
+### Model family: GPT, Claude and small models
+
+termocode tunes a short part of the AI's prompt to the model. It reads
+the family from the model id:
+
+- **GPT** (`gpt-*`, `o1` to `o9`, Codex models and Codex steps): the AI
+  is told to finish every step in the same turn. Only a real question to
+  you ends the turn early.
+- **Small** (an id that names 14B parameters or less, such as
+  `qwen2.5-coder:7b`): fewer tools (files, terminal, git, databases,
+  tests, code intelligence and MCP) and a system prompt cut to about
+  8000 tokens, so a local model has room to work.
+- **Claude** and every other model keep the default prompt.
+
+Every family gets the same short way of working: say the plan in one
+line, read in parallel, show proof (a check that ran) before saying
+done, and stop after 2 or 3 failed fixes.
+
+To pick the family yourself, set `"ai_model_family"` in config.json to
+`gpt`, `claude` or `small`; `other` turns the family lines off; `auto`
+is the default. Only you can change it, never the AI.
+
 ### Autopilot and approval rules
 
 termocode rates every change the agent wants to make as **low**, **medium**
