@@ -205,6 +205,12 @@ button.chip:hover { background: var(--bg-hover); }
 .chev.is-open { transform: rotate(90deg); }
 .tree-icon { color: var(--muted); }
 .tree-icon.is-dir { color: var(--blue); }
+/* The phone's file and folder glyphs, drawn in the text colour through a
+   mask: one box a row instead of an SVG (1,500 rows open at once). */
+.tree-icon.is-file, .tree-icon.is-dir { flex: none; width: 16px; height: 16px; background: currentColor; -webkit-mask: var(--glyph) center / 16px 16px no-repeat; mask: var(--glyph) center / 16px 16px no-repeat; }
+.tree-icon.is-file { --glyph: url("/assets/tree-file.svg"); }
+.tree-icon.is-dir { --glyph: url("/assets/tree-dir.svg"); }
+.tree-icon.is-dir.is-open { --glyph: url("/assets/tree-dir-open.svg"); }
 .tree-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9375rem; }
 .dirty-dot { color: var(--amber); font-size: 0.625rem; }
 .git-badge { font-family: var(--font-mono); font-size: var(--fs-hint); font-weight: 700; width: 1.5ch; text-align: center; }
