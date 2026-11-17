@@ -98,8 +98,13 @@ func TestPortForwardFailureModes(t *testing.T) {
 	waitCond(t, "the panel", func() bool { _, o, _, _ := ff.snapshot(); return len(o) == 1 })
 	f.free = func() (int, error) { return 0, errors.New("no ports") }
 	f.Handoff(session.WebHandoff{Fwd: &session.PortForward{Open: true, Port: 3000, ID: "a"}})
+	// The forward's goroutine reads free and start under f.mu: swap them
+	// there, after the first request was handled.
+	waitCond(t, "the first note", func() bool { f.mu.Lock(); defer f.mu.Unlock(); return len(f.notes) >= 1 })
+	f.mu.Lock()
 	f.free = func() (int, error) { return 50200, nil }
 	f.start = func(string, []string) (webFwdProc, error) { return nil, errors.New("no ssh") }
+	f.mu.Unlock()
 	f.Handoff(session.WebHandoff{Fwd: &session.PortForward{Open: true, Port: 3001, ID: "b"}})
 	waitCond(t, "two notes", func() bool { f.mu.Lock(); defer f.mu.Unlock(); return len(f.notes) >= 2 })
 	if notes := f.Close(); len(notes) != 2 || !strings.Contains(notes[0], "no port preview") {
