@@ -12,6 +12,9 @@ import (
 	"github.com/amin-jalali/termocode/internal/httpclient"
 )
 
+// intPtr is &n (the settings fields are pointers: unset is nil).
+func intPtr(n int) *int { return &n }
+
 // Settings below one fall back to their defaults.
 func TestCovHTTPSettingsDefaults(t *testing.T) {
 	zero := httpSettings{Timeout: intPtr(0), MaxRedirects: intPtr(-1), MaxBodyMB: intPtr(0), AIMaxKB: intPtr(-5), HistoryMax: intPtr(0)}
