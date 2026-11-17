@@ -59,6 +59,12 @@ its name and key.
 - Launch profiles for outside agents: model, plan mode, permission mode and env per agent, with the full line shown before it runs. → [Agents](guides/agents.md#profiles)
 - Race one task across 2 to 8 lanes of outside agents (run one agent several times, e.g. `claude:3,codex:2`), each in its own worktree; compare their diffs, verify them, let an AI judge rank them and pick one, and merge the winner. → [Agents](guides/agents.md#race-agents-on-one-task)
 - A shared plan per workspace that you and the AI both keep: the AI proposes and updates cards, you approve, reorder and remove them. → [Shared plan](guides/ai-use.md#shared-plan-canvas)
+- Small, fast requests: a chat sends a short core set of tools and loads the other tool groups (databases, containers, Kubernetes, …) only when it needs them. → [Tool groups](guides/ai-use.md#tool-groups-small-fast-requests)
+- **AI: Abilities…** sets each tool group to on, on demand or off. An off group is never sent; the AI asks on a card when a task needs it. → [Abilities](guides/ai-use.md#abilities-on-on-demand-off)
+- Keep going: the agent goes on while its todo list has open items, and stops on a question, a stall or a limit. → [Todo list and keep going](guides/ai-use.md#todo-list-and-keep-going)
+- A chat step that runs Claude Code or Codex goes on in that tool's own session on the next turn, so it remembers the last turns. → [Subscription steps](guides/ai-profiles.md#subscription-steps-claude-code-and-codex)
+- **AI: Now (What Needs You)…** lists only what waits on you: agents that wait for your OK, a red branch, review asks. A pull request opens a short review page. → [Now](guides/web.md#now-only-what-waits-on-you)
+- MCP servers, local and remote, and a *Connect a service* wizard. After you connect one, a card checks it once and offers one next step. → [Connect MCP servers](guides/mcp.md#after-you-connect-the-check-card)
 
 ![AI chat with a Markdown answer and a code card](assets/screenshots/ai-chat-answer.png)
 
@@ -80,7 +86,10 @@ its name and key.
 - A test explorer for Go, pytest, Rust, Jest and Vitest. → [Run and explore tests](guides/tests.md)
 - A Containers view: your project's services on top, then every container, image, registry, network, volume and context on the machine. Live CPU and memory graphs for the selected container; logs, shell, attach and stats open as terminal tabs; remove and prune always ask with the exact command; the AI reads the host and asks before it starts, stops or pulls. `/` filters every section; `b` lists an image's public remote tags and `s` searches Docker Hub. Works with Docker and Podman (Podman connections show as contexts). → [Containers](guides/containers.md)
 - Project services for Docker Compose and local dev commands: start, stop, logs in a terminal tab, and AI tools that read their state and logs (secrets masked). → [Dev services](guides/services.md)
-- A Databases view for PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey and SQL Server / Azure SQL: schema tree, SQL console, result pages, row edits with a reviewed transaction, export and import, EXPLAIN, SSH tunnels, and AI tools that read in a read-only session and ask before a write. → [Browse databases](guides/databases.md)
+- After you add an `ssh://` container context, one card offers a read-only scan of that server and then one next step (a database, Containers or Kubernetes). → [Containers](guides/containers.md)
+- A Kubernetes view: the pods, deployments, services and jobs of one namespace, pod logs and a shell. Restart, scale and delete ask first. → [Kubernetes](guides/kubernetes.md)
+- An HTTP client for `.http` files: send a request, see the answer, use variables and environments. → [Test an HTTP API](guides/http-client.md)
+- A Databases view for PostgreSQL, MySQL / MariaDB, SQLite, SQL Server, Oracle, Redis / Valkey, MongoDB, Cassandra, ClickHouse, DuckDB, cloud warehouses and more: schema tree, SQL console, result pages, row edits with a reviewed transaction, export and import, EXPLAIN, SSH tunnels, and AI tools that read in a read-only session and ask before a write. → [Browse databases](guides/databases.md)
 - A Run and Debug view with breakpoints, watch, call stack and a Debug Console. → [Debug a program](guides/debug.md)
 - An integrated terminal with tabs (`Ctrl+T`) and splits: up to four shells side by side or stacked in one tab (`Alt+/`, `Alt+-`). Click `file:line` links in its output. → [The terminal and its splits](guides/terminal.md)
 
@@ -116,6 +125,7 @@ its name and key.
 - Over SSH, a dropped connection loses nothing: run `termocode` again to get the same editor, terminals and jobs back. → [Remote and SSH](guides/remote-ssh.md)
 - `termocode ssh host` reconnects by itself after a network change, a Wi-Fi switch or sleep: the screen stays, typing pauses, and a toast says when it is back. → [Remote and SSH](guides/remote-ssh.md#reconnect-by-itself-termocode-ssh)
 - The web panel (experimental): the same session in a browser tab, for chat and cards, files, terminals and git, on this computer or from a server with `termocode ssh --web`. → [The web panel](guides/web.md)
+- The web panel on a phone: a Home with Now and one chat box, a terminal with termocode's own keyboard, Git with a commit sheet and branches, and a round ✦ menu. Reach it over your tailnet, the same Wi-Fi or a relay, with push notifications. → [Use it on a phone](guides/web.md#use-it-on-a-phone)
 - Lite mode: `termocode --lite` (or a machine without Neovim) runs without the editor — terminals, agents, git and worktrees only. → [Lite mode](getting-started/install.md#lite-mode-no-editor)
 - Unsaved files survive a crash or a kill: the next start offers to restore them.
 - Download a file or folder to your own computer, or upload into a folder. Locally it is a plain copy (Downloads folder; the desktop file chooser for uploads); over SSH it goes through the terminal (kitty, iTerm2, trzsz; else a ready scp command). → [Remote and SSH](guides/remote-ssh.md#download-and-upload-files)

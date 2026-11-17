@@ -143,9 +143,10 @@ The session lives on the machine that runs termocode. It survives a dropped conn
     ---
 
     Start and stop Docker Compose services, follow their logs, open a shell
-    in a container, and send HTTP requests from `.http` files.
+    in a container, browse databases and a Kubernetes cluster, and send
+    HTTP requests from `.http` files.
 
-    [:octicons-arrow-right-24: Services](guides/services.md) · [HTTP client](guides/http-client.md)
+    [:octicons-arrow-right-24: Services](guides/services.md) · [Databases](guides/databases.md) · [Kubernetes](guides/kubernetes.md) · [HTTP client](guides/http-client.md)
 
 -   :material-magnify:{ .lg } **Find Anything.**
 

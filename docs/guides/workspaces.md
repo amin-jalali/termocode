@@ -77,14 +77,14 @@ setup with your team.
 
 | Command | What it does |
 |---|---|
-| **Layout: Open...** (`Alt+Y`) | Pick a layout and open it. `Right` shows what it changes first. |
-| **Layout: Save As...** | Save what is on screen under a name. |
-| **Layout: Delete...** | Remove a saved layout. It asks first; Cancel is the default. |
+| **Layout: Open…** (`Alt+Y`) | Pick a layout and open it. `Right` shows what it changes first. |
+| **Layout: Save As…** | Save what is on screen under a name. |
+| **Layout: Delete…** | Remove a saved layout. It asks first; Cancel is the default. |
 | **Layout: Reset to Default** | Back to the first-start look and sizes. Open files stay. |
 
 The status bar shows the layout name for 2 seconds after it opens.
 
-**Built-in layouts** (they cannot be deleted; copy one with **Layout: Save As...**):
+**Built-in layouts** (they cannot be deleted; copy one with **Layout: Save As…**):
 
 | Name | What it opens |
 |---|---|
@@ -270,7 +270,7 @@ exec termocode bar --format menu
 | **File: Open Recent Workspace...** | Switch project |
 | **Workspace: Add Folder...** | Add a root folder |
 | **Workspace: Remove Folder...** | Remove a root folder |
-| **Layout: Save As...** | Save the window layout under a name |
+| **Layout: Save As…** | Save the window layout under a name |
 | **Developer: Reload Window** | Restart, keep session |
 | **Developer: Reset Session** | Clear the session |
 
