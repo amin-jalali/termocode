@@ -75,7 +75,11 @@ func TestDatabasesKeysIntrospectionAndSessionLifetime(t *testing.T) {
 			if count() != 0 {
 				t.Fatal("opening view connected before Enter")
 			}
-			d.Key("enter", "down", "enter") // connect, then open other
+			d.Key("enter") // connect: the databases load off the UI thread
+			if !d.WaitForText("other", 5*time.Second) {
+				t.Fatalf("connecting listed no databases:\n%s", ansi.Strip(d.Frame()))
+			}
+			d.Key("down", "enter") // open other
 			if driver == "postgres" {
 				d.Key("down", "enter")
 			} // public schema

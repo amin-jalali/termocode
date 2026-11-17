@@ -99,6 +99,19 @@ func TestPerfGuardRulesFirstTurnAfterWarm(t *testing.T) {
 		t.Errorf("WarmProjectRules took %v; it must not walk on the caller", d)
 	}
 	time.Sleep(500 * time.Millisecond) // the user opens the chat and types
+	// A slow machine (CI macOS) may still walk after that pause; the turn
+	// would wait for it by design. Measure the turn after the warm walk.
+	for deadline := time.Now().Add(30 * time.Second); ; time.Sleep(10 * time.Millisecond) {
+		folderRules.Lock()
+		done := folderRules.by[other] != nil && folderRules.by[other].first == nil
+		folderRules.Unlock()
+		if done {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("the warm walk did not end in 30 s")
+		}
+	}
 	t1 := time.Now()
 	r := LoadProjectRules(other)
 	first := time.Since(t1)

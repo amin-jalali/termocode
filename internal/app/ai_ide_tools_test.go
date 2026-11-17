@@ -55,6 +55,11 @@ func (p *scriptedAIProvider) toolResults() []string {
 	var out []string
 	if n := len(p.seen); n > 0 {
 		for _, m := range p.seen[n-1] {
+			if m.Role == ai.RoleUser {
+				// The chat replays earlier turns' tool results (they sit
+				// before the turn's user message): only this turn counts.
+				out = nil
+			}
 			if m.Role == ai.RoleTool {
 				out = append(out, m.Content)
 			}
