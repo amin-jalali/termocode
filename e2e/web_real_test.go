@@ -74,14 +74,22 @@ func newWebModel(t *testing.T) *webModel {
 		text := func(s string) any {
 			return map[string]any{"choices": []any{map[string]any{"delta": map[string]any{"content": s}}}}
 		}
-		if strings.Contains(body, `"role":"tool"`) {
+		call := func(id, name string, args map[string]any) any {
+			a, _ := json.Marshal(args)
+			return map[string]any{"choices": []any{map[string]any{"delta": map[string]any{"tool_calls": []any{
+				map[string]any{"index": 0, "id": id, "function": map[string]any{"name": name, "arguments": string(a)}}}}}}}
+		}
+		// A chat writes only a file it has read (#614): read notes.txt
+		// first, then write it, then say done.
+		switch {
+		case strings.Contains(body, `"call_web1"`):
 			send(text(webDone))
-		} else {
+		case strings.Contains(body, `"call_webr"`):
+			send(call("call_web1", "write_file", map[string]any{"path": "notes.txt", "content": webNotes}))
+		default:
 			send(text(webHello1))
 			send(text(webHello2))
-			a, _ := json.Marshal(map[string]any{"path": "notes.txt", "content": webNotes})
-			send(map[string]any{"choices": []any{map[string]any{"delta": map[string]any{"tool_calls": []any{
-				map[string]any{"index": 0, "id": "call_web1", "function": map[string]any{"name": "write_file", "arguments": string(a)}}}}}}})
+			send(call("call_webr", "read_file", map[string]any{"path": "notes.txt"}))
 		}
 		fmt.Fprint(w, "data: [DONE]\n\n")
 	}))
@@ -310,32 +318,38 @@ func webRealWalk(t *testing.T, vp webViewport) {
 	// Terminal: open one on the laptop and run a command from the page.
 	p.goTab("term")
 	open := webButton(wTerm, "Open one")
-	line := wTerm + `.querySelector(".term-line")`
-	if !vp.Mobile { // the desktop's panel: a click on it, then every key goes to the shell
-		line = wTerm + `.querySelector(".dterm-pane.is-focus .term-rows")`
+	// A tap on the terminal, then every key goes to the shell: the
+	// phone's Term page (#605) is the terminal engine, the desktop's
+	// panel its own rows.
+	line, input := wTerm+`.querySelector(".pterm-x .xterm-screen")`, wTerm+`.querySelector(".pterm-x textarea")`
+	if !vp.Mobile {
+		line, input = wTerm+`.querySelector(".dterm-pane.is-focus .term-rows")`, wTerm+`.querySelector(".dterm-pane.is-focus .dterm-input")`
 	}
 	p.waitJS(open + ` || ` + line)
 	if webEval[bool](p, `!!(`+open+`)`) {
 		p.tapJS(open)
 	}
+	p.waitJS(line)
 	p.tapJS(line)
-	if !vp.Mobile {
-		p.waitJS(`document.activeElement === ` + wTerm + `.querySelector(".dterm-pane.is-focus .dterm-input")`)
+	p.waitJS(`document.activeElement === ` + input)
+	if vp.Mobile {
+		p.rawKeys("echo web-$((6*7))-ok\r")
+	} else {
+		p.keys("echo web-$((6*7))-ok\r")
 	}
-	p.keys("echo web-$((6*7))-ok\r")
 	p.waitJS(wTerm + `.innerText.includes("web-42-ok")`)
 
 	// Git: stage notes.txt and commit it.
 	p.goTab("git")
-	if vp.Mobile {
-		notes := `document.querySelector('.git-row-wrap[data-path="notes.txt"] .git-row .btn')`
-		p.tapJS(notes)
+	if vp.Mobile { // the phone's Git page (#604): a row's circle stages, the dock commits through its sheet
+		p.tapJS(`document.querySelector('.gp-row[data-path="notes.txt"] .gp-circ')`)
 		p.waitJS(`[...document.querySelectorAll(".toasts .toast-title")].some((e) => e.textContent === "Staged notes.txt")`)
-		p.tap(".commit-subject")
+		p.tap(".gp-msg")
 		p.keys("docs: a line from the web")
-		p.tapJS(webButton("document", "Commit 1 file"))
-		p.waitJS(`document.activeElement === document.querySelector(".commit-ask button")`)
-		p.tapJS(webButton(`document.querySelector(".commit-ask")`, "Commit"))
+		p.waitJS(`document.querySelector(".gp-msg").value === "docs: a line from the web"`)
+		p.tapJS(`document.querySelector('.gp-dock [data-act="commit"]')`)
+		p.waitJS(`document.querySelector(".gp-cs-files")?.textContent === "1 staged file: notes.txt"`)
+		p.tapJS(`document.querySelector('.gp-cs [data-act="commit-do"]')`)
 	} else { // the side bar's source control
 		scm := `document.querySelector('.wb-side [data-view="git"]')`
 		row := scm + `.querySelector('.tr[data-group="changes"][data-path="notes.txt"]')`
