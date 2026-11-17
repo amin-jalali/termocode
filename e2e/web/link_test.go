@@ -73,17 +73,20 @@ func TestLinkReconnectsWithBackoffAndResumes(t *testing.T) {
 }
 
 // Close codes that retrying cannot fix end the session: the page says
-// why in the final bar and never knocks again. 4001 also drops the token.
+// why and never knocks again. 4001 also drops the token and, since the
+// sign-in after the kill switch (#576), shows what a new tab shows: the
+// "open from the laptop" line instead of the final bar.
 func TestLinkFinalCloseStopsForGood(t *testing.T) {
 	cases := []struct {
 		code      webproto.CloseCode
+		sel       string
 		text      string
 		dropToken bool
 	}{
-		{webproto.CloseStopped, "The web session was stopped.", false},
-		{webproto.CloseIdle, "15 minutes", false},
-		{webproto.CloseAuthFailed, "This link has expired", true},
-		{webproto.CloseUnsupportedVersion, "Reload", false},
+		{webproto.CloseStopped, ".bar-final", "The web session was stopped.", false},
+		{webproto.CloseIdle, ".bar-final", "15 minutes", false},
+		{webproto.CloseAuthFailed, ".connect-line.is-error", "Open this page from termocode", true},
+		{webproto.CloseUnsupportedVersion, ".bar-final", "Reload", false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.code.Reason(), func(t *testing.T) {
@@ -92,9 +95,9 @@ func TestLinkFinalCloseStopsForGood(t *testing.T) {
 			c := p.Login("c-1")
 			c.Close(t, tc.code)
 			p.WaitJS(`document.documentElement.dataset.link === "final"`)
-			p.WaitJS(`document.querySelector(".bar-final")`)
-			if got := p.Text(".bar-final"); !strings.Contains(got, tc.text) {
-				t.Errorf("final bar %q, want %q in it", got, tc.text)
+			p.WaitJS(`document.querySelector(` + jsq(tc.sel) + `)`)
+			if got := p.Text(tc.sel); !strings.Contains(got, tc.text) {
+				t.Errorf("%s %q, want %q in it", tc.sel, got, tc.text)
 			}
 			s.Hub.NoConn(t, 1500*time.Millisecond) // three backoff steps' worth
 			kept := Eval[bool](p, `sessionStorage.getItem("termocode.session") !== null`)
