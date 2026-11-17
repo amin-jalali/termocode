@@ -107,6 +107,10 @@ function StatusRow({ depth, children }: { depth: number; children: ComponentChil
   );
 }
 
+/** ROWS_FIRST rows of a folder show at once; ROWS_STEP more each task. */
+const ROWS_FIRST = 150;
+const ROWS_STEP = 300;
+
 function Folder({ path, depth, tree }: { path: string; depth: number; tree: TreeData }) {
   const [filter, setFilter] = useState("");
   // Each row's drawing, kept while what it shows stays the same: Preact
@@ -114,6 +118,16 @@ function Folder({ path, depth, tree }: { path: string; depth: number; tree: Tree
   // letter, a new file) leaves the other thousands of rows alone.
   const rows = useMemo(() => new Map<string, [string, VNode]>(), []);
   const dir = own(tree.dirs, path);
+  // A big folder comes in steps: the first rows at once, the rest a few
+  // hundred a task, so opening 1,500 names is not one long task (the
+  // page stays answering taps; a row out of view is not laid out anyway).
+  const [shown, setShown] = useState(ROWS_FIRST);
+  const total = dir?.entries?.length ?? 0;
+  useEffect(() => {
+    if (shown >= total) return;
+    const id = setTimeout(() => setShown((n) => n + ROWS_STEP), 0);
+    return () => clearTimeout(id);
+  }, [shown, total]);
   const why = failed.value.get(path);
   if (!dir) {
     if (why !== undefined) {
@@ -154,7 +168,7 @@ function Folder({ path, depth, tree }: { path: string; depth: number; tree: Tree
         </StatusRow>
       )}
       {entries.length === 0 && !needle && <StatusRow depth={depth}>{t("files.empty_dir")}</StatusRow>}
-      {entries.map((e) => {
+      {entries.slice(0, shown).map((e) => {
         const p = join(path, e.name);
         const open = e.dir && expanded.value.has(p);
         const more = canEdit() && t("files.more", { name: e.name });
