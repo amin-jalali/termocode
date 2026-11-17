@@ -102,9 +102,9 @@ func SceneClips(repo string) []SceneClip {
 	containers := join(
 		one(openFile),
 		one(hold(until(act("palette:containers-focus"), "nginx"), 1000*ms)),
-		repeat(hold(key("down"), 300*ms), 3),
-		one(hold(key("down"), 600*ms)),
-		one(hold(until(key("enter"), "restart requested"), 1600*ms)), // follow the logs of shop-api-1
+		repeat(hold(key("down"), 300*ms), 4),
+		one(hold(key("down"), 600*ms)),                               // api
+		one(hold(until(key("enter"), "restart requested"), 1600*ms)), // follow the logs of api
 		one(hold(act("palette:containers-focus"), 700*ms)),
 		one(hold(key("r"), 400*ms)), // restart it
 		one(hold(pause(1800*ms), 2300*ms)),
@@ -121,7 +121,7 @@ func SceneClips(repo string) []SceneClip {
 		one(hold(act("palette:ai-open-chat"), 700*ms)),
 		typed("Make toasts stay on screen longer", 30*ms),
 		one(live(key("enter"), 500*ms)),
-		repeat(live(pause(0), 600*ms), 3),
+		repeat(live(pause(0), 600*ms), 5),
 		one(hold(until(pause(900*ms), "Review AI changes"), 1800*ms)), // the review card
 		one(live(key("a"), 400*ms)),                                   // Accept
 		repeat(live(pause(0), 400*ms), 2),
@@ -172,6 +172,27 @@ func SceneClips(repo string) []SceneClip {
 		one(hold(key("esc"), 1300*ms)),
 	)
 
+	// After add: a new MCP server is checked (read-only, no tool is
+	// called); one card says what was found and offers one next step.
+	afterAdd := join(
+		one(openFile),
+		one(hold(until(act("afteradddemo:mcp"), "review its tools"), 4200*ms)),
+		one(hold(key("right"), 2200*ms)), // Not now -> Review tools
+	)
+
+	// AI abilities: the palette, the tool groups and their states; Enter
+	// moves one on (on demand -> off -> ON).
+	abilities := join(
+		one(openFile),
+		one(hold(until(key("f1"), "Command Palette"), 500*ms)),
+		typed("abilities", 45*ms),
+		one(hold(pause(0), 900*ms)),
+		one(hold(until(key("enter"), "AI: Abilities"), 2600*ms)),
+		one(hold(key("down"), 700*ms)), // the second group
+		one(hold(until(key("enter"), " is off"), 1600*ms)),
+		one(hold(until(key("enter"), " is ON"), 2600*ms)),
+	)
+
 	return []SceneClip{
 		{Name: "db", Caption: "Your database, in your terminal.", Scene: shotkit.Scene{Name: "db", Steps: db}},
 		{
@@ -185,7 +206,11 @@ func SceneClips(repo string) []SceneClip {
 				if err := os.WriteFile(filepath.Join("internal", "toast", "defaults.go"), []byte(before), 0o644); err != nil {
 					return nil, err
 				}
+				// A file the chat has not read cannot be overwritten (the
+				// read guard), so the model reads it first.
 				model = NewFakeModel(
+					Reply{Text: "Let me read the file first.", Pace: 60 * ms,
+						Tool: "read_file", Args: map[string]any{"path": "internal/toast/defaults.go"}},
 					Reply{Text: "I will make toasts stay on screen for five seconds, and give errors eight seconds.", Pace: 110 * ms,
 						Tool: "write_file", Args: map[string]any{"path": "internal/toast/defaults.go", "content": after}},
 					Reply{Text: "Done. Toasts now stay for 5 s and errors for 8 s.", Pace: 40 * ms},
@@ -209,5 +234,7 @@ func SceneClips(repo string) []SceneClip {
 			Scene:   shotkit.Scene{Name: "secrets", Steps: secrets},
 		},
 		{Name: "import", Caption: "Bring your setup with you.", Scene: shotkit.Scene{Name: "import", Steps: imp}},
+		{Name: "after-add", Caption: "Add something: termocode checks it and suggests one next step.", Scene: shotkit.Scene{Name: "after-add", Steps: afterAdd}},
+		{Name: "ai-abilities", Caption: "You choose what the AI can reach.", Scene: shotkit.Scene{Name: "ai-abilities", Steps: abilities}},
 	}
 }

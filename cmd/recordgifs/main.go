@@ -3,11 +3,12 @@
 //	go run ./cmd/recordgifs                     # all GIFs
 //	go run ./cmd/recordgifs -only db,secrets    # some
 //
-// It is a developer tool: it needs nvim, git and a Nerd Font .ttf. Seven
-// GIFs play shotkit scenes (the real app model in process, no terminal);
-// hero.gif runs the real binary in a PTY through the e2e "record" test
-// (a real disconnect and reattach of the persistent session). See
-// assets/gifs/README.md.
+// It is a developer tool: it needs nvim, git, Chrome and a Nerd Font
+// .ttf. Most GIFs play shotkit scenes (the real app model in process, no
+// terminal); hero.gif runs the real binary in a PTY through the e2e
+// "record" test (a real disconnect and reattach of the persistent
+// session); phone-now.gif is the real web page in headless Chrome on a
+// fake hub (the e2e/web "record" test). See assets/gifs/README.md.
 package main
 
 import (
@@ -96,6 +97,14 @@ func run() int {
 			code = 1
 		}
 	}
+	// The phone is the real web page in headless Chrome: the e2e/web
+	// record test.
+	if len(want) == 0 || want["phone-now"] {
+		if err := recordWeb(repo, "^TestRecordPhoneNow$", emit); err != nil {
+			fmt.Fprintln(os.Stderr, "recordgifs: phone-now:", err)
+			code = 1
+		}
+	}
 	cleanup, err := gifkit.EnterDemoWorkspace()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "recordgifs:", err)
@@ -143,12 +152,44 @@ func recordHero(repo string, emit func(gifkit.Clip) error) error {
 	return emit(gifkit.WithTitle(c))
 }
 
+// recordWeb runs one e2e/web record test (headless Chrome, a fake hub),
+// which writes its screenshots, and encodes them.
+func recordWeb(repo, test string, emit func(gifkit.Clip) error) error {
+	dir, err := os.MkdirTemp("", "termocode-web-")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(dir)
+	cmd := spawn.Command("go", "-C", filepath.Join(repo, "e2e"), "test", "-tags", "browser,record",
+		"-run", test, "-count=1", "-timeout", "5m", "./web/")
+	cmd.Env = append(os.Environ(), "GIF_FRAMES_DIR="+dir)
+	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+	c, err := gifkit.Load(dir)
+	if err != nil {
+		return err
+	}
+	return emit(c)
+}
+
 func dumpFrames(c gifkit.Clip, r *ansipng.Renderer, dir string) error {
 	_ = os.RemoveAll(dir)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
 	for i, f := range c.Frames {
+		if f.PNG != "" { // a screenshot already
+			b, err := os.ReadFile(f.PNG)
+			if err == nil {
+				err = os.WriteFile(filepath.Join(dir, fmt.Sprintf("%03d.png", i)), b, 0o644)
+			}
+			if err != nil {
+				return err
+			}
+			continue
+		}
 		p, err := os.Create(filepath.Join(dir, fmt.Sprintf("%03d.png", i)))
 		if err != nil {
 			return err

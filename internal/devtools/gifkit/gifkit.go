@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"image/draw"
+	"image/png"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,8 +34,11 @@ const MaxBytes = 5 << 20
 // Frame is one screen (ANSI text, as Bubble Tea prints it or as the VT
 // emulator renders it) and how long the GIF shows it.
 type Frame struct {
-	ANSI string        `json:"ansi,omitempty"`
-	File string        `json:"file,omitempty"` // ANSI in a file next to frames.json
+	ANSI string `json:"ansi,omitempty"`
+	File string `json:"file,omitempty"` // ANSI in a file next to frames.json
+	// PNG is a picture instead of a screen (a browser screenshot): a file
+	// next to frames.json. A clip is all screens or all pictures.
+	PNG  string        `json:"png,omitempty"`
 	Hold time.Duration `json:"hold_ns"`
 }
 
@@ -113,13 +118,45 @@ func Encode(c Clip, r *ansipng.Renderer) ([]byte, error) {
 	imgs := make([]*image.RGBA, len(c.Frames))
 	delays := make([]time.Duration, len(c.Frames))
 	for i, f := range c.Frames {
-		imgs[i], delays[i] = r.Render(Normalize(f.ANSI), Cols), f.Hold
+		delays[i] = f.Hold
+		if f.PNG == "" {
+			imgs[i] = r.Render(Normalize(f.ANSI), Cols)
+			continue
+		}
+		img, err := loadPNG(f.PNG)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", c.Name, err)
+		}
+		if i > 0 && img.Bounds() != imgs[0].Bounds() {
+			return nil, fmt.Errorf("%s: frame %d is %v, frame 0 is %v", c.Name, i, img.Bounds(), imgs[0].Bounds())
+		}
+		imgs[i] = img
 	}
 	var buf bytes.Buffer
 	if err := ansipng.EncodeGIF(&buf, imgs, delays); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+// loadPNG reads a picture frame as RGBA.
+func loadPNG(path string) (*image.RGBA, error) {
+	fh, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer fh.Close()
+	src, err := png.Decode(fh)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	if rgba, ok := src.(*image.RGBA); ok && rgba.Bounds().Min == (image.Point{}) {
+		return rgba, nil
+	}
+	b := src.Bounds()
+	out := image.NewRGBA(image.Rect(0, 0, b.Dx(), b.Dy()))
+	draw.Draw(out, out.Bounds(), src, b.Min, draw.Src)
+	return out, nil
 }
 
 // Write writes dir/<name>.gif and dir/<name>.txt and returns the GIF size.
@@ -194,6 +231,9 @@ func Load(dir string) (Clip, error) {
 		return c, err
 	}
 	for i, f := range c.Frames {
+		if f.PNG != "" {
+			c.Frames[i].PNG = filepath.Join(dir, f.PNG)
+		}
 		if f.File != "" {
 			a, err := os.ReadFile(filepath.Join(dir, f.File))
 			if err != nil {
