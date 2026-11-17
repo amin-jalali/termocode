@@ -17,10 +17,10 @@ import (
 	"time"
 )
 
-// editModel is a scripted OpenAI-compatible model: a request whose last
-// message is the user's (no tool result yet) answers with one write_file
-// call; a request that carries a tool result answers with done. It
-// records every request body.
+// editModel is a scripted OpenAI-compatible model: the user's request
+// answers with read_file (a chat writes only a file it has read, #614),
+// the read's result with one write_file call, and the write's result
+// with done. It records every request body.
 type editModel struct {
 	srv  *httptest.Server
 	path string // the file write_file writes
@@ -44,13 +44,19 @@ func newEditModel(t *testing.T, path, text, done string) *editModel {
 		em.mu.Lock()
 		em.bodies = append(em.bodies, body)
 		em.mu.Unlock()
+		call := func(id, name string, args map[string]any) any {
+			a, _ := json.Marshal(args)
+			return map[string]any{"choices": []any{map[string]any{"delta": map[string]any{"tool_calls": []any{
+				map[string]any{"index": 0, "id": id, "function": map[string]any{"name": name, "arguments": string(a)}}}}}}}
+		}
 		var chunk any
-		if strings.Contains(body, `"role":"tool"`) {
+		switch {
+		case strings.Contains(body, `"call_w1"`):
 			chunk = map[string]any{"choices": []any{map[string]any{"delta": map[string]any{"content": done}}}}
-		} else {
-			a, _ := json.Marshal(map[string]any{"path": path, "content": text})
-			chunk = map[string]any{"choices": []any{map[string]any{"delta": map[string]any{"tool_calls": []any{
-				map[string]any{"index": 0, "id": "call_w1", "function": map[string]any{"name": "write_file", "arguments": string(a)}}}}}}}
+		case strings.Contains(body, `"call_r1"`):
+			chunk = call("call_w1", "write_file", map[string]any{"path": path, "content": text})
+		default:
+			chunk = call("call_r1", "read_file", map[string]any{"path": path})
 		}
 		out, _ := json.Marshal(chunk)
 		w.Header().Set("Content-Type", "text/event-stream")
