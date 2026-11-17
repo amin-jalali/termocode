@@ -16,8 +16,10 @@ import (
 
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/emulation"
+	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/cdproto/log"
 	"github.com/chromedp/chromedp"
+	"github.com/chromedp/chromedp/kb"
 )
 
 // A small Chrome driver for the web tests that run against the real
@@ -285,6 +287,24 @@ func (p *webPage) tap(sel string) {
 func (p *webPage) keys(s string) {
 	p.t.Helper()
 	p.do(chromedp.KeyEvent(s))
+}
+
+// rawKeys types s as a hardware keyboard does: rawKeyDown, char, keyUp
+// per key. KeyEvent's keyDown makes Chrome add a char of its own, which
+// the terminal engine (the phone's Term page) takes as a second key.
+func (p *webPage) rawKeys(s string) {
+	p.t.Helper()
+	for _, r := range s {
+		for _, ev := range kb.Encode(r) {
+			if ev.Type == input.DispatchKeyEventTypeKeyDown {
+				ev.Type = input.DispatchKeyEventTypeRawKeyDown
+			}
+			p.do(chromedp.Func(func(ctx context.Context, t *chromedp.Target) error {
+				_, err := cdp.Call(ctx, t, input.DispatchKeyEvent, *ev)
+				return err
+			}))
+		}
+	}
 }
 
 // webButton is a JavaScript expression for the first button under root
