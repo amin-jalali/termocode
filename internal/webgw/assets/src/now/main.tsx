@@ -545,9 +545,10 @@ export function Now({ n }: { n: number }) {
   const open = openItem;
   const r = H.route.value;
   // The ✦ count, with or without messages on the Home (a tap on ✦ with a
-  // count opens Now: radial.ts).
+  // count opens Now: radial.ts). Set with the rows it counts, never a
+  // frame after them (a layout effect, before the paint).
   const need = summary(sections(read().items, Date.now())).need;
-  H.useEffect(() => badge(need), [need]);
+  H.useLayoutEffect(() => badge(need), [need]);
   let page: El | null = null;
   if (r.tab === "home") {
     if (r.rest === "now/rules") page = <Rules />;
