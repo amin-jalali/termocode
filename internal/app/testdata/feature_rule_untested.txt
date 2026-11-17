@@ -44,9 +44,7 @@ palette/ai-edit
 palette/ai-explain
 palette/ai-fix
 palette/ai-hooks
-palette/ai-mcp-insert
 palette/ai-new-chat
-palette/ai-review
 palette/ai-runs
 palette/ai-side
 palette/ai-toggle-inline
