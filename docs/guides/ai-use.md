@@ -1072,6 +1072,9 @@ tool on every request again, set `"ai_tool_groups": "off"` in config.json.
 
 ### Abilities: on, on demand, off
 
+![AI: Abilities…: the tool groups and their states; Enter moves git to off, then to ON](../assets/gifs/ai-abilities.gif){ .tc-shot }
+*You choose what the AI can reach.*
+
 Each group has one of three states. Change them with **AI: Abilities…**
 (Enter moves a group on → on demand → off); they are saved as
 `ai_abilities` in config.json.

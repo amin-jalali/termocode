@@ -1,0 +1,2 @@
+# after-add.gif - 6.4 s, loops. Captions are not burned into the frames.
+ 0.0- 6.4 s  Add something: termocode checks it and suggests one next step.

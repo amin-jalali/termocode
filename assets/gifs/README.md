@@ -7,17 +7,21 @@ put them on the page or in the video editor).
 
 | GIF | Length | Shows | Caption |
 |---|---|---|---|
-| `hero.gif` | 25 s | open a project, edit a file, run a query, give the AI a task, **drop the connection**, reconnect: file, result and answer are still there | One terminal. Your whole project. / Edit, query, ship — on the server. / AI works with your IDE. / Connection lost. / Your work lives on. |
+| `hero.gif` | 26 s | open a project, edit a file, run a query, give the AI a task, **drop the connection**, reconnect: file, result and answer are still there | One terminal. Your whole project. / Edit, query, ship — on the server. / AI works with your IDE. / Connection lost. / Your work lives on. |
 | `db.gif` | 9 s | type a query, the result grid, edit rows, the Submit card with the full SQL | Your database, in your terminal. |
 | `containers.gif` | 8 s | container list, follow the logs, restart one container | Containers without leaving the editor. |
-| `ai-confirm.gif` | 9 s | the AI proposes a change, the review card, Accept | AI asks before it acts. |
+| `ai-confirm.gif` | 10 s | the AI reads the file, proposes a change, the review card, Accept | AI asks before it acts. |
 | `agents.gif` | 12 s | the planner builds the plan, steps run in parallel on their own models, cost on the cards, `u` opens AI: Usage | Agents plan the work, run in parallel, and show what each one cost. |
 | `mcp.gif` | 9 s | an outside agent asks to run a tool, the confirm card names it, Allow, the status bar chip, the server status | Your agents get the IDE's tools. |
 | `secrets.gif` | 9 s | the Secret Store (names only), lock, unlock with the masked passphrase | Secrets stay secret. |
-| `import.gif` | 10 s | pick an editor, review old and new values, apply, the clickable toast and its Undo card | Bring your setup with you. |
+| `import.gif` | 9 s | pick an editor, review old and new values, apply, the clickable toast and its Undo card | Bring your setup with you. |
+| `after-add.gif` | 6 s | a new MCP server is checked without calling its tools; one card with what was found and one next step (Review tools) | Add something: termocode checks it and suggests one next step. |
+| `ai-abilities.gif` | 9 s | the palette, **AI: Abilities…** with every tool group and its state, Enter moves `git` to off, then to ON | You choose what the AI can reach. |
+| `phone-now.gif` | 14 s | the web page on a phone: Now, Why this?, Done with Undo, a pull request in Review, Approve & next with Undo | Now and Review on your phone. |
 
-All of them are 200 x 50 cells, the dark theme and the JetBrainsMono Nerd
-Font, under 5 MB, and loop.
+The terminal GIFs are 200 x 50 cells, the dark theme and the JetBrainsMono
+Nerd Font. `phone-now.gif` is 390 x 844 (at scale 2), the dark theme. All
+are under 5 MB and loop.
 
 ## What is real, what is canned
 
@@ -42,10 +46,19 @@ Font, under 5 MB, and loop.
   a sandbox config dir, the same hooks as the screenshots and golden tests. The
   keys you see pressed are real; the database result and the MCP agent are made
   up. No real server, secret or home path is involved.
+* `after-add.gif` uses the `afteradddemo:mcp` hook: the real checks and card
+  over a fake probe of a made-up server (nothing connects, no tool is
+  called). `ai-abilities.gif` is the real picker; it writes only the
+  sandbox config dir.
+* `phone-now.gif` is the **real web page** in headless Chrome, talking to
+  the **fake hub** of the browser tests (sample items and pull requests; no
+  laptop, no GitHub). The round mark shows where a finger taps; it is
+  drawn on the page just for that frame.
 
 ## Re-recording
 
-You need `nvim`, `git`, `sqlite3` (3.33 or newer) and a Nerd Font `.ttf`.
+You need `nvim`, `git`, `sqlite3` (3.33 or newer), Chrome (for
+`phone-now`) and a Nerd Font `.ttf`.
 From the repository root:
 
 ```sh
@@ -74,6 +87,10 @@ How it works:
   and `GIF_FRAMES_DIR` set. It samples the VT emulator while the scenes
   run, plays a scene that took longer than its time in the GIF a little
   faster and holds the last screen of a shorter one.
+* The phone GIF is `e2e/web/record_phone_test.go` (build tags
+  `browser,record`), run the same way with `GIF_FRAMES_DIR` set. It writes
+  one PNG screenshot per step; gifkit encodes them (a frame with `png`
+  instead of `ansi` in `frames.json`).
 
 To change a scene, edit `scenes.go`, run `-only <name> -frames <dir>` and
 look at the PNGs. Everything runs in a private config dir and a temp copy
