@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -196,8 +197,14 @@ func TestCovContainerContextGuards(t *testing.T) {
 	m.services.hostLoaded["contexts"] = true
 	m.services.sessionContext = "edge"
 	_ = m.switchContext(podmanLocal)
-	if m.services.sessionContext != "" {
-		t.Fatalf("session %q", m.services.sessionContext)
+	if runtime.GOOS == "linux" {
+		if m.services.sessionContext != "" {
+			t.Fatalf("session %q", m.services.sessionContext)
+		}
+	} else if m.services.sessionContext != "edge" || !strings.Contains(ctrToast(m), "Unknown") {
+		// Podman on macOS and Windows always talks to a machine: there is
+		// no local row to switch to (contextChoices).
+		t.Fatalf("session %q toast %s", m.services.sessionContext, ctrToast(m))
 	}
 	// The palette: hidden CONTEXTS says why.
 	m2 := contextTestModel(t)
