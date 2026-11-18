@@ -286,8 +286,11 @@ jobs:
       - name: Download modules
         run: go mod download
 
+      # Vet runs on shard 3, not on shard 1 that saves the cache: a cold
+      # vet (11-13 min) plus shard 1's tests passed the 40 minutes, the
+      # cancelled job saved no cache, and every next run started cold.
       - name: Vet
-        if: matrix.shard == 1
+        if: matrix.shard == 3
         run: go vet ./...
 
       - name: Test
