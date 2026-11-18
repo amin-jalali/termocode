@@ -102,9 +102,6 @@ func newWebPage(t *testing.T, vp webViewport) *webPage {
 		chromedp.Flag("disable-component-update", true),
 		chromedp.Flag("disable-sync", true),
 		chromedp.Flag("lang", "en-US"),
-		// The window holds the emulated viewport: on macOS a touch below the
-		// headless window's 800x600 never reaches the page's point.
-		chromedp.WindowSize(1920, 1200),
 	)
 	if os.Getenv("CI") != "" {
 		// Hosted runners do not allow Chrome's user-namespace sandbox. The

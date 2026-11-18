@@ -141,11 +141,6 @@ func startPage(t *testing.T, s *Server, vp Viewport, lang, exe string, wait time
 		chromedp.Flag("disable-sync", true),
 		chromedp.Flag("lang", lang),
 		chromedp.Flag("accept-lang", lang),
-		// The window holds every emulated viewport (the widest is 1920x1080,
-		// the tallest phone 932): headless Chrome's own window is 800x600,
-		// and on macOS a touch below its bottom never reaches the page's
-		// point (a Tactile key or ✦ at y 750 hit the top strip instead).
-		chromedp.WindowSize(1920, 1200),
 	)
 	if s.Site.Scheme == "https" {
 		opts = append(opts, chromedp.Flag("ignore-certificate-errors", true)) // the test's own certificate
