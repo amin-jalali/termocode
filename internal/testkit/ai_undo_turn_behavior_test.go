@@ -8,7 +8,7 @@ import (
 // Spec (R3): after a turn that changed a file, the chat shows "Undo AI
 // changes"; clicking it puts the old text back on disk and in the tab.
 func TestAIUndoTurnOnScreen(t *testing.T) {
-	_, srv := fakeToolModel(t, toolCall{"write_file", map[string]any{"path": "r.txt", "content": reviewNewA}})
+	_, srv := fakeToolModel(t, reviewRead, toolCall{"write_file", map[string]any{"path": "r.txt", "content": reviewNewA}})
 	d := aiDriver(t, srv.URL, reviewFiles(), false)
 	open(d, "r.txt")
 	askAI(d, "change it")

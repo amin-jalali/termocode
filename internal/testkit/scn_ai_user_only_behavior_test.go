@@ -304,7 +304,9 @@ var scnAskingCalls = []toolCall{
 	{"terminal_send", map[string]any{"text": "touch typed-by-ai.txt"}},
 	{"delete", map[string]any{"path": "b.txt"}},
 	{"rename", map[string]any{"from": "b.txt", "to": "moved.txt"}},
-	{"write_file", map[string]any{"path": "c.txt", "content": "changed by ai\n"}},
+	// A new file: an existing one the chat never read is refused before
+	// any card (write_file's read guard).
+	{"write_file", map[string]any{"path": "written-by-ai.txt", "content": "changed by ai\n"}},
 	{"create_dir", map[string]any{"path": "made-by-ai"}},
 	{"settings_set", map[string]any{"key": "tab_size", "value": "8"}},
 	{"agent_run_start", map[string]any{"task": "do more", "steps": []any{map[string]any{"title": "step", "prompt": "go"}}}},
