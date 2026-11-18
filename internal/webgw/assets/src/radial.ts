@@ -42,10 +42,12 @@ const isPt = (v: unknown): v is [number, number] => Array.isArray(v) && v.length
  * attention pill, the Home's box, the Git page's commit bar or the
  * Tactile keyboard, whichever reaches highest; at a side the tablet's
  * rail (on the right in a right-to-left page). */
+const BARS = ".tabbar, .composer, .keybar, .term-follow, .pill-wrap, .home-foot, .tk-dock, .gp-dock";
+
 function reserve(): { bottom: number; left: number; right: number } {
   const vh = innerHeight, vw = innerWidth;
   let top = vh, left = 0, right = 0;
-  for (const el of document.querySelectorAll(".tabbar, .composer, .keybar, .term-follow, .pill-wrap, .home-foot, .tk-dock, .gp-dock")) {
+  for (const el of document.querySelectorAll(BARS)) {
     const r = el.getBoundingClientRect();
     if (r.height > 0 && r.top > vh / 2) top = Math.min(top, r.top);
   }
@@ -115,19 +117,23 @@ function show(host: RadialHost): () => void {
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(() => fab.relayout());
   };
-  // Bars come and go without a route change (the terminal's key bar, the
-  // keyboard dock): look twice a second, move only when they changed.
-  let last = "";
-  const watch = setInterval(() => {
-    const now = JSON.stringify(reserve());
-    if (now !== last) {
-      last = now;
-      if (!fab.dragging) fab.relayout();
-    }
-  }, 500);
+  // Bars come, go and grow without a route change (the terminal's key
+  // bar, the keyboard dock, the Home's box): the button moves in the
+  // frame a bar's size changes (a ResizeObserver on each bar, re-aimed
+  // when the page's tree changes; a resized window the button follows
+  // itself). A look twice a second came up to half a second late, under
+  // a tap meant for the button.
+  const ro = new ResizeObserver(() => fab.dragging || fab.relayout());
+  const track = (): void => {
+    ro.disconnect();
+    document.querySelectorAll(BARS).forEach((e) => ro.observe(e));
+  };
+  track();
   // A sheet or a card over the page hides the button (it would sit on
-  // the sheet's own buttons): looked at whenever the page's tree changes.
+  // the sheet's own buttons): looked at whenever the page's tree changes,
+  // as are the bars there are to watch.
   const sheets = new MutationObserver(() => {
+    track();
     const on = !!document.querySelector(".sheet-layer");
     fab.root.style.setProperty("display", on ? "none" : "");
     if (on && fab.isOpen) fab.close();
@@ -143,8 +149,8 @@ function show(host: RadialHost): () => void {
   return () => {
     offs.forEach((f) => f());
     cancelAnimationFrame(raf);
-    clearInterval(watch);
     sheets.disconnect();
+    ro.disconnect();
     fab.destroy();
   };
 }

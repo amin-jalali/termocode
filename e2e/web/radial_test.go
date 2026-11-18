@@ -181,6 +181,29 @@ func TestRadialNeverOnDesktop(t *testing.T) {
 	}
 }
 
+// The button follows a bar that grows within two frames, not on the
+// next half-second look: until then it sat where a tap aimed at it would
+// find it moved (TestNowFabNoBadge missed it on the macOS runner).
+func TestRadialFollowsABarAtOnce(t *testing.T) {
+	now := time.Now().UnixMilli()
+	p, _ := openNow(t, map[string]any{
+		"items":  []any{nowItem("run:c2/r1", "run", "working", "docs-sync agent", "none", "Running", "", 4, now-4*60_000, "stop")},
+		"counts": map[string]any{"working": 1},
+		"now":    nowInfo(true, 5),
+	})
+	p.WaitJS(`document.querySelector(".rm-fab") && document.querySelector(".home-foot") && document.querySelector(".rm-fab").getBoundingClientRect().bottom <= document.querySelector(".home-foot").getBoundingClientRect().top`)
+	got := evalAwait[string](p, `(async () => {
+		const foot = document.querySelector(".home-foot"), fab = document.querySelector(".rm-fab");
+		foot.style.paddingBottom = "120px";
+		await new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
+		const f = fab.getBoundingClientRect().bottom, top = foot.getBoundingClientRect().top;
+		return f <= top ? "" : "two frames after the bar grew, ✦ ends at " + Math.round(f) + ", the bar starts at " + Math.round(top);
+	})()`)
+	if got != "" {
+		t.Error(got)
+	}
+}
+
 // The button moves clear of a bar that comes without a route change (the
 // terminal's key bar) and of a tablet's rail on a phone turned sideways.
 func TestRadialClearOfBars(t *testing.T) {
