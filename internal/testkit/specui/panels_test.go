@@ -117,7 +117,17 @@ func TestProblemsCollapseChipWithAIPanel(t *testing.T) {
 	d.Palette("problems-panel")
 	mustSee(t, d, "spec warning there")
 	clickText(t, d, "⊟")
-	if !d.WaitFor(func() bool { return !strings.Contains(screen(d), "spec warning there") }, wait) {
+	// The Problems row ("… [Ln 3, Col 1]"); the editor also shows the
+	// message at the end of its line, and that stays.
+	problemRow := func() bool {
+		for _, l := range strings.Split(screen(d), "\n") {
+			if strings.Contains(l, "spec warning there") && strings.Contains(l, "[Ln ") {
+				return true
+			}
+		}
+		return false
+	}
+	if !d.WaitFor(func() bool { return !problemRow() }, wait) {
 		t.Fatalf("⊟ click did not collapse the problems:\n%s", screen(d))
 	}
 }
