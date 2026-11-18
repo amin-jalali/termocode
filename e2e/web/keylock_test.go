@@ -4,6 +4,7 @@ package web
 
 import (
 	"context"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -58,6 +59,21 @@ func TestDeskTermFullScreenLocksKeys(t *testing.T) {
 	showTerm(t, p, c, termSnap(3, 0, 80, "$"), termItem(3, "zsh", false, true))
 	stubKeyboard(p)
 	p.Tap(".dterm-fullscreen")
+	if runtime.GOOS == "darwin" {
+		// The macOS runner's headless Chrome may refuse full screen even
+		// to a real click ("TypeError: not granted", run 44197458253; the
+		// owner's rule 2026-11-18): then the page must say so in a toast
+		// and lock nothing. Granted, it goes on as everywhere else.
+		const refused = `[...document.querySelectorAll(".toasts .toast-title")].some((e) => e.textContent === "The browser did not go full screen.")`
+		p.WaitJS(`(window.__lock === "all" && document.fullscreenElement !== null) || ` + refused)
+		if Eval[bool](p, refused) {
+			if Eval[bool](p, `window.__lock !== undefined || document.fullscreenElement !== null`) {
+				t.Error("full screen was refused, yet the keys were locked")
+			}
+			t.Log("this Chrome refused full screen; the page said so in a toast")
+			return
+		}
+	}
 	p.WaitJS(`window.__lock === "all" && document.fullscreenElement !== null`)
 	p.WaitJS(`!` + keyHint)
 	p.TapJS(`document.querySelector('[data-view="term"] .dterm-pane.is-focus .trow')`)
@@ -73,6 +89,21 @@ func TestDeskTermFullScreenLocksKeys(t *testing.T) {
 
 // The hint's Install as app shows once the browser offers the install,
 // and asks the browser to install.
+// A browser that refuses full screen gets a toast that says so, and no
+// key is locked (on every system: the browser is stubbed to refuse).
+func TestDeskTermFullScreenRefusedSaysSo(t *testing.T) {
+	p, c := openTerm(t, Desktop)
+	showTerm(t, p, c, termSnap(3, 0, 80, "$"), termItem(3, "zsh", false, true))
+	stubKeyboard(p)
+	Eval[bool](p, `(document.documentElement.requestFullscreen = () => Promise.reject(new TypeError("not granted")), true)`)
+	p.Tap(".dterm-fullscreen")
+	p.WaitJS(`[...document.querySelectorAll(".toasts .toast-title")].some((e) => e.textContent === "The browser did not go full screen.")`)
+	if Eval[bool](p, `window.__lock !== undefined || document.fullscreenElement !== null`) {
+		t.Error("full screen was refused, yet the keys were locked")
+	}
+	p.WaitJS(keyHint) // the hint still offers the ways to get the keys
+}
+
 func TestDeskTermKeysHintInstallsApp(t *testing.T) {
 	p, c := openTerm(t, Desktop)
 	showTerm(t, p, c, termSnap(3, 0, 80, "$"), termItem(3, "zsh", false, true))
