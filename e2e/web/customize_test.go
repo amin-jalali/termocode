@@ -135,6 +135,25 @@ func TestCustomizeFieldsPreviewLive(t *testing.T) {
 	}
 }
 
+// The controls stay where they are while the preview works and when it
+// is back. Before, the
+// preview's "updating" line came and went and the sheet grew and shrank
+// with it, so every control slid by its height under the next tap (on
+// the slow macOS runner a tap meant for Title hid CI).
+func TestCustomizeControlsStayWhileThePreviewWorks(t *testing.T) {
+	p := openCustomizeKit(t)
+	top := func(id string) int {
+		return int(Eval[float64](p, `Math.round(`+custSheet+`.querySelector('[data-field=`+jsq(id)+`]').getBoundingClientRect().top)`))
+	}
+	p.TapJS(fieldBox("number"))
+	p.WaitJS(custPreview + `.classList.contains("is-busy")`)
+	busy := top("title")
+	previewSettled(p)
+	if got := top("title"); got != busy {
+		t.Errorf("Title moved from %d to %d when the preview came back", busy, got)
+	}
+}
+
 // The last shown field cannot be hidden.
 func TestCustomizeKeepsOneField(t *testing.T) {
 	p := openCustomizeKit(t)
