@@ -60,12 +60,14 @@ func parseStatusV2(out string) BranchStatus {
 		case '#':
 			key, val, _ := strings.Cut(rec[2:], " ")
 			switch key {
+			// Clone: a caller that keeps only the branch (the repo
+			// scan) must not keep the whole output alive.
 			case "branch.oid":
 				if val != "(initial)" {
-					bs.OID = val
+					bs.OID = strings.Clone(val)
 				}
 			case "branch.head":
-				head = val
+				head = strings.Clone(val)
 			case "branch.ab":
 				a, b, _ := strings.Cut(val, " ")
 				bs.Branch.Ahead, _ = strconv.Atoi(strings.TrimPrefix(a, "+"))
