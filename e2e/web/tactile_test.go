@@ -124,6 +124,38 @@ func TestTactileKeyboardSettingsOnThisPhone(t *testing.T) {
 // the terminal docks the Tactile keyboard instead of the system one, the
 // key bar hides (the keyboard has its keys), and its keys go straight to
 // the shell: ls -la, Enter, then Ctrl+C as a one-shot Ctrl.
+// The keyboard is laid out in the same frame as the focus that docks it:
+// its keys are the same elements, at the same places, two frames later.
+// A later rebuild (the first ResizeObserver pass) replaced every key, so
+// a tap aimed in between (a slow frame on the macOS runner) hit a key
+// that was gone and landed elsewhere.
+func TestTactileKeyboardIsLaidOutWithTheFocus(t *testing.T) {
+	s := StartServer(t)
+	p := NewPage(t, s, Phone)
+	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+	c := p.Login("c-1")
+	p.GoTab("term")
+	c.Subs(t, "terms")
+	showTerm(t, p, c, termSnap(3, 0, 80, "$ "), termItem(3, "zsh", false, true))
+	p.WaitJS(xtermInput + `?.getAttribute("inputmode") === "none"`) // the keyboard is bound
+	got := evalAwait[string](p, `(async () => {
+		const ta = document.querySelector('[data-view="term"] .pterm-x textarea');
+		ta.focus();
+		const keys = () => [...document.querySelectorAll(".tk-dock:not([hidden]) .tk-key")];
+		const rects = (ks) => ks.map((k) => { const r = k.getBoundingClientRect(); return k.dataset.key + "@" + [r.left, r.top, r.width, r.height].map(Math.round).join(","); }).join(" ");
+		const k0 = keys(), r0 = rects(k0);
+		if (k0.length === 0) return "no keys right after the focus";
+		await new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
+		const k1 = keys();
+		if (k1.length !== k0.length || k1.some((k, i) => k !== k0[i])) return "the keys were built again after the focus";
+		const r1 = rects(k1);
+		return r0 === r1 ? "" : "the keys moved after the focus: " + r0.slice(0, 120) + " → " + r1.slice(0, 120);
+	})()`)
+	if got != "" {
+		t.Error(got)
+	}
+}
+
 func TestTactileKeyboardTypesInTheTerminal(t *testing.T) {
 	s := StartServer(t)
 	p := NewPage(t, s, Phone)
