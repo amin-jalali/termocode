@@ -69,6 +69,8 @@ export interface TactileKeyboard {
   setOptions(o: Partial<MountOptions>): void;
   /** Re-reads the host's width (and the window for layout "auto"). */
   relayout(): void;
+  /** Lays the keys out again now if the host's width changed since. */
+  sync(): void;
   destroy(): void;
 }
 
@@ -127,8 +129,12 @@ export function mount(host: HTMLElement, opts: MountOptions): TactileKeyboard {
     return wantsCompact(o.layout, win);
   }
 
+  // laidW is the width the keys were last laid out for: a pass that finds
+  // the same width keeps them (the same elements, at the same places).
+  let laidW = -1;
   function relayout(): void {
     const w = host.getBoundingClientRect().width || win?.innerWidth || 360;
+    laidW = w;
     height = o.height ?? defaultHeight(w);
     root.style.height = `${height}px`;
     engine.layout(w, height, wantCompact());
@@ -298,15 +304,15 @@ export function mount(host: HTMLElement, opts: MountOptions): TactileKeyboard {
   let ro: ResizeObserver | undefined;
   const RO = (globalThis as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
   if (RO) {
-    let lastW = -1;
-    ro = new RO(() => {
-      const w = host.getBoundingClientRect().width;
-      if (w && Math.abs(w - lastW) > 0.5) {
-        lastW = w;
-        relayout();
-      }
-    });
+    ro = new RO(() => sync());
     ro.observe(host);
+  }
+
+  /** sync lays the keys out again only when the host's width changed
+   * since the last layout (a hidden host has none: nothing to do). */
+  function sync(): void {
+    const w = host.getBoundingClientRect().width;
+    if (w && Math.abs(w - laidW) > 0.5) relayout();
   }
 
   applyTheme();
@@ -331,6 +337,7 @@ export function mount(host: HTMLElement, opts: MountOptions): TactileKeyboard {
       if (relay) relayout();
     },
     relayout,
+    sync,
     destroy() {
       engine.destroy();
       ro?.disconnect();

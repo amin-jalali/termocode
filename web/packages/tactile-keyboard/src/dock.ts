@@ -264,6 +264,9 @@ export function mountDock(host: HTMLElement, opts: DockOptions): Dock {
       root.hidden = false;
       setCollapsed(false);
       layout();
+      // the keys are laid out for the width they show at, in this frame:
+      // no later pass moves or rebuilds them under a tap
+      keyboard.sync();
     },
     detach(target) {
       if (attached !== target) return;
