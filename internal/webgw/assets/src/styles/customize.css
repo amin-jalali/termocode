@@ -47,6 +47,7 @@
 .cust-preview { position: relative; max-height: 14rem; overflow: auto; border: 1px solid var(--border); border-radius: var(--r-card); background: var(--bg); }
 .cust-preview.is-busy .vp { opacity: 0.55; }
 .cust-busy { position: sticky; bottom: 0; margin: 0; padding: var(--s1) var(--s2); background: var(--bg-2); color: var(--text-2); font-size: var(--fs-hint); }
+.cust-busy.is-idle { visibility: hidden; }
 .cust-failed { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); padding: var(--s2); border-bottom: 1px solid var(--border); color: var(--text); font-size: var(--fs-hint); }
 
 .vp { font-size: var(--fs-row); line-height: var(--lh-row); color: var(--text); }
