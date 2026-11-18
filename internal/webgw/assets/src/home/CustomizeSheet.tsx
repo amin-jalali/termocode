@@ -318,7 +318,13 @@ function PreviewPane({ p, density, retry }: { p: Preview; density: string; retry
         </div>
       ) : null}
       {p.block ? <ViewPreview block={p.block} density={density} /> : <SkeletonRows rows={4} mono={false} />}
-      {p.state === "busy" && p.block ? <p class="cust-busy">{t("cust.preview_busy")}</p> : null}
+      {/* The "updating" line keeps its place while it is not shown, so the
+          sheet's controls never slide when the preview starts or ends. */}
+      {p.block ? (
+        <p class={`cust-busy${p.state === "busy" ? "" : " is-idle"}`} aria-hidden={p.state === "busy" ? undefined : "true"}>
+          {t("cust.preview_busy")}
+        </p>
+      ) : null}
     </div>
   );
 }
