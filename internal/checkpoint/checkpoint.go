@@ -153,7 +153,7 @@ func tree(top string) (string, error) {
 	env := append([]string{"GIT_INDEX_FILE=" + idx}, identity...)
 	copied := false
 	if p, err := git(top, nil, "rev-parse", "--path-format=absolute", "--git-path", "index"); err == nil {
-		copied = copyFile(strings.TrimSpace(p), idx) == nil
+		copied = copyIndex(strings.TrimSpace(p), idx) == nil
 	}
 	if !copied {
 		_ = os.Remove(idx) // a half copy is no index
@@ -171,6 +171,21 @@ func tree(top string) (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(out), nil
+}
+
+// copyIndex copies the index with its mtime: git trusts a stat entry only
+// when the file is older than the index ("racy git"), so a copy with a
+// new time would take an edit in the same tick as the last index write,
+// with the same size, for unchanged.
+func copyIndex(src, dst string) error {
+	st, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	if err := copyFile(src, dst); err != nil {
+		return err
+	}
+	return os.Chtimes(dst, st.ModTime(), st.ModTime())
 }
 
 func copyFile(src, dst string) error {
