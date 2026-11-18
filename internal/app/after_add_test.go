@@ -138,6 +138,31 @@ func TestAfterAddCardWaitsForAnOpenDialog(t *testing.T) {
 	}
 }
 
+// A card that arrives while the user types in a picker or a prompt
+// waits too: opened on top it took the next keys, and Enter answered
+// Not now for good without the user seeing the card.
+func TestAfterAddCardWaitsForAPickerOrPrompt(t *testing.T) {
+	m := agentMCPTestModel(t)
+	m.afterAddEngine().Add(afterAddTestRule())
+	afterAddRunOp = func(*Model, string, string) tea.Cmd { return nil }
+	t.Cleanup(func() { afterAddRunOp = afterAddRunOpReal })
+
+	for i, open := range []func(){func() { m.pickerOpen = true }, func() { m.promptOpen = true }} {
+		open()
+		afterAddRun(t, m, afteradd.Event{Kind: afteradd.KindSSH, Item: "web" + string(rune('1'+i))})
+		if m.confirmOpen {
+			t.Fatalf("case %d: the card opened over the open picker or prompt", i)
+		}
+		m.pickerOpen, m.promptOpen = false, false
+		m.onAfterAddRetry(afterAddRetryMsg{})
+		if !m.confirmOpen || m.confirmKind != confirmKindAfterAdd {
+			t.Fatalf("case %d: the waiting card did not show", i)
+		}
+		m.confirmOpen = false
+		m.onAIConfirmClosed()
+	}
+}
+
 // The web sees the same card (kind suggest): Not now is the safe choice,
 // Do it runs the op on the laptop and closes the laptop's card.
 func TestAfterAddWebCard(t *testing.T) {
