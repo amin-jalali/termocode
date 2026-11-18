@@ -108,12 +108,12 @@ func TestWebRealPhoneZshTactileTypesOneLine(t *testing.T) {
 		}
 		return out
 	}
+	// count counts s in the rows read as one text: a long `ls -lah` row
+	// wraps on the phone (macOS's ls writes "34B" and "staff", so
+	// "README.md" broke over two rows there), and a wrapped name is still
+	// there once.
 	count := func(ls []string, s string) int {
-		n := 0
-		for _, l := range ls {
-			n += strings.Count(l, s)
-		}
-		return n
+		return strings.Count(strings.Join(ls, ""), s)
 	}
 	// worst watches every frame the phone draws: the most times a text
 	// was on the screen at once.
@@ -121,7 +121,7 @@ func TestWebRealPhoneZshTactileTypesOneLine(t *testing.T) {
 		const W = window.__worst = {};
 		const rows = `+x+`.querySelector(".xterm-rows");
 		const look = () => {
-			const t = rows.innerText;
+			const t = rows.innerText.replace(/\n/g, ""); // a wrapped row is one text
 			for (const s of ["➜", "ls -lah", "total ", "README.md"]) {
 				const n = t.split(s).length - 1;
 				if (n > (W[s] ?? 0)) (W[s] = n), (W[s + " frame"] = t);
@@ -151,7 +151,7 @@ func TestWebRealPhoneZshTactileTypesOneLine(t *testing.T) {
 	}
 	p.tapJS(key("enter"))
 	waitUntil(t, "ls -lah to run", uiTimeout, func() bool { return prompts() > start })
-	p.waitJS(x + `.querySelector(".xterm-rows").innerText.includes("README.md")`)
+	p.waitJS(x + `.querySelector(".xterm-rows").innerText.replace(/\n/g, "").includes("README.md")`)
 	time.Sleep(time.Second)
 	cmds, _ := os.ReadFile(filepath.Join(r.home, "cmds.log"))
 	if string(cmds) != "ls -lah\n" {
