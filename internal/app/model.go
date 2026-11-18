@@ -14,7 +14,6 @@ import (
 	"github.com/amin-jalali/termocode/internal/agentlog"
 	"github.com/amin-jalali/termocode/internal/agentusage"
 	"github.com/amin-jalali/termocode/internal/ai"
-	"github.com/amin-jalali/termocode/internal/now"
 	"github.com/amin-jalali/termocode/internal/anim"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/connectcard"
@@ -29,6 +28,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/layout"
 	"github.com/amin-jalali/termocode/internal/menu"
+	"github.com/amin-jalali/termocode/internal/now"
 	"github.com/amin-jalali/termocode/internal/nvim"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/preview"
@@ -231,7 +231,8 @@ type Model struct {
 	gitRebase     git.RebaseState // a stopped interactive rebase (git_rebase.go)
 	gitStopped    string          // a stopped merge / cherry-pick / revert (git_merge_branch.go)
 	gitFiles      []git.FileStatus
-	gitCursor     int // index into gitVisibleRows() for the ViewGit sidebar
+	gitTally      gitFileTally // gitFiles' counts, made with the snapshot (git_panel.go)
+	gitCursor     int          // index into gitVisibleRows() for the ViewGit sidebar
 
 	// gitViewTree selects the Source-Control file list layout: true renders a
 	// collapsible directory tree (the default, like the file explorer), false

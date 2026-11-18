@@ -193,6 +193,7 @@ func (m *Model) applyGitSnapshot(msg GitMsg) {
 	m.gitSubmodules = msg.Submodules
 	defer m.gitSelPrune() // after the clamp: marks of rows that went
 	m.gitFiles = msg.Files
+	m.gitTally = tallyGitFiles(msg.Files)
 	// Editor tabs show each open file's status letter (GITX-39).
 	m.tabs.SetGitStatus(m.gitStatusMap())
 	m.setGitCommits(msg.Graph, msg.More)
