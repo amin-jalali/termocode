@@ -4,6 +4,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/theme"
 	"slices"
 	"sync"
+	"unsafe"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -295,29 +296,53 @@ func (m *Model) onGitOlder(msg gitOlderMsg) {
 // how many have worktree changes (modified-but-unstaged or untracked). A file
 // can count toward both.
 func (m Model) gitFileCounts() (staged, changed int) {
-	for _, f := range m.gitFiles {
-		if f.Conflicted() {
-			continue
-		}
-		if f.Staged() {
-			staged++
-		}
-		if f.Unstaged() || f.Untracked() {
-			changed++
-		}
+	t := m.gitTally
+	if !t.of(m.gitFiles) {
+		t = tallyGitFiles(m.gitFiles)
 	}
-	return staged, changed
+	return t.staged, t.changed
 }
 
 // gitConflictCount returns how many files are unmerged (CONFLICTS section).
 func (m Model) gitConflictCount() int {
-	n := 0
-	for _, f := range m.gitFiles {
+	t := m.gitTally
+	if !t.of(m.gitFiles) {
+		t = tallyGitFiles(m.gitFiles)
+	}
+	return t.conflicts
+}
+
+// gitFileTally is the counts of one gitFiles list, made once when a git
+// snapshot arrives: each frame shows them (section headers, action bar),
+// and a walk over 50 000 changes per frame blocked the UI loop (SCN-12).
+type gitFileTally struct {
+	first                      *git.FileStatus // the counted list: its first element and length
+	n                          int
+	staged, changed, conflicts int
+}
+
+// tallyGitFiles counts files (see gitFileCounts for what counts where).
+func tallyGitFiles(files []git.FileStatus) gitFileTally {
+	t := gitFileTally{first: unsafe.SliceData(files), n: len(files)}
+	for _, f := range files {
 		if f.Conflicted() {
-			n++
+			t.conflicts++
+			continue
+		}
+		if f.Staged() {
+			t.staged++
+		}
+		if f.Unstaged() || f.Untracked() {
+			t.changed++
 		}
 	}
-	return n
+	return t
+}
+
+// of reports whether t counted files (the same list: no code changes a
+// gitFiles element in place; a new snapshot is a new list).
+func (t gitFileTally) of(files []git.FileStatus) bool {
+	return t.first != nil && t.first == unsafe.SliceData(files) && t.n == len(files)
 }
 
 // gitCurrentFileIndex resolves the cursor to an index into m.gitFiles, or
