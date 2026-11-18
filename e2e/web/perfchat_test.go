@@ -5,6 +5,8 @@ package web
 import (
 	"context"
 	"fmt"
+	"math"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
@@ -265,6 +267,16 @@ func TestPerfGuardChatStreamLaysOutItsEnd(t *testing.T) {
 	cp := startChatPerf(t, 200)
 	cp.open(t)
 	drain(cp.c, 200*time.Millisecond)
+	// Two frames of this browser: 34 ms at 60 Hz. The macOS runner's
+	// headless Chrome draws an idle page about every 33-50 ms (run
+	// 44197458253), so there (only) two of its own idle frames count, when
+	// longer (the owner's rule, 2026-11-18). The 34 ms stays the floor.
+	drawBudget := 34.0
+	if runtime.GOOS == "darwin" {
+		idle := evalAwait[float64](cp.p, `new Promise((done) => { const ts = []; const f = (t) => { ts.push(t); if (ts.length < 61) requestAnimationFrame(f); else { const d = ts.slice(1).map((x, i) => x - ts[i]).sort((a, b) => a - b); done(d[30]); } }; requestAnimationFrame(f); })`)
+		drawBudget = math.Max(34, 2*idle)
+		t.Logf("idle page: a frame every %.1f ms (median); token→drawn budget %.1f ms", idle, drawBudget)
+	}
 	seq := uint64(1)
 	pre := longAnswer(48 << 10)
 	frames, sp := cp.stream(t, &seq, pre, 300, 10*time.Millisecond)
@@ -283,8 +295,8 @@ func TestPerfGuardChatStreamLaysOutItsEnd(t *testing.T) {
 	if sp.Layouts >= 300*9/10 {
 		t.Errorf("300 tokens laid the page out %d times: once a token, want once a frame", sp.Layouts)
 	}
-	if m := statsOf(paint).med; m > 34 {
-		t.Errorf("a token was drawn %.1f ms after it came (median), budget 34 ms (two frames)", m)
+	if m := statsOf(paint).med; m > drawBudget {
+		t.Errorf("a token was drawn %.1f ms after it came (median), budget %.1f ms (two frames)", m, drawBudget)
 	}
 	const text = `document.querySelector('[data-view="chat"] .msg[data-i="200"] .msg-text')`
 	if n := Eval[int](cp.p, `Math.max(...[...`+text+`.querySelectorAll("*"), `+text+`].flatMap((e) => [...e.childNodes].filter((n) => n.nodeType === 3).map((n) => n.data.length)))`); n > 4<<10 {
