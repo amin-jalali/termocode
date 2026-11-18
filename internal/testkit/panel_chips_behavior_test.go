@@ -54,10 +54,12 @@ func TestProblemsFixChip(t *testing.T) {
 vim.diagnostic.set(ns, 0, {{lnum = 1, col = 0, message = 'chip-test-problem', severity = vim.diagnostic.severity.ERROR}})
 return ''`)
 	d.Action("panel:problems")
-	if !d.WaitFor(func() bool { return strings.Contains(screen(d), "chip-test-problem") }, 5*time.Second) {
+	if !d.WaitForText("✘ chip-test-problem", 5*time.Second) {
 		t.Fatalf("diagnostic not in Problems:\n%s", screen(d))
 	}
-	clickText(d, "chip-test-problem") // select the row: its Fix chip shows
+	// Select the Problems row (its Fix chip shows); the editor also shows
+	// the message at the end of line 2 (with ●), so click the ✘ row.
+	clickText(d, "✘ chip-test-problem")
 	if !d.WaitFor(func() bool { return strings.Contains(screen(d), "✦ Fix") }, 3*time.Second) {
 		t.Fatalf("no Fix chip on the selected row:\n%s", screen(d))
 	}

@@ -56,6 +56,9 @@ func TestAIContainersPortBusyFlow(t *testing.T) {
 	)
 	files := textFiles()
 	files[".env"] = "POSTGRES_PASSWORD=hunter2hunter2\n"
+	// A container project: with nothing to work on the containers tools
+	// start off (AI: Abilities…) and the AI would have to ask first.
+	files["Dockerfile"] = "FROM scratch\n"
 	d := aiDriver(t, srv.URL, files, false)
 	open(d, "a.txt")
 	askAI(d, "why is 8081 busy?")
@@ -145,7 +148,9 @@ func TestAIContainersImagesPullFlow(t *testing.T) {
 		toolCall{"images_pull", map[string]any{"ref": "--all-tags"}},
 		toolCall{"images_pull", map[string]any{"ref": "nginx:1.27"}},
 	)
-	d := aiDriver(t, srv.URL, nil, false)
+	files := textFiles()
+	files["Dockerfile"] = "FROM scratch\n" // a container project: the containers tools are on demand
+	d := aiDriver(t, srv.URL, files, false)
 	open(d, "a.txt")
 	askAI(d, "pull nginx 1.27 please")
 	// images_pull runs at once, as the Containers view pulls without a

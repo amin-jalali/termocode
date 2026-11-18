@@ -14,6 +14,9 @@ import (
 const reviewOldA = "one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\n"
 const reviewNewA = "one\nTWO\nthree\nfour\nfive\nsix\nseven\neight\nNINE\nten\n"
 
+// reviewRead comes first: write_file refuses a file the chat has not read.
+var reviewRead = toolCall{"read_file", map[string]any{"path": "r.txt"}}
+
 func reviewFiles() map[string]string {
 	f := textFiles()
 	f["r.txt"] = reviewOldA
@@ -47,7 +50,7 @@ func clickNth(d *Driver, s string, n int) {
 // the disk and the open tab have exactly change 1, and the model is told
 // 1 of 2 was accepted.
 func TestAIReviewWriteFileOnScreen(t *testing.T) {
-	s, srv := fakeToolModel(t, toolCall{"write_file", map[string]any{"path": "r.txt", "content": reviewNewA}})
+	s, srv := fakeToolModel(t, reviewRead, toolCall{"write_file", map[string]any{"path": "r.txt", "content": reviewNewA}})
 	d := aiDriver(t, srv.URL, reviewFiles(), false)
 	open(d, "r.txt")
 	askAI(d, "change it")
@@ -91,7 +94,7 @@ func TestAIReviewWriteFileOnScreen(t *testing.T) {
 		t.Errorf("buffer %q", got)
 	}
 	r := s.toolResults()
-	if len(r) != 1 || !strings.Contains(r[0], "accepted 1 of 2 changes to r.txt") || !strings.Contains(r[0], "+NINE") {
+	if len(r) != 2 || !strings.Contains(r[1], "accepted 1 of 2 changes to r.txt") || !strings.Contains(r[1], "+NINE") {
 		t.Errorf("results %q", r)
 	}
 	if strings.Contains(screen(d), "Review AI changes") {
@@ -101,7 +104,7 @@ func TestAIReviewWriteFileOnScreen(t *testing.T) {
 
 // Spec: Reject file writes nothing and the model is told so.
 func TestAIReviewRejectFileOnScreen(t *testing.T) {
-	s, srv := fakeToolModel(t, toolCall{"write_file", map[string]any{"path": "r.txt", "content": reviewNewA}})
+	s, srv := fakeToolModel(t, reviewRead, toolCall{"write_file", map[string]any{"path": "r.txt", "content": reviewNewA}})
 	d := aiDriver(t, srv.URL, reviewFiles(), false)
 	askAI(d, "change it")
 	if !d.WaitForText("Reject file", 5*time.Second) {
@@ -114,7 +117,7 @@ func TestAIReviewRejectFileOnScreen(t *testing.T) {
 	if diskFile(d, "r.txt") != reviewOldA {
 		t.Errorf("disk changed: %q", diskFile(d, "r.txt"))
 	}
-	if r := s.toolResults(); len(r) != 1 || !strings.Contains(r[0], "rejected the change to r.txt; nothing was written") {
+	if r := s.toolResults(); len(r) != 2 || !strings.Contains(r[1], "rejected the change to r.txt; nothing was written") {
 		t.Errorf("results %q", r)
 	}
 }
@@ -123,7 +126,7 @@ func TestAIReviewRejectFileOnScreen(t *testing.T) {
 // ends the turn while the review waits: nothing is written and no card is
 // left.
 func TestAIReviewStopOnScreen(t *testing.T) {
-	_, srv := fakeToolModel(t, toolCall{"write_file", map[string]any{"path": "r.txt", "content": reviewNewA}})
+	_, srv := fakeToolModel(t, reviewRead, toolCall{"write_file", map[string]any{"path": "r.txt", "content": reviewNewA}})
 	d := aiDriver(t, srv.URL, reviewFiles(), false)
 	askAI(d, "change it")
 	if !d.WaitForText("Review AI changes", 5*time.Second) {

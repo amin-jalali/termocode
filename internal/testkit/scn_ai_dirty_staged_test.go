@@ -22,7 +22,7 @@ const scn22Staged = reviewOldA + "eleven\n"
 // staged change (index and disk: scn22Staged).
 func scn22Driver(t *testing.T, auto ...string) (*Driver, *aiScript) {
 	t.Helper()
-	s, srv := fakeToolModel(t, toolCall{"write_file", map[string]any{"path": "r.txt", "content": reviewNewA}})
+	s, srv := fakeToolModel(t, reviewRead, toolCall{"write_file", map[string]any{"path": "r.txt", "content": reviewNewA}})
 	// No inline completions: they would take the fake model's replies.
 	d := aiDriverConfig(t, srv.URL, reviewFiles(), true, `"ai_inline":false`, auto...)
 	if err := writeAndStage(d.Dir, "r.txt", scn22Staged); err != nil {
@@ -114,7 +114,7 @@ func TestSCN22AIWriteDirtyStagedReview(t *testing.T) {
 	if strings.Contains(screen(d), "Review AI changes") {
 		t.Errorf("review card for a file with unsaved edits:\n%s", screen(d))
 	}
-	if r := s.toolResults(); len(r) != 1 || !strings.Contains(r[0], "unsaved changes") {
+	if r := s.toolResults(); len(r) != 2 || !strings.Contains(r[1], "unsaved changes") {
 		t.Errorf("model not told about the unsaved edits: %q\n%s", r, screen(d))
 	}
 	scn22Unchanged(t, d, "Q")
@@ -137,7 +137,7 @@ func TestSCN22AIWriteDirtyStagedAuto(t *testing.T) {
 	if !d.WaitForText("fake-done", 5*time.Second) {
 		t.Fatalf("the turn did not finish:\n%s", screen(d))
 	}
-	if r := s.toolResults(); len(r) != 1 || !strings.Contains(r[0], "unsaved changes") {
+	if r := s.toolResults(); len(r) != 2 || !strings.Contains(r[1], "unsaved changes") {
 		t.Errorf("model not told about the unsaved edits: %q", r)
 	}
 	scn22Unchanged(t, d, "Q")
