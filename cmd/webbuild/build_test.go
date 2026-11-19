@@ -125,7 +125,7 @@ func fixture(t *testing.T, mainTSX string) string {
 	}
 	// The workbench shares a module with the page, as the real one does,
 	// so the split build writes app-chunk.js (index.html preloads it).
-	files := map[string]string{"main.tsx": `import "./x.css"; import { shared } from "./shared"; shared.push(2);` + mainTSX, "x.css": "p{margin:0}", "desk.ts": `import "./y.css";`, "y.css": "b{margin:0}", "index.html": string(tpl),
+	files := map[string]string{"main.tsx": `import "./x.css"; import { shared } from "./shared"; shared.push(2);` + mainTSX, "x.css": "p{margin:0}", "desk.ts": `import "./y.css";`, "y.css": "b{margin:0}", "applayout.ts": "document.title;", "index.html": string(tpl),
 		"shared.ts": "export const shared = [1];", "workbench.tsx": `import { shared } from "./shared"; export const n = shared.length;`}
 	for name, body := range files {
 		if err := os.WriteFile(filepath.Join(src, name), []byte(body), 0o644); err != nil {

@@ -6,6 +6,7 @@ app-chunk-3.js sha384-fiJ33ETdzjdgudr32sxR3VFuxnpe4a1cXs9HIslBlEr0URVps2ORo7mJnx
 app-chunk.js sha384-voZ9SrxlS1Qccrkq6SecMEZ7E1TGhe/EGhuxQz/r6zFoA5EiAugYclTKJwvUcvkO 215658
 app.css sha384-rFWjyQmc/hAs7Lob1b5e4fkjKEOW/udBzQklEdTKrDmdGKB5fwdoJ0E4PEaX77Qx 112666
 app.js sha384-cO4qhmALFDPzkeBsFlrVjKbs4MczNVbNpQRTnjaPD/KsG+cnHbIU1PdrGd4ljZBw 28461
+applayout.js sha384-DoIACqQ3BEJYUXu7U7gf98rZk5TzfSFg+llIRku1tEWx2a4K7xeNl3my11be0HQY 833
 coedit.js sha384-esnNViX6EaHCrpV7RVFAuPwGVYySWNcOfBtCXyaR6fNg6g643Ykbqv//60jI9gmB 4842
 desk.css sha384-KP4SIJ8JihztWHdTuq0ISmydZuMOd+SUOvEkO2QuyMv4biaJD06Ur/a7WE0p4Skd 111757
 device.js sha384-Tn787tG5ozPVKL4N9FTeheLppwu0Vrw1RKjFsltrlRQ6RjSTawMLJauT9WvoNzxi 11034
@@ -23,7 +24,7 @@ home.js sha384-wZvpUuBo3q9O6R5owTWtkWMx9XlL8Qa1HVUJE51kaGqFD4ojsVI9C4SUSlLOYua8 
 icon-maskable.svg sha384-jsUQFC456bVobLxEI3ZKbp9mW6SjO1Joa3U86iXD66qm+YF+smRbvNGYVLvYMqOf 201
 icon.svg sha384-1i6/INXc16ryIXQB25IUE2qoPWGgij99HXLf1+5KcACYRgURj9eQzm/tcozbgZjh 210
 icons/codicon.ttf sha384-ydwWqX1+Wu2d6/YNWz288+ntV4SOp+lwtNI+XWqY3797m8eIMAmbNR5P9SCqdB5N 125828
-index.html sha384-kjIorD2EVH2cloINRI26iFhz1Q9wSVIQ/C5Kt+Mq2RAw4RMxvBBOgE2cilS7M0Js 1274
+index.html sha384-yW6YyBgFSLyEvs0t1ZKxuQFJlNtHFg/BrnZuA64/EFJV1D7WM2vT9yHI+TIKieEL 1417
 kit.css sha384-5yTn0tvLA+HxjCDjd4mOAjjDHDSOmvqj1l8V2OnLw378SIwDrNN4wQOL5AouQjvi 106024
 kit.html sha384-AhsuZ79X8cmnhuYqwpzoFP7C2cY3o0xZDhvY0FRuw9DSHaJBxVe0VLYXoRkTazAC 719
 kit.js sha384-dxHcpA68EwiXX4wPc4ntHCI6OQfiJThAGwHHFgKD37TwAkXkZhuGKjGFZfL/oWbG 220282

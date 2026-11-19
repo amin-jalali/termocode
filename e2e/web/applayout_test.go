@@ -33,14 +33,14 @@ func TestAppPhoneLayoutOnTablet(t *testing.T) {
 	p.onNewDocument(appBridge)
 	p.Login("c-app")
 	p.WaitJS(`document.documentElement.dataset.layout === "phone" && !!document.querySelector(".shell.layout-phone")`)
+	if !Eval[bool](p, `!!document.querySelector("nav.tabbar")`) {
+		t.Error("no tab bar on the chat in the app's phone layout")
+	}
 	Eval[bool](p, `(location.hash = "#/home", true)`)
 	p.WaitJS(`!!document.querySelector(".home-top")`)
 	p.WaitJS(`!!document.querySelector(".rm-fab")`)
 	if Eval[bool](p, `!!document.querySelector(".rail, .act-item, .wb")`) {
 		t.Error("a rail or the workbench shows in the app's phone layout")
-	}
-	if !Eval[bool](p, `!!document.querySelector("nav.tabbar")`) {
-		t.Error("no tab bar in the app's phone layout")
 	}
 	// The phone's sizes and sheets, not the wide screen's.
 	if g := Eval[string](p, gutterJS); g != "1rem" {

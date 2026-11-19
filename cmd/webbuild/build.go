@@ -185,6 +185,12 @@ var nowChunk = page{Name: "now", Entry: "now/main.tsx"}
 // phone neither waits for it nor counts it in its budget.
 var deskChunk = page{Name: "desk", Entry: "desk.ts", CSSOnly: true}
 
+// appLayoutChunk is the termocode app's phone layout (applayout.js): when
+// the app's bridge asks for it, every width check of the page sees a
+// phone. index.html runs it before app.js, by its SRI; it imports
+// nothing, so app.js does not grow.
+var appLayoutChunk = page{Name: "applayout", Entry: "applayout.ts"}
+
 // relayPage is the page the relay serves (relay.html, ADR 0022): relay.js
 // opens the end-to-end tunnel to the laptop and puts the laptop's own
 // paths through it, then loads app.js by its SRI hash (relay.html's
@@ -223,7 +229,7 @@ func Build(dir string) (map[string][]byte, error) {
 	if err := copyServed(vendorDir, pkgs, out); err != nil {
 		return nil, err
 	}
-	for _, p := range []page{deskChunk, appPage, relayPage, editorChunk, persianChunk, deviceChunk, aictxChunk, pickerChunk, linkChunk, coeditChunk, parquetChunk, queueChunk, termChunk, tactileChunk, radialChunk, pagesChunk, gitphoneChunk, ptermChunk, nowChunk, monacoAMD, monacoVim, monacoFrame, kitPage} {
+	for _, p := range []page{deskChunk, appLayoutChunk, appPage, relayPage, editorChunk, persianChunk, deviceChunk, aictxChunk, pickerChunk, linkChunk, coeditChunk, parquetChunk, queueChunk, termChunk, tactileChunk, radialChunk, pagesChunk, gitphoneChunk, ptermChunk, nowChunk, monacoAMD, monacoVim, monacoFrame, kitPage} {
 		if p.Name != appPage.Name {
 			if _, err := os.Stat(filepath.Join(abs, "src", p.Entry)); errors.Is(err, os.ErrNotExist) {
 				continue // a folder without the kit or the editor (test fixtures)
