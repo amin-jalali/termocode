@@ -36,6 +36,9 @@ type Viewport struct {
 	W, H   int64
 	Scale  float64
 	Mobile bool // mobile metrics and touch input
+	// AppPhone: the termocode app asks for the phone layout at any width
+	// (applayout_test.go), so the page is a phone's, not a workbench.
+	AppPhone bool
 }
 
 var (
